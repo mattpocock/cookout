@@ -1,5 +1,11 @@
 # @ai-hero/cookout
 
+## 0.1.1
+
+### Patch Changes
+
+- 2729455: `cookout --version` prints the package's version instead of `v0.0.0`.
+
 ## 0.1.0
 
 ### Minor Changes
