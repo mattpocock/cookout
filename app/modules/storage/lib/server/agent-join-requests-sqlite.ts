@@ -4,8 +4,9 @@ import type {
   AgentJoinRequestsSection,
   CollectAgentJoinRequest,
   NewAgentJoinRequest,
+  PendingAgentJoinRequest,
 } from "./agent-join-requests.ts";
-import { Effect, Option, Predicate, Schema } from "effect";
+import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
 import { GONE, PENDING, collectionOf, sessionToIssue } from "./agent-join-requests.ts";
 import { agentSessionIssuer, sqlAgentSessions } from "./agent-sessions-sqlite.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
@@ -34,6 +35,19 @@ const RequestRow = Schema.Struct({
 });
 
 type RequestRowType = typeof RequestRow.Type;
+
+const PendingRow = Schema.Struct({
+  agent: NameColumn,
+  created_at: IsoTimeSchema,
+  expires_at: IsoTimeSchema,
+  host: Schema.String,
+  user_code: Schema.String,
+});
+
+const LIST_PENDING = `SELECT agent, created_at, expires_at, host, user_code FROM agent_join_requests
+  WHERE joins IS NULL AND expires_at > ? ORDER BY created_at, user_code`;
+
+const decodePendingRows = Schema.decodeUnknownEffect(Schema.Array(PendingRow));
 
 const COLUMNS = "agent, created, expires_at, force, host, idle_expiry, idle_seconds, joins, user_code";
 
@@ -68,6 +82,23 @@ function shown(row: RequestRowType): AgentJoinRequest {
     return view;
   }
   return { ...view, idleExpiry: row.idle_expiry };
+}
+
+function pendingIn(db: SqlDatabase): AgentJoinRequestsSection["listPendingAgentJoinRequests"] {
+  return (now) =>
+    Effect.flatMap(db.all(LIST_PENDING, now), (rows) =>
+      Effect.mapBoth(decodePendingRows(rows), {
+        onFailure: unreadable,
+        onSuccess: (pending): readonly PendingAgentJoinRequest[] =>
+          Arr.map(pending, (row) => ({
+            agent: row.agent,
+            createdAt: row.created_at,
+            expiresAt: row.expires_at,
+            host: row.host,
+            userCode: row.user_code,
+          })),
+      }),
+    );
 }
 
 function liveByCode(db: SqlDatabase, userCode: string, now: IsoTime): Fails<Option.Option<RequestRowType>> {
@@ -139,6 +170,7 @@ function sqliteAgentJoinRequests(db: SqlDatabase): AgentJoinRequestsSection {
     collectAgentJoinRequest: collectIn(db),
     findAgentJoinRequest: (userCode, now) =>
       Effect.map(liveByCode(db, userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
+    listPendingAgentJoinRequests: pendingIn(db),
   };
 }
 

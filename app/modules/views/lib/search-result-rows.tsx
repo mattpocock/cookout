@@ -1,9 +1,10 @@
+import type { ListboxGroup, ListboxOption } from "../../design-system/index.tsx";
+import { useCallback, useMemo } from "react";
 import type { BoxOption } from "./search-options.ts";
+import { Listbox } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
-import { ResultList } from "../../design-system/index.tsx";
-import { SearchResultGroup } from "./search-result-group.tsx";
+import { SearchResultOption } from "./search-result-option.tsx";
 import { parseQuery } from "../../search/index.ts";
-import { useMemo } from "react";
 
 const TEXT = { results: "Search results" } as const;
 
@@ -15,35 +16,36 @@ interface SearchResultRowsProps {
   readonly onChoose: (href: string) => void;
 }
 
-interface Grouped {
-  readonly group: BoxOption["group"];
-  readonly entries: readonly { readonly option: BoxOption; readonly index: number }[];
+interface Listed extends ListboxOption {
+  readonly option: BoxOption;
 }
 
-function groupsOf(options: readonly BoxOption[]): readonly Grouped[] {
+function groupsOf(options: readonly BoxOption[]): readonly ListboxGroup<Listed>[] {
   const groups = [...new Set(options.map((option) => option.group))];
   return groups.map((group) => ({
-    entries: options.flatMap((option, index) => [{ index, option }].filter(() => option.group === group)),
-    group,
+    label: group,
+    options: options.filter((option) => option.group === group).map((option) => ({ option, value: option.href })),
   }));
 }
 
 export function SearchResultRows(props: SearchResultRowsProps): ReactNode {
   const parsed = useMemo(() => parseQuery(props.query), [props.query]);
+  const groups = useMemo(() => groupsOf(props.options), [props.options]);
   const handleChoose = props.onChoose;
+  const renderOption = useCallback(
+    (listed: Listed) => <SearchResultOption option={listed.option} query={parsed} />,
+    [parsed],
+  );
   return (
-    <ResultList label={TEXT.results} list={props.list}>
-      {groupsOf(props.options).map((grouped) => (
-        <SearchResultGroup
-          entries={grouped.entries}
-          highlighted={props.highlighted}
-          key={grouped.group}
-          label={grouped.group}
-          list={props.list}
-          onChoose={handleChoose}
-          query={parsed}
-        />
-      ))}
-    </ResultList>
+    <Listbox
+      groups={groups}
+      highlighted={props.highlighted}
+      label={TEXT.results}
+      list={props.list}
+      look="results"
+      onChoose={handleChoose}
+    >
+      {renderOption}
+    </Listbox>
   );
 }

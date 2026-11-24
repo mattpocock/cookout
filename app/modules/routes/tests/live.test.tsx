@@ -98,6 +98,7 @@ it("a reply that arrives in the open thread counts as read", { timeout: 5000 }, 
 
   await waitFor(async () => {
     await expect(reader.inbox()).resolves.toStrictEqual({
+      agentJoinRequests: [],
       alerts: [],
       deactivatedQuietAgents: [],
       deactivationOffers: [],

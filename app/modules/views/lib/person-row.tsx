@@ -13,6 +13,7 @@ interface PersonRowProps {
   readonly identity: Identity;
   readonly me: IdentityName;
   readonly open: IdentityName | null;
+  readonly tabbable: boolean;
 }
 
 function noteOf(identity: Identity, me: IdentityName): string | null {
@@ -35,6 +36,7 @@ export function PersonRow(props: PersonRowProps): ReactNode {
       name={identity.name}
       note={noteOf(identity, props.me)}
       presence={usePresence(identity.name)}
+      tabbable={props.tabbable}
     >
       <IdentityTags identity={identity} />
     </IdentityRow>

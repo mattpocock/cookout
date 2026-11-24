@@ -1,7 +1,6 @@
 import type { DeactivationOffers, Inbox, Nudges, OfflineAlerts } from "../../../inbox/server.ts";
-import { allChannels, channels, reactions, readReceipts, threads } from "./all-channels.ts";
-import { connected, presence } from "./connected.ts";
 import {
+  agentJoinRequests,
   deactivatedQuietAgents,
   deactivationOffers,
   inboxItems,
@@ -9,6 +8,8 @@ import {
   nudgesRead,
   reactionItems,
 } from "./inbox-items.ts";
+import { allChannels, channels, reactions, readReceipts, threads } from "./all-channels.ts";
+import { connected, presence } from "./connected.ts";
 import { identities, identityDeletions } from "./identities.ts";
 import { offlineAlerts, subscriptions } from "./subscriptions.ts";
 import type { AllChannelsNeeds } from "./all-channels.ts";
@@ -38,6 +39,7 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   nudgesRead,
   deactivationOffers,
   deactivatedQuietAgents,
+  agentJoinRequests,
   readPositions,
   subscriptions,
   offlineAlerts,

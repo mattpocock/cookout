@@ -9,6 +9,7 @@ interface SentEvent {
 }
 
 const eventTypes = {
+  "agent-join-requests": true,
   "agent-session": true,
   channel: true,
   "channel-deleted": true,

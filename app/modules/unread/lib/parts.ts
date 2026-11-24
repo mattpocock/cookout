@@ -3,6 +3,7 @@ import type {
   CookoutEvent,
   DeactivatedQuietAgent,
   DeactivationOffer,
+  InboxAgentJoinRequest,
   InboxItem,
   Nudge,
   OfflineAlert,
@@ -12,10 +13,12 @@ import type { Notices, NoticesBeside } from "./notices.ts";
 import { catchingUp, createInboxItems, readInto } from "./inbox-items.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { Live } from "../../live/index.ts";
+import type { LiveAgentJoinRequests } from "./agent-join-requests.ts";
 import type { LiveAlerts } from "./alerts.ts";
 import type { MarkAllState } from "./mark-all.ts";
 import type { MarkUnread } from "./mark-unread.ts";
 import type { Notifier } from "./notifier.ts";
+import { createAgentJoinRequests } from "./agent-join-requests.ts";
 import { createAlerts } from "./alerts.ts";
 import { createEarlier } from "./earlier.ts";
 import { createNotifier } from "./notifier.ts";
@@ -32,6 +35,7 @@ type UnreadState =
       readonly deactivationOffers: readonly DeactivationOffer[];
       readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
       readonly heldDeactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+      readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
       readonly markAll: MarkAllState;
     }
   | (Refusal & { readonly status: "failed" });
@@ -39,6 +43,7 @@ type UnreadState =
 interface PartsOptions {
   readonly client: Pick<
     CookoutClient,
+    | "approveAgentJoin"
     | "closeThread"
     | "inbox"
     | "inboxHistory"
@@ -54,6 +59,7 @@ interface PartsOptions {
 interface Held extends Notices {
   readonly items: InboxItems;
   readonly alerts: LiveAlerts;
+  readonly agentJoinRequests: LiveAgentJoinRequests;
 }
 
 interface Parts extends Held {
@@ -79,10 +85,15 @@ interface Following extends Held {
   readonly republish: () => void;
 }
 
-type Beside = { readonly alerts: readonly OfflineAlert[] } | NoticesBeside;
+type Beside =
+  | { readonly alerts: readonly OfflineAlert[] }
+  | { readonly agentJoinRequests: readonly InboxAgentJoinRequest[] }
+  | NoticesBeside;
 
-function loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, markAll, nudges }: Shown): UnreadState {
+function loadedOf(shown: Shown): UnreadState {
+  const { alerts, deactivatedQuietAgents, deactivationOffers, items, markAll, nudges } = shown;
   return {
+    agentJoinRequests: shown.agentJoinRequests.pending(),
     alerts: alerts.unread(),
     deactivatedQuietAgents: deactivatedQuietAgents.unread(),
     deactivationOffers: deactivationOffers.open(),
@@ -100,13 +111,14 @@ async function loadedOrFailed(loading: Loading): Promise<UnreadState> {
     await readInto({
       client,
       items,
+      onAgentJoinRequests: loading.agentJoinRequests.pendingAre,
       onAlerts: alerts.addAll,
       onDeactivatedQuietAgents: deactivatedQuietAgents.unreadAre,
       onDeactivationOffers: deactivationOffers.openAre,
       onNudges: nudges.addUnread,
       onRead: earlier.add,
     });
-    return loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, markAll: markAll(), nudges });
+    return loadedOf({ ...loading, markAll: markAll() });
   } catch (error: unknown) {
     return { ...refusalOf(error), status: "failed" };
   }
@@ -123,6 +135,12 @@ function partsOf(options: PartsOptions): Parts {
   const shown = createNotifier<UnreadState>({ status: "loading" });
   const items = createInboxItems();
   return {
+    agentJoinRequests: createAgentJoinRequests({
+      client: options.client,
+      onChange: (pending) => {
+        withBeside(shown, { agentJoinRequests: pending });
+      },
+    }),
     alerts: createAlerts({
       client: options.client,
       onChange: (unread) => {
@@ -164,7 +182,12 @@ function follow(following: Following): void {
     return;
   }
   live.subscribe((event) => {
-    const besides = [nudges.receive(event), deactivationOffers.receive(event), deactivatedQuietAgents.receive(event)];
+    const besides = [
+      nudges.receive(event),
+      deactivationOffers.receive(event),
+      deactivatedQuietAgents.receive(event),
+      following.agentJoinRequests.receive(event),
+    ];
     if (
       markUnread.receive(event) ||
       items.receive(event, earlier.add) ||
@@ -180,6 +203,7 @@ function follow(following: Following): void {
       client,
       items,
       moveBack: markUnread.moveBack,
+      onAgentJoinRequests: following.agentJoinRequests.pendingAre,
       onAlerts: alerts.addAll,
       onChange: republish,
       onDeactivatedQuietAgents: deactivatedQuietAgents.unreadAre,
@@ -191,5 +215,6 @@ function follow(following: Following): void {
 }
 
 export type { DeactivatedQuietAgents, DeactivationOffers } from "./notices.ts";
+export type { AgentJoinRequests } from "./agent-join-requests.ts";
 export type { MarkChannel } from "./mark-channel.ts";
 export { type UnreadState, follow, loadedOf, loadedOrFailed, partsOf };

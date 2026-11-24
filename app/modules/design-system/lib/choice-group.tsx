@@ -5,8 +5,11 @@ import type { ReactNode } from "react";
 export function ChoiceGroup(parts: ChoiceGroupParts): ReactNode {
   const handleChoose = parts.onChoose;
   return (
-    <fieldset className="flex w-fit shrink-0 gap-0.5 rounded-lg bg-muted p-0.5 text-[13px]">
-      <legend className="sr-only">{parts.label}</legend>
+    <div
+      aria-label={parts.label}
+      className="flex w-fit shrink-0 gap-0.5 rounded-lg bg-muted p-0.5 text-[13px]"
+      role="radiogroup"
+    >
       {parts.choices.map((choice) => (
         <ChoiceButton
           chosen={parts.value === choice.value}
@@ -17,6 +20,6 @@ export function ChoiceGroup(parts: ChoiceGroupParts): ReactNode {
           value={choice.value}
         />
       ))}
-    </fieldset>
+    </div>
   );
 }

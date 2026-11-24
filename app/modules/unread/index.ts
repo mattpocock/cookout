@@ -90,8 +90,14 @@
  * made with: `browserReadingTools()` are `browserClock` and the document's focus,
  * and tests bring a clock they move on by hand.
  */
+import type {
+  AgentJoinRequests,
+  DeactivatedQuietAgents,
+  DeactivationOffers,
+  MarkChannel,
+  UnreadState,
+} from "./lib/parts.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
-import type { DeactivatedQuietAgents, DeactivationOffers, MarkChannel, UnreadState } from "./lib/parts.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
 import { follow, loadedOf, loadedOrFailed, partsOf } from "./lib/parts.ts";
 import type { Alerts } from "./lib/alerts.ts";
@@ -149,6 +155,8 @@ export interface Unread {
   readonly deactivationOffers: DeactivationOffers;
   /** Every Inbox entry of the caller's about a deactivated quiet agent, read or not, newest first, and marking one read. */
   readonly deactivatedQuietAgents: DeactivatedQuietAgents;
+  /** Approve on a pending Agent join request, and why the last Approve of each was refused: a store of its own. */
+  readonly agentJoinRequests: AgentJoinRequests;
 }
 
 /**
@@ -159,6 +167,7 @@ export interface UnreadOptions {
   readonly client: Pick<
     CookoutClient,
     | "ack"
+    | "approveAgentJoin"
     | "ackAll"
     | "closeThread"
     | "inbox"
@@ -181,7 +190,8 @@ export interface UnreadOptions {
  */
 export function createUnread(options: UnreadOptions): Unread {
   const parts = partsOf(options);
-  const { alerts, deactivatedQuietAgents, deactivationOffers, earlier, items, nudges, shown } = parts;
+  const { agentJoinRequests, alerts, deactivatedQuietAgents, deactivationOffers, earlier, items, nudges, shown } =
+    parts;
   let loading: Promise<void> | null = null;
   const markAll = createMarkAll({
     ...options,
@@ -206,6 +216,7 @@ export function createUnread(options: UnreadOptions): Unread {
   const menu = createMessageMenu(markUnread.markUnread);
 
   return withNewLines<Omit<Unread, "newLine" | "selection">>({
+    agentJoinRequests,
     alerts,
     deactivatedQuietAgents,
     deactivationOffers,
@@ -234,6 +245,7 @@ export type { UnreadState } from "./lib/parts.ts";
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
+export type { AgentJoinRequests } from "./lib/agent-join-requests.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";
 export type { DeactivatedQuietAgents, DeactivatedQuietAgentsState } from "./lib/deactivated-quiet-agents.ts";

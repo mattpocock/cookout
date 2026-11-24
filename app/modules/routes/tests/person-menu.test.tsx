@@ -48,9 +48,9 @@ async function menuItems(name: string): Promise<Shown> {
 }
 
 const ALL_ITEMS: Shown = [
-  ["View profile", true, false],
-  ["Message", true, false],
-  ["Copy name", true, false],
+  ["View profileEnter", true, false],
+  ["Messagem", true, false],
+  ["Copy namec", true, false],
 ];
 
 function boxNow(): readonly [boolean, string | null] {
@@ -186,9 +186,9 @@ it("a deactivated author's Message is dimmed", { timeout: 5000 }, async () => {
     fireEvent.contextMenu(await authorName(author));
 
     await expect(menuItems(`@${author} actions`)).resolves.toStrictEqual([
-      ["View profile", true, false],
-      ["Message", true, true],
-      ["Copy name", true, false],
+      ["View profileEnter", true, false],
+      ["Messagem", true, true],
+      ["Copy namec", true, false],
     ]);
   });
 
@@ -215,8 +215,8 @@ async function peopleRowMenu(name: string, how: "right-click" | "button"): Promi
 }
 
 const WITHOUT_MESSAGE: Shown = [
-  ["View profile", true, false],
-  ["Copy name", true, false],
+  ["View profileEnter", true, false],
+  ["Copy namec", true, false],
 ];
 
 it("a row in the People list has the menu, without Message where there is no message box", {

@@ -18,6 +18,7 @@ type AppClient = BoardStoreClient &
   Pick<
     CookoutClient,
     | "ackAll"
+    | "approveAgentJoin"
     | "createIdentity"
     | "countMessagesBy"
     | "deactivateIdentity"

@@ -1,6 +1,7 @@
 import type { Unread, UnreadState } from "../../unread/index.ts";
 import type { InboxRows } from "./use-inbox-rows.ts";
 import type { MarkAllReadProps } from "./mark-all-read.tsx";
+import { besideCountOf } from "./beside-count.ts";
 
 const NONE = 0;
 
@@ -24,7 +25,7 @@ function markAllPlaces(where: MarkAllWhere): MarkAllPlaces {
   const { state } = where;
   const markAll = { state, unread: where.store };
   const held = state.heldDeactivatedQuietAgents.length;
-  const besides = state.nudges.length + state.deactivationOffers.length + state.deactivatedQuietAgents.length;
+  const besides = besideCountOf(state) - state.alerts.length;
   const none = { activity: null, alerts: null, besides, forYou: null, held };
   if (state.alerts.length > NONE) {
     return { ...none, alerts: markAll };

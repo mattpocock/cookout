@@ -23,6 +23,7 @@ import {
   viewOf,
 } from "./join-request-terms.ts";
 import { agentToApprove, agentToPreview } from "./resolve.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Terms } from "./join-request-terms.ts";
@@ -48,6 +49,11 @@ interface Viewing {
   readonly userCode: string;
 }
 
+interface JoinRequestChanges {
+  readonly started: (agent: IdentityName, expiresAt: IsoTime) => Effect.Effect<void>;
+  readonly approved: (agent: IdentityName) => Effect.Effect<void>;
+}
+
 interface JoinRequests {
   readonly startJoin: (request: StartAgentJoin) => Fails<AgentJoinRequestStartedResponse>;
   readonly collectJoin: (requestId: Token) => Fails<AgentJoinCollectedResponse>;
@@ -55,9 +61,13 @@ interface JoinRequests {
   readonly approveJoin: (approving: Approving) => Fails<AgentJoinRequestView>;
 }
 
+interface Changing extends On {
+  readonly joinRequestChanges: JoinRequestChanges;
+}
+
 const codeTaken = new Error("The new user code was taken: start again.");
 
-function starter(on: On): JoinRequests["startJoin"] {
+function starter(on: Changing): JoinRequests["startJoin"] {
   const asked = termsAsked(on);
   return ({ as: agent, ...request }) =>
     Effect.gen(function* startAgentJoinRequest() {
@@ -71,6 +81,7 @@ function starter(on: On): JoinRequests["startJoin"] {
         createdAt,
       );
       yield* Effect.filterOrElse(added, (result) => result === "added", Function.constant(Effect.die(codeTaken)));
+      yield* on.joinRequestChanges.started(agent, expiresAt);
       return { approvalPath: agentJoinApprovalPathOf(userCode), expiresAt, requestId, userCode };
     });
 }
@@ -154,21 +165,22 @@ function decided(on: On, { approval, caller }: Approving, found: AgentJoinReques
   });
 }
 
-function approver(on: On): JoinRequests["approveJoin"] {
+function approver(on: Changing): JoinRequests["approveJoin"] {
   return (approving) =>
     Effect.gen(function* approveAgentJoinRequest() {
       const found = yield* liveRequest(on)(approving.userCode);
       const { approval, terms } = yield* decided(on, approving, found);
       const at = yield* now;
       yield* on.storage.approveAgentJoinRequest(approving.userCode, approval, at);
+      yield* on.joinRequestChanges.approved(found.agent);
       const { created: creates, identity: joins } = approval;
       const shown = { ...found, approved: true };
       return viewOf({ creates, found: shown, idleExpiry: terms.idleExpiry, joins, live: Option.none() });
     });
 }
 
-function joinRequestsOn(on: On): JoinRequests {
+function joinRequestsOn(on: Changing): JoinRequests {
   return { approveJoin: approver(on), collectJoin: collector(on), showJoin: shower(on), startJoin: starter(on) };
 }
 
-export { type JoinRequests, joinRequestsOn };
+export { type JoinRequestChanges, type JoinRequests, joinRequestsOn };

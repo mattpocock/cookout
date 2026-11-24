@@ -13,11 +13,6 @@ const SEPARATOR = " · ";
 interface SearchResultRowProps {
   readonly result: SearchResult;
   readonly query: ParsedQuery;
-  readonly href: string;
-  readonly list: string;
-  readonly index: number;
-  readonly highlighted: boolean;
-  readonly onChoose: (href: string) => void;
 }
 
 function detailOf({ result, time }: { readonly result: SearchResult; readonly time: string }): string {
@@ -30,17 +25,8 @@ export function SearchResultRow(props: SearchResultRowProps): ReactNode {
   const { message } = props.result;
   const { displayName } = useAuthor(message.author);
   const time = useTimeAgo(message.createdAt);
-  const handleChoose = props.onChoose;
   return (
-    <ResultOption
-      detail={detailOf({ result: props.result, time })}
-      highlighted={props.highlighted}
-      href={props.href}
-      index={props.index}
-      label={displayName ?? message.author.name}
-      list={props.list}
-      onChoose={handleChoose}
-    >
+    <ResultOption detail={detailOf({ result: props.result, time })} label={displayName ?? message.author.name}>
       <FeedText unread>
         <SearchText query={props.query} text={message.text} />
       </FeedText>

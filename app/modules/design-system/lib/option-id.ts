@@ -7,4 +7,4 @@ function optionIdOf({ index, list }: OptionAt): string {
   return `${list}-option-${String(index)}`;
 }
 
-export { optionIdOf };
+export { type OptionAt, optionIdOf };

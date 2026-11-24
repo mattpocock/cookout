@@ -4,6 +4,7 @@ import type {
   CookoutEvent,
   DeactivatedQuietAgent,
   DeactivationOffer,
+  InboxAgentJoinRequest,
   InboxItem,
   Message,
   MessageId,
@@ -199,10 +200,10 @@ interface Reading {
   readonly onNudges: (nudges: readonly Nudge[]) => void;
   readonly onDeactivationOffers: (offers: readonly DeactivationOffer[]) => void;
   readonly onDeactivatedQuietAgents: (entries: readonly DeactivatedQuietAgent[]) => void;
+  readonly onAgentJoinRequests: (requests: readonly InboxAgentJoinRequest[]) => void;
 }
 
-interface ReadInbox
-  extends Pick<Reading, "items" | "onAlerts" | "onDeactivatedQuietAgents" | "onDeactivationOffers" | "onNudges"> {
+interface ReadInbox extends Omit<Reading, "client" | "onRead"> {
   readonly inbox: Awaited<ReturnType<Reading["client"]["inbox"]>>;
 }
 
@@ -213,6 +214,7 @@ function readIntoItems(reading: ReadInbox): void {
   onNudges(inbox.nudges);
   onDeactivationOffers(inbox.deactivationOffers);
   onDeactivatedQuietAgents(inbox.deactivatedQuietAgents);
+  reading.onAgentJoinRequests(inbox.agentJoinRequests);
 }
 
 async function readInto(reading: Reading): Promise<void> {

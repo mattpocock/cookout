@@ -18,8 +18,10 @@
  * when it has something new (`marked`), highlighted when it is the open item, with an icon and any `CountBadge` after
  * it: a count read out by its label, loud (the accent), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
  * `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens
- * its `choices` as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
- * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's. `NavHeading` heads a `NavList`
+ * its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
+ * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's; under a `PersonKeysArea`, its
+ * keys (View profile, Message, Copy name, which a polite status announces) act on the name while focus is in it.
+ * `NavHeading` heads a `NavList`
  * of links: its label is a button that folds the list away (`folded`), and any `HeadingButton` on its line, shown while
  * the pointer is on the sidebar, is a plus named by its label that starts something new, such as a channel; in the
  * footer, `FooterLink` is a gear button-link named by its label, such as Settings, beside the identity, highlighted
@@ -27,7 +29,7 @@
  * description, then the `PaneSearch` it is given and any action on its right, such as a `PressButton`, a button that is
  * on or off), a named `Page` that scrolls a centred column of `PageSection`s, each headed by a link to itself, its
  * heading focused when `focused`, and any `add` as a plus button on its right, such as Settings' New agent, that says
- * it is `expanded` while what it adds is open (such as Settings, where `ChoiceGroup` picks one of a few choices), a
+ * it is `expanded` while what it adds is open (such as Settings, where `ChoiceGroup` is a radio group of a few choices), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless scrolled up, and anything under it,
  * such as a message box in a `BoxFrame` (a rounded frame one line tall that grows with its text up to five lines, then
  * scrolls, a short hint as the placeholder, and its round send button at its bottom right); `SidePanel` is a named
@@ -137,16 +139,15 @@
  * to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts
  * a new line, and, while its owner is `choosing` from suggestions, is a combobox naming the highlighted option as its
  * active descendant, where the arrows move it, Enter or Tab picks it and Escape closes the list; `SubmitButton` sends
- * it, a primary `Button` (Cursor Style's: `variant` primary, secondary, outline, ghost or text; `tone` default,
- * monochrome, secondary, tertiary or danger; `size` sm to xl or icon-sm to icon-xl; `rounded`; `QuietButton`,
- * `RowButton` and `PressButton` are outline ones), and `SendButton` is its paper-plane icon form, named and tooltipped
+ * it, a primary `Button` (Cursor Style's `variant`, `tone`, `size` and `rounded`; `QuietButton`, `RowButton` and
+ * `PressButton` are outline ones), and `SendButton` is its paper-plane icon form, named and tooltipped
  * by `label`; `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any
  * muted detail after it), one selected, which leaves the box focused even when a pointer picks one; it sits in the
  * overlay layer, above everything else in the pane. `ComboboxField` is a named search input (`box` its ID) led by a search
  * icon, that is a combobox controlling the listbox `list`, its option at `active` the active one while
- * `expanded`; `ResultList` is a named listbox (`list` its ID) of named `ResultGroup`s of `ResultOption`s, each a label,
- * any muted detail and its children, highlighted (and scrolled into view) when `highlighted`; pressing one calls
- * `onChoose` with its `href`, leaving the box focused. `DataArea` is a labelled box to write JSON in, `LinesArea` an
+ * `expanded`; `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named groups, drawn by
+ * its children, the one at `highlighted` selected (scrolled into view in the `results` look); pressing one calls
+ * `onChoose` with its `value`, leaving the box focused; `ResultOption` is a result's label, detail and children. `DataArea` is a labelled box to write JSON in, `LinesArea` an
  * optional one for lines (`name: value` headers), whose text its owner holds. `PromptForm` is a named card in place of
  * a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused, and
  * Escape anywhere in it calls `onEscape`; in it `InputField` (text, a number, an integer, a date or a time), `PickField`
@@ -203,12 +204,14 @@ export {
   Mention,
   IdentityCard,
   PersonMenu,
+  PersonKeysArea,
   IdentityCardComposer,
   IdentityCards,
   ReactionChip,
   ReactionChips,
 } from "./lib/messages.ts";
 export type {
+  PersonKeysSource,
   IdentityCardLink,
   IdentityCardParts,
   IdentityCardSource,
@@ -260,8 +263,9 @@ export {
   PromptForm,
   Suggestions,
   ComboboxField,
-  ResultGroup,
-  ResultList,
+  Listbox,
+  type ListboxGroup,
+  type ListboxOption,
   ResultOption,
   SendButton,
   SubmitButton,

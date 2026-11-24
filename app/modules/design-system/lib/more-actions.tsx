@@ -9,6 +9,7 @@ interface MoreActionsParts {
   readonly choices: readonly MenuChoice[];
   readonly label: string;
   readonly quiet?: boolean;
+  readonly inTabOrder?: boolean;
 }
 
 export function MoreActions(parts: MoreActionsParts): ReactNode {
@@ -17,7 +18,12 @@ export function MoreActions(parts: MoreActionsParts): ReactNode {
   const handleReturned = menu.onReturned;
   return (
     <Root onOpenChange={handleOpenChange} open={menu.open}>
-      <MoreActionsButton label={parts.label} quiet={parts.quiet ?? false} returning={menu.returning} />
+      <MoreActionsButton
+        inTabOrder={parts.inTabOrder ?? true}
+        label={parts.label}
+        quiet={parts.quiet ?? false}
+        returning={menu.returning}
+      />
       <Portal>
         <MoreActionsContent choices={parts.choices} onReturned={handleReturned} />
       </Portal>

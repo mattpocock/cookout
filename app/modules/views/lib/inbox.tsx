@@ -28,11 +28,11 @@ export function InboxView(props: InboxProps): ReactNode {
   const { board, composer, keymap, me, selected, unread } = props;
   const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
   const rows = useInboxRows({ me, selected, state, unread });
-  const { deactivatedQuietAgents, deactivationOffers, nudges } = unread;
+  const { agentJoinRequests, deactivatedQuietAgents, deactivationOffers, nudges } = unread;
   const { identities } = composer;
   const notices = useMemo(
-    () => ({ deactivatedQuietAgents, deactivationOffers, identities, nudges }),
-    [deactivatedQuietAgents, deactivationOffers, nudges, identities],
+    () => ({ agentJoinRequests, deactivatedQuietAgents, deactivationOffers, identities, nudges }),
+    [agentJoinRequests, deactivatedQuietAgents, deactivationOffers, nudges, identities],
   );
   useInboxKeys({ conversation: CONVERSATION, keymap, selected: selected !== null });
   return (

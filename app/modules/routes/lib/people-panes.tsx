@@ -27,7 +27,13 @@ export function PeoplePanes(props: PeoplePanesProps): ReactNode {
   const open = openOf(route);
   return (
     <>
-      <PeopleView identities={composer.identities} layout={props.layout} me={props.me} open={open} />
+      <PeopleView
+        identities={composer.identities}
+        keymap={props.keymap}
+        layout={props.layout}
+        me={props.me}
+        open={open}
+      />
       {open !== null && (
         <ProfileView
           closeHref={hrefOf({ name: "people" })}

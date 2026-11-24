@@ -14,7 +14,7 @@ const sessionHash = tokenHash("hash:session");
 const ada = identity("ada", { kind: "human" });
 const agent = identity("triage-agent", { kind: "agent", owner: ada.name });
 const WEEK = 604_800;
-const FAILING_CALLS = 4;
+const FAILING_CALLS = 5;
 
 const request = {
   agent: agent.name,
@@ -29,6 +29,16 @@ const request = {
 const approval = { created: true, force: false, identity: agent.name, idleSeconds: WEEK };
 
 type Store = Storage["Service"];
+
+const later = {
+  agent: agent.name,
+  createdAt: before,
+  expiresAt,
+  host: "build-box",
+  requestHash: tokenHash("hash:later"),
+  userCode: "LATE-CODE",
+};
+const pendingOf = { agent: agent.name, host: "build-box" };
 
 function withAgent(storage: Store): Effect.Effect<void, StorageUnavailable> {
   const adaCreated = storage.createIdentity(ada, tokenHash("hash:ada"));
@@ -154,6 +164,35 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): the pending agent join requests are listed oldest first, until approved or expired",
+  ({ layer }) =>
+    Effect.gen(function* listPending() {
+      const { storage } = yield* openStore(layer);
+      yield* Effect.andThen(
+        storage.addAgentJoinRequest({ ...later, expiresAt: sessionExpiry }, before),
+        storage.addAgentJoinRequest(request, created),
+      );
+      const listed = yield* storage.listPendingAgentJoinRequests(before);
+      yield* storage.approveAgentJoinRequest("LATE-CODE", approval, before);
+      const approvedGone = yield* storage.listPendingAgentJoinRequests(before);
+      yield* storage.addAgentJoinRequest(
+        { ...later, requestHash: tokenHash("hash:third"), userCode: "NEXT-CODE" },
+        before,
+      );
+      const expiredGone = yield* storage.listPendingAgentJoinRequests(after);
+
+      expect([listed, approvedGone, expiredGone]).toStrictEqual([
+        [
+          { ...pendingOf, createdAt: created, expiresAt, userCode: "WDJB-MJHT" },
+          { ...pendingOf, createdAt: before, expiresAt: sessionExpiry, userCode: "LATE-CODE" },
+        ],
+        [{ ...pendingOf, createdAt: created, expiresAt, userCode: "WDJB-MJHT" }],
+        [],
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): a closed store can't keep agent join requests",
   ({ layer }) =>
     Effect.gen(function* closed() {
@@ -165,6 +204,7 @@ it.effect.each(storageLayers)(
           Effect.flip(storage.findAgentJoinRequest("WDJB-MJHT", before)),
           Effect.flip(storage.approveAgentJoinRequest("WDJB-MJHT", approval, before)),
           Effect.flip(storage.collectAgentJoinRequest({ now: before, requestHash, sessionHash })),
+          Effect.flip(storage.listPendingAgentJoinRequests(before)),
         ],
         { concurrency: 1 },
       );

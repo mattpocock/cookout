@@ -97,11 +97,13 @@
  * presses in a text field other than `Esc`,
  * presses with Ctrl, Alt or Meta held, and presses another handler already took. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
- * are, a name filter and All / Humans / Agents chips, each counting what the
+ * are, a name filter and an All / Humans / Agents radio group, each counting what the
  * name filter leaves (both kept in the `layout` store), and a row per
  * identity shown, with its avatar, name, "(you)" on the logged-in human, its
  * `agent` and `admin` tags and its kind and owner, the open one highlighted;
- * "Nobody matches." when the filters leave none. `ProfileView` is the panel
+ * "Nobody matches." when the filters leave none. The rows are one Tab stop: ↑/↓ (the keymap's `people list`) move
+ * between them, and on any focused name (`Authors` gives the keymap's `person` keys) Enter views the profile, m
+ * messages them where there is a message box and c copies `@name`, said in a polite status. `ProfileView` is the panel
  * beside it for one identity: its large avatar, name and tags, display name,
  * kind and owner, its presence (how it is connected while online, "Online ·
  * watching from laptop-1", "Online · watching" or "Online · web", or when it

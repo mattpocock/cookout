@@ -2,7 +2,7 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, JoinCodeResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
+import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
@@ -25,6 +25,7 @@ export declare function isListChannelsResponse(data: unknown): data is ListChann
 export declare function isCallCommandResponse(data: unknown): data is CallCommandResponse;
 export declare function isCommandWithSecretResponse(data: unknown): data is CommandWithSecretResponse;
 export declare function isListCommandsResponse(data: unknown): data is ListCommandsResponse;
+export declare function isAgentJoinRequestsEvent(data: unknown): data is AgentJoinRequestsEvent;
 export declare function isAgentSessionEvent(data: unknown): data is AgentSessionEvent;
 export declare function isChannelDeletedEvent(data: unknown): data is ChannelDeletedEvent;
 export declare function isChannelEvent(data: unknown): data is ChannelEvent;

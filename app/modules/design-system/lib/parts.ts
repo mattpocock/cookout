@@ -66,6 +66,7 @@ interface IdentityRowParts {
   readonly active: boolean;
   readonly detail: string;
   readonly note: string | null;
+  readonly tabbable: boolean;
   readonly children?: ReactNode;
 }
 

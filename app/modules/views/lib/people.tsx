@@ -2,21 +2,17 @@ import { FilterField, Pane, PaneHeader, SwitchField, Toolbar, ToolbarDivider } f
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { KindChoice, Layout } from "../../layout/index.ts";
 import type { Identities } from "../../composer/index.ts";
-import { KindChip } from "./kind-chip.tsx";
+import type { Keymap } from "../../keymap/index.ts";
+import { KindFilter } from "./kind-filter.tsx";
 import { PeopleRows } from "./people-rows.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { deactivated: "Show deactivated", filter: "Filter by name", title: "People & agents" } as const;
 
-const KINDS = [
-  { kind: "all", label: "All" },
-  { kind: "human", label: "Humans" },
-  { kind: "agent", label: "Agents" },
-] as const;
-
 interface PeopleProps {
   readonly identities: Identities;
+  readonly keymap: Keymap;
   readonly layout: Layout;
   readonly me: IdentityName;
   readonly open: IdentityName | null;
@@ -37,6 +33,14 @@ function named(listed: readonly Identity[], filter: string): readonly Identity[]
   );
 }
 
+function countsOf(listed: readonly Identity[]): Readonly<Record<KindChoice, number>> {
+  return {
+    agent: ofKind(listed, "agent").length,
+    all: listed.length,
+    human: ofKind(listed, "human").length,
+  };
+}
+
 export function PeopleView(props: PeopleProps): ReactNode {
   const { layout } = props;
   const everyone = useSyncExternalStore(props.identities.subscribe, props.identities.snapshot);
@@ -51,20 +55,11 @@ export function PeopleView(props: PeopleProps): ReactNode {
       <PaneHeader description={`${String(listed.length)} identities`} sans title={TEXT.title} />
       <Toolbar>
         <FilterField label={TEXT.filter} onEdit={handleEdit} value={state.identityFilter} />
-        {KINDS.map((each) => (
-          <KindChip
-            count={ofKind(matching, each.kind).length}
-            key={each.kind}
-            kind={each.kind}
-            label={each.label}
-            layout={layout}
-            pressed={state.identityKind === each.kind}
-          />
-        ))}
+        <KindFilter counts={countsOf(matching)} layout={layout} value={state.identityKind} />
         <ToolbarDivider />
         <SwitchField checked={state.showDeactivated} label={TEXT.deactivated} onToggle={handleToggle} />
       </Toolbar>
-      <PeopleRows listed={everyone} me={props.me} open={props.open} shown={shown} />
+      <PeopleRows keymap={props.keymap} listed={everyone} me={props.me} open={props.open} shown={shown} />
     </Pane>
   );
 }

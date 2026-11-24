@@ -5,8 +5,9 @@ import type {
   AgentJoinRequestsSection,
   CollectAgentJoinRequest,
   NewAgentJoinRequest,
+  PendingAgentJoinRequest,
 } from "./agent-join-requests.ts";
-import { Array as Arr, Effect, Option, pipe } from "effect";
+import { Array as Arr, Effect, Option, Order, pipe } from "effect";
 import { GONE, PENDING, collectionOf, sessionToIssue } from "./agent-join-requests.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
 import type { Fails } from "./errors.ts";
@@ -49,6 +50,25 @@ function dropExpired(requests: Requests, now: IsoTime): void {
       requests.delete(hash);
     }
   }
+}
+
+const oldestFirst: Order.Order<NewAgentJoinRequest> = Order.combine(
+  Order.mapInput(Order.String, (request: NewAgentJoinRequest) => request.createdAt),
+  Order.mapInput(Order.String, (request: NewAgentJoinRequest) => request.userCode),
+);
+
+function pendingOf({ agent, createdAt, expiresAt, host, userCode }: NewAgentJoinRequest): PendingAgentJoinRequest {
+  return { agent, createdAt, expiresAt, host, userCode };
+}
+
+function pendingIn(requests: Requests, now: IsoTime): readonly PendingAgentJoinRequest[] {
+  dropExpired(requests, now);
+  const unapproved = Arr.filter([...requests.values()], ({ approval }) => Option.isNone(approval));
+  const sorted = Arr.sort(
+    Arr.map(unapproved, ({ request }) => request),
+    oldestFirst,
+  );
+  return Arr.map(sorted, pendingOf);
 }
 
 function liveByCode(requests: Requests, userCode: string, now: IsoTime): Option.Option<Kept> {
@@ -129,6 +149,7 @@ function memoryAgentJoinRequests({
       ),
     findAgentJoinRequest: (userCode, now) =>
       open(() => pipe(liveByCode(requests, userCode, now), Option.map(shown), Option.getOrUndefined)),
+    listPendingAgentJoinRequests: (now) => open(() => pendingIn(requests, now)),
   };
 }
 

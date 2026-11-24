@@ -34,6 +34,5 @@ export { Chip } from "./chip.tsx";
 export { SwitchField } from "./switch-field.tsx";
 export { FilterField } from "./filter-field.tsx";
 export { ComboboxField } from "./combobox-field.tsx";
-export { ResultGroup } from "./result-group.tsx";
-export { ResultList } from "./result-list.tsx";
+export { Listbox, type ListboxGroup, type ListboxOption } from "./listbox.tsx";
 export { ResultOption } from "./result-option.tsx";

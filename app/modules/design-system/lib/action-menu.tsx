@@ -8,20 +8,26 @@ const TEXT = { more: "More actions" } as const;
 interface ActionMenuFrame extends ActionMenuParts {
   readonly inline?: boolean;
   readonly quiet?: boolean;
+  readonly moreInTabOrder?: boolean;
   readonly children: ReactNode;
 }
 
-export function ActionMenu(parts: ActionMenuFrame): ReactNode {
-  const { choices } = parts;
-  const inline = parts.inline ?? false;
-  const more = (
+function moreOf(parts: ActionMenuFrame, inline: boolean): ReactNode {
+  return (
     <HoverMoreActions
-      choices={choices}
+      choices={parts.choices}
+      inTabOrder={parts.moreInTabOrder ?? true}
       inline={inline}
       label={parts.buttonLabel ?? TEXT.more}
       quiet={parts.quiet ?? false}
     />
   );
+}
+
+export function ActionMenu(parts: ActionMenuFrame): ReactNode {
+  const { choices } = parts;
+  const inline = parts.inline ?? false;
+  const more = moreOf(parts, inline);
   if (inline) {
     return (
       <ActionContextMenu choices={choices} label={parts.label}>

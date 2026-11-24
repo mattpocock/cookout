@@ -58,6 +58,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
           actions={props.notices}
           deactivated={unread.deactivatedQuietAgents}
           held={unread.heldDeactivatedQuietAgents}
+          joinRequests={unread.agentJoinRequests}
           nudges={unread.nudges}
           offers={unread.deactivationOffers}
         />

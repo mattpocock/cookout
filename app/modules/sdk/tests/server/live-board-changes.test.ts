@@ -136,9 +136,9 @@ it.effect("collecting an approved join request tells the agent's owner", () =>
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     yield* cookout.createIdentity("release-bot", { owner: "ada" });
-    const events = yield* watchingAllChannels(ada.client);
     const started = yield* answer(() => cookout.clientFor().startAgentJoin({ as: "release-bot", host: "build-box" }));
     yield* answer(() => ada.client.approveAgentJoin(started.userCode));
+    const events = yield* watchingAllChannels(ada.client);
     yield* answer(() => cookout.clientFor().collectAgentJoin(started.requestId));
     const event = yield* events.next;
 

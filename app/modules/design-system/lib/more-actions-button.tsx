@@ -7,6 +7,17 @@ interface MoreActionsButtonParts {
   readonly label: string;
   readonly quiet: boolean;
   readonly returning: boolean;
+  readonly inTabOrder: boolean;
+}
+
+const TAB_STOP = 0;
+const OUT_OF_TAB_ORDER = -1;
+
+function tabIndexOf(inTabOrder: boolean): number {
+  if (inTabOrder) {
+    return TAB_STOP;
+  }
+  return OUT_OF_TAB_ORDER;
 }
 
 const LOOKS = {
@@ -29,6 +40,7 @@ export function MoreActionsButton(parts: MoreActionsButtonParts): ReactNode {
         aria-label={parts.label}
         className={lookOf(parts)}
         data-returning={String(parts.returning)}
+        tabIndex={tabIndexOf(parts.inTabOrder)}
         title={parts.label}
         type="button"
       >

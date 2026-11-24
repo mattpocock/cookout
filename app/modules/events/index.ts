@@ -10,6 +10,7 @@
 import type {
   DeactivatedQuietAgent,
   DeactivationOffer,
+  InboxAgentJoinRequest,
   InboxItem,
   MovedBackReadPosition,
   Nudge,
@@ -76,6 +77,16 @@ export interface DeactivatedQuietAgentEvent {
 export interface DeactivationOfferEvent {
   readonly type: "deactivation-offer";
   readonly deactivationOffer: DeactivationOffer;
+}
+
+/**
+ * The pending Agent join requests the caller may approve, all of them, oldest first, as they now stand: sent whenever
+ * one for an agent the caller owns or brought in starts, is approved or expires, on every stream of the caller's,
+ * `cookout watch` included. It replaces the list the inbox gave. It has no SSE `id`.
+ */
+export interface AgentJoinRequestsEvent {
+  readonly type: "agent-join-requests";
+  readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
 }
 
 /** The caller's new read position in a thread or channel, sent the moment any session of the caller acks. */
@@ -234,6 +245,7 @@ export type CookoutEvent =
   | NudgeReadEvent
   | DeactivationOfferEvent
   | DeactivatedQuietAgentEvent
+  | AgentJoinRequestsEvent
   | ReadPositionEvent
   | ReadPositionMovedBackEvent
   | MessageEvent

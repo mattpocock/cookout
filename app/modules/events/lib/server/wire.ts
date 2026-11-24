@@ -1,4 +1,5 @@
 import type {
+  AgentJoinRequestsEvent,
   AgentSessionEvent,
   ChannelDeletedEvent,
   ChannelEvent,
@@ -26,6 +27,7 @@ import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import {
   DeactivatedQuietAgentSchema,
   DeactivationOfferSchema,
+  InboxAgentJoinRequestSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
   NudgeIdSchema,
@@ -71,6 +73,13 @@ export const DeactivatedQuietAgentEventSchema = matchesWire<DeactivatedQuietAgen
 
 export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(
   Schema.Struct({ deactivationOffer: DeactivationOfferSchema, type: Schema.Literal("deactivation-offer") }),
+);
+
+export const AgentJoinRequestsEventSchema = matchesWire<AgentJoinRequestsEvent>()(
+  Schema.Struct({
+    agentJoinRequests: Schema.Array(InboxAgentJoinRequestSchema),
+    type: Schema.Literal("agent-join-requests"),
+  }),
 );
 
 export const ReadPositionEventSchema = matchesWire<ReadPositionEvent>()(

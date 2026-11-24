@@ -34,8 +34,16 @@ function filterBy(text: string): void {
   fireEvent.change(screen.getByRole("textbox", { name: "Filter by name" }), { target: { value: text } });
 }
 
-function chip(label: string): HTMLElement {
-  return inPane().getByRole("button", { name: (name) => name.startsWith(`${label} `) });
+function kind(label: string): HTMLElement {
+  return inPane().getByRole("radio", { name: (name) => name.startsWith(`${label} `) });
+}
+
+function kindText(label: string): string {
+  const shown = kind(label).closest("label");
+  if (shown === null) {
+    return "";
+  }
+  return shown.textContent;
 }
 
 async function openFiltered(client: CookoutClient, hash: string, filter: string): Promise<() => void> {
@@ -101,16 +109,16 @@ it("#/people lists every identity, with its kind, owner and tags, and you marked
   close();
 });
 
-it("the chips narrow the list to humans or agents, and count what the name filter leaves", {
+it("the kind filter narrows the list to humans or agents, and count what the name filter leaves", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   const close = await openFiltered(await crewOf("web-people-chips"), "#/people", "web-people-chips");
-  const counts = [chip("All").textContent, chip("Humans").textContent, chip("Agents").textContent];
-  fireEvent.click(chip("Agents"));
-  const agents = [...rowTexts(), chip("All").getAttribute("aria-pressed"), chip("Agents").getAttribute("aria-pressed")];
-  fireEvent.click(chip("Humans"));
+  const counts = [kindText("All"), kindText("Humans"), kindText("Agents")];
+  fireEvent.click(kind("Agents"));
+  const agents = [...rowTexts(), kind("All").matches(":checked"), kind("Agents").matches(":checked")];
+  fireEvent.click(kind("Humans"));
   const humans = rowTexts();
   filterBy("web-people-chips-nobody");
 
@@ -119,8 +127,8 @@ it("the chips narrow the list to humans or agents, and count what the name filte
     [
       "web-people-chips-botagentAgent · owned by web-people-chips-human",
       "web-people-chips-loneragentAgent · owned by admin",
-      "false",
-      "true",
+      false,
+      true,
     ],
     ["web-people-chips-bossadminHuman", "web-people-chips-human(you)Human"],
     "Nobody matches.",

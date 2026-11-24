@@ -1,4 +1,4 @@
-const SCOPES = ["search box", "text box", "profile panel", "inbox", "everywhere"] as const;
+const SCOPES = ["search box", "text box", "person", "people list", "profile panel", "inbox", "everywhere"] as const;
 
 type Scope = (typeof SCOPES)[number];
 
@@ -7,6 +7,8 @@ const TEXT_SCOPES: ReadonlySet<Scope> = new Set(["search box", "text box"]);
 const GROUPS: Readonly<Record<Scope, string>> = {
   everywhere: "Everywhere",
   inbox: "Inbox row",
+  "people list": "People list",
+  person: "Person",
   "profile panel": "Profile panel",
   "search box": "Search box",
   "text box": "Message box",
@@ -21,6 +23,11 @@ const KEYS = [
   { action: "openHighlighted", chord: "Enter", does: "Open the highlighted result", scope: "search box" },
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
+  { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
+  { action: "messagePerson", chord: "m", does: "Message them", scope: "person" },
+  { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
+  { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
+  { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "nextRow", chord: "j", does: "Next row", scope: "inbox" },
   { action: "nextRow", chord: "ArrowDown", does: "Next row", scope: "inbox" },

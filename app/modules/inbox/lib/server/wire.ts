@@ -7,6 +7,7 @@ import type {
   DeactivationOffer,
   DeactivationOfferResponse,
   FollowResponse,
+  InboxAgentJoinRequest,
   InboxHistoryItem,
   InboxHistoryNudge,
   InboxHistoryResponse,
@@ -100,6 +101,17 @@ const DeactivatedQuietAgentResponseSchema = matchesWire<DeactivatedQuietAgentRes
   Schema.Struct({ deactivatedQuietAgent: DeactivatedQuietAgentSchema }),
 );
 
+const InboxAgentJoinRequestSchema = matchesWire<InboxAgentJoinRequest>()(
+  Schema.Struct({
+    agent: IdentitySchema,
+    createdAt: IsoTimeSchema,
+    expiresAt: IsoTimeSchema,
+    host: Schema.String,
+    text: Schema.String,
+    userCode: Schema.String,
+  }),
+);
+
 const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
   Schema.Struct({ ...inboxItemFields, read: Schema.Boolean }),
 );
@@ -181,6 +193,7 @@ export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
 
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
   Schema.Struct({
+    agentJoinRequests: Schema.Array(InboxAgentJoinRequestSchema),
     alerts: Schema.Array(OfflineAlertSchema),
     deactivatedQuietAgents: Schema.Array(DeactivatedQuietAgentSchema),
     deactivationOffers: Schema.Array(DeactivationOfferSchema),
@@ -206,6 +219,7 @@ export {
   DeactivatedQuietAgentSchema,
   DeactivationOfferResponseSchema,
   DeactivationOfferSchema,
+  InboxAgentJoinRequestSchema,
   NudgeIdSchema,
   NudgeResponseSchema,
   NudgeSchema,

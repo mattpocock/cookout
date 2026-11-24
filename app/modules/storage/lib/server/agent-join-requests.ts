@@ -23,6 +23,14 @@ interface AgentJoinRequest {
   readonly approved: boolean;
 }
 
+interface PendingAgentJoinRequest {
+  readonly userCode: string;
+  readonly agent: IdentityName;
+  readonly host: string;
+  readonly createdAt: IsoTime;
+  readonly expiresAt: IsoTime;
+}
+
 interface AgentJoinApproval {
   readonly identity: IdentityName;
   readonly created: boolean;
@@ -51,6 +59,7 @@ type AgentJoinCollection =
 interface AgentJoinRequestsSection {
   readonly addAgentJoinRequest: (request: NewAgentJoinRequest, now: IsoTime) => Fails<"added" | "code_taken">;
   readonly findAgentJoinRequest: (userCode: string, now: IsoTime) => Fails<AgentJoinRequest | undefined>;
+  readonly listPendingAgentJoinRequests: (now: IsoTime) => Fails<readonly PendingAgentJoinRequest[]>;
   readonly approveAgentJoinRequest: (
     userCode: string,
     approval: AgentJoinApproval,
@@ -100,4 +109,5 @@ export type {
   AgentJoinRequestsSection,
   CollectAgentJoinRequest,
   NewAgentJoinRequest,
+  PendingAgentJoinRequest,
 };

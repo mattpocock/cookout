@@ -14,6 +14,7 @@ const QUIET =
 interface HoverMoreActionsParts {
   readonly choices: readonly MenuChoice[];
   readonly inline: boolean;
+  readonly inTabOrder: boolean;
   readonly label: string;
   readonly quiet: boolean;
 }
@@ -31,7 +32,7 @@ function placeOf(parts: HoverMoreActionsParts): string {
 export function HoverMoreActions(parts: HoverMoreActionsParts): ReactNode {
   return (
     <span className={placeOf(parts)}>
-      <MoreActions choices={parts.choices} label={parts.label} quiet={parts.quiet} />
+      <MoreActions choices={parts.choices} inTabOrder={parts.inTabOrder} label={parts.label} quiet={parts.quiet} />
     </span>
   );
 }

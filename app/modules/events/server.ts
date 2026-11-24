@@ -34,6 +34,7 @@
  * `GET /v1/presence`, is among the Schemas below so the SDK reads it with the event.
  */
 import {
+  AgentJoinRequestsEventSchema,
   AgentSessionEventSchema,
   ChannelDeletedEventSchema,
   ChannelEventSchema,
@@ -112,6 +113,7 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute, ...cleanCloseR
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
+  AgentJoinRequestsEvent: AgentJoinRequestsEventSchema,
   AgentSessionEvent: AgentSessionEventSchema,
   ChannelDeletedEvent: ChannelDeletedEventSchema,
   ChannelEvent: ChannelEventSchema,

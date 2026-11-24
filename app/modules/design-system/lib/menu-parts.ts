@@ -1,4 +1,5 @@
 import type { MenuIcon } from "./menu-icons.ts";
+import type { Shortcut } from "./shortcut.ts";
 
 interface ReactionChoice {
   readonly symbol: string;
@@ -29,6 +30,7 @@ interface MessageActionParts {
 interface MenuChoiceLabel {
   readonly label: string;
   readonly icon: MenuIcon;
+  readonly keys?: Shortcut;
 }
 
 type MenuChoice =
