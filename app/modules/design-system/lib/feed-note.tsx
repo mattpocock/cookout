@@ -6,8 +6,8 @@ interface FeedNoteParts {
 }
 
 const PLACES = {
-  empty: "px-3 py-6 text-sm text-muted-foreground",
-  end: "py-4 text-center text-[11px] text-muted-foreground",
+  empty: "px-1.5 py-6 text-sm text-muted-foreground",
+  end: "pt-8 pb-4 text-center text-[11px] text-muted-foreground",
 } as const;
 
 export function FeedNote(parts: FeedNoteParts): ReactNode {

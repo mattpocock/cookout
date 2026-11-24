@@ -26,7 +26,7 @@ export function SuggestionOption(parts: OptionParts): ReactNode {
       <button
         aria-current={parts.highlighted}
         aria-label={presenceNameOf({ name: parts.spoken, presence })}
-        className={`flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted focus:bg-muted focus:outline-none ${optionStyle(parts.highlighted)}`}
+        className={`flex w-full items-baseline gap-2 rounded-md px-2 py-1.5 text-left text-foreground hover:bg-muted focus:bg-muted focus:outline-none ${optionStyle(parts.highlighted)}`}
         onClick={handleClick}
         type="button"
       >

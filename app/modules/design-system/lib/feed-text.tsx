@@ -14,7 +14,9 @@ function colourOf(unread: boolean): string {
 
 export function FeedText(parts: FeedTextParts): ReactNode {
   return (
-    <span className={`mt-1 line-clamp-2 text-sm leading-relaxed whitespace-pre-wrap ${colourOf(parts.unread)}`}>
+    <span
+      className={`-mx-1 mt-1 line-clamp-2 px-1 py-0.5 text-sm leading-relaxed whitespace-pre-wrap ${colourOf(parts.unread)}`}
+    >
       {parts.children}
     </span>
   );

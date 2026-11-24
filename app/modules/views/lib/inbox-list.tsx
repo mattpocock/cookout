@@ -30,7 +30,7 @@ export function InboxList(props: InboxListProps): ReactNode {
   const actions = useMemo(() => ({ ack, markUnread }), [ack, markUnread]);
   return (
     <ListPane hiddenWhenNarrow={selected !== null}>
-      <InboxHeader board={props.board} state={unread} title={TITLE} unread={props.unread} />
+      <InboxHeader board={props.board} title={TITLE} />
       <Feed label={TITLE}>
         {unread.status === "loaded" && <MarkAllFailed markAll={unread.markAll} />}
         <InboxBody
@@ -40,6 +40,7 @@ export function InboxList(props: InboxListProps): ReactNode {
           onMarkAlertRead={handleMarkAlertRead}
           rows={rows}
           selected={selected}
+          store={props.unread}
           unread={unread}
         />
         {unread.status === "loaded" && (

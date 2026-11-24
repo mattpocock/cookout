@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 export function UnreadIcon(): ReactNode {
   return (
     <MenuIconFrame>
-      <circle cx="8" cy="8" r="5.5" />
-      <circle cx="8" cy="8" fill="currentColor" r="2" />
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
     </MenuIconFrame>
   );
 }

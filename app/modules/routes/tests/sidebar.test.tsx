@@ -58,7 +58,7 @@ async function postedAndCounted(poster: CookoutClient, text: string, count: stri
   await waitFor(() => {
     expect(inboxLink().textContent).toContain(count);
   });
-  return inboxLink().querySelector(".bg-mention-bar") !== null;
+  return inboxLink().querySelector('[class*="bg-mention-bar"]') !== null;
 }
 
 it("the Inbox link is bold for activity, and counts what is for you live, in the accent colour", {

@@ -11,7 +11,7 @@ interface RowParts extends FeedRowContentParts {
 const LOOKS = {
   activity: "",
   "for-you": "",
-  read: "opacity-80 hover:opacity-100",
+  read: "",
 } as const;
 
 function rowLook(parts: RowParts): string {
@@ -33,7 +33,7 @@ export function FeedRow(parts: RowParts): ReactNode {
   }
   return (
     <li className={look}>
-      <ActionMenu choices={menu.choices} label={menu.label}>
+      <ActionMenu choices={menu.choices} label={menu.label} quiet>
         <FeedRowContent row={parts} />
       </ActionMenu>
     </li>

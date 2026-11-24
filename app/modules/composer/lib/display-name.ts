@@ -9,6 +9,7 @@ type SaveState =
   | (Refusal & { readonly status: "failed" });
 
 interface DisplayNameSnapshot {
+  readonly open: boolean;
   readonly text: string | null;
   readonly save: SaveState;
 }
@@ -18,26 +19,36 @@ interface DisplayNameDraft {
   readonly snapshot: () => DisplayNameSnapshot;
   readonly edit: (text: string) => void;
   readonly save: (text: string) => void;
+  readonly open: () => void;
+  readonly close: () => void;
 }
 
 interface DisplayNameOptions {
   readonly set: (name: IdentityName, text: string | null) => Promise<void>;
   readonly list: IdentityList;
   readonly name: IdentityName;
+  readonly ownNameClears: boolean;
 }
 
-function sentOf(text: string): string | null {
-  const trimmed = text.trim();
-  if (trimmed === "") {
+interface Sent {
+  readonly name: IdentityName;
+  readonly ownNameClears: boolean;
+  readonly text: string;
+}
+
+function sentOf(sent: Sent): string | null {
+  const trimmed = sent.text.trim();
+  if (trimmed === "" || (sent.ownNameClears && trimmed === String(sent.name))) {
     return null;
   }
   return trimmed;
 }
 
 function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
-  const { list, name, set } = options;
+  const { list, name, ownNameClears, set } = options;
   const listeners = listenersOf(list.show);
-  let current: DisplayNameSnapshot = { save: { status: "idle" }, text: null };
+  const CLOSED: DisplayNameSnapshot = { open: false, save: { status: "idle" }, text: null };
+  let current = CLOSED;
   let saving = Promise.resolve();
 
   function publish(next: DisplayNameSnapshot): void {
@@ -47,10 +58,10 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
 
   async function send(text: string): Promise<void> {
     try {
-      await set(name, sentOf(text));
-      publish({ save: { status: "idle" }, text: null });
+      await set(name, sentOf({ name, ownNameClears, text }));
+      publish(CLOSED);
     } catch (error: unknown) {
-      publish({ save: { ...refusalOf(error), status: "failed" }, text });
+      publish({ ...current, save: { ...refusalOf(error), status: "failed" }, text });
     }
   }
 
@@ -60,11 +71,19 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
   }
 
   return {
+    close: () => {
+      if (current.save.status !== "saving") {
+        publish(CLOSED);
+      }
+    },
     edit: (text) => {
       publish({ ...current, text });
     },
+    open: () => {
+      publish({ ...current, open: true });
+    },
     save: (text) => {
-      publish({ save: { status: "saving" }, text });
+      publish({ ...current, save: { status: "saving" }, text });
       saving = sendAfter(saving, text);
     },
     snapshot: () => current,

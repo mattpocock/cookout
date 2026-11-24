@@ -1,3 +1,4 @@
+import { AGENT_MENU_ICONS } from "./agent-menu-icons.ts";
 import { CHANNEL_MENU_ICONS } from "./channel-menu-icons.ts";
 import { PERSON_MENU_ICONS } from "./person-menu-icons.ts";
 import type { ReactNode } from "react";
@@ -14,6 +15,7 @@ const MENU_ICONS = {
   react: SmileIcon,
   reply: ReplyIcon,
   ...PERSON_MENU_ICONS,
+  ...AGENT_MENU_ICONS,
   ...CHANNEL_MENU_ICONS,
   ...THREAD_MENU_ICONS,
 } as const satisfies Readonly<Record<string, () => ReactNode>>;

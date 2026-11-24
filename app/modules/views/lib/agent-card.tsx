@@ -1,21 +1,31 @@
-import { ActionGroup, ProfileName } from "../../design-system/index.tsx";
-import type { Identities } from "../../composer/index.ts";
+import { ActionGroup, SettingLine } from "../../design-system/index.tsx";
+import type { DisplayNameDraft, Identities } from "../../composer/index.ts";
+import { AgentMenu } from "./agent-menu.tsx";
+import { AgentNameDialog } from "./agent-name-dialog.tsx";
+import { AgentSummary } from "./agent-summary.tsx";
 import type { Identity } from "../../sdk/index.ts";
-import { IdentityActionsView } from "./identity-actions.tsx";
+import { IdentityConfirm } from "./identity-confirm.tsx";
 import type { ReactNode } from "react";
-import { noteOf } from "./use-author.ts";
+import { TokenShown } from "./token-shown.tsx";
 
 interface AgentCardProps {
+  readonly draft: DisplayNameDraft;
   readonly identities: Identities;
   readonly identity: Identity;
 }
 
 export function AgentCard(props: AgentCardProps): ReactNode {
   const { identity } = props;
+  const actions = props.identities.actions(identity.name);
   return (
     <ActionGroup label={`@${identity.name}`}>
-      <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)} />
-      <IdentityActionsView deletable={false} identities={props.identities} identity={identity} transfer={false} />
+      <SettingLine>
+        <AgentSummary actions={actions} identity={identity} />
+        <AgentMenu actions={actions} active={identity.deactivated !== true} draft={props.draft} />
+      </SettingLine>
+      <IdentityConfirm actions={actions} identity={identity} />
+      <TokenShown actions={actions} />
+      <AgentNameDialog draft={props.draft} name={identity.name} />
     </ActionGroup>
   );
 }

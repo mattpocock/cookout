@@ -61,7 +61,7 @@ const MARKED: Look = { marker: CLOSED, marks: 1 };
 function shownWith({ channel, mention, parent }: Thread, { marker }: Look): readonly unknown[] {
   return [
     [
-      `#/inbox/${channel}/${String(parent.id)}/messages/${String(mention.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}${marker}2 newjust nowre: Deploy at noon?Two`,
+      `#/inbox/${channel}/${String(parent.id)}/messages/${String(mention.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}${marker}just nowre: Deploy at noon?Two+1 more in this thread`,
     ],
     ["1 unread", "1 for you"],
   ];

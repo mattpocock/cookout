@@ -1,3 +1,4 @@
+import { useMemo, useSyncExternalStore } from "react";
 import type { Composer } from "../../composer/index.ts";
 import { DisplayNames } from "./display-names.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
@@ -9,7 +10,7 @@ import type { SettingsSection } from "../../paths/index.ts";
 import { ThemeChoice } from "./theme-choice.tsx";
 import { hrefOf } from "../../paths/index.ts";
 
-const TEXT = { agents: "My agents", profile: "Profile", theme: "Theme" } as const;
+const TEXT = { agents: "My agents", newAgent: "New agent", profile: "Profile", theme: "Theme" } as const;
 
 interface SettingsSectionsProps {
   readonly composer: Composer;
@@ -20,9 +21,16 @@ interface SettingsSectionsProps {
 
 export function SettingsSections(props: SettingsSectionsProps): ReactNode {
   const { composer, me, section } = props;
+  const { creation } = composer.identities;
+  const creating = useSyncExternalStore(creation.subscribe, creation.snapshot);
+  const add = useMemo(
+    () => ({ expanded: creating.open, label: TEXT.newAgent, onAdd: creation.open }),
+    [creating.open, creation],
+  );
   return (
     <>
       <PageSection
+        add={null}
         focused={section === "profile"}
         href={hrefOf({ name: "settings", section: "profile" })}
         label={TEXT.profile}
@@ -30,6 +38,7 @@ export function SettingsSections(props: SettingsSectionsProps): ReactNode {
         <DisplayNames composer={composer} me={me} />
       </PageSection>
       <PageSection
+        add={null}
         focused={section === "theme"}
         href={hrefOf({ name: "settings", section: "theme" })}
         label={TEXT.theme}
@@ -37,11 +46,12 @@ export function SettingsSections(props: SettingsSectionsProps): ReactNode {
         <ThemeChoice layout={props.layout} />
       </PageSection>
       <PageSection
+        add={add}
         focused={section === "agents"}
         href={hrefOf({ name: "settings", section: "agents" })}
         label={TEXT.agents}
       >
-        <MyAgents identities={composer.identities} me={me} />
+        <MyAgents composer={composer} me={me} />
       </PageSection>
     </>
   );

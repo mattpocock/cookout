@@ -12,6 +12,7 @@ interface MessageBoxText {
 }
 
 const SEND = { posting: "Sending…", ready: "Send" } as const;
+const HINT = "Write a message, @ to mention";
 const NONE = 0;
 
 interface MessageBoxProps {
@@ -36,7 +37,9 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
   const posting = post.status === "posting";
   const handleSend = useCallback(
     (sent: string) => {
-      onPost(sent, draft.clear);
+      if (sent.trim() !== "") {
+        onPost(sent, draft.clear);
+      }
     },
     [draft, onPost],
   );
@@ -57,6 +60,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           onEdit={handleEdit}
           onMove={handleMove}
           onPick={handlePick}
+          placeholder={HINT}
           value={written.text}
         />
         {choosing && (
@@ -67,7 +71,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
             options={shown.options}
           />
         )}
-        <SendButton disabled={posting} label={sendLabelOf(posting)} />
+        <SendButton disabled={posting || written.text.trim() === ""} label={sendLabelOf(posting)} />
       </Form>
       {post.status === "failed" && <Alert>{`Couldn't post the ${text.posts} (${post.code}): ${post.message}`}</Alert>}
     </BoxFrame>

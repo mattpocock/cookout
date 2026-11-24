@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import { adminClient } from "./identities.ts";
-import { fireEvent } from "@testing-library/react";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const EDGE = "Resize the sidebar";
@@ -128,16 +128,16 @@ it("other keys and a secondary-button drag leave the sidebar's width as it is", 
   close();
 });
 
-it("the sidebar collapsed to its rail has no edge to drag", { timeout: 5000 }, async () => {
+it("the hidden sidebar has no edge to drag, and comes back at its width", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const close = openAt({ client: adminClient(), hash: "#/" });
-  await sidebarWidth();
+  const before = await sidebarWidth();
   fireEvent.click(inSidebar().getByRole("button", { name: "Collapse sidebar" }));
-  const shownOnRail = inSidebar().queryByRole("separator", { name: EDGE });
-  fireEvent.click(inSidebar().getByRole("button", { name: "Expand sidebar" }));
+  const shownHidden = screen.queryByRole("separator", { name: EDGE });
+  fireEvent.click(inPane().getByRole("button", { name: "Expand sidebar" }));
 
-  expect([shownOnRail, inSidebar().queryByRole("separator", { name: EDGE }) !== null]).toStrictEqual([null, true]);
+  expect([shownHidden, widthNow()]).toStrictEqual([null, before]);
 
   close();
 });

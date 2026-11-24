@@ -30,10 +30,11 @@
  * that change's state: being sent, or why the server refused it.
  * `displayName(name)` is that identity's display name as it is edited: its
  * text is `null` until edited, so the field shows the saved one; `save` sends
- * the field's text trimmed (empty clears it), puts the answer in the identity
+ * the field's text trimmed (empty clears it, and so does a display name that is just the identity's own name), puts the answer in the identity
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal. `description(name)` is an agent's description as it
- * is edited, and saves the same way.
+ * is edited, and saves the same way. Either is `open` (in a dialog) from `open()` until `close()`
+ * (ignored while saving, and forgetting the text) or a save that succeeds.
  * `identities.actions(name)` is what an agent's owner or an admin does to
  * that identity: rotate its token, list and revoke its agent session (the board store's agent sessions for it, shown while `subscribeToSessions` has a reader),
  * deactivate it, reactivate it, delete it and transfer it. Each is asked
@@ -45,7 +46,8 @@
  * Each answer goes in the identity list at once, and a fresh token is in its
  * snapshot until `forgetToken` (`copyToken` puts it on the clipboard).
  * `identities.creation` creates an agent the caller owns, whose token then
- * shows in that agent's `actions`.
+ * shows in that agent's `actions`. Its form is `open` from `open()` until `close()`
+ * (ignored while creating) or a create that succeeds; a refused create keeps it open.
  * `channelDraft(channel)`, a channel's box, also suggests the registered
  * commands (from the board store's command list, read once the identities load)
  * whose names start with what follows `/` when that is the whole text;
@@ -237,9 +239,13 @@ export function createComposer(options: ComposerOptions): Composer {
         createDraft(list, { commands: registered, identities: list.identities, members: noMembers }),
       ),
     description: (name) =>
-      storeIn(descriptions, name, () => createDisplayName({ list, name, set: list.calls.setDescription })),
+      storeIn(descriptions, name, () =>
+        createDisplayName({ list, name, ownNameClears: false, set: list.calls.setDescription }),
+      ),
     displayName: (name) =>
-      storeIn(displayNames, name, () => createDisplayName({ list, name, set: list.calls.setDisplayName })),
+      storeIn(displayNames, name, () =>
+        createDisplayName({ list, name, ownNameClears: true, set: list.calls.setDisplayName }),
+      ),
     draft: (key, members = noMembers) =>
       storeIn(drafts, key, () =>
         createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members }),

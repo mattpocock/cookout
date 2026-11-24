@@ -1,4 +1,4 @@
-import { Chip, FilterField, Pane, PaneHeader, Toolbar } from "../../design-system/index.tsx";
+import { FilterField, Pane, PaneHeader, SwitchField, Toolbar, ToolbarDivider } from "../../design-system/index.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { KindChoice, Layout } from "../../layout/index.ts";
 import type { Identities } from "../../composer/index.ts";
@@ -61,9 +61,8 @@ export function PeopleView(props: PeopleProps): ReactNode {
             pressed={state.identityKind === each.kind}
           />
         ))}
-        <Chip onClick={handleToggle} pressed={state.showDeactivated}>
-          {TEXT.deactivated}
-        </Chip>
+        <ToolbarDivider />
+        <SwitchField checked={state.showDeactivated} label={TEXT.deactivated} onToggle={handleToggle} />
       </Toolbar>
       <PeopleRows listed={everyone} me={props.me} open={props.open} shown={shown} />
     </Pane>

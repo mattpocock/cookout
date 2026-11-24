@@ -88,7 +88,7 @@ function rowsAt(label: string, address: string): readonly string[] {
 }
 
 function isUnreadRow(row: string): boolean {
-  return row.includes("2 new");
+  return row.includes("+1 more");
 }
 
 async function threadRowClicked(): Promise<string> {

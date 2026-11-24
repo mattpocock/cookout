@@ -1,4 +1,5 @@
 import type { LinkParts } from "./parts.ts";
+import { PANEL_ACTION_LOOK } from "./panel-action-look.ts";
 import type { ReactNode } from "react";
 
 interface HoverActionParts extends LinkParts {
@@ -7,11 +8,7 @@ interface HoverActionParts extends LinkParts {
 
 export function HoverAction(parts: HoverActionParts): ReactNode {
   return (
-    <a
-      className="block rounded-md border bg-background px-1.5 py-0.5 text-muted-foreground shadow-sm hover:text-foreground focus-visible:text-foreground"
-      href={parts.href}
-      title={parts.name}
-    >
+    <a className={PANEL_ACTION_LOOK} href={parts.href} title={parts.name}>
       {parts.children}
     </a>
   );

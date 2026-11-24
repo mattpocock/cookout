@@ -13,8 +13,8 @@ export function MenuIconFrame(parts: MenuIconFrameParts): ReactNode {
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth="1.4"
-      viewBox="0 0 16 16"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
     >
       {parts.children}
     </svg>

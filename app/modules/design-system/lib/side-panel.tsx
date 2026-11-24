@@ -1,5 +1,7 @@
 import type { ActionMenuParts } from "./menu-parts.ts";
 import { CloseLink } from "./close-link.tsx";
+import type { PanelAction } from "./panel-action-button.tsx";
+import { PanelActionButton } from "./panel-action-button.tsx";
 import { PanelEdge } from "./panel-edge.tsx";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import { PanelTitle } from "./panel-title.tsx";
@@ -14,7 +16,10 @@ interface SidePanelParts extends Parts {
   readonly closeLabel: string;
   readonly edge: PanelEdgeParts | null;
   readonly menu?: ActionMenuParts | null;
+  readonly actions?: readonly PanelAction[];
 }
+
+const NO_ACTIONS: readonly PanelAction[] = [];
 
 export function SidePanel(parts: SidePanelParts): ReactNode {
   const { edge } = parts;
@@ -26,8 +31,11 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
       style={look.style}
     >
       {edge !== null && <PanelEdge edge={edge} />}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
+      <header className="flex h-10 shrink-0 items-center gap-1 px-3">
         <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
+        {(parts.actions ?? NO_ACTIONS).map((action) => (
+          <PanelActionButton action={action} key={action.label} />
+        ))}
         <CloseLink href={parts.closeHref} label={parts.closeLabel} />
       </header>
       {parts.children}

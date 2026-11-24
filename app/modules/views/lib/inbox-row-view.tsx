@@ -46,7 +46,11 @@ function countOf(row: InboxRow, unread: boolean): string | null {
   if (!unread || row.count === ONE) {
     return null;
   }
-  return `${String(row.count)} new`;
+  const more = `+${String(row.count - ONE)} more`;
+  if (row.thread !== null) {
+    return `${more} in this thread`;
+  }
+  return `${more} in #${row.latest.channel.name}`;
 }
 
 export function InboxRowView(props: InboxRowViewProps): ReactNode {

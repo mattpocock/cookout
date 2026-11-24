@@ -5,7 +5,7 @@ import type { PanelEdgeParts } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { ReplyFooter } from "./reply-footer.tsx";
 import { SidePanel } from "../../design-system/index.tsx";
-import { ThreadClosingBar } from "./thread-closing-bar.tsx";
+import { ThreadClosedNote } from "./thread-closed-note.tsx";
 import { ThreadMessages } from "./thread-messages.tsx";
 import type { Unread } from "../../unread/index.ts";
 import { threadDraft } from "./thread-draft.ts";
@@ -35,6 +35,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
   return (
     <SidePanel
+      actions={header.actions}
       closeHref={header.closeHref}
       closeLabel={TEXT.close}
       detail={`#${channel}`}
@@ -42,7 +43,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       label={TEXT.thread}
       menu={header.menu}
     >
-      {state.status === "loaded" && <ThreadClosingBar closing={props.board.closing} parent={state.parent} />}
+      {state.status === "loaded" && <ThreadClosedNote closing={props.board.closing} parent={state.parent} />}
       <ThreadMessages
         closing={props.board.closing}
         linked={props.linked}

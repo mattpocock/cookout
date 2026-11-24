@@ -4,7 +4,7 @@ import type { TextAreaParts } from "./parts.ts";
 import { useBoxKeys } from "./box-keys.ts";
 import { useTypedCaret } from "./use-typed-caret.ts";
 
-const ROWS = 3;
+const ROWS = 1;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
   const { caret, choosing, focused, onClose, onEdit, onMove, onPick, value } = parts;
@@ -28,8 +28,8 @@ export function TextArea(parts: TextAreaParts): ReactNode {
         onChange={handleEdit}
         onKeyDown={handleKeyDown}
         onSelect={handleEdit}
+        placeholder={parts.placeholder}
         ref={box}
-        required
         rows={ROWS}
         value={value}
       />

@@ -1,7 +1,7 @@
 import { Alert, LineForm } from "../../design-system/index.tsx";
-import { useCallback, useSyncExternalStore } from "react";
 import type { DisplayNameDraft } from "../../composer/index.ts";
 import type { ReactNode } from "react";
+import { useNameDraft } from "./use-name-draft.ts";
 
 interface DisplayNameFieldProps {
   readonly draft: DisplayNameDraft;
@@ -11,24 +11,17 @@ interface DisplayNameFieldProps {
 }
 
 export function DisplayNameField(props: DisplayNameFieldProps): ReactNode {
-  const { draft } = props;
-  const state = useSyncExternalStore(draft.subscribe, draft.snapshot);
-  const handleEdit = draft.edit;
-  const { save } = state;
-  const value = state.text ?? props.saved ?? "";
-  const handleSave = useCallback(() => {
-    draft.save(value);
-  }, [draft, value]);
+  const name = useNameDraft({ draft: props.draft, saved: props.saved });
   return (
     <LineForm
       field={props.field}
       label={props.label}
-      onEdit={handleEdit}
-      onSubmit={handleSave}
-      saving={save.status === "saving"}
-      value={value}
+      onEdit={name.handleEdit}
+      onSubmit={name.handleSave}
+      saving={name.saving}
+      value={name.value}
     >
-      {save.status === "failed" && <Alert>{`Couldn't save the display name (${save.code}): ${save.message}`}</Alert>}
+      {name.failure !== null && <Alert>{name.failure}</Alert>}
     </LineForm>
   );
 }

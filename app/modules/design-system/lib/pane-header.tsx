@@ -1,5 +1,8 @@
 import type { PaneHeaderParts } from "./parts.ts";
+import { PaneLead } from "./pane-lead.ts";
+import { PaneSearch } from "./pane-search.ts";
 import type { ReactNode } from "react";
+import { useContext } from "react";
 
 function fontOf(sans: boolean): string {
   if (sans) {
@@ -9,13 +12,23 @@ function fontOf(sans: boolean): string {
 }
 
 export function PaneHeader(parts: PaneHeaderParts): ReactNode {
+  const lead = useContext(PaneLead);
+  const search = useContext(PaneSearch);
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5">
-      <h1 className={`${fontOf(parts.sans === true)}text-[15px] font-semibold`}>{parts.title}</h1>
+    <header className="flex h-10 shrink-0 items-center gap-2 px-3">
+      {lead}
+      <h1
+        className={`${fontOf(parts.sans === true)}flex h-[26px] max-w-[280px] min-w-0 shrink-0 items-center truncate rounded-md bg-muted px-1.5 text-[13px] font-medium`}
+      >
+        {parts.title}
+      </h1>
       {parts.description !== null && parts.description !== "" && (
-        <p className="truncate border-l pl-3 text-xs text-muted-foreground">{parts.description}</p>
+        <p className="hidden min-w-0 truncate text-xs text-muted-foreground md:block">{parts.description}</p>
       )}
-      <div className="ml-auto shrink-0">{parts.children}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {search}
+        {parts.children}
+      </div>
     </header>
   );
 }

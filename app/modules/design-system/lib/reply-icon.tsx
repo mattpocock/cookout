@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 export function ReplyIcon(): ReactNode {
   return (
     <MenuIconFrame>
-      <path d="M6.5 4 3 7.5 6.5 11" />
-      <path d="M3 7.5h6.5a3.5 3.5 0 0 1 3.5 3.5v1" />
+      <path d="M11 6H15.5C17.9853 6 20 8.01472 20 10.5C20 12.9853 17.9853 15 15.5 15H4" />
+      <path d="M6.99998 12C6.99998 12 4.00001 14.2095 4 15C3.99999 15.7906 7 18 7 18" />
     </MenuIconFrame>
   );
 }

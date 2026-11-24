@@ -29,10 +29,14 @@ export function MenuButton(parts: MenuButtonParts): ReactNode {
         className="h-4 w-4"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.6"
-        viewBox="0 0 16 16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+        viewBox="0 0 24 24"
       >
-        <path d="M2 4h12M2 8h12M2 12h12" strokeLinecap="round" />
+        <path d="M4 5L20 5" />
+        <path d="M4 12L20 12" />
+        <path d="M4 19L20 19" />
       </svg>
     </button>
   );

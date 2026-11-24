@@ -27,7 +27,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
   const { state } = props;
   const note = noteOf(state);
   return (
-    <div className="absolute inset-x-4 top-full z-30 mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-background p-1 shadow-lg">
+    <div className="absolute top-full right-0 w-[28rem] max-w-[calc(100vw-2rem)] z-30 mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-background p-1 shadow-lg">
       {note !== null && <output className="block px-3 py-2 text-sm text-muted-foreground">{note}</output>}
       {state.found.status === "found" && (
         <SearchResultRows highlighted={state.highlighted} query={state.query} results={state.found.results} />

@@ -5,7 +5,7 @@ import type { SuggestionsParts } from "./parts.ts";
 export function Suggestions(parts: SuggestionsParts): ReactNode {
   const handleChoose = parts.onChoose;
   return (
-    <ul aria-label={parts.label} className="z-50 flex flex-col rounded-md border bg-background py-1 text-sm">
+    <ul aria-label={parts.label} className="z-50 flex flex-col gap-0.5 rounded-lg border bg-background p-1 text-sm">
       {parts.options.map((each, index) => (
         <SuggestionOption
           detail={each.detail}

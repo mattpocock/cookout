@@ -22,8 +22,14 @@ interface ConversationProps {
 
 function actionsOf(reader: Reader): readonly PanelAction[] {
   return [
-    { label: TEXT.markRead, name: TEXT.readName, onAction: reader.markRead, shortcut: CONVERSATION_KEYS.read },
-    { label: TEXT.markUnread, onAction: reader.markUnread, shortcut: CONVERSATION_KEYS.unread },
+    {
+      icon: "mark-read",
+      label: TEXT.markRead,
+      name: TEXT.readName,
+      onAction: reader.markRead,
+      shortcut: CONVERSATION_KEYS.read,
+    },
+    { icon: "mark-unread", label: TEXT.markUnread, onAction: reader.markUnread, shortcut: CONVERSATION_KEYS.unread },
   ];
 }
 

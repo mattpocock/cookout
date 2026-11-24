@@ -1,3 +1,4 @@
+import { PANEL_ACTION_LOOK } from "./panel-action-look.ts";
 import type { ReactNode } from "react";
 import type { ReactionChoice } from "./menu-parts.ts";
 
@@ -11,7 +12,7 @@ export function ReactButton(parts: ReactButtonParts): ReactNode {
   return (
     <button
       aria-label={`React with ${choice.symbol}`}
-      className="block rounded-md border bg-background px-1.5 py-0.5 text-[11px] shadow-sm before:content-[attr(data-symbol)] hover:bg-accent focus-visible:bg-accent"
+      className={`${PANEL_ACTION_LOOK} text-sm before:content-[attr(data-symbol)]`}
       data-symbol={choice.symbol}
       onClick={handleReact}
       title={`React with ${choice.symbol}`}

@@ -1,38 +1,39 @@
 import { expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import { adminClient } from "./identities.ts";
-import { fireEvent } from "@testing-library/react";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
-function inboxShown(): boolean {
-  return inSidebar().queryByRole("link", { name: /^Inbox/u }) !== null;
+function sidebarShown(): boolean {
+  return screen.queryByRole("navigation", { name: "Sidebar" }) !== null;
 }
 
 async function collapseThenLeave(): Promise<boolean> {
   const close = openAt({ client: adminClient(), hash: "#/" });
   fireEvent.click(await inSidebar().findByRole("button", { name: "Collapse sidebar" }));
-  const shown = inboxShown();
+  const shown = sidebarShown();
   close();
   return shown;
 }
 
-it("the sidebar collapses to a rail, stays collapsed after a reload, and expands again", {
+it("the sidebar hides, stays hidden after a reload, and the top bar's button brings it back", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   const shownCollapsed = await collapseThenLeave();
   const close = openAt({ client: adminClient(), hash: "#/" });
-  const expand = await inSidebar().findByRole("button", { name: "Expand sidebar" });
-  const shownAfterReload = inboxShown();
+  const expand = await inPane().findByRole("button", { name: "Expand sidebar" });
+  const shownAfterReload = sidebarShown();
   fireEvent.click(expand);
 
-  expect([shownCollapsed, shownAfterReload, expand.getAttribute("aria-expanded"), inboxShown()]).toStrictEqual([
-    false,
-    false,
-    "true",
-    true,
-  ]);
+  expect([
+    shownCollapsed,
+    shownAfterReload,
+    expand.getAttribute("aria-expanded"),
+    sidebarShown(),
+    inPane().queryByRole("button", { name: "Expand sidebar" }),
+  ]).toStrictEqual([false, false, "false", true, null]);
 
   close();
 });

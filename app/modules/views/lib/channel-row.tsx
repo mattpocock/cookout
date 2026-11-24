@@ -23,7 +23,7 @@ export function ChannelRow(props: ChannelRowProps): ReactNode {
       active={props.open}
       href={hrefOf({ channel, name: "channel" })}
       icon="channel"
-      label={`#${channel}`}
+      label={channel}
       marked={hasUnread(counts)}
       menu={menu}
     >

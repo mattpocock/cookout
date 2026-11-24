@@ -20,6 +20,8 @@ const TEXT = {
 
 interface SidebarLinksProps {
   readonly board: Board;
+  readonly channelsFolded: boolean;
+  readonly onToggleChannels: () => void;
   readonly route: Route;
   readonly unread: Looking["unread"];
   readonly me: string;
@@ -34,6 +36,7 @@ function openChannel(route: Route): ChannelName | null {
 
 export function SidebarLinks(props: SidebarLinksProps): ReactNode {
   const { route } = props;
+  const handleToggleChannels = props.onToggleChannels;
   const { channels } = useSyncExternalStore(props.board.subscribe, props.board.snapshot);
   const unread = useSyncExternalStore(props.unread.subscribe, props.unread.snapshot);
   const counts = useSidebarCounts({ me: props.me, state: unread });
@@ -53,10 +56,12 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
           marked={false}
         />
       </NavList>
-      <NavHeading label={TEXT.channels}>
+      <NavHeading folded={props.channelsFolded} label={TEXT.channels} onToggleFolded={handleToggleChannels}>
         <NewChannelButton creation={props.board.creation} />
       </NavHeading>
-      <ChannelRows actions={actions} channels={channels} open={openChannel(route)} counts={counts.channels} />
+      {!props.channelsFolded && (
+        <ChannelRows actions={actions} channels={channels} open={openChannel(route)} counts={counts.channels} />
+      )}
       <NewChannel creation={props.board.creation} />
     </>
   );

@@ -35,10 +35,10 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
       style={look.style}
     >
       {edge !== null && <PanelEdge edge={edge} />}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
+      <header className="flex h-10 shrink-0 items-center gap-1 px-3">
         <BackLink href={parts.backHref} label={parts.backLabel} />
-        <h2 className="text-sm font-semibold">{parts.label}</h2>
-        <span className="flex-1 font-mono text-xs text-muted-foreground">{parts.detail}</span>
+        <h2 className="text-[13px] font-medium">{parts.label}</h2>
+        <span className="ml-1 min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{parts.detail}</span>
         {(parts.actions ?? NO_ACTIONS).map((action) => (
           <PanelActionButton action={action} key={action.label} />
         ))}

@@ -14,7 +14,7 @@ interface AvatarParts {
   readonly name: string;
   readonly agent: boolean;
   readonly presence: PresenceShown | null;
-  readonly size?: "large" | "small" | "tiny";
+  readonly size?: "large" | "medium" | "small" | "tiny" | undefined;
 }
 
 interface SuggestionOptionParts {

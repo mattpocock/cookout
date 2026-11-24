@@ -121,10 +121,10 @@ it("unread replies in one thread share one row, and new posts in one channel sha
 
   expect([rowsOf("Activity"), screen.queryByRole("list", { name: "For you" })]).toStrictEqual([
     [
-      channelRow(channel, "2 newjust nowTea?"),
+      channelRow(channel, `just nowTea?+1 more in #${channel}`),
       threadRow(
         thread,
-        `New reply in a thread you follow${channel}-otherreplied in a thread in#${channel}3 newjust nowre: Deploy at noon?Three`,
+        `New reply in a thread you follow${channel}-otherreplied in a thread in#${channel}just nowre: Deploy at noon?Three+2 more in this thread`,
       ),
     ],
     null,
@@ -146,7 +146,7 @@ it("a thread with one reply that mentions the reader is one row under For you, l
     [
       threadRow(
         thread,
-        `Mentioned you${thread.channel}-posterreplied in a thread in#${thread.channel}3 newjust nowre: Deploy at noon?Three`,
+        `Mentioned you${thread.channel}-posterreplied in a thread in#${thread.channel}just nowre: Deploy at noon?Three+2 more in this thread`,
       ),
     ],
     null,
@@ -163,12 +163,15 @@ it("a live reply joins its thread's row and moves it to the top, and a reply in 
   const { close, other, thread } = await watchingTwoThreads("web-rows-live");
   const { channel, poster } = thread;
   await repliesIn(thread, "Two");
-  await screen.findByText("2 new");
+  await screen.findByText("+1 more in this thread");
   const { message: yes } = await poster.createMessage({ channel, replyTo: other.id, text: "Yes" });
   await screen.findByRole("heading", { level: 2, name: "For you 1" });
 
   expect([rowsOf("Activity"), rowsOf("For you")]).toStrictEqual([
-    [followedRow(thread, "2 newjust nowre: Deploy at noon?Two"), channelRow(channel, "just nowLunch?")],
+    [
+      followedRow(thread, "just nowre: Deploy at noon?Two+1 more in this thread"),
+      channelRow(channel, "just nowLunch?"),
+    ],
     [
       `#/inbox/${channel}/${String(other.id)}/messages/${String(yes.id)} Replied to you${channel}-posterreplied in a thread in#${channel}just nowre: Tea?Yes`,
     ],
@@ -192,7 +195,7 @@ it("a row read in another session moves to Earlier live, and marking it unread t
 
   expect([read, rowsOf("Activity"), rowsOf("Earlier")]).toStrictEqual([
     [followedRow(thread, "just nowre: Deploy at noon?Two"), channelRow(thread.channel, "just nowDeploy at noon?")],
-    [followedRow(thread, "2 newjust nowre: Deploy at noon?Two")],
+    [followedRow(thread, "just nowre: Deploy at noon?Two+1 more in this thread")],
     [channelRow(thread.channel, "just nowDeploy at noon?")],
   ]);
 

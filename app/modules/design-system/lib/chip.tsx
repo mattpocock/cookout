@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 
 function chipStyle(pressed: boolean): string {
   if (pressed) {
-    return "border-foreground bg-foreground text-background";
+    return "bg-accent text-foreground";
   }
-  return "text-muted-foreground hover:text-foreground";
+  return "text-muted-foreground hover:bg-hover hover:text-foreground";
 }
 
 export function Chip(parts: ChipParts): ReactNode {
@@ -13,7 +13,7 @@ export function Chip(parts: ChipParts): ReactNode {
   return (
     <button
       aria-pressed={parts.pressed}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${chipStyle(parts.pressed)}`}
+      className={`flex h-6 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${chipStyle(parts.pressed)}`}
       onClick={onClick}
       type="button"
     >

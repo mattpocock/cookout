@@ -1,4 +1,4 @@
-import type { ActionMenuParts, MenuChoice } from "../../design-system/index.tsx";
+import type { ActionMenuParts, MenuChoice, PanelAction } from "../../design-system/index.tsx";
 import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
@@ -22,6 +22,7 @@ interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "state"> {
 interface ThreadHeader {
   readonly closeHref: string;
   readonly menu: ActionMenuParts | null;
+  readonly actions: readonly PanelAction[];
 }
 
 async function copyAfter(previous: Promise<void>, text: string): Promise<void> {
@@ -48,14 +49,26 @@ function threadChoices({ channel, closing, menu, parent }: ThreadChoicesOf): rea
   ];
 }
 
+function threadActions(closing: ThreadClosing, parent: TopLevelMessage): readonly PanelAction[] {
+  const choice = threadChoice({ closing, message: parent });
+  if (choice === null) {
+    return [];
+  }
+  return [{ icon: choice.icon, label: choice.name, name: choice.label, onAction: choice.onSelect }];
+}
+
 function useThreadHeader({ channel, closing, menu, state }: ThreadHeaderOf): ThreadHeader {
   const parent = state.status === "loaded" && state.parent;
   return useMemo(() => {
     const closeHref = hrefOf({ channel, name: "channel" });
     if (parent === false) {
-      return { closeHref, menu: null };
+      return { actions: [], closeHref, menu: null };
     }
-    return { closeHref, menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu } };
+    return {
+      actions: threadActions(closing, parent),
+      closeHref,
+      menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu },
+    };
   }, [channel, closing, menu, parent]);
 }
 

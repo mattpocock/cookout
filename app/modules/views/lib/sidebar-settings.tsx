@@ -26,9 +26,11 @@ export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
         name={identity.name}
         presence={usePresence(identity.name)}
       />
-      <FooterLink active={route.name === "settings"} href={hrefOf({ name: "settings", section: null })}>
-        {TEXT.settings}
-      </FooterLink>
+      <FooterLink
+        active={route.name === "settings"}
+        href={hrefOf({ name: "settings", section: null })}
+        label={TEXT.settings}
+      />
     </>
   );
 }

@@ -1,10 +1,14 @@
+import { ChoiceGroup, SettingLine, SettingText } from "../../design-system/index.tsx";
 import type { Layout, ThemeChoice as Theme } from "../../layout/index.ts";
 import { useCallback, useSyncExternalStore } from "react";
-import { ChoiceGroup } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { themeChoices } from "../../layout/index.ts";
 
-const TEXT = { theme: "Theme" } as const;
+const TEXT = {
+  description: "System follows your device's setting.",
+  theme: "Theme",
+  title: "Interface theme",
+} as const;
 
 const THEMES = [
   { label: "System", value: "system" },
@@ -31,5 +35,10 @@ export function ThemeChoice(props: ThemeChoiceProps): ReactNode {
     },
     [layout],
   );
-  return <ChoiceGroup choices={THEMES} label={TEXT.theme} onChoose={handleChoose} value={state.theme} />;
+  return (
+    <SettingLine>
+      <SettingText description={TEXT.description} title={TEXT.title} />
+      <ChoiceGroup choices={THEMES} label={TEXT.theme} onChoose={handleChoose} value={state.theme} />
+    </SettingLine>
+  );
 }

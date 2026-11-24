@@ -1,13 +1,12 @@
-import type { ButtonParts } from "./parts.ts";
+import type { ButtonParts } from "./button-parts.ts";
 import type { ReactNode } from "react";
+import { buttonLookOf } from "./button-paint.ts";
+
+const LOOK = buttonLookOf({ size: "lg", variant: "primary" });
 
 export function SubmitButton(parts: Omit<ButtonParts, "onClick">): ReactNode {
   return (
-    <button
-      className="self-start rounded-md border bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-      disabled={parts.disabled}
-      type="submit"
-    >
+    <button className={`w-fit ${LOOK}`} disabled={parts.disabled} type="submit">
       {parts.children}
     </button>
   );

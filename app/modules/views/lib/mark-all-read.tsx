@@ -21,8 +21,12 @@ export function MarkAllRead(props: MarkAllReadProps): ReactNode {
     <Button
       disabled={state.items.length + besideCountOf(state) === NONE || state.markAll.status === "marking"}
       onClick={handleClick}
+      size="md"
+      variant="primary"
     >
       {TEXT.markAll}
     </Button>
   );
 }
+
+export type { MarkAllReadProps };

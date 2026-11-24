@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 export function HashIcon(): ReactNode {
   return (
     <MenuIconFrame>
-      <path d="M6.5 2.5 5 13.5M11 2.5 9.5 13.5M2.5 6h11M2 10.5h11" />
+      <path d="M14 21L18 3" />
+      <path d="M6 21L10 3" />
+      <path d="M5 8H21" />
+      <path d="M3 16H19" />
     </MenuIconFrame>
   );
 }

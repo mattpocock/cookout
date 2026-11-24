@@ -100,7 +100,7 @@ it("people leaves deactivated identities out until Show deactivated is pressed",
     expect(rowNames()).toHaveLength(ONE);
   });
   const hidden = rowNames();
-  fireEvent.click(inPane().getByRole("button", { name: "Show deactivated" }));
+  fireEvent.click(inPane().getByRole("switch", { name: "Show deactivated" }));
 
   expect([hidden, rowNames()]).toStrictEqual([
     ["web-off-people-humanHuman"],

@@ -5,11 +5,8 @@ import type { ReactNode } from "react";
 import { ThreadBar } from "../../design-system/index.tsx";
 import type { ThreadClosing } from "../../board/index.ts";
 import type { TopLevelMessage } from "../../sdk/index.ts";
-import { useCallback } from "react";
 
-const TEXT = { close: "Close", reopen: "Reopen" } as const;
-
-interface ThreadClosingBarProps {
+interface ThreadClosedNoteProps {
   readonly closing: ThreadClosing;
   readonly parent: TopLevelMessage;
 }
@@ -22,25 +19,16 @@ function closingOf(parent: TopLevelMessage): Closing | null {
   return { closedAt, closedBy };
 }
 
-export function ThreadClosingBar(props: ThreadClosingBarProps): ReactNode {
-  const { closing } = props;
-  const { id } = props.parent;
+export function ThreadClosedNote(props: ThreadClosedNoteProps): ReactNode {
   const closed = closingOf(props.parent);
-  const handleClose = useCallback(() => {
-    closing.close(id);
-  }, [closing, id]);
-  const handleReopen = useCallback(() => {
-    closing.reopen(id);
-  }, [closing, id]);
   return (
     <>
-      {closed === null && <ThreadBar actionLabel={TEXT.close} onAction={handleClose} />}
       {closed !== null && (
-        <ThreadBar actionLabel={TEXT.reopen} onAction={handleReopen}>
+        <ThreadBar>
           <ClosedBy closing={closed} />
         </ThreadBar>
       )}
-      <ClosingRefusal closing={closing} />
+      <ClosingRefusal closing={props.closing} />
     </>
   );
 }

@@ -9,11 +9,6 @@ const NEAR_END_PX = 48;
 const CAPTURE = { capture: true } as const;
 const ONE = 1;
 
-interface SearchBox {
-  readonly area: RefObject<HTMLDivElement | null>;
-  readonly box: RefObject<HTMLInputElement | null>;
-}
-
 interface Place {
   readonly search: Search;
   readonly area: () => HTMLDivElement | null;
@@ -212,16 +207,23 @@ function listen(place: Place): () => void {
   };
 }
 
-function useSearchBox(search: Search): SearchBox {
+function inputIn(area: () => HTMLDivElement | null): HTMLInputElement | null {
+  const found = area();
+  if (found === null) {
+    return null;
+  }
+  return found.querySelector("input");
+}
+
+function useSearchBox(search: Search): RefObject<HTMLDivElement | null> {
   const area = useRef<HTMLDivElement>(null);
-  const box = useRef<HTMLInputElement>(null);
   const back = useRef<unknown>(null);
   useEffect(
     () =>
       listen({
         area: () => area.current,
         back: () => back.current,
-        box: () => box.current,
+        box: () => inputIn(() => area.current),
         remember: (element) => {
           back.current = element;
         },
@@ -229,7 +231,7 @@ function useSearchBox(search: Search): SearchBox {
       }),
     [search],
   );
-  return { area, box };
+  return area;
 }
 
 export { searchHrefOf, useSearchBox };

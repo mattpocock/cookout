@@ -68,7 +68,7 @@ function postedRow(channel: string, text: string): string {
 }
 
 function newRow(channel: string, text: string): string {
-  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}3 newjust now${text}`;
+  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${text}+2 more in #${channel}`;
 }
 
 it("earlier lists read rows, a page at a time, merging each page into the rows it shows, until there are no more", {

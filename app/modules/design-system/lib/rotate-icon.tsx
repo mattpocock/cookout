@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 export function RotateIcon(): ReactNode {
   return (
     <MenuIconFrame>
-      <path d="M2.75 8a5.25 5.25 0 1 0 1.55-3.7" />
-      <path d="M2.75 2.5v2.5h2.5" />
+      <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C8.66873 3 5.76018 4.80989 4.20404 7.5" />
+      <path d="M3 3V4.27816C3 6.47004 3 7.56599 3.70725 8.16512C4.4145 8.76425 5.49553 8.58408 7.6576 8.22373L9 8" />
     </MenuIconFrame>
   );
 }

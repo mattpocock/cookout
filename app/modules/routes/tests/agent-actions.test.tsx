@@ -1,4 +1,5 @@
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { agentCard, choose, menuOf } from "./agent-menu.ts";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, onTestFinished, vi } from "vitest";
 import { inDialog, inSettings, inSidebar } from "./regions.ts";
@@ -27,11 +28,6 @@ async function openSettings(client: CookoutClient): Promise<() => void> {
   return close;
 }
 
-async function agentCard(name: string): Promise<HTMLElement> {
-  const card = await screen.findByRole("group", { name: `@${name}` });
-  return card;
-}
-
 async function press(name: string, button: string): Promise<void> {
   fireEvent.click(within(await agentCard(name)).getByRole("button", { name: button }));
 }
@@ -41,7 +37,7 @@ async function confirmWith(button: string): Promise<void> {
 }
 
 async function pressAndAnswer(name: string, button: string, answer: string): Promise<void> {
-  await press(name, button);
+  await choose({ agent: name, item: button });
   await confirmWith(answer);
 }
 
@@ -72,7 +68,7 @@ async function nameWith(token: string): Promise<string> {
 }
 
 async function rotateIn(name: string): Promise<string> {
-  await press(name, "Rotate token");
+  await choose({ agent: name, item: "Rotate token" });
   await confirmWith("Rotate token");
   const token = await shownToken(name);
   return token;
@@ -99,6 +95,13 @@ async function submitIn(label: string, text: string): Promise<void> {
   const form = await screen.findByRole("form", { name: label });
   fireEvent.change(within(form).getByRole("textbox"), { target: { value: text } });
   fireEvent.click(within(form).getByRole("button"));
+}
+
+async function createAgent(name: string): Promise<void> {
+  fireEvent.click(await inSettings().findByRole("button", { name: "New agent" }));
+  const form = await inDialog().findByRole("form", { name: "Create an agent" });
+  fireEvent.change(within(form).getByRole("textbox"), { target: { value: name } });
+  fireEvent.click(within(form).getByRole("button", { name: "Create" }));
 }
 
 async function transferTo(name: string, owner: string): Promise<void> {
@@ -157,10 +160,10 @@ it("create makes an agent you own and shows its token once; a taken name is refu
 
   const { human } = await crewOf("web-mine-create");
   const close = await openSettings(human);
-  await submitIn("Create an agent", "web-mine-create-new");
+  await createAgent("web-mine-create-new");
   const token = await shownToken("web-mine-create-new");
   const { identity } = await clientWith(token).whoami();
-  await submitIn("Create an agent", "web-mine-create-bot");
+  await createAgent("web-mine-create-bot");
   const alert = await alertSaying("Couldn't create the agent (identity_exists)");
 
   expect([identity, screen.getByRole("form", { name: "Create an agent" }).contains(alert)]).toStrictEqual([
@@ -177,15 +180,15 @@ it("deactivate asks first, naming the agent, then marks it deactivated", { timeo
   const { bot, human } = await crewOf("web-mine-off");
   const close = await openSettings(human);
   const card = await agentCard("web-mine-off-bot");
-  await press("web-mine-off-bot", "Deactivate");
+  await choose({ agent: "web-mine-off-bot", item: "Deactivate" });
   const refusalBefore = await refusalWith(bot);
   await confirmWith("Deactivate @web-mine-off-bot");
-  await within(card).findByRole("button", { name: "Reactivate" });
+  await within(card).findByText("(deactivated)");
 
-  expect([refusalBefore, await refusalWith(bot), within(card).getByText("(deactivated)").textContent]).toStrictEqual([
+  expect([refusalBefore, await refusalWith(bot), await menuOf("web-mine-off-bot")]).toStrictEqual([
     "accepted",
     "token_revoked",
-    "(deactivated)",
+    ["Edit display name", "Reactivate"],
   ]);
 
   close();
@@ -247,7 +250,9 @@ it("a session not yet used shows when it joined, and Cancel keeps the agent acti
   const card = await agentCard("web-mine-cancel-bot");
   const { textContent: line } = await within(card).findByText(/^Joined/u);
   await pressAndAnswer("web-mine-cancel-bot", "Deactivate", "Cancel");
-  await within(card).findByRole("button", { name: "Deactivate" });
+  await waitFor(() => {
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
 
   expect([line, screen.queryByRole("alertdialog"), await refusalWith(bot)]).toStrictEqual([
     expect.stringMatching(/^Joined · not used yet · expires .+/u),
@@ -271,12 +276,12 @@ it("a session list the server refuses shows no session and no Revoke", { timeout
   };
   const close = await openSettings(refusing);
   const card = await agentCard("web-mine-unlisted-bot");
-  await within(card).findByRole("button", { name: "Rotate token" });
+  await within(card).findByRole("button", { name: "More actions" });
 
-  expect([
-    within(card).queryByText(/session/u),
-    within(card).queryByRole("button", { name: "Revoke session" }),
-  ]).toStrictEqual([null, null]);
+  expect([within(card).queryByText(/session/u), await menuOf("web-mine-unlisted-bot")]).toStrictEqual([
+    null,
+    ["Edit display name", "Rotate token", "Deactivate"],
+  ]);
 
   close();
 });

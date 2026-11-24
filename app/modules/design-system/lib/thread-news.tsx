@@ -1,5 +1,5 @@
-import { AccentDot } from "./accent-dot.tsx";
 import type { ReactNode } from "react";
+import { StatusDot } from "./status-dot.tsx";
 
 interface ThreadNewsParts {
   readonly children: string;
@@ -9,7 +9,7 @@ interface ThreadNewsParts {
 export function ThreadNews(parts: ThreadNewsParts): ReactNode {
   return (
     <>
-      {parts.forYou && <AccentDot />}
+      {parts.forYou && <StatusDot mode="for-you" />}
       <span className="font-semibold text-foreground">{parts.children}</span>
     </>
   );

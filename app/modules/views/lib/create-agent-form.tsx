@@ -1,9 +1,16 @@
-import { Alert, LineForm } from "../../design-system/index.tsx";
+import { Alert, FormDialog, InputField } from "../../design-system/index.tsx";
 import type { AgentCreation } from "../../composer/index.ts";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { field: "New agent's name", label: "Create an agent", submit: "Create" } as const;
+const TEXT = {
+  busy: "Creating…",
+  description: "It gets its own token to join the board, shown once after it is created.",
+  field: "Name",
+  label: "Create an agent",
+  submit: "Create",
+  title: "New agent",
+} as const;
 
 interface CreateAgentFormProps {
   readonly creation: AgentCreation;
@@ -14,18 +21,30 @@ export function CreateAgentForm(props: CreateAgentFormProps): ReactNode {
   const state = useSyncExternalStore(creation.subscribe, creation.snapshot);
   const handleEdit = creation.edit;
   const handleCreate = creation.create;
+  const handleCancel = creation.close;
   const { create } = state;
   return (
-    <LineForm
-      field={TEXT.field}
+    <FormDialog
+      busy={create.status === "creating"}
+      busyButton={TEXT.busy}
+      button={TEXT.submit}
+      description={TEXT.description}
       label={TEXT.label}
-      onEdit={handleEdit}
+      onCancel={handleCancel}
       onSubmit={handleCreate}
-      saving={create.status === "creating"}
-      submit={TEXT.submit}
-      value={state.text}
+      open={state.open}
+      title={TEXT.title}
     >
+      <InputField
+        error={null}
+        help={null}
+        kind="text"
+        label={TEXT.field}
+        onEdit={handleEdit}
+        required
+        value={state.text}
+      />
       {create.status === "failed" && <Alert>{`Couldn't create the agent (${create.code}): ${create.message}`}</Alert>}
-    </LineForm>
+    </FormDialog>
   );
 }

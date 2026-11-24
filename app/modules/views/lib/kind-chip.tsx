@@ -18,7 +18,8 @@ export function KindChip(props: KindChipProps): ReactNode {
   }, [kind, layout]);
   return (
     <Chip onClick={handleClick} pressed={props.pressed}>
-      {`${props.label} ${String(props.count)}`}
+      {`${props.label} `}
+      <span className="tabular-nums opacity-60">{props.count}</span>
     </Chip>
   );
 }

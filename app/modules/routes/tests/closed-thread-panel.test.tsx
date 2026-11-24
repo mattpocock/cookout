@@ -92,7 +92,7 @@ it("opening a closed thread by its address shows it all, who closed it and when,
     "Deploy?",
     "Noon works.",
   ]);
-  expect(inThread().getByRole("button", { name: "Reopen" }).textContent).toBe("Reopen");
+  expect(inThread().getByRole("button", { name: "Reopen" }).getAttribute("aria-label")).toBe("Reopen");
 
   await feedShows(["Before.", "<1 closed thread>", "After."]);
 
@@ -193,7 +193,7 @@ it("reacting in a closed thread's panel, and taking the reaction back, keeps the
   await feedShows(["Before.", "<1 closed thread>", "After."]);
 
   await expect(closedByOf(posted)).resolves.toBe(`${posted.channel}-ada`);
-  expect(inThread().getByRole("button", { name: "Reopen" }).textContent).toBe("Reopen");
+  expect(inThread().getByRole("button", { name: "Reopen" }).getAttribute("aria-label")).toBe("Reopen");
 
   close();
 });

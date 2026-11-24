@@ -132,6 +132,8 @@ const SCREENS: readonly Screen[] = [
   { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
   { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
   { hash: "#/settings", name: "settings", text: "System" },
+  { click: "New agent", hash: "#/settings", name: "settings-new-agent", text: "It gets its own token" },
+  { click: "More actions", hash: "#/settings", name: "settings-agent-menu", text: "Edit display name" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { hash: "#/channels/deploys", name: "closed-threads", text: "2 closed threads" },

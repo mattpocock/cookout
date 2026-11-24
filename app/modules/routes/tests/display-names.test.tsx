@@ -1,5 +1,6 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
+import { chose, pressed } from "./menus.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inSettings, inSidebar } from "./regions.ts";
@@ -51,6 +52,13 @@ async function saveIn(label: string, text: string): Promise<void> {
   const form = await screen.findByRole("form", { name: label });
   fireEvent.change(within(form).getByRole("textbox"), { target: { value: text } });
   fireEvent.click(within(form).getByRole("button", { name: "Save" }));
+}
+
+async function renameAgent(name: string, text: string): Promise<void> {
+  const card = await inSettings().findByRole("group", { name: `@${name}` });
+  pressed(() => within(card).getByRole("button", { name: "More actions" }));
+  await chose("Edit display name");
+  await saveIn(`Display name of @${name}`, text);
 }
 
 function rowOf(name: string): string {
@@ -107,7 +115,7 @@ it("settings saves your own display name and your agents', and shows them at onc
   const { human } = await crewOf("web-names-save");
   const close = await openSettings(human);
   await saveIn("Your display name", "  Ada Lovelace ");
-  await saveIn("Display name of @web-names-save-bot", "Release Bot");
+  await renameAgent("web-names-save-bot", "Release Bot");
   const forms = formNames();
   await openPeople();
   await waitFor(() => {
@@ -121,7 +129,7 @@ it("settings saves your own display name and your agents', and shows them at onc
     rowOf("web-names-save-human"),
     inSidebar().getByRole("link", { name: /Ada Lovelace/u }).textContent,
   ]).toStrictEqual([
-    ["Your display name", "Display name of @web-names-save-bot", "Create an agent"],
+    ["Your display name"],
     "Ada Lovelace@web-names-save-human(you)Human",
     "Ada Lovelace@web-names-save-human",
   ]);
@@ -129,7 +137,9 @@ it("settings saves your own display name and your agents', and shows them at onc
   close();
 });
 
-it("saving an empty display name clears it", { timeout: 5000 }, async () => {
+it("saving an empty display name clears it, and the field then shows the identity's own name", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const { human } = await crewOf("web-names-clear");
@@ -142,7 +152,7 @@ it("saving an empty display name clears it", { timeout: 5000 }, async () => {
 
   expect([rowOf("web-names-clear-human"), field]).toStrictEqual([
     "web-names-clear-human(you)Human",
-    expect.objectContaining({ value: "" }),
+    expect.objectContaining({ value: "web-names-clear-human" }),
   ]);
 
   close();

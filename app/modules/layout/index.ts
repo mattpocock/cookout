@@ -10,7 +10,10 @@
  * `toggleSidebar` flips it, and `closeSidebar` closes the sidebar, as after
  * following a link in it. `collapsed` is whether the sidebar is collapsed to
  * a narrow rail on a wide screen; `toggleCollapsed` flips it and keeps it in
- * the browser's storage, so a reload keeps it. `identityFilter` and `identityKind` narrow the
+ * the browser's storage, so a reload keeps it. `channelsFolded` is whether
+ * the sidebar's Channels section is folded away under its heading;
+ * `toggleChannelsFolded` flips it and keeps it in the browser's storage, so a
+ * reload keeps it. `identityFilter` and `identityKind` narrow the
  * directory of identities: the text a name must contain, and `all`, `human`
  * or `agent`; `filterIdentities` and `showKind` set them. `showDeactivated`
  * is whether it lists Deactivated identities too, which `toggleDeactivated`
@@ -34,6 +37,7 @@ interface LayoutState {
   readonly theme: ThemeChoice;
   readonly sidebar: boolean;
   readonly collapsed: boolean;
+  readonly channelsFolded: boolean;
   readonly identityFilter: string;
   readonly identityKind: KindChoice;
   readonly showDeactivated: boolean;
@@ -56,6 +60,8 @@ interface LayoutOptions {
 const THEME_KEY = "cookout-theme";
 const COLLAPSED_KEY = "cookout-sidebar-collapsed";
 const COLLAPSED = "collapsed";
+const CHANNELS_FOLDED_KEY = "cookout-channels-folded";
+const FOLDED = "folded";
 const THREAD_WIDTH_KEY = "cookout-thread-width";
 const threadWidths = { max: 768, min: 320, start: 448, step: 32 } as const;
 const SIDEBAR_WIDTH_KEY = "cookout-sidebar-width";
@@ -85,12 +91,12 @@ function keepTheme(options: LayoutOptions, theme: ThemeChoice): void {
   options.root.setAttribute(THEME_ATTRIBUTE, theme);
 }
 
-function keepCollapsed(storage: LayoutOptions["storage"], collapsed: boolean): void {
-  if (collapsed) {
-    storage.setItem(COLLAPSED_KEY, COLLAPSED);
+function keepFlag(storage: LayoutOptions["storage"], [key, value]: readonly [string, string], on: boolean): void {
+  if (on) {
+    storage.setItem(key, value);
     return;
   }
-  storage.removeItem(COLLAPSED_KEY);
+  storage.removeItem(key);
 }
 
 const THREAD: Widths = { ...threadWidths, key: THREAD_WIDTH_KEY };
@@ -171,6 +177,27 @@ function directoryControls(
   };
 }
 
+type SidebarControls = Pick<Layout, "toggleChannelsFolded" | "toggleCollapsed">;
+
+function sidebarControls(
+  storage: LayoutOptions["storage"],
+  publish: (next: Partial<LayoutState>) => void,
+  snapshot: () => LayoutState,
+): SidebarControls {
+  return {
+    toggleChannelsFolded: () => {
+      const channelsFolded = !snapshot().channelsFolded;
+      keepFlag(storage, [CHANNELS_FOLDED_KEY, FOLDED], channelsFolded);
+      publish({ channelsFolded });
+    },
+    toggleCollapsed: () => {
+      const collapsed = !snapshot().collapsed;
+      keepFlag(storage, [COLLAPSED_KEY, COLLAPSED], collapsed);
+      publish({ collapsed, sidebar: false });
+    },
+  };
+}
+
 /** The themes a person can choose: `system` follows the operating system's setting. */
 export { themeChoices };
 
@@ -200,6 +227,8 @@ export interface Layout {
   readonly closeSidebar: () => void;
   /** Collapses the sidebar to a narrow rail on a wide screen, or expands it, and keeps the choice in the browser's storage. */
   readonly toggleCollapsed: () => void;
+  /** Folds the sidebar's Channels section away under its heading, or unfolds it, and keeps the choice in the browser's storage. */
+  readonly toggleChannelsFolded: () => void;
   /** Sets the thread panel's width, kept within `threadWidths`, and keeps it in the browser's storage. */
   readonly resizeThread: (width: number) => void;
   /** Sets the sidebar's width on a wide screen, kept within `sidebarWidths`, and keeps it in the browser's storage. */
@@ -220,6 +249,7 @@ export interface Layout {
 export function createLayout(options: LayoutOptions): Layout {
   const listeners = new Set<() => void>();
   let current: LayoutState = {
+    channelsFolded: options.storage.getItem(CHANNELS_FOLDED_KEY) === FOLDED,
     collapsed: options.storage.getItem(COLLAPSED_KEY) === COLLAPSED,
     identityFilter: "",
     identityKind: "all",
@@ -249,6 +279,7 @@ export function createLayout(options: LayoutOptions): Layout {
       }
     },
     ...directoryControls(publish, () => current),
+    ...sidebarControls(options.storage, publish, () => current),
     ...resizers(options.storage, publish, () => current),
     snapshot: () => current,
     subscribe: (listener) => {
@@ -256,10 +287,6 @@ export function createLayout(options: LayoutOptions): Layout {
       return () => {
         listeners.delete(listener);
       };
-    },
-    toggleCollapsed: () => {
-      keepCollapsed(options.storage, !current.collapsed);
-      publish({ collapsed: !current.collapsed, sidebar: false });
     },
     toggleSidebar: () => {
       publish({ sidebar: !current.sidebar });

@@ -1,4 +1,4 @@
-import type { ButtonParts } from "./parts.ts";
+import type { ButtonParts } from "./button-parts.ts";
 import { FoldDay } from "./fold-day.tsx";
 import type { ReactNode } from "react";
 

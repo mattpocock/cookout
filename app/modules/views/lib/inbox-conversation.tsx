@@ -24,7 +24,11 @@ interface InboxConversationProps {
 export function InboxConversation(props: InboxConversationProps): ReactNode {
   const { selected } = props;
   if (selected === null) {
-    return <ConversationEmpty label={TEXT.conversation}>{TEXT.pick}</ConversationEmpty>;
+    return (
+      <ConversationEmpty edge={props.edge} label={TEXT.conversation}>
+        {TEXT.pick}
+      </ConversationEmpty>
+    );
   }
   if (selected.thread === null) {
     return (

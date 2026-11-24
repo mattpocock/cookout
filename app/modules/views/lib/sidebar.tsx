@@ -28,6 +28,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
   const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleFollow = layout.closeSidebar;
   const handleToggleCollapsed = layout.toggleCollapsed;
+  const handleToggleChannels = layout.toggleChannelsFolded;
   return (
     <Sidebar
       collapsed={state.collapsed}
@@ -40,7 +41,14 @@ export function SidebarView(props: SidebarProps): ReactNode {
       title={TEXT.name}
     >
       <SidebarBody onFollow={handleFollow}>
-        <SidebarLinks board={props.board} me={props.identity.name} route={props.route} unread={props.unread} />
+        <SidebarLinks
+          board={props.board}
+          channelsFolded={state.channelsFolded}
+          me={props.identity.name}
+          onToggleChannels={handleToggleChannels}
+          route={props.route}
+          unread={props.unread}
+        />
       </SidebarBody>
       <SidebarFooter>
         <SidebarSettings identity={props.identity} route={props.route} />

@@ -14,7 +14,7 @@ export function NavLink(parts: NavLinkParts): ReactNode {
   }
   return (
     <li className="flex">
-      <ActionMenu choices={menu.choices} label={menu.label}>
+      <ActionMenu choices={menu.choices} label={menu.label} quiet>
         <NavAnchor link={parts} />
       </ActionMenu>
     </li>

@@ -1,52 +1,26 @@
-import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { useContext, useSyncExternalStore } from "react";
-import { AuthorList } from "./author-list.ts";
 import type { Composer } from "../../composer/index.ts";
-import { DisplayNameField } from "./display-name-field.tsx";
+import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
-import { identityList } from "../../board/index.ts";
+import { SettingNameField } from "./setting-name-field.tsx";
+import { useSavedName } from "./use-saved-name.ts";
 
-const TEXT = { own: "Your display name" } as const;
+const TEXT = { description: "How your name shows on your messages.", field: "Your display name" } as const;
 
 interface DisplayNamesProps {
   readonly composer: Composer;
   readonly me: IdentityName;
 }
 
-function ownedBy(listed: readonly Identity[], me: IdentityName): readonly Identity[] {
-  return listed.filter((identity) => identity.kind === "agent" && identity.owner === String(me));
-}
-
-function savedOf(listed: readonly Identity[], name: IdentityName): string | null {
-  for (const identity of listed) {
-    if (identity.name === name) {
-      return identity.displayName ?? null;
-    }
-  }
-  return null;
-}
-
 export function DisplayNames(props: DisplayNamesProps): ReactNode {
   const { composer, me } = props;
-  const store = useContext(AuthorList);
-  const listed = useSyncExternalStore(store.subscribeShowing("identities"), () => identityList(store.snapshot()));
+  const saved = useSavedName(me);
   return (
-    <>
-      <DisplayNameField
-        draft={composer.displayName(me)}
-        field={TEXT.own}
-        label={TEXT.own}
-        saved={savedOf(listed, me)}
-      />
-      {ownedBy(listed, me).map((agent) => (
-        <DisplayNameField
-          draft={composer.displayName(agent.name)}
-          field={`@${agent.name}`}
-          key={agent.name}
-          label={`Display name of @${agent.name}`}
-          saved={agent.displayName ?? null}
-        />
-      ))}
-    </>
+    <SettingNameField
+      description={TEXT.description}
+      draft={composer.displayName(me)}
+      field={TEXT.field}
+      label={TEXT.field}
+      saved={saved ?? String(me)}
+    />
   );
 }

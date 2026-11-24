@@ -9,6 +9,7 @@ type CreateState =
   | (Refusal & { readonly status: "failed" });
 
 interface AgentCreationSnapshot {
+  readonly open: boolean;
   readonly text: string;
   readonly create: CreateState;
 }
@@ -18,6 +19,8 @@ interface AgentCreation {
   readonly snapshot: () => AgentCreationSnapshot;
   readonly edit: (text: string) => void;
   readonly create: () => void;
+  readonly open: () => void;
+  readonly close: () => void;
 }
 
 interface AgentCreationOptions {
@@ -27,7 +30,8 @@ interface AgentCreationOptions {
 
 function createAgentCreation(options: AgentCreationOptions): AgentCreation {
   const listeners = listenersOf(options.list.show);
-  let current: AgentCreationSnapshot = { create: { status: "idle" }, text: "" };
+  const CLOSED: AgentCreationSnapshot = { create: { status: "idle" }, open: false, text: "" };
+  let current = CLOSED;
   let queue = Promise.resolve();
 
   function publish(next: AgentCreationSnapshot): void {
@@ -40,20 +44,28 @@ function createAgentCreation(options: AgentCreationOptions): AgentCreation {
     try {
       const { name, token } = await options.list.calls.createAgent(text.trim());
       options.created(name, token);
-      publish({ create: { status: "idle" }, text: "" });
+      publish(CLOSED);
     } catch (error: unknown) {
-      publish({ create: { ...refusalOf(error), status: "failed" }, text });
+      publish({ create: { ...refusalOf(error), status: "failed" }, open: true, text });
     }
   }
 
   return {
+    close: () => {
+      if (current.create.status !== "creating") {
+        publish(CLOSED);
+      }
+    },
     create: () => {
       const { text } = current;
-      publish({ create: { status: "creating" }, text });
+      publish({ create: { status: "creating" }, open: true, text });
       queue = sendAfter(queue, text);
     },
     edit: (text) => {
       publish({ ...current, text });
+    },
+    open: () => {
+      publish({ ...current, open: true });
     },
     snapshot: () => current,
     subscribe: listeners.add,

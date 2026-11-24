@@ -1,4 +1,4 @@
-import type { ButtonParts } from "./parts.ts";
+import type { ButtonParts } from "./button-parts.ts";
 import type { ReactNode } from "react";
 import { Spinner } from "./spinner.tsx";
 

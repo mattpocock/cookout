@@ -79,7 +79,7 @@ export function AgentJoinRequestShown(props: AgentJoinRequestShownProps): ReactN
       {refused !== null && <Alert>{refused}</Alert>}
       {state.status === "approved" && <Muted>{approvedText(state)}</Muted>}
       {state.status !== "approved" && (
-        <Button disabled={state.status === "approving"} onClick={handleApprove}>
+        <Button disabled={state.status === "approving"} onClick={handleApprove} variant="primary">
           {TEXT.approve}
         </Button>
       )}

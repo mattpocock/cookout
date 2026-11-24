@@ -1,11 +1,17 @@
 import type { PressButtonParts } from "./parts.ts";
 import type { ReactNode } from "react";
+import { buttonLookOf } from "./button-paint.ts";
+
+const LOOKS = {
+  off: buttonLookOf({ variant: "outline" }),
+  on: buttonLookOf({ variant: "secondary" }),
+} as const;
 
 function pressStyle(pressed: boolean): string {
   if (pressed) {
-    return "bg-accent text-muted-foreground hover:text-foreground";
+    return LOOKS.on;
   }
-  return "text-foreground hover:bg-accent";
+  return LOOKS.off;
 }
 
 export function PressButton(parts: PressButtonParts): ReactNode {
@@ -13,7 +19,7 @@ export function PressButton(parts: PressButtonParts): ReactNode {
   return (
     <button
       aria-pressed={parts.pressed}
-      className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${pressStyle(parts.pressed)}`}
+      className={pressStyle(parts.pressed)}
       disabled={parts.disabled}
       onClick={onClick}
       type="button"

@@ -15,11 +15,6 @@ interface ListParts extends Parts {
   readonly label: string;
 }
 
-interface ButtonParts extends Parts {
-  readonly disabled?: boolean;
-  readonly onClick: () => void;
-}
-
 interface FormParts extends Parts {
   readonly label: string;
   readonly field: string;
@@ -38,6 +33,7 @@ interface DataAreaParts extends TextFieldParts {
 
 interface TextAreaParts extends TextFieldParts {
   readonly value: string;
+  readonly placeholder: string;
   readonly caret: number;
   readonly onEdit: (text: string, caret: number) => void;
   readonly choosing: boolean;
@@ -53,10 +49,6 @@ interface SuggestionsParts {
   readonly options: readonly SuggestionOptionParts[];
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
-}
-
-interface TagParts {
-  readonly label: string;
 }
 
 interface ChipParts extends Parts {
@@ -136,12 +128,6 @@ interface NavLinkParts {
   readonly marked: boolean;
   readonly icon: "inbox" | "people" | "channel";
   readonly menu?: ActionMenuParts;
-}
-
-interface PillParts {
-  readonly count: number;
-  readonly label: string;
-  readonly tone: "loud" | "quiet" | "unseen";
 }
 
 interface PaneHeaderParts {
@@ -266,7 +252,6 @@ export type {
   IdentityRowParts,
   ProfileNameParts,
   ProfileParts,
-  TagParts,
   AuthorParts,
   CallChipParts,
   ChannelStartParts,
@@ -277,12 +262,10 @@ export type {
   ShownTimeParts,
   SeparatorParts,
   StandaloneMessageParts,
-  ButtonParts,
   ChoiceGroupParts,
   NavLinkParts,
   PaneHeaderParts,
   PressButtonParts,
-  PillParts,
   SidebarParts,
   WorkspaceParts,
   DataAreaParts,

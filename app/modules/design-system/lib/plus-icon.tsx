@@ -7,10 +7,12 @@ export function PlusIcon(): ReactNode {
       className="h-3.5 w-3.5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
-      viewBox="0 0 16 16"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
     >
-      <path d="M8 3v10M3 8h10" strokeLinecap="round" />
+      <path d="M12 4V20M20 12H4" />
     </svg>
   );
 }

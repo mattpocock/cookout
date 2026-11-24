@@ -9,20 +9,23 @@ export function SendButton(parts: SendButtonParts): ReactNode {
   return (
     <button
       aria-label={parts.label}
-      className="self-start rounded-md border bg-foreground p-1.5 text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="grid size-7 shrink-0 place-items-center rounded-full bg-foreground text-background transition-opacity outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:bg-muted disabled:text-muted-foreground disabled:hover:opacity-100"
       disabled={parts.disabled}
       title={parts.label}
       type="submit"
     >
       <svg
         aria-hidden="true"
-        className="h-4 w-4"
+        className="size-4"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.6"
-        viewBox="0 0 16 16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
       >
-        <path d="M14 2L7 9M14 2l-4.5 12L7 9 2 6.5 14 2z" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 5.5V19" />
+        <path d="M18 11C18 11 13.5811 5.00001 12 5C10.4188 4.99999 6 11 6 11" />
       </svg>
     </button>
   );

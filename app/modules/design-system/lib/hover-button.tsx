@@ -1,4 +1,5 @@
-import type { ButtonParts } from "./parts.ts";
+import type { ButtonParts } from "./button-parts.ts";
+import { PANEL_ACTION_LOOK } from "./panel-action-look.ts";
 import type { ReactNode } from "react";
 
 interface HoverButtonParts extends ButtonParts {
@@ -8,12 +9,7 @@ interface HoverButtonParts extends ButtonParts {
 export function HoverButton(parts: HoverButtonParts): ReactNode {
   const handleClick = parts.onClick;
   return (
-    <button
-      className="block rounded-md border bg-background px-1.5 py-0.5 text-muted-foreground shadow-sm hover:text-foreground focus-visible:text-foreground"
-      onClick={handleClick}
-      title={parts.name}
-      type="button"
-    >
+    <button className={PANEL_ACTION_LOOK} onClick={handleClick} title={parts.name} type="button">
       {parts.children}
     </button>
   );

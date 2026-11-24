@@ -1,3 +1,5 @@
+import { ArrowUpRightIcon } from "./arrow-up-right-icon.tsx";
+import { PANEL_ACTION_LOOK } from "./panel-action-look.ts";
 import type { ReactNode } from "react";
 import { Tooltip } from "./tooltip.tsx";
 import { useMemo } from "react";
@@ -13,12 +15,8 @@ export function ShortcutLink(parts: ShortcutLinkParts): ReactNode {
   const lines = useMemo(() => [`${label} (${shortcut})`], [label, shortcut]);
   return (
     <Tooltip lines={lines}>
-      <a
-        aria-keyshortcuts={parts.shortcut}
-        className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-        href={parts.href}
-      >
-        {parts.label}
+      <a aria-keyshortcuts={parts.shortcut} aria-label={label} className={PANEL_ACTION_LOOK} href={parts.href}>
+        <ArrowUpRightIcon />
       </a>
     </Tooltip>
   );

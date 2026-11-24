@@ -1,12 +1,23 @@
+import type { MenuIcon } from "./menu-icons.ts";
+import { PANEL_ACTION_LOOK } from "./panel-action-look.ts";
 import type { ReactNode } from "react";
 import { Tooltip } from "./tooltip.tsx";
+import { menuIcon } from "./menu-icons.ts";
 import { useMemo } from "react";
 
 interface PanelAction {
   readonly label: string;
   readonly name?: string;
-  readonly shortcut: string;
+  readonly icon: MenuIcon;
+  readonly shortcut?: string;
   readonly onAction: () => void;
+}
+
+function linesOf(label: string, shortcut: string | null): readonly string[] {
+  if (shortcut === null) {
+    return [label];
+  }
+  return [`${label} (${shortcut})`];
 }
 
 interface PanelActionButtonParts {
@@ -14,18 +25,18 @@ interface PanelActionButtonParts {
 }
 
 export function PanelActionButton(parts: PanelActionButtonParts): ReactNode {
-  const { label, onAction: handleClick, shortcut } = parts.action;
-  const lines = useMemo(() => [`${label} (${shortcut})`], [label, shortcut]);
+  const { label, onAction: handleClick, shortcut = null } = parts.action;
+  const lines = useMemo(() => linesOf(label, shortcut), [label, shortcut]);
   return (
     <Tooltip lines={lines}>
       <button
-        aria-keyshortcuts={shortcut}
-        aria-label={parts.action.name}
-        className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        aria-keyshortcuts={parts.action.shortcut}
+        aria-label={parts.action.name ?? label}
+        className={PANEL_ACTION_LOOK}
         onClick={handleClick}
         type="button"
       >
-        {label}
+        {menuIcon(parts.action.icon)}
       </button>
     </Tooltip>
   );

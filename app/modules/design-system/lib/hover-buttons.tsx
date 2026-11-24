@@ -13,7 +13,7 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
   return (
     <fieldset
       aria-label={TEXT.label}
-      className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible has-data-[state=open]:visible"
+      className="invisible absolute top-1.5 right-3 z-10 flex gap-0.5 group-focus-within:visible group-hover:visible has-data-[state=open]:visible"
     >
       {reactions
         .filter((choice) => choice.inHoverBar)

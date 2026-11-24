@@ -76,7 +76,7 @@ test("the inbox lists the identity's unread rows for you, then activity, each le
     `Mentioned you${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon?@${channel}-reader can you check the rollout?`,
   ]);
   await expect(rows(page, "Activity")).toHaveText([
-    `New in #${channel}${channel}-posterposted in#${channel}2 newjust nowOr at one?`,
+    `New in #${channel}${channel}-posterposted in#${channel}just nowOr at one?+1 more in #${channel}`,
   ]);
   await expect(page.getByText("Nothing read yet.")).toBeVisible();
 });
@@ -147,5 +147,5 @@ test("a reply posted by another identity joins its thread's row live", async ({ 
 
   await replyFromElsewhere(browser, poster, `/#/channels/${channel}/threads/${String(parent.id)}`);
 
-  await expect(rows(page, "For you")).toHaveText([/Replied to you.*2 new.*Noon works$/u]);
+  await expect(rows(page, "For you")).toHaveText([/Replied to you.*Noon works\+1 more in this thread$/u]);
 });

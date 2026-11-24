@@ -26,7 +26,7 @@ export function LoginRequestShown(props: LoginRequestShownProps): ReactNode {
       <Muted>{`Requested by ${loginRequest.host}, until ${loginRequest.expiresAt}.`}</Muted>
       {props.status === "approved" && <Muted>{TEXT.approved}</Muted>}
       {props.status !== "approved" && (
-        <Button disabled={props.status === "approving"} onClick={onApprove}>
+        <Button disabled={props.status === "approving"} onClick={onApprove} variant="primary">
           {TEXT.approve}
         </Button>
       )}

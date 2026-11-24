@@ -1,26 +1,23 @@
-import { useCallback, useRef } from "react";
 import type { FilterFieldParts } from "./parts.ts";
+import { InputGroup } from "./input-group.tsx";
+import { InputGroupInput } from "./input-group-input.tsx";
 import type { ReactNode } from "react";
+import { SearchAddon } from "./search-addon.tsx";
 
 export function FilterField(parts: FilterFieldParts): ReactNode {
-  const { onEdit } = parts;
-  const box = useRef<HTMLInputElement>(null);
-  const handleChange = useCallback(() => {
-    if (box.current !== null) {
-      onEdit(box.current.value);
-    }
-  }, [onEdit]);
+  const handleEdit = parts.onEdit;
   return (
-    <input
-      aria-label={parts.label}
-      autoComplete="off"
-      className="h-8 w-64 max-w-full rounded-md border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-muted-foreground"
-      onChange={handleChange}
-      placeholder={`${parts.label}…`}
-      ref={box}
-      spellCheck={false}
-      type="text"
-      value={parts.value}
-    />
+    <div className="w-60 max-w-full">
+      <InputGroup size="lg">
+        <SearchAddon />
+        <InputGroupInput
+          label={parts.label}
+          onEdit={handleEdit}
+          placeholder={`${parts.label}…`}
+          type="text"
+          value={parts.value}
+        />
+      </InputGroup>
+    </div>
   );
 }

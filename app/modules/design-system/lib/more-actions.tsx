@@ -7,12 +7,13 @@ import type { ReactNode } from "react";
 interface MoreActionsParts {
   readonly choices: readonly MenuChoice[];
   readonly label: string;
+  readonly quiet?: boolean;
 }
 
 export function MoreActions(parts: MoreActionsParts): ReactNode {
   return (
     <Root>
-      <MoreActionsButton label={parts.label} />
+      <MoreActionsButton label={parts.label} quiet={parts.quiet ?? false} />
       <Portal>
         <MoreActionsContent choices={parts.choices} />
       </Portal>

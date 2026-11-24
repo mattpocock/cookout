@@ -1,5 +1,5 @@
+import { CountBadge } from "../../design-system/index.tsx";
 import { NONE } from "./unread-counts.ts";
-import { Pill } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import type { UnreadCounts } from "../../unread/index.ts";
 
@@ -11,8 +11,8 @@ export function ChannelBadges(props: ChannelBadgesProps): ReactNode {
   const { activity, forYou } = props.counts;
   return (
     <>
-      {activity > NONE && <Pill count={activity} label={`${String(activity)} unread`} tone="unseen" />}
-      {forYou > NONE && <Pill count={forYou} label={`${String(forYou)} for you`} tone="loud" />}
+      {activity > NONE && <CountBadge count={activity} label={`${String(activity)} unread`} tone="unseen" />}
+      {forYou > NONE && <CountBadge count={forYou} label={`${String(forYou)} for you`} tone="loud" />}
     </>
   );
 }

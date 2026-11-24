@@ -29,9 +29,9 @@ const MARKED = "Marked as read";
 async function backInActivity(thread: ReadThread): Promise<readonly string[]> {
   await unreadAtLast({ count: TWO, thread });
   await waitFor(() => {
-    expect(rowsAt({ label: "Activity", thread }).join(",")).toContain("2 new");
+    expect(rowsAt({ label: "Activity", thread }).join(",")).toContain("+1 more");
   });
-  return rowsAt({ label: "Activity", thread }).filter((row) => row.includes("2 new"));
+  return rowsAt({ label: "Activity", thread }).filter((row) => row.includes("+1 more"));
 }
 
 async function noteShown(): Promise<string> {
