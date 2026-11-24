@@ -86,6 +86,24 @@ it("ctrl+K and Cmd+K focus the search box from a message box, preventing the bro
   opened.close();
 });
 
+it("on a Mac, the search box names ⌘K in its placeholder and aria-keyshortcuts", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const platform = vi.spyOn(globalThis.navigator, "platform", "get").mockReturnValue("MacIntel");
+  onTestFinished(() => {
+    platform.mockRestore();
+  });
+  const opened = await openedOnThread("web-search-mac");
+  const box = await searchBox();
+
+  expect([box.getAttribute("placeholder"), box.getAttribute("aria-keyshortcuts")]).toStrictEqual([
+    "Search messages (⌘K)",
+    "Meta+K",
+  ]);
+
+  opened.close();
+});
+
 it("escape closes the list and gives focus back to the message box it came from", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 

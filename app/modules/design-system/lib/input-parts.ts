@@ -21,6 +21,7 @@ interface InputGroupInputParts {
   readonly onEdit?: ((text: string) => void) | undefined;
   readonly mono?: boolean | undefined;
   readonly disabled?: boolean | undefined;
+  readonly keyshortcuts?: string | undefined;
 }
 
 export type { InputGroupInputParts, InputGroupParts, InputSize, InputVariant };

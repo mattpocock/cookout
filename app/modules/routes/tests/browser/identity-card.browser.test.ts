@@ -40,8 +40,17 @@ async function openAsReader(page: Page, channel: string): Promise<void> {
   await logInToChannels({ page, token, url: `/#/channels/${channel}` });
 }
 
-async function edgesOnHover(page: Page, name: string): Promise<Edges> {
+async function cardTrigger(page: Page, name: string): Promise<Locator> {
   const trigger = page.getByRole("list", { name: "Messages" }).getByRole("link", { exact: true, name });
+
+  await expect(trigger).toHaveAttribute("data-identity-card");
+  await expect(trigger).toBeInViewport();
+
+  return trigger;
+}
+
+async function edgesOnHover(page: Page, name: string): Promise<Edges> {
+  const trigger = await cardTrigger(page, name);
   await trigger.hover();
   const card = page.getByRole("dialog");
 
@@ -88,7 +97,8 @@ async function focusedAuthor(page: Page, channel: string): Promise<string> {
   await adminClient().createChannel({ name: channel });
   await postAs(channel, author, "human");
   await openAsReader(page, channel);
-  await page.getByRole("list", { name: "Messages" }).getByRole("link", { exact: true, name: author }).focus();
+  const trigger = await cardTrigger(page, author);
+  await trigger.focus();
   return author;
 }
 

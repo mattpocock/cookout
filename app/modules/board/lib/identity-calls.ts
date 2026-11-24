@@ -1,14 +1,16 @@
-import type { CookoutClient, Identity, IdentityName, Token } from "../../sdk/index.ts";
+import type { CookoutClient, Identity, IdentityName, SetTriggerRequest, Token, Trigger } from "../../sdk/index.ts";
 import type { Identities, IdentityChange } from "./identities-slice.ts";
 import type { Part } from "./slice.ts";
 import type { SessionsPart } from "./agent-sessions-part.ts";
 
 type IdentityCallsClient = Pick<
   CookoutClient,
+  | "clearTrigger"
   | "countMessagesBy"
   | "createIdentity"
   | "deactivateIdentity"
   | "deleteIdentity"
+  | "getTrigger"
   | "makeAdmin"
   | "reactivateIdentity"
   | "removeAdmin"
@@ -16,6 +18,7 @@ type IdentityCallsClient = Pick<
   | "rotateToken"
   | "setDescription"
   | "setDisplayName"
+  | "setTrigger"
   | "transferAgent"
 >;
 
@@ -36,6 +39,9 @@ interface IdentityCalls {
   readonly delete: (name: IdentityName) => Promise<void>;
   readonly transfer: (name: IdentityName, to: string) => Promise<void>;
   readonly countMessages: (name: IdentityName) => Promise<number>;
+  readonly readTrigger: (name: IdentityName) => Promise<Trigger | null>;
+  readonly setTrigger: (name: IdentityName, request: SetTriggerRequest) => Promise<Trigger | null>;
+  readonly clearTrigger: (name: IdentityName) => Promise<void>;
 }
 
 interface IdentityCallsOptions {
@@ -100,6 +106,24 @@ function lifeCalls(
   };
 }
 
+function triggerCalls({
+  client,
+}: IdentityCallsOptions): Pick<IdentityCalls, "clearTrigger" | "readTrigger" | "setTrigger"> {
+  return {
+    clearTrigger: async (name) => {
+      await client.clearTrigger(name);
+    },
+    readTrigger: async (name) => {
+      const { trigger } = await client.getTrigger(name);
+      return trigger;
+    },
+    setTrigger: async (name, request) => {
+      const { trigger } = await client.setTrigger(name, request);
+      return trigger;
+    },
+  };
+}
+
 function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
   const { client, identities, sessions } = options;
   function put(identity: Identity): void {
@@ -108,6 +132,7 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
   return {
     ...textCalls(options, put),
     ...lifeCalls(options, put),
+    ...triggerCalls(options),
     countMessages: async (name) => {
       const { messages } = await client.countMessagesBy(name);
       return messages;

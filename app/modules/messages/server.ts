@@ -7,64 +7,28 @@
  * message, so they survive the identity being deleted. Routes sit behind the
  * server's token gate.
  */
-import { Caller, CommandThread, sentHarness } from "../identities/server.ts";
-import { Effect, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ListMessagesQuerySchema,
   ListMessagesResponseSchema,
   MessageResponseSchema,
-  PostMessageRequestSchema,
   ReactionsResponseSchema,
   ThreadResponseSchema,
   TopLevelMessageResponseSchema,
 } from "./lib/server/wire.ts";
-import { channelMessagesPath, closedPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
+import { channelMessagesPath, closedPath, reactionPath, threadPath } from "./index.ts";
 import { listingResponseSchemas, listingRoutes } from "./lib/server/listings.ts";
+import { Caller } from "../identities/server.ts";
+import { Effect } from "effect";
 import type { ListingNeeds } from "./lib/server/listings.ts";
-import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
-import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
-import { messageNotFound } from "./lib/server/refusals.ts";
+import { postRoutes } from "./lib/server/routes.ts";
+import { threadIdOf } from "./lib/server/refusals.ts";
 
-const CREATED = 201;
 const ALL_ERRORS = { errors: "all" } as const;
 const PATH_BASE = "http://cookout.invalid";
 const DIGITS = /^\d+$/u;
-
-function threadIdOf(asked: string): Effect.Effect<MessageId, Refusal> {
-  const id = Number(asked);
-  if (isMessageId(id)) {
-    return Effect.succeed(id);
-  }
-  return Effect.fail(messageNotFound(asked));
-}
-
-function seenOnReply(body: typeof PostMessageRequestSchema.Type): typeof PostMessageRequestSchema.Type {
-  if (Predicate.isUndefined(body.replyTo)) {
-    return body;
-  }
-  return { ...body, seen: body.seen ?? body.replyTo };
-}
-
-const postRoute: Route<Caller | Messages> = {
-  handle: () =>
-    Effect.gen(function* postMessageRoute() {
-      const body = yield* HttpServerRequest.schemaBodyJson(PostMessageRequestSchema, ALL_ERRORS);
-      const caller = yield* Caller;
-      const messages = yield* Messages;
-      const thread = yield* CommandThread;
-      const posting = { ...seenOnReply(body), ...(yield* sentHarness) };
-      const posted = yield* Option.match(thread, {
-        onNone: () => messages.post(caller, posting),
-        onSome: (threadId) => messages.postInThread(caller, posting, threadId),
-      });
-      return yield* HttpServerResponse.schemaJson(MessageResponseSchema)(posted, { status: CREATED });
-    }),
-  method: "POST",
-  path: messagesPath,
-};
 
 const threadRoute: Route<Messages> = {
   handle: (params) =>
@@ -148,8 +112,11 @@ export { messageNotFound } from "./lib/server/refusals.ts";
 
 /** The Schemas of a message and its ID, for other modules' answers that hold messages. */
 export {
+  AuthorSchema,
   MessageIdSchema,
   MessageSchema,
+  ScheduledMessageIdSchema,
+  TextSchema,
   ReactionCountSchema,
   ReactionSchema,
   ReadReceiptSchema,
@@ -164,7 +131,7 @@ export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts
  * which `messagesLayer` provides, and `Storage`.
  */
 export const messageRoutes: readonly Route<ListingNeeds>[] = [
-  postRoute,
+  ...postRoutes,
   threadRoute,
   pageRoute,
   reactionRoute("PUT", (messages) => messages.react),

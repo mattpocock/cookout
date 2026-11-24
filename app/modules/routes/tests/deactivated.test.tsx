@@ -161,9 +161,9 @@ it("the @ suggestions leave out deactivated identities", { timeout: 5000 }, asyn
   await adminClient().createChannel({ name: "web-off-suggest" });
   const close = openAt({ client: adminClient(), hash: "#/channels/web-off-suggest" });
   fireEvent.change(await screen.findByLabelText("Message"), { target: { value: "@web-off-suggest" } });
-  const list = await screen.findByRole("list", { name: "Mention suggestions" });
+  const list = await screen.findByRole("listbox", { name: "Mention suggestions" });
 
-  expect(textsOf(() => within(list).getAllByRole("button"))).toStrictEqual(["@web-off-suggest-human"]);
+  expect(textsOf(() => within(list).getAllByRole("option"))).toStrictEqual(["@web-off-suggest-human"]);
 
   close();
 });

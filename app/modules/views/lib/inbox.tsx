@@ -3,6 +3,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { InboxConversation } from "./inbox-conversation.tsx";
+import type { InboxKeys } from "./use-inbox-keys.ts";
 import { InboxList } from "./inbox-list.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
 import type { PanelEdgeParts } from "../../design-system/index.tsx";
@@ -16,6 +17,7 @@ interface InboxProps {
   readonly board: Board;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
+  readonly keymap: InboxKeys["keymap"];
   readonly unread: Unread;
   readonly me: string;
   readonly reading: Reading;
@@ -23,7 +25,7 @@ interface InboxProps {
 }
 
 export function InboxView(props: InboxProps): ReactNode {
-  const { board, composer, me, selected, unread } = props;
+  const { board, composer, keymap, me, selected, unread } = props;
   const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
   const rows = useInboxRows({ me, selected, state, unread });
   const { deactivatedQuietAgents, deactivationOffers, nudges } = unread;
@@ -32,7 +34,7 @@ export function InboxView(props: InboxProps): ReactNode {
     () => ({ deactivatedQuietAgents, deactivationOffers, identities, nudges }),
     [deactivatedQuietAgents, deactivationOffers, nudges, identities],
   );
-  useInboxKeys({ conversation: CONVERSATION, selected: selected !== null });
+  useInboxKeys({ conversation: CONVERSATION, keymap, selected: selected !== null });
   return (
     <>
       <InboxList
@@ -49,6 +51,7 @@ export function InboxView(props: InboxProps): ReactNode {
           board={board}
           composer={composer}
           edge={props.edge}
+          keymap={keymap}
           me={me}
           reading={props.reading}
           selected={selected}

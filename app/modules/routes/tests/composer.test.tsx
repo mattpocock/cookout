@@ -16,15 +16,15 @@ function hashOf(parent: Message): string {
 }
 
 async function typeInReply(text: string): Promise<HTMLElement> {
-  const box = await screen.findByLabelText("Reply");
+  const box = await screen.findByLabelText("Reply", { selector: "textarea" });
   fireEvent.change(box, { target: { value: text } });
   return box;
 }
 
 async function suggested(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Mention suggestions" });
+  const list = await screen.findByRole("listbox", { name: "Mention suggestions" });
   const shown: (string | null)[] = [];
-  for (const button of within(list).getAllByRole("button")) {
+  for (const button of within(list).getAllByRole("option")) {
     shown.push(button.textContent);
   }
   return shown;
@@ -67,7 +67,7 @@ it("typing @ and the start of a display name, in any case, suggests that identit
 
   const box = await typeInReply("Ping @qUOk");
   const shown = await suggested();
-  fireEvent.click(inPane().getByRole("button", { name: /@shown-worker-1/u }));
+  fireEvent.mouseDown(inPane().getByRole("option", { name: /@shown-worker-1/u }));
 
   expect([shown, box]).toStrictEqual([
     ["@shown-worker-1Quokka (cloud)"],
@@ -131,11 +131,11 @@ it("choosing a suggestion puts the mention in the reply box in place of the pref
 
   const box = await typeInReply("Ping @chosen-l");
   await suggested();
-  fireEvent.click(inPane().getByRole("button", { name: /^@chosen-linus/u }));
+  fireEvent.mouseDown(inPane().getByRole("option", { name: /^@chosen-linus/u }));
 
   expect([
     screen.queryByDisplayValue("Ping @chosen-linus ", { normalizer: getDefaultNormalizer({ trim: false }) }),
-    screen.queryByRole("list", { name: "Mention suggestions" }),
+    screen.queryByRole("listbox", { name: "Mention suggestions" }),
   ]).toStrictEqual([box, null]);
 
   close();
@@ -149,7 +149,7 @@ it("text with no @ before the caret suggests nobody", { timeout: 5000 }, async (
 
   await typeInReply("mail me at me@admin");
 
-  expect(screen.queryByRole("list", { name: "Mention suggestions" })).toBeNull();
+  expect(screen.queryByRole("listbox", { name: "Mention suggestions" })).toBeNull();
 
   close();
 });
@@ -167,7 +167,7 @@ it("when the server refuses the identity list, typing @ suggests nobody and the 
   await expect(refused.listIdentities()).rejects.toThrow("token");
 
   expect([
-    screen.queryByRole("list", { name: "Mention suggestions" }),
+    screen.queryByRole("listbox", { name: "Mention suggestions" }),
     screen.queryByDisplayValue("Ping @adm"),
   ]).toStrictEqual([null, box]);
 

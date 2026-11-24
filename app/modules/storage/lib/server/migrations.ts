@@ -1,10 +1,10 @@
+import { ATTACHMENTS_MIGRATION, SEARCH_MIGRATION, TRIGGERS_MIGRATION } from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
-import { SEARCH_MIGRATION } from "./search-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -197,6 +197,30 @@ const migrations: readonly string[] = [
   DEACTIVATED_QUIET_AGENTS_MIGRATION,
   SEARCH_MIGRATION,
   "ALTER TABLE identities ADD COLUMN brought_in_by TEXT;",
+  ATTACHMENTS_MIGRATION,
+  `CREATE TABLE scheduled_messages (
+     id INTEGER PRIMARY KEY,
+     channel TEXT NOT NULL REFERENCES channels (name),
+     creator TEXT NOT NULL REFERENCES identities (name),
+     text TEXT NOT NULL,
+     cron TEXT,
+     run_at TEXT,
+     time_zone TEXT NOT NULL,
+     status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'finished')),
+     paused_because TEXT CHECK (paused_because IN ('creator_deactivated')),
+     runs_from TEXT NOT NULL,
+     last_run_due TEXT,
+     last_run_outcome TEXT CHECK (last_run_outcome IN ('posted', 'skipped')),
+     last_run_message INTEGER,
+     created_at TEXT NOT NULL,
+     updated_at TEXT NOT NULL,
+     deleted_at TEXT,
+     CHECK ((cron IS NULL) <> (run_at IS NULL))
+   ) STRICT;
+   CREATE INDEX scheduled_messages_by_channel ON scheduled_messages (channel, id);
+   CREATE INDEX scheduled_messages_by_creator ON scheduled_messages (creator);
+   ALTER TABLE messages ADD COLUMN scheduled_message_id INTEGER;`,
+  TRIGGERS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

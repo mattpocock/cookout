@@ -22,6 +22,7 @@ export function InputGroupInput(parts: InputGroupInputParts): ReactNode {
   }, [onEdit]);
   return (
     <input
+      aria-keyshortcuts={parts.keyshortcuts}
       aria-label={parts.label}
       autoComplete="off"
       className={`${CONTROL} ${fontOf(parts.mono ?? false)}`}

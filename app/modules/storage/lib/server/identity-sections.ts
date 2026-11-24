@@ -1,7 +1,7 @@
 import type { IdentitySections, SectionsBesideIdentities } from "./identity-section-types.ts";
 import { memoryIdentities, sqlIdentities } from "./identities.ts";
 import { memoryOfflineAlerts, sqlOfflineAlerts } from "./offline-alerts.ts";
-import { memoryPresence, sqlPresence } from "./presence.ts";
+import { memoryReach, sqlReach } from "./reach-sections.ts";
 import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
@@ -17,7 +17,7 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
     findIdentity: identities.findIdentity,
     state,
   });
-  const { dropPresence, ...presence } = memoryPresence(state);
+  const { dropPresence, ...presence } = memoryReach(state);
   const { dropOfflineAlerts, ...offlineAlerts } = memoryOfflineAlerts(state);
   return {
     ...identities,
@@ -46,7 +46,7 @@ function sqlIdentitySections(db: SqlDatabase): IdentitySections {
     ...sqlIdentities(db),
     ...sqlIdentityDeletes(db),
     ...sqlLoginRequests(db),
-    ...sqlPresence(db),
+    ...sqlReach(db),
     ...sqlOfflineAlerts(db),
   };
 }

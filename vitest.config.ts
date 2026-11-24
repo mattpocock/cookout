@@ -1,10 +1,15 @@
 import { defineConfig } from "vitest/config";
-import { postgresContractFiles } from "./app/modules/testing/lib/server/postgres-contract-files.ts";
 
 const postgresFiles = [
-  ...postgresContractFiles.map((name) => `app/modules/storage/tests/server/${name}.contract.test.ts`),
+  "app/modules/storage/tests/server/*.contract.test.ts",
   "app/modules/storage/tests/server/postgres.test.ts",
   "app/modules/storage/tests/server/postgres-query-plans.test.ts",
+  "app/modules/cli/tests/server/serve-postgres.test.ts",
+];
+
+const s3Files = [
+  "app/modules/storage/tests/server/asset-store.contract.test.ts",
+  "app/modules/cli/tests/server/serve-s3.test.ts",
 ];
 
 export default defineConfig({
@@ -37,7 +42,7 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          exclude: ["app/**/*.browser.test.ts", ...postgresFiles],
+          exclude: ["app/**/*.browser.test.ts", ...postgresFiles, ...s3Files],
           include: [
             "app/**/*.test.ts",
             "packages/handler-example/app/**/*.test.ts",
@@ -51,10 +56,20 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          exclude: s3Files,
           globalSetup: ["./scripts/postgres-test-container.ts"],
           include: postgresFiles,
           isolate: false,
           name: "postgres",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          globalSetup: ["./scripts/s3-test-container.ts"],
+          include: s3Files,
+          isolate: false,
+          name: "s3",
         },
       },
       {

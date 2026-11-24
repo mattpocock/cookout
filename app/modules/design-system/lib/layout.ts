@@ -12,7 +12,7 @@ export { ListPane } from "./list-pane.tsx";
 export { ConversationEmpty } from "./conversation-empty.tsx";
 export { ConversationPanel } from "./conversation-panel.tsx";
 export type { PanelAction } from "./panel-action-button.tsx";
-export { CONVERSATION_KEYS } from "./conversation-keys.ts";
+export type { ShortcutLinkParts } from "./shortcut-link.tsx";
 export { PaneHeader } from "./pane-header.tsx";
 export { PaneLead } from "./pane-lead.ts";
 export { PaneSearch } from "./pane-search.ts";

@@ -1,7 +1,8 @@
 import type { FileTiming, ReportFile } from "./slowest-files.ts";
 import { TIMINGS_DIR, readTimings, saveFullList, slowestNames, slowestSummary } from "./slowest-files.ts";
+import { holdMachineLock, waitingLine } from "./machine-lock.ts";
+import type { Holder } from "./machine-lock.ts";
 import { firstError } from "./first-error.ts";
-import { holdMachineLock } from "./machine-lock.ts";
 import { once } from "node:events";
 import { rmSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -16,8 +17,15 @@ interface Check {
   readonly timings?: ReportFile;
 }
 
+interface CiOnly {
+  readonly ciJob: string;
+  readonly command: string;
+  readonly name: string;
+}
+
 interface Checks {
   readonly checks: readonly Check[];
+  readonly ciOnly: readonly CiOnly[];
   readonly inCi: boolean;
   readonly job: string;
   readonly lockFile: string;
@@ -165,17 +173,20 @@ async function runSelected(selected: readonly Check[]): Promise<readonly Outcome
   return [...first, ...after];
 }
 
-function waiting(holder: number): void {
-  console.error(
-    `check: waiting for the pnpm check already running on this machine (pid ${String(holder)}). Two at once overload the CPU until spawned test processes time out (#94).`,
-  );
+function waiting(holder: Holder): void {
+  console.error(waitingLine({ holder, script: "check" }));
 }
 
 async function runLocked(selected: readonly Check[], { inCi, lockFile }: Checks): Promise<readonly Outcome[]> {
   if (inCi) {
     return runSelected(selected);
   }
-  const release = await holdMachineLock({ file: lockFile, onWait: waiting, pollMs: LOCK_POLL_MS });
+  const release = await holdMachineLock({
+    file: lockFile,
+    onWait: waiting,
+    pollMs: LOCK_POLL_MS,
+    worktree: process.cwd(),
+  });
   try {
     return await runSelected(selected);
   } finally {
@@ -191,6 +202,17 @@ function exitCodeOf(failed: readonly string[]): number {
   return EXIT_FAILURE;
 }
 
+function reportSkipped({ ciOnly, inCi, job }: Checks): void {
+  if (inCi || job !== "") {
+    return;
+  }
+  for (const suite of ciOnly) {
+    console.log(
+      `skipped: ${suite.name}, which CI runs as its ${suite.ciJob} job. Run it here on purpose with ${suite.command}.`,
+    );
+  }
+}
+
 async function runChecks(options: Checks): Promise<number> {
   const { checks, inCi, job } = options;
   const selected = checks.filter((check) => job === "" || check.job === job);
@@ -202,8 +224,9 @@ async function runChecks(options: Checks): Promise<number> {
   for (const outcome of final) {
     report(outcome, inCi);
   }
+  reportSkipped(options);
   return exitCodeOf(final.filter((outcome) => !passed(outcome)).map((outcome) => outcome.check.name));
 }
 
-export type { Check };
+export type { Check, CiOnly };
 export { runChecks };

@@ -1,10 +1,10 @@
 import type { Search, SearchState } from "../../search/web.ts";
 import { useEffect, useRef } from "react";
+import type { Keymap } from "../../keymap/index.ts";
 import type { RefObject } from "react";
 import type { SearchResult } from "../../sdk/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 
-const SHORTCUT = "k";
 const NEAR_END_PX = 48;
 const CAPTURE = { capture: true } as const;
 const ONE = 1;
@@ -18,11 +18,6 @@ interface Place {
 }
 
 type Listener = (event: Readonly<Event>) => void;
-
-interface Press {
-  readonly key: string;
-  readonly shortcut: boolean;
-}
 
 function searchHrefOf({ message }: SearchResult): string {
   if (message.kind === "reply") {
@@ -44,22 +39,6 @@ function present<Element>(element: Element | null): readonly Element[] {
 
 function focusable(element: unknown): readonly HTMLElement[] {
   return [element].filter((each): each is HTMLElement => each instanceof HTMLElement);
-}
-
-function isShortcut(event: Readonly<Event>): boolean {
-  return (
-    event instanceof KeyboardEvent &&
-    event.key.toLowerCase() === SHORTCUT &&
-    (event.ctrlKey || event.metaKey) &&
-    !event.altKey
-  );
-}
-
-function pressOf(event: Readonly<Event>): Press {
-  if (!(event instanceof KeyboardEvent) || event.isComposing) {
-    return { key: "", shortcut: false };
-  }
-  return { key: event.key, shortcut: isShortcut(event) };
 }
 
 function isInside(place: Place, event: Readonly<Event>): boolean {
@@ -90,47 +69,47 @@ function choose(place: Place): void {
   }
 }
 
-function boxKeys(place: Place): Readonly<Partial<Record<string, () => void>>> {
+function bindBox(place: Place, keymap: Keymap): () => void {
   const { search } = place;
-  return {
-    ArrowDown: () => {
-      search.move("down");
+  return keymap.bind({
+    actions: {
+      closeSearch: () => {
+        search.close();
+        goBack(place);
+        return true;
+      },
+      highlightNext: () => {
+        search.move("down");
+        return true;
+      },
+      highlightPrevious: () => {
+        search.move("up");
+        return true;
+      },
+      openHighlighted: () => {
+        choose(place);
+        return true;
+      },
     },
-    ArrowUp: () => {
-      search.move("up");
-    },
-    Enter: () => {
-      choose(place);
-    },
-    Escape: () => {
-      search.close();
-      goBack(place);
-    },
-  };
+    scope: "search box",
+    within: place.box,
+  });
 }
 
-function shortcutOf(place: Place): Listener {
-  return (event) => {
-    if (pressOf(event).shortcut) {
-      event.preventDefault();
-      for (const box of present(place.box())) {
-        box.focus();
-        box.select();
-      }
-      place.search.open();
-    }
-  };
-}
-
-function pressedOf(place: Place): Listener {
-  const keys = boxKeys(place);
-  return (event) => {
-    const action = keys[pressOf(event).key] ?? null;
-    if (action !== null && event.target === place.box()) {
-      event.preventDefault();
-      action();
-    }
-  };
+function bindOpen(place: Place, keymap: Keymap): () => void {
+  return keymap.bind({
+    actions: {
+      openSearch: () => {
+        for (const box of present(place.box())) {
+          box.focus();
+          box.select();
+        }
+        place.search.open();
+        return true;
+      },
+    },
+    scope: "everywhere",
+  });
 }
 
 function typedOf(place: Place): Listener {
@@ -190,10 +169,10 @@ function on(type: keyof DocumentEventMap, listener: Listener): () => void {
   };
 }
 
-function listen(place: Place): () => void {
+function listen(place: Place, keymap: Keymap): () => void {
   const stops = [
-    on("keydown", shortcutOf(place)),
-    on("keydown", pressedOf(place)),
+    bindOpen(place, keymap),
+    bindBox(place, keymap),
     on("input", typedOf(place)),
     on("focusin", focusedOf(place)),
     on("pointerdown", pointedOf(place)),
@@ -215,21 +194,30 @@ function inputIn(area: () => HTMLDivElement | null): HTMLInputElement | null {
   return found.querySelector("input");
 }
 
-function useSearchBox(search: Search): RefObject<HTMLDivElement | null> {
+function useSearchBox({
+  keymap,
+  search,
+}: {
+  readonly keymap: Keymap;
+  readonly search: Search;
+}): RefObject<HTMLDivElement | null> {
   const area = useRef<HTMLDivElement>(null);
   const back = useRef<unknown>(null);
   useEffect(
     () =>
-      listen({
-        area: () => area.current,
-        back: () => back.current,
-        box: () => inputIn(() => area.current),
-        remember: (element) => {
-          back.current = element;
+      listen(
+        {
+          area: () => area.current,
+          back: () => back.current,
+          box: () => inputIn(() => area.current),
+          remember: (element) => {
+            back.current = element;
+          },
+          search,
         },
-        search,
-      }),
-    [search],
+        keymap,
+      ),
+    [keymap, search],
   );
   return area;
 }

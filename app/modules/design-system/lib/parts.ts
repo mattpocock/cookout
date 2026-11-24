@@ -1,5 +1,5 @@
 import type { ActionMenuParts, MenuChoice, MessageMenuParts, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
-import type { AvatarParts, PresenceShown, SuggestionOptionParts } from "./avatar-parts.ts";
+import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 
@@ -37,18 +37,13 @@ interface TextAreaParts extends TextFieldParts {
   readonly caret: number;
   readonly onEdit: (text: string, caret: number) => void;
   readonly choosing: boolean;
+  readonly list: string;
+  readonly highlighted: number;
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
   readonly focused: boolean;
   readonly focusRequests: number;
   readonly onClose: () => void;
-}
-
-interface SuggestionsParts {
-  readonly label: string;
-  readonly options: readonly SuggestionOptionParts[];
-  readonly highlighted: number;
-  readonly onChoose: (option: string) => void;
 }
 
 interface ChipParts extends Parts {
@@ -275,7 +270,6 @@ export type {
   ListParts,
   Parts,
   SkeletonParts,
-  SuggestionsParts,
   TextAreaParts,
   TextFieldParts,
 };

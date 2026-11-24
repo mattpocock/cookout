@@ -1,6 +1,6 @@
-import { Portal, Root } from "@radix-ui/react-alert-dialog";
-import { ConfirmOverlay } from "./confirm-overlay.tsx";
+import { Portal, Root } from "@radix-ui/react-dialog";
 import { FormDialogContent } from "./form-dialog-content.tsx";
+import { FormDialogOverlay } from "./form-dialog-overlay.tsx";
 import type { FormDialogParts } from "./form-dialog-parts.ts";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
@@ -20,12 +20,13 @@ export function FormDialog(parts: FormDialogParts): ReactNode {
   return (
     <Root onOpenChange={handleOpenChange} open={parts.open}>
       <Portal>
-        <ConfirmOverlay />
+        <FormDialogOverlay />
         <FormDialogContent
           busy={busy}
           busyButton={parts.busyButton}
           button={parts.button}
           description={parts.description}
+          disabled={parts.disabled}
           label={parts.label}
           onCancel={handleCancel}
           onSubmit={handleSubmit}

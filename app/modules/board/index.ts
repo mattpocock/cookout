@@ -89,6 +89,12 @@ export {
   type CreationState,
   createChannelCreation,
 } from "./lib/channel-creation.ts";
+export {
+  type ScheduleKind,
+  type Scheduling,
+  type SchedulingSnapshot,
+  createScheduling,
+} from "./lib/scheduling.ts";
 export type { ChannelsState } from "./lib/listed-slices.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
 export type { CallState } from "./lib/command-call.ts";

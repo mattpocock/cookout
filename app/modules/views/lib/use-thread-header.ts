@@ -54,7 +54,7 @@ function threadActions(closing: ThreadClosing, parent: TopLevelMessage): readonl
   if (choice === null) {
     return [];
   }
-  return [{ icon: choice.icon, label: choice.name, name: choice.label, onAction: choice.onSelect }];
+  return [{ icon: choice.icon, label: choice.name, onAction: choice.onSelect }];
 }
 
 function useThreadHeader({ channel, closing, menu, state }: ThreadHeaderOf): ThreadHeader {

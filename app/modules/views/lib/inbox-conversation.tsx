@@ -5,6 +5,7 @@ import type { Composer } from "../../composer/index.ts";
 import { ConversationEmpty } from "../../design-system/index.tsx";
 import { ConversationView } from "./conversation.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
+import type { Keymap } from "../../keymap/index.ts";
 import type { PanelEdgeParts } from "../../design-system/index.tsx";
 
 import type { ReactNode } from "react";
@@ -19,6 +20,7 @@ interface InboxConversationProps {
   readonly unread: Unread;
   readonly reading: Reading;
   readonly me: string;
+  readonly keymap: Keymap;
 }
 
 export function InboxConversation(props: InboxConversationProps): ReactNode {
@@ -38,6 +40,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
         composer={props.composer}
         edge={props.edge}
         key={selected.channel}
+        keymap={props.keymap}
         me={props.me}
         reading={props.reading}
         unread={props.unread}
@@ -50,6 +53,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
       composer={props.composer}
       key={`${selected.channel}/${String(selected.thread)}`}
       edge={props.edge}
+      keymap={props.keymap}
       me={props.me}
       reading={props.reading}
       selected={selected}

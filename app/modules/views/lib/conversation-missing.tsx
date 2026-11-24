@@ -6,7 +6,6 @@ const TEXT = {
   back: "Back to the inbox",
   conversation: "Conversation",
   nothing: "Nothing here",
-  open: "Open thread",
 } as const;
 
 export function ConversationMissing(): ReactNode {
@@ -18,8 +17,7 @@ export function ConversationMissing(): ReactNode {
       edge={null}
       label={TEXT.conversation}
       message={null}
-      openHref={null}
-      openLabel={TEXT.open}
+      open={null}
     >
       <CardBody>
         <Muted>{TEXT.nothing}</Muted>

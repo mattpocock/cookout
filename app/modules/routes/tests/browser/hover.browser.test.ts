@@ -52,7 +52,7 @@ test("Reply in a thread's More actions menu opens the thread with the cursor in 
   await message.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Reply" }).click();
 
-  await expect(page.getByLabel("Reply", { exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { exact: true, name: "Reply" })).toBeFocused();
 });
 
 interface Shot {

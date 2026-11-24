@@ -1,4 +1,4 @@
-import { actionsOf, isMissing } from "./conversation-parts.ts";
+import { actionsOf, isMissing, openLinkOf } from "./conversation-parts.ts";
 import { ConversationMessages } from "./conversation-messages.tsx";
 import { ConversationMissing } from "./conversation-missing.tsx";
 import { ConversationPanel } from "../../design-system/index.tsx";
@@ -32,15 +32,14 @@ export function ConversationView(props: ConversationProps): ReactNode {
   }
   return (
     <ConversationPanel
-      actions={actionsOf(reader)}
+      actions={actionsOf({ keymap: props.keymap, reader })}
       backHref={hrefOf({ name: "inbox", selected: null })}
       backLabel={TEXT.back}
       detail={`#${channel}`}
       edge={props.edge}
       label={TEXT.conversation}
       message={draft.replyTo}
-      openHref={hrefOf({ channel, name: "thread", thread })}
-      openLabel={TEXT.open}
+      open={openLinkOf({ href: hrefOf({ channel, name: "thread", thread }), keymap: props.keymap, label: TEXT.open })}
     >
       <ReadNote reader={reader} />
       <ConversationMessages

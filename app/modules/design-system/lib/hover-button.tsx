@@ -9,7 +9,13 @@ interface HoverButtonParts extends ButtonParts {
 export function HoverButton(parts: HoverButtonParts): ReactNode {
   const handleClick = parts.onClick;
   return (
-    <button className={PANEL_ACTION_LOOK} onClick={handleClick} title={parts.name} type="button">
+    <button
+      aria-label={parts.name}
+      className={PANEL_ACTION_LOOK}
+      onClick={handleClick}
+      title={parts.name}
+      type="button"
+    >
       {parts.children}
     </button>
   );

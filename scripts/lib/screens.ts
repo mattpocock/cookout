@@ -3,6 +3,8 @@ interface Screen {
   readonly hash: string;
   readonly click?: string;
   readonly clickIn?: string;
+  readonly choose?: string;
+  readonly fill?: readonly (readonly [label: string, value: string])[];
   readonly focus?: string;
   readonly press?: string;
   readonly text: string;
@@ -128,6 +130,8 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { hash: "#/people/triage-agent", name: "warning", text: "Went offline unexpectedly" },
+  { hash: "#/people/release-bot", name: "wakes-on-mention", text: "Wakes on mention" },
+  { hash: "#/people/rollback", name: "unreachable", text: "Unreachable:" },
   { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },
   { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
   { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
@@ -135,6 +139,19 @@ const SCREENS: readonly Screen[] = [
   { click: "New agent", hash: "#/settings", name: "settings-new-agent", text: "It gets its own token" },
   { click: "More actions", hash: "#/settings", name: "settings-agent-menu", text: "Edit display name" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
+  {
+    choose: "Schedule…",
+    click: "Post later",
+    fill: [
+      ["Text", "@grace the deploy window opens now"],
+      ["Date", "2099-06-01"],
+      ["Time", "09:30"],
+      ["Time zone", "Europe/London"],
+    ],
+    hash: "#/channels/general",
+    name: "schedule",
+    text: "1 Jun 2099, 09:30",
+  },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { hash: "#/channels/deploys", name: "closed-threads", text: "2 closed threads" },
   { hash: "#/channels/deploys/threads/8", name: "closed-thread", text: "Rolled back to 1.4.1." },
@@ -153,6 +170,7 @@ const SCREENS: readonly Screen[] = [
     text: "Lunch at 12:30.",
   },
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
+  { focus: "main a", hash: "#/inbox", name: "shortcut-list", press: "?", text: "Keyboard shortcuts" },
   { hash: "#/channels/general", liveDown: true, name: "reconnecting", text: "Reconnecting…" },
 ];
 

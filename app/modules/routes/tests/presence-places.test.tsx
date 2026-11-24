@@ -36,10 +36,10 @@ it("an @-suggestion for an identity with a display name reads the display name, 
   await readerOn({ hash: "#/channels/web-presence-suggest-named", reader: "web-presence-suggest-named-reader" });
 
   fireEvent.change(await screen.findByLabelText("Message"), { target: { value: "Hi @web-presence-suggest-gr" } });
-  const list = await screen.findByRole("list", { name: "Mention suggestions" });
+  const list = await screen.findByRole("listbox", { name: "Mention suggestions" });
 
   await expect(
-    within(list).findByRole("button", { name: "Grace Hopper, @web-presence-suggest-grace, Offline" }),
+    within(list).findByRole("option", { name: "Grace Hopper, @web-presence-suggest-grace, Offline" }),
   ).resolves.toBeDefined();
 });
 

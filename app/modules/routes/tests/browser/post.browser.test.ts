@@ -9,8 +9,8 @@ async function postWithMention(page: Page): Promise<void> {
   await inSidebar(page).getByRole("link", { name: "#browser-post" }).click();
   await page.getByLabel("Message", { exact: true }).pressSequentially("Can @browser-post-r");
   await page
-    .getByRole("list", { name: "Mention suggestions" })
-    .getByRole("button", { name: "@browser-post-reviewer" })
+    .getByRole("listbox", { name: "Mention suggestions" })
+    .getByRole("option", { name: "@browser-post-reviewer" })
     .click();
   await page.keyboard.type("look?");
   await inPane(page).getByRole("button", { name: "Send" }).click();

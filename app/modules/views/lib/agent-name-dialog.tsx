@@ -24,6 +24,7 @@ export function AgentNameDialog(props: AgentNameDialogProps): ReactNode {
       busy={name.saving}
       busyButton={TEXT.busy}
       button={TEXT.save}
+      disabled={false}
       description={`How @${props.name} shows on its messages. Leave it empty to show @${props.name}.`}
       label={`Display name of @${props.name}`}
       onCancel={handleCancel}

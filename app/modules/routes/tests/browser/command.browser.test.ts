@@ -36,7 +36,7 @@ interface Typing {
 }
 
 async function pickByKeyboard(page: Page): Promise<Locator> {
-  await expect(page.getByRole("list", { name: "Command suggestions" }).getByRole("listitem")).toHaveText([
+  await expect(page.getByRole("listbox", { name: "Command suggestions" }).getByRole("option")).toHaveText([
     "/browser-call-boxShip a branch",
   ]);
 

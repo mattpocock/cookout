@@ -1,5 +1,5 @@
 import { Context, Effect, Predicate } from "effect";
-import type { Hub, PostMessage } from "./posting.ts";
+import type { Hub, PostMessage, ScheduledRunParts } from "./posting.ts";
 import type {
   ListMessagesResponse,
   ListOpenThreadsResponse,
@@ -14,15 +14,16 @@ import type {
 import type { NewCommandCall, OpenThreadsPageRequest, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { PubSub, Scope } from "effect";
 import { closeWithCommandToken, messageNotFound, replyOutsideCommandThread } from "./refusals.ts";
+import { postScheduledWith, postWith } from "./posting.ts";
 import { react, shownPage, shownThread, unreact } from "./reactions.ts";
+import type { Attaching } from "../../../attachments/server.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { Reactions } from "./reactions.ts";
-import type { Refusal } from "../../../http/index.ts";
+import type { Refusal } from "./refusals.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { pageSize } from "../../index.ts";
-import { postWith } from "./posting.ts";
 
 interface PageQuery {
   readonly before?: MessageId;
@@ -59,28 +60,34 @@ interface MessagesOn {
   readonly storage: Storage["Service"];
   readonly hub: Hub;
   readonly reactions: Reactions["Service"];
+  readonly attaching: Attaching;
 }
 
 type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged" | "listOpenThreads";
 
-function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
-  const post = postWith({ append: storage.appendMessage, hub, storage });
+function pageWith(storage: Storage["Service"]): MessagesService["page"] {
+  return (channel, query) =>
+    Effect.gen(function* pageChannel() {
+      if (!isChannelName(channel)) {
+        return yield* Effect.fail(channelNotFound(channel));
+      }
+      const page = yield* storage.listChannelMessages(channel, pageRequest(query));
+      if (Predicate.isUndefined(page)) {
+        return yield* Effect.fail(channelNotFound(channel));
+      }
+      return yield* shownPage({ shown: page, storage });
+    });
+}
+
+function messagesOn({ attaching, hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
+  const posting = { attaching, hub, storage };
+  const post = postWith({ ...posting, append: storage.appendMessage });
   return {
     latestId: storage.latestMessageId,
-    page: (channel, query) =>
-      Effect.gen(function* pageChannel() {
-        if (!isChannelName(channel)) {
-          return yield* Effect.fail(channelNotFound(channel));
-        }
-        const page = yield* storage.listChannelMessages(channel, pageRequest(query));
-        if (Predicate.isUndefined(page)) {
-          return yield* Effect.fail(channelNotFound(channel));
-        }
-        return yield* shownPage({ shown: page, storage });
-      }),
+    page: pageWith(storage),
     post,
     postCommandCall: (author, message, call) =>
-      postWith({ append: (stored) => storage.appendCommandCall({ ...call, message: stored }), hub, storage })(
+      postWith({ ...posting, append: (stored) => storage.appendCommandCall({ ...call, message: stored }) })(
         author,
         message,
       ),
@@ -99,6 +106,7 @@ function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesServi
         }
         return yield* post(author, message);
       }),
+    postScheduled: postScheduledWith(posting),
     posted: hub.subscribe,
     react: (caller, id, reaction) => react({ asked: { caller, id, reaction }, hub: reactions, storage }),
     thread: (id) =>
@@ -127,6 +135,7 @@ export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
   readonly postCommandCall: (author: Identity, message: PostMessage, call: CallParts) => Fails<MessageResponse>;
   readonly postInThread: (author: Identity, message: PostMessage, threadId: MessageId) => Fails<MessageResponse>;
+  readonly postScheduled: (author: Identity, message: PostMessage, run: ScheduledRunParts) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;

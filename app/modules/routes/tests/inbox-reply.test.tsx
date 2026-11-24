@@ -38,9 +38,9 @@ async function sent(text: string): Promise<HTMLElement> {
 }
 
 async function suggested(): Promise<readonly (string | null)[]> {
-  const list = await inConversation().findByRole("list", { name: "Mention suggestions" });
+  const list = await inConversation().findByRole("listbox", { name: "Mention suggestions" });
   const shown: (string | null)[] = [];
-  for (const button of within(list).getAllByRole("button")) {
+  for (const button of within(list).getAllByRole("option")) {
     shown.push(button.textContent);
   }
   return shown;

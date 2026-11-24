@@ -1,4 +1,5 @@
 import { PaneLead, PaneSearch, WorkspaceMain } from "../../design-system/index.tsx";
+import type { Keymap } from "../../keymap/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import type { ReactNode } from "react";
 import type { Search } from "../../search/web.ts";
@@ -7,14 +8,15 @@ import { SidebarExpand } from "./sidebar-expand.tsx";
 import { useMemo } from "react";
 
 interface SearchableMainProps {
+  readonly keymap: Keymap;
   readonly layout: Layout;
   readonly search: Search;
   readonly children: ReactNode;
 }
 
 export function SearchableMain(props: SearchableMainProps): ReactNode {
-  const { layout, search } = props;
-  const box = useMemo(() => <SearchBox search={search} />, [search]);
+  const { keymap, layout, search } = props;
+  const box = useMemo(() => <SearchBox keymap={keymap} search={search} />, [keymap, search]);
   const expand = useMemo(() => <SidebarExpand layout={layout} />, [layout]);
   return (
     <PaneLead value={expand}>

@@ -11,6 +11,7 @@ import type {
 } from "../../../messages/index.ts";
 import type { Duration, Effect } from "effect";
 import { isMessageId, withNewestReply } from "../../../messages/index.ts";
+import type { AttachmentsSection } from "./attachments.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -83,7 +84,7 @@ interface ThreadStateChange {
   readonly parent: TopLevelMessage;
 }
 
-interface MessagesSection extends OpenThreadsSection, SearchSection {
+interface MessagesSection extends OpenThreadsSection, SearchSection, AttachmentsSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
   readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
   readonly getThread: (id: MessageId) => Fails<StoredThread | undefined>;
@@ -201,3 +202,5 @@ export {
   threadIdOf,
   withKnownMentions,
 };
+
+export { attachmentIn } from "./attachments.ts";

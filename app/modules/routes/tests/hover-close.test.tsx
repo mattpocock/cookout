@@ -83,7 +83,9 @@ it("a top-level message's More actions menu holds Reply, which opens its thread'
   const article = await feedArticle("Deploy?");
   pressed(() => within(article).getByRole("button", { name: "More actions" }));
   await chose("Reply");
-  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByLabelText("Reply");
+  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByRole("textbox", {
+    name: "Reply",
+  });
 
   await waitFor(() => {
     expect([document.activeElement === box, globalThis.location.hash]).toStrictEqual([

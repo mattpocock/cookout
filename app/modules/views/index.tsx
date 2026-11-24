@@ -106,7 +106,7 @@
  * kind and owner, its presence (how it is connected while online, "Online ·
  * watching from laptop-1", "Online · watching" or "Online · web", or when it
  * was last seen while offline), and when it joined, or "Unknown identity", with a link that
- * closes it (as Escape does). The panel opens beside any page: a message's
+ * closes it (as Escape does, the keymap's `closeProfile`). The panel opens beside any page: a message's
  * author and an `@name` link to it, beside the page `ProfileLinks` names. On
  * your own profile, and on an agent's to its owner, a form saves its display
  * name; an agent's owner also gets its agent actions. To an admin, a human's profile has "Make admin", or "Remove
@@ -117,9 +117,14 @@
  * `AgentJoinApprovalView` is the same for an agent join request: the agent it
  * joins or creates, the host, the code, the idle expiry to keep or lower, and
  * whether to replace the agent's live session.
- * `SearchableMain` is the workspace's main area, giving each `PaneHeader` a `SearchBox`, on the `search` store, led by an Expand sidebar button while the `layout`'s sidebar is collapsed: Ctrl+K (Cmd+K) focuses it from
- * anywhere; typing lists the matching messages under it, newest first, each word matching the query highlighted; Up,
+ * `SearchableMain` is the workspace's main area, giving each `PaneHeader` a `SearchBox`, on the `search` store, led
+ * by an Expand sidebar button while the `layout`'s sidebar is collapsed: the keymap's `openSearch` (Ctrl+K, ⌘K on a
+ * Mac, its placeholder naming it) focuses it from anywhere; typing lists the matching messages under it, newest first,
+ * each word matching the query highlighted; Up,
  * Down and Enter open one in its thread, and Escape or clicking away closes the list and gives focus back.
+ * `ShortcutListView` is the list of every keyboard shortcut, generated from the keymap and grouped by where each
+ * applies: the keymap's `openShortcutList` (`?` off a text box, Ctrl/Cmd+/ anywhere) opens it, and Escape closes
+ * it with focus back where it was.
  */
 export { AgentJoinApprovalView } from "./lib/agent-join-approval.tsx";
 export { Authors } from "./lib/authors.tsx";
@@ -136,6 +141,7 @@ export { ProfileView } from "./lib/profile.tsx";
 export { ReconnectingView } from "./lib/reconnecting.tsx";
 export { SettingsView } from "./lib/settings.tsx";
 export { SearchableMain } from "./lib/searchable-main.tsx";
+export { ShortcutListView } from "./lib/shortcut-list.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
 export { ThreadCardComposer } from "./lib/thread-card-composer.tsx";
 export { ThreadView } from "./lib/thread.tsx";

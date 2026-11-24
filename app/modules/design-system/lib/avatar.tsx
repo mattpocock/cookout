@@ -35,6 +35,7 @@ export function Avatar(parts: AvatarParts): ReactNode {
           name={parts.name}
           online={presence.online}
           spoken={presence.spoken}
+          unreachable={presence.unreachable}
           warning={presence.warning}
         />
       )}

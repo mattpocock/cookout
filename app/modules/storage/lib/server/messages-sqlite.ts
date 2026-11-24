@@ -9,6 +9,7 @@ import type {
   TopLevelMessage,
 } from "../../../messages/index.ts";
 import { MentionsText, dataText, messageColumns, toMessage } from "./message-rows-sqlite.ts";
+import { insertAttachments, sqlAttachments } from "./attachments.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { latestOf, stampedIn, takeId } from "./message-sequence-sqlite.ts";
 import { recordAppended, sqlInbox } from "./inbox-sqlite.ts";
@@ -30,8 +31,8 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
 const INSERT_MESSAGE = `INSERT INTO messages
-  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness, scheduled_message_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function replyToOf(message: Message): MessageId | null {
   if (message.kind === "reply") {
@@ -62,13 +63,33 @@ function placementOf(db: SqlDatabase, { channel, replyTo }: NewMessage): Fails<P
   return Effect.map(find(db, replyTo), (found) => placeIn({ channel, found }));
 }
 
+function scheduleOf({ scheduledMessage }: Message): number | null {
+  if (Predicate.isUndefined(scheduledMessage)) {
+    return null;
+  }
+  return scheduledMessage.id;
+}
+
 function insert(db: SqlDatabase, message: Message, data: string | null): Fails<void> {
   return Effect.gen(function* insertMessage() {
     const mentions = yield* Schema.encodeEffect(MentionsText)(message.mentions).pipe(Effect.mapError(unreadable));
     const owner = message.author.owner ?? null;
     const replyTo = replyToOf(message);
     const { harness = null, author, channel, createdAt, id, text } = message;
-    const columns = [id, channel, author.name, owner, text, data, replyTo, mentions, createdAt, harness] as const;
+    const schedule = scheduleOf(message);
+    const columns = [
+      id,
+      channel,
+      author.name,
+      owner,
+      text,
+      data,
+      replyTo,
+      mentions,
+      createdAt,
+      harness,
+      schedule,
+    ] as const;
     yield* db.run(INSERT_MESSAGE, ...columns);
   });
 }
@@ -107,9 +128,9 @@ function appendInChannel(db: SqlDatabase, message: NewMessage): Fails<AppendMess
     const mentioning = yield* stampedIn({ db, message: withKnownMentions({ known, message }) });
     const id = yield* takeId({ db, message: mentioning });
     const stored = placed({ id, message: mentioning, placement });
-    const [receipts, threadChanged] = yield* Effect.andThen(
-      insert(db, stored, data),
-      afterInsert(db, stored, message.close),
+    const [receipts, threadChanged] = yield* insert(db, stored, data).pipe(
+      Effect.andThen(insertAttachments(db)(stored)),
+      Effect.andThen(afterInsert(db, stored, message.close)),
     );
     return { message: stored, receipts, status: "appended", threadChanged } as const;
   });
@@ -167,6 +188,7 @@ function sqlMessages(db: SqlDatabase): SharedMessagesSection {
   return {
     ...sqlInbox({ db, reader: sqlMessageReader(db) }),
     ...sqlClosedThreads({ db, reader: sqlMessageReader(db) }),
+    ...sqlAttachments(db),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
     latestMessageId: latestOf(db),

@@ -38,57 +38,58 @@
  * and a drag released past its narrowest closes (`onClose`); it isn't shown on a narrow screen. A split view, such as
  * the inbox's, is a `ListPane` (the main column, hidden on a narrow screen while `hiddenWhenNarrow`) beside a
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a narrow screen, where the panel takes the
- * whole width), its detail, its header's `actions` as small icon buttons named by their label (each naming its key in
- * `aria-keyshortcuts` and a tooltip), and any open link, an arrow icon named by its label (naming its key,
- * `CONVERSATION_KEYS.open`, in `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read
- * and Mark unread), its `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or
- * beside a `ConversationEmpty`, a named column holding only a muted line, as wide as a conversation and with its `edge`
- * (hidden on a narrow screen); a `DividerButton` is a divider line led by a quiet button, such as one that shows the
- * replies folded under it. A name's avatar is its coloured initials, one of eight hues hashed from the name, a circle
- * for a human and a rounded square for an agent, with its `PresenceDot` in the corner once its presence is known:
- * filled in the online colour while online, a hollow grey ring while offline, a ring in the accent with a dot in its
- * middle for the owner's warning ("Offline, went offline unexpectedly"), named for a screen reader and as a tooltip
- * ("Offline, last seen 5 minutes ago"), as a `Suggestions` option shows it beside the name; `Author` is a message's
- * avatar and name (a display name, with the `@name` muted beside it), with an `agent` `Badge`, a small label (Cursor
- * Style's, on the app's tokens): a `variant` (secondary, primary, outline, ghost), a `tone` in the colour roles
- * (neutral, muted, faint, mention, destructive), a `size` and `rounded`. `StatusDot` is a for-you or activity dot.
- * `IdentityLink` is the logged-in identity's avatar and name as a link, highlighted when open. Wherever an identity has
- * a display name (`IdentityLink`, `IdentityRow`, `ProfileName`, a `Suggestions` option's muted detail) it shows first
- * and the `@name` muted beside it. `LineForm` is a named form of one labelled line of text, whose text its owner holds,
- * with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it,
- * such as an `Alert`. `AreaForm` is its form of a few growing lines of text, up to `limit` characters shown as a
- * counter, where Enter starts a new line and Ctrl/Cmd+Enter saves. `SettingForm` is a `LineForm` laid out as a settings
- * row: its label and its `description` on the left, the line and its button on the right. A `SettingLine` is a settings
- * row of a `SettingText` (a title, any `description`, then its children) and its control; a `SettingIdentity` is that
- * text led by an identity's avatar, such as an agent in Settings, and `MoreActions` is a ⋯ button named by its `label`
- * that opens its `choices` as a dropdown. `ActionGroup` is a named group of what can be done to one thing, `ButtonRow`
- * puts buttons side by side, and `TokenText` shows a secret, such as a fresh token, to copy. `ConfirmDialog` asks
- * before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library:
- * its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action
- * can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what
- * opened it when it closes. While `pending` both buttons are disabled and the confirm button says so; an `error` shows
- * inside it. Its owner decides when it is `open`, so it never closes on its own. `FormDialog` is the same modal holding
- * a form named by its `label`: its title, a `description`, its fields (its first focused on opening), then Cancel and
- * its submit `button` (`busyButton` and disabled while `busy`); Escape or Cancel calls `onCancel`, except while busy.
- * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A `Toolbar` under it holds a `FilterField` (a
- * labelled `InputGroup`, Cursor Style's input box: default, elevated, ghost or unfilled; md, lg or xl; `rounded`; with
- * `InputGroupAddon` icons such as `SearchIcon` and an `InputGroupInput` that gives its text to `onEdit`) and `Chip`s,
- * buttons pressed or not, a `ToolbarDivider`, and a `SwitchField`, Cursor Style's switch; a named `ListArea` scrolls
- * from the top, its `IdentityRow`s links to identities: avatar, name, tags, a muted detail line. `Profile` is one
- * identity's large avatar beside its `ProfileName` (its name and any tags, as a heading) and its details; `DateText` is
- * a moment as a date, in mono. `Feed` is a named, full-width column that scrolls, its rows lined up with the header's
- * edges, such as the inbox, read from the top: a `FeedHeading` heads a part of it, with its count, or, with no count,
- * as a divider line; a `FeedList` is a named list of `FeedRow`s, each a link over the whole row (named by its text)
- * leading with why it is there (`why`), then a message with its author's avatar and name (its own link, to
- * `authorHref`, above the row's), what they did (`action`) and in which channel, a short time, a `Closed` marker when
- * it is `closed` (its thread is closed), any `count` of how many of its messages are new ("3 new") and any `context`
- * line (a reply's thread), then what it holds: its `FeedText`, up to two lines, and any `RowButton`, a small button
- * raised above the row's link; given a `menu`, it is an `ActionMenu`'s target. A `for-you` row has an accent dot and
- * why, a bold name and bright text; an `activity` row has a muted dot and why, a bold name and bright text; a `read`
- * one is muted. A `current` row, the one whose conversation is shown, is highlighted and its link marked as the current
- * page. A `FeedNoticeRow` sits in a `FeedList` for an Inbox entry about an identity rather than a message: its why,
- * then the identity's avatar and name (a link to `href`) and a short time, then any buttons; `for-you` or `read` as a
- * `FeedRow`. `Mention` is an `@` mention in a message's text, in the mention colour when it is the reader's own
+ * whole width), its detail, its header's `actions` as small icon buttons named by their label and any `open` link, an
+ * arrow icon, each naming any `Shortcut` it has (its keys as the keymap names them) in `aria-keyshortcuts` and a
+ * tooltip, its `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or beside a
+ * `ConversationEmpty`, a named column holding only a muted line, as wide as a conversation and with its `edge` (hidden
+ * on a narrow screen); a `DividerButton` is a divider line led by a quiet button, such as one that shows the replies
+ * folded under it. A name's avatar is its coloured initials, one of eight hues hashed from the name, a circle for a
+ * human and a rounded square for an agent, with its `PresenceDot` in the corner once its presence is known: filled in
+ * the online colour while online, a hollow grey ring while offline, a ring in the accent with a dot in its middle for
+ * the owner's warning ("Offline, went offline unexpectedly"), named for a screen reader and as a tooltip ("Offline,
+ * last seen 5 minutes ago"), as a `Suggestions` option shows it beside the name; `Author` is a message's avatar and
+ * name (a display name, with the `@name` muted beside it), with an `agent` `Badge`, a small label (Cursor Style's, on
+ * the app's tokens): a `variant` (secondary, primary, outline, ghost), a `tone` in the colour roles (neutral, muted,
+ * faint, mention, destructive), a `size` and `rounded`. `StatusDot` is a for-you or activity dot. `IdentityLink` is the
+ * logged-in identity's avatar and name as a link, highlighted when open. Wherever an identity has a display name
+ * (`IdentityLink`, `IdentityRow`, `ProfileName`, a `Suggestions` option's muted detail) it shows first and the `@name`
+ * muted beside it. `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save
+ * button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an
+ * `Alert`. `AreaForm` is its form of a few growing lines of text, up to `limit` characters shown as a counter, where
+ * Enter starts a new line and Ctrl/Cmd+Enter saves. `SettingForm` is a `LineForm` laid out as a settings row: its label
+ * and its `description` on the left, the line and its button on the right. A `SettingLine` is a settings row of a
+ * `SettingText` (a title, any `description`, then its children) and its control; a `SettingIdentity` is that text led
+ * by an identity's avatar, such as an agent in Settings, and `MoreActions` is a ⋯ button named by its `label` that
+ * opens its `choices` as a dropdown. `ActionGroup` is a named group of what can be done to one thing, `ButtonRow` puts
+ * buttons side by side, and `TokenText` shows a secret, such as a fresh token, to copy. `ConfirmDialog` asks before an
+ * action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a
+ * body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be
+ * undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it
+ * when it closes. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it.
+ * Its owner decides when it is `open`, so it never closes on its own. `FormDialog` is the same modal holding a form
+ * named by its `label`: its title, a `description`, its fields (its first focused on opening), then Cancel and its
+ * submit `button` (`busyButton` and disabled while `busy`); Escape or Cancel calls `onCancel`, except while busy;
+ * `RunList`, `FieldNote`. `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its
+ * heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was
+ * focused when it opened. `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A `Toolbar` under it holds
+ * a `FilterField` (a labelled `InputGroup`, Cursor Style's input box: default, elevated, ghost or unfilled; md, lg or
+ * xl; `rounded`; with `InputGroupAddon` icons such as `SearchIcon` and an `InputGroupInput` that gives its text to
+ * `onEdit`) and `Chip`s, buttons pressed or not, a `ToolbarDivider`, and a `SwitchField`, Cursor Style's switch; a
+ * named `ListArea` scrolls from the top, its `IdentityRow`s links to identities: avatar, name, tags, a muted detail
+ * line. `Profile` is one identity's large avatar beside its `ProfileName` (its name and any tags, as a heading) and its
+ * details; `DateText` is a moment as a date, in mono. `Feed` is a named, full-width column that scrolls, its rows lined
+ * up with the header's edges, such as the inbox, read from the top: a `FeedHeading` heads a part of it, with its count,
+ * or, with no count, as a divider line; a `FeedList` is a named list of `FeedRow`s, each a link over the whole row
+ * (named by its text) leading with why it is there (`why`), then a message with its author's avatar and name (its own
+ * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a short time, a `Closed`
+ * marker when it is `closed` (its thread is closed), any `count` of how many of its messages are new ("3 new") and any
+ * `context` line (a reply's thread), then what it holds: its `FeedText`, up to two lines, and any `RowButton`, a small
+ * button raised above the row's link; given a `menu`, it is an `ActionMenu`'s target. A `for-you` row has an accent dot
+ * and why, a bold name and bright text; an `activity` row has a muted dot and why, a bold name and bright text; a
+ * `read` one is muted. A `current` row, the one whose conversation is shown, is highlighted and its link marked as the
+ * current page. A `FeedNoticeRow` sits in a `FeedList` for an Inbox entry about an identity rather than a message: its
+ * why, then the identity's avatar and name (a link to `href`) and a short time, then any buttons; `for-you` or `read`
+ * as a `FeedRow`. `Mention` is an `@` mention in a message's text, in the mention colour when it is the reader's own
  * (`mine`). `FeedNote` is a muted line in a feed: why a part is `empty`, or that it has reached the `end`;
  * `FeedCaughtUp` centres a read-out feed's note under an icon; `MoreButton` is a quiet full-width row under a list that
  * loads more of it, with a spinner while `loading`. `MessageList` is a named list of `MessageItem`s: one message each,
@@ -134,18 +135,19 @@
  * happened, read out politely; `Skeleton` stands in while something loads. `Form` hands one field's value to `onSubmit`
  * without reloading the page; `TextField` is a labelled secret input in it, such as a token, `TextArea` a labelled box
  * to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts
- * a new line, and, while its owner is `choosing` from suggestions, the arrow keys move the highlight, Enter or Tab
- * picks it and Escape closes the list; `SubmitButton` sends it, a primary `Button` (Cursor Style's: `variant` primary,
- * secondary, outline, ghost or text; `tone` default, monochrome, secondary, tertiary or danger; `size` sm to xl or
- * icon-sm to icon-xl; `rounded`; `QuietButton`, `RowButton` and `PressButton` are outline ones), and `SendButton` is
- * its paper-plane icon form, named and tooltipped by `label`; `Suggestions` is a named list of options to pick from
- * under a box, such as mentions or commands (each with any muted detail after it), one of them highlighted, which
- * leaves the box focused; it sits in the overlay layer, above everything else in the pane. `DataArea` is a labelled box
- * to write JSON in, whose text its owner holds. `PromptForm` is a named card in place of a message box that asks for a
- * command's data, titled, with a Cancel and a submit button, its first field focused, and Escape anywhere in it calls
- * `onEscape`; in it `InputField` (text, a number or an integer), `PickField` (one of a list, or none) and `CheckField`
- * (a checkbox) are labelled fields whose value their owner holds, each marked when required, with its help text and any
- * error under it, both read out as its description.
+ * a new line, and, while its owner is `choosing` from suggestions, is a combobox naming the highlighted option as its
+ * active descendant, where the arrows move it, Enter or Tab picks it and Escape closes the list; `SubmitButton` sends
+ * it, a primary `Button` (Cursor Style's: `variant` primary, secondary, outline, ghost or text; `tone` default,
+ * monochrome, secondary, tertiary or danger; `size` sm to xl or icon-sm to icon-xl; `rounded`; `QuietButton`,
+ * `RowButton` and `PressButton` are outline ones), and `SendButton` is its paper-plane icon form, named and tooltipped
+ * by `label`; `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any
+ * muted detail after it), one selected, which leaves the box focused even when a pointer picks one; it sits in the
+ * overlay layer, above everything else in the pane. `DataArea` is a labelled box to write JSON in, whose text its owner
+ * holds. `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel
+ * and a submit button, its first field focused, and Escape anywhere in it calls `onEscape`; in it `InputField` (text, a
+ * number, an integer, a date or a time), `PickField` (one of a list, or none) and `CheckField` (a checkbox) are
+ * labelled fields whose value their owner holds, each marked when required, with its help text and any error under it,
+ * both read out as its description.
  */
 export {
   AppShell,
@@ -161,7 +163,6 @@ export {
   ListPane,
   ConversationEmpty,
   ConversationPanel,
-  CONVERSATION_KEYS,
   CollapseButton,
   PaneHeader,
   PaneLead,
@@ -182,7 +183,7 @@ export {
   Toolbar,
   ToolbarDivider,
 } from "./lib/layout.ts";
-export type { PanelAction, PanelEdgeParts } from "./lib/layout.ts";
+export type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "./lib/layout.ts";
 export {
   CallChip,
   ChannelStart,
@@ -228,6 +229,11 @@ export {
 export {
   ActionGroup,
   ConfirmDialog,
+  FormDialog,
+  ShortcutList,
+  FieldNote,
+  RunList,
+  MoreActions,
   ButtonRow,
   TokenText,
   QuietButton,
@@ -236,12 +242,10 @@ export {
   ChoiceGroup,
   DataArea,
   Form,
-  FormDialog,
   LineForm,
   SettingForm,
   SettingLine,
   SettingIdentity,
-  MoreActions,
   SettingText,
   AreaForm,
   InputField,

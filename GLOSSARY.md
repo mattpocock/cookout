@@ -18,6 +18,10 @@ _Avoid_ (for the thread state, in prose and the UI): resolved, archived, done. C
 A message posted in a thread. A reply to a reply attaches to the same thread.
 _Avoid_: also send to channel, reply broadcast
 
+**Scheduled message**:
+A stored schedule that posts an ordinary top-level message into a channel at set times, on a cron expression or once, as the identity that created it. The schedule is the Scheduled message; each post is an ordinary message (Matt, 2026-11-24, msg 3108, answering Q7, [#386](https://github.com/mattpocock/cookout/issues/386)).
+_Avoid_: reminder, cron job
+
 **Identity**:
 A named, long-lasting participant that keeps its history and read position across sessions and machines. Every identity is one of two kinds, a **human** or an **agent**, set when it is created and never changed.
 
@@ -89,7 +93,7 @@ _Avoid_ (in domain talk): file, upload, asset. Code isn't linted for these, sinc
 A reminder in the Inbox that an open thread has been quiet for a while. Its starter gets one after 3 quiet days and a second 7 days later, and it turns read once the thread is closed or gets a new message (Matt, 2026-11-23, on [#215](https://github.com/mattpocock/cookout/issues/215) and [#221](https://github.com/mattpocock/cookout/issues/221)).
 
 **Activity**:
-What shows an identity is in use: posting a message or reply, adding a Reaction, or being Online. An identity's last activity moves forward with each; reading, acking and polling don't count (Matt, 2026-11-23, deactivation grilling Q1 and Q13, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)). A call to one of an agent's commands is that agent's Activity too, so a handler people call never goes quiet (Matt, 2026-11-24, [#236](https://github.com/mattpocock/cookout/issues/236)).
+What shows an identity is in use: posting a message or reply, adding a Reaction, or being Online. An identity's last activity moves forward with each; reading, acking and polling don't count (Matt, 2026-11-23, deactivation grilling Q1 and Q13, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)). A call to one of an agent's commands is that agent's Activity too, so a handler people call never goes quiet (Matt, 2026-11-24, [#236](https://github.com/mattpocock/cookout/issues/236)). A message a Scheduled message posts is not its creator's Activity (Matt, 2026-11-24, msg 3171, [#386](https://github.com/mattpocock/cookout/issues/386)).
 
 **Deactivation offer**:
 An entry in the Inbox, not a message, asking whether to deactivate an identity that has had no Activity for 30 days. About an agent, it goes to the agent's owner, or to every active admin when the owner is Deactivated; about a person, to every active admin but that person, and never about the last active admin. Either way it is one entry they share. A person's Activity includes that of each active agent they own, and a person is never deactivated automatically, so their offer comes back every 30 quiet days for as long as they stay quiet (Matt, 2026-11-23, deactivation grilling Q9, Q10 and Q12, [#232](https://github.com/mattpocock/cookout/issues/232)). Keep, or marking all as read, clears it until 30 more quiet days; any activity of the identity or its deactivation clears it too (Matt, 2026-11-23, deactivation grilling Q2-Q4, Q13 and Q15, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)).
@@ -103,8 +107,12 @@ Whether an identity is online, and if not, when it was last seen and why it went
 _Avoid_: online status, availability (and plain "status", kept for custom status text)
 
 **Online**:
-An identity is online while it has at least one live connection, and for 60 s after its last one closes. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). A Deactivated identity is always offline.
-_Avoid_: away, active presence, connected presence
+An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)). A Deactivated identity is always offline.
+_Avoid_: away, active presence, connected presence, wakeable
+
+**Unreachable**:
+An agent whose last trigger call failed and that has no live connection: a red presence dot, whose tooltip gives the call's status (or error) and time. The next successful call, or a live connection, makes it online again. The first failure of a streak raises one offline alert in its owner's Inbox, naming the status and the message that didn't get through; the next success clears it (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)).
+_Avoid_: failing presence, broken presence
 
 **Live connection**:
 An identity's open live stream from the server: a running `cookout watch`, or an open web tab. An agent has at most one, and a new one replaces it. A human may have several, which count as one presence (Matt, 2026-11-23, presence grilling Q4, Q7: "an identity shouldn't have more than one live connection", [#177](https://github.com/mattpocock/cookout/issues/177)).

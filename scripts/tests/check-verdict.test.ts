@@ -10,7 +10,17 @@ const BROKEN = { budget: 60, command: ["node", "-e", "process.exit(1)"], job: "a
 const ALSO_BROKEN = { ...BROKEN, name: "also-broken" } as const;
 const LAST = -1;
 
-async function printed(checks: readonly Check[]): Promise<readonly string[]> {
+const E2E = { ciJob: "e2e-docker", command: "pnpm e2e:docker", name: "the e2e suite" } as const;
+const PASSING = { ...BROKEN, command: ["node", "-e", ""], name: "passing" } as const;
+const SKIP_LINE =
+  "skipped: the e2e suite, which CI runs as its e2e-docker job. Run it here on purpose with pnpm e2e:docker.";
+
+interface Run {
+  readonly inCi?: boolean;
+  readonly job?: string;
+}
+
+async function printed(checks: readonly Check[], { inCi = false, job = "" }: Run = {}): Promise<readonly string[]> {
   const dir = mkdtempSync(path.join(tmpdir(), "check-verdict-"));
   onTestFinished(() => {
     rmSync(dir, { force: true, recursive: true });
@@ -25,7 +35,7 @@ async function printed(checks: readonly Check[]): Promise<readonly string[]> {
     log.mockRestore();
     error.mockRestore();
   });
-  await runChecks({ checks, inCi: false, job: "", lockFile: path.join(dir, "check.lock") });
+  await runChecks({ checks, ciOnly: [E2E], inCi, job, lockFile: path.join(dir, "check.lock") });
   return lines;
 }
 
@@ -46,4 +56,28 @@ it("ends with a fail verdict naming every failed check", { timeout: 10_000 }, as
   const lines = await printed([BROKEN, SLOW, ALSO_BROKEN]);
 
   expect(lines.at(LAST)).toBe("RESULT: FAIL (broken, also-broken)");
+});
+
+it("names the CI-only suite it skipped, and how to run it, before its verdict", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const lines = await printed([PASSING]);
+
+  expect(lines.filter((line) => line.startsWith("skipped:"))).toStrictEqual([SKIP_LINE]);
+});
+
+it("skips nothing in CI, which runs the e2e suite as its own job", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const lines = await printed([PASSING], { inCi: true });
+
+  expect(lines.some((line) => line.startsWith("skipped:"))).toBe(false);
+});
+
+it("names no skip on a run of one job", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const lines = await printed([PASSING], { job: "a" });
+
+  expect(lines.some((line) => line.startsWith("skipped:"))).toBe(false);
 });

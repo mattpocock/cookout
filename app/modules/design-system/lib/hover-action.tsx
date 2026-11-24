@@ -8,7 +8,7 @@ interface HoverActionParts extends LinkParts {
 
 export function HoverAction(parts: HoverActionParts): ReactNode {
   return (
-    <a className={PANEL_ACTION_LOOK} href={parts.href} title={parts.name}>
+    <a aria-label={parts.name} className={PANEL_ACTION_LOOK} href={parts.href} title={parts.name}>
       {parts.children}
     </a>
   );

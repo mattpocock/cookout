@@ -7,12 +7,14 @@ import type {
   ThreadMessages,
 } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import { browserClock, browserTimeZone } from "../../format/index.ts";
 import {
   channelList,
   channelPage,
   closingRefusal,
   commandList,
   createChannelCreation,
+  createScheduling,
   deletedChannelNotice,
   messageBeforeOf,
   subscribedChannels,
@@ -21,6 +23,7 @@ import {
 import type { Stores } from "./stores.ts";
 
 const NONE = 0;
+const PREVIEW_PAUSE_MS = 200;
 
 interface ThreadPlace {
   readonly channel: ChannelName;
@@ -116,6 +119,13 @@ function createBoard(store: BoardStore): Board {
     creation: createChannelCreation({ createChannel: store.calls.createChannel }),
     dismissNotice: store.dismissNotice,
     messageBefore: madeOnce(placeKey, (place: ThreadPlace) => beforeIn(store, place)),
+    scheduling: createScheduling({
+      clock: browserClock,
+      create: store.calls.createScheduledMessage,
+      pause: PREVIEW_PAUSE_MS,
+      preview: store.calls.previewScheduledMessage,
+      timeZone: browserTimeZone(),
+    }),
     snapshot: listBoardSnapshot(store),
     subscribe: store.subscribeShowing("channels"),
     subscriptions: {

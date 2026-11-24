@@ -19,7 +19,7 @@ export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
     <WorkspaceColumn>
       {stores.live !== null && <ReconnectingView live={stores.live} />}
       <IdentityDeletedNotice identities={stores.composer.identities} />
-      <SearchableMain layout={stores.layout} search={stores.search}>
+      <SearchableMain keymap={stores.keymap} layout={stores.layout} search={stores.search}>
         <WorkspacePanes me={props.me} profile={props.profile} route={props.route} stores={stores} />
       </SearchableMain>
     </WorkspaceColumn>

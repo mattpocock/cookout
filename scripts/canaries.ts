@@ -1,3 +1,4 @@
+import { changesetMissing, packageShips } from "./lib/changesets.ts";
 import { fail, oxlint, tool, unwrap } from "./lib/tools.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
 import { readFileSync, readdirSync } from "node:fs";
@@ -23,6 +24,7 @@ const localRuleFile = (rule: string) => {
 };
 
 const otherPluginRules: ReadonlySet<string> = new Set([
+  "keymap-owner",
   "no-internal-tag",
   "own-clock",
   "page-title-owner",
@@ -52,6 +54,7 @@ const nativeRules: readonly (readonly [string, string])[] = [
   ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.sqlite"],
   ["web-rules(page-title-owner)", "page-title-owner"],
+  ["web-rules(keymap-owner)", "keymap-owner"],
   ["export-rules(no-internal-tag)", "no-internal-tag"],
 ];
 
@@ -74,6 +77,10 @@ const lintCanaries: readonly Canary[] = [
   ...nativeRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/lib/${name}.ts` })),
   ...testRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/tests/${name}.test.ts` })),
   ...backendRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/lib/server/${name}.ts` })),
+];
+
+const lintPasses: readonly Canary[] = [
+  { check: "oxlint", code: "web-rules(keymap-owner)", file: `${ROOT}/app/modules/keymap/index.ts` },
 ];
 
 const tscCanaries: readonly Canary[] = [
@@ -167,15 +174,40 @@ function migrationsCaught(): ReadonlySet<string> {
   );
 }
 
+const CHANGESET_CANARY = `${ROOT}/changesets/no-changeset.txt`;
+const CHANGESET_CODE = "ship in @ai-hero/cookout (app/modules/sdk/index.ts)";
+
+const changesetCanaries: readonly Canary[] = [{ check: "hygiene", code: CHANGESET_CODE, file: CHANGESET_CANARY }];
+
+async function changesetsCaught(): Promise<ReadonlySet<string>> {
+  const changes = readFileSync(CHANGESET_CANARY, "utf8")
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => {
+      const [status = "", file = ""] = line.split("\t");
+      return { file, status };
+    });
+  const reasons = changesetMissing({ changes, ships: await packageShips() });
+  return new Set(
+    reasons.filter((reason) => reason.includes(CHANGESET_CODE)).map(() => key(CHANGESET_CODE, CHANGESET_CANARY)),
+  );
+}
+
+const caughtByLint = lintCaught();
 const escaped = [
-  ...missing(lintCanaries, lintCaught()),
+  ...missing(lintCanaries, caughtByLint),
   ...missing(tscCanaries, tscCaught()),
   ...missing(seamCanaries, seamsCaught()),
   ...missing(validatorCanaries, validatorsCaught()),
   ...missing(adrCanaries, adrsCaught()),
   ...missing(migrationCanaries, migrationsCaught()),
+  ...missing(changesetCanaries, await changesetsCaught()),
 ];
+const overreached = lintPasses.filter((canary) => caughtByLint.has(key(canary.code, canary.file)));
 for (const canary of escaped) {
   console.error(`${SCRIPT}: ${canary.check} did not report ${canary.code} for its planted violation in ${canary.file}`);
 }
-process.exitCode = escaped.length > 0 ? 1 : 0;
+for (const canary of overreached) {
+  console.error(`${SCRIPT}: ${canary.check} reported ${canary.code} in ${canary.file}, where it is allowed`);
+}
+process.exitCode = [...escaped, ...overreached].length > 0 ? 1 : 0;

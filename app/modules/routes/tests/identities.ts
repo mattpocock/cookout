@@ -64,6 +64,28 @@ function tracked(client: CookoutClient): Tracked {
   };
 }
 
+interface Refusing {
+  readonly client: CookoutClient;
+  readonly refused: Promise<unknown>;
+}
+
+export function refusalNoticed(client: CookoutClient): Refusing {
+  const refused = Promise.withResolvers<unknown>();
+  return {
+    client: {
+      ...client,
+      ack: async (messageId) => {
+        const answer = await client.ack(messageId).catch((error: unknown) => {
+          refused.resolve(error);
+          throw error;
+        });
+        return answer;
+      },
+    },
+    refused: refused.promise,
+  };
+}
+
 export function anonymousClient(): CookoutClient {
   return createCookoutClient({ env: {}, url: webTestCookout().url });
 }

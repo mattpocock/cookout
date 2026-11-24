@@ -74,6 +74,7 @@
     "local/no-overloads": "error",
     "local/sort-imports": "error",
     "web-rules/page-title-owner": "error",
+    "web-rules/keymap-owner": "error",
     "export-rules/no-internal-tag": "error",
     "sort-imports": "off",
     "typescript/ban-ts-comment": "error",
@@ -417,6 +418,10 @@
       {
         "allow": [
           {
+            "from": "lib",
+            "name": ["Uint8Array"]
+          },
+          {
             "from": "package",
             "name": ["Methods", "MethodsNonLive"],
             "package": "@effect/vitest"
@@ -430,6 +435,7 @@
               "Exit",
               "HttpClientRequest",
               "HttpClientResponse",
+              "HttpServerResponse",
               "Layer",
               "Option",
               "Stream",
@@ -515,7 +521,11 @@
       }
     },
     {
-      "files": ["app/modules/design-system/lib/panel-edge.tsx"],
+      "files": [
+        "app/modules/design-system/lib/panel-edge.tsx",
+        "app/modules/design-system/lib/suggestions.tsx",
+        "app/modules/design-system/lib/suggestion-option.tsx"
+      ],
       "rules": {
         "jsx-a11y/prefer-tag-over-role": "off"
       }
@@ -524,6 +534,12 @@
       "files": ["app/modules/page-title/**"],
       "rules": {
         "web-rules/page-title-owner": "off"
+      }
+    },
+    {
+      "files": ["app/modules/keymap/**", "app/modules/*/tests/**"],
+      "rules": {
+        "web-rules/keymap-owner": "off"
       }
     },
     {

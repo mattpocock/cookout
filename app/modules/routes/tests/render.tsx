@@ -1,7 +1,7 @@
 import type { AgentJoinApprovals, LoginApprovals, Session } from "../../board/index.ts";
 import type { BoardStore, BoardStoreClient, Live, Reading, Unread } from "./defaults.ts";
 import { adminClient, anonymousClient } from "./identities.ts";
-import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
+import { boardStoreFor, createKeymap, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
 import { createAgentJoinApprovals, createLoginApprovals } from "../../board/index.ts";
 import { onTestFinished, vi } from "vitest";
@@ -148,6 +148,7 @@ export function openBoard(opening: BoardOpening): () => void {
       agentJoinApprovals={agentJoinApprovals}
       boardStore={boardStore}
       composer={composer}
+      keymap={createKeymap({ platform: globalThis.navigator.platform })}
       layout={layout}
       live={opening.live ?? null}
       loginApprovals={loginApprovals}

@@ -68,7 +68,7 @@ test("the @ suggestion box is the topmost element everywhere it shows, over the 
   await expect(inPane(page).getByRole("link", { name: /3 replies/u })).toBeVisible();
 
   await inPane(page).getByLabel("Message", { exact: true }).pressSequentially(`@${CHANNEL}`);
-  const list = inPane(page).getByRole("list", { name: "Mention suggestions" });
+  const list = inPane(page).getByRole("listbox", { name: "Mention suggestions" });
 
   await expect(list).toBeVisible();
 

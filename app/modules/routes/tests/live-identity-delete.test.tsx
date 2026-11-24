@@ -33,13 +33,13 @@ async function leftPeople(name: string): Promise<void> {
 async function mentioning(text: string): Promise<void> {
   await screen.findByLabelText("Message");
   type(text);
-  await screen.findByRole("list", { name: "Mention suggestions" });
+  await screen.findByRole("listbox", { name: "Mention suggestions" });
 }
 
 function mentionNames(): readonly (string | null)[] {
-  const list = screen.queryByRole("list", { name: "Mention suggestions" });
+  const list = screen.queryByRole("listbox", { name: "Mention suggestions" });
   const shown: (string | null)[] = [];
-  for (const item of within(list ?? document.createElement("ul")).queryAllByRole("listitem")) {
+  for (const item of within(list ?? document.createElement("ul")).queryAllByRole("option")) {
     shown.push(item.textContent);
   }
   return shown;

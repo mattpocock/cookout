@@ -216,9 +216,9 @@ it("the @ suggestions show display names and insert the name", { timeout: 5000 }
 
   const { human } = await crewOf("web-names-suggest");
   const { box, close } = await typeMention(human, "web-names-suggest");
-  const option = within(await screen.findByRole("list", { name: "Mention suggestions" })).getByRole("button");
+  const option = within(await screen.findByRole("listbox", { name: "Mention suggestions" })).getByRole("option");
   const shown = option.textContent;
-  fireEvent.click(option);
+  fireEvent.mouseDown(option);
 
   expect([shown, box]).toStrictEqual([
     "@web-names-suggest-botRelease Bot",

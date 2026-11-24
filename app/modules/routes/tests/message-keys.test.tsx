@@ -28,7 +28,7 @@ async function twoToMention(): Promise<void> {
 
 async function suggest(text: string): Promise<void> {
   type(text);
-  await screen.findByRole("list", { name: "Mention suggestions" });
+  await screen.findByRole("listbox", { name: "Mention suggestions" });
 }
 
 function pressEach(keys: readonly string[]): void {
@@ -43,8 +43,8 @@ async function shownMessages(): Promise<readonly string[]> {
 }
 
 function highlighted(): string | null {
-  const list = screen.getByRole("list", { name: "Mention suggestions" });
-  return within(list).getByRole("button", { current: true }).textContent;
+  const list = screen.getByRole("listbox", { name: "Mention suggestions" });
+  return within(list).getByRole("option", { selected: true }).textContent;
 }
 
 it("pressing Enter in the message box sends the message and empties the box", { timeout: 5000 }, async () => {
@@ -97,7 +97,7 @@ it("while suggestions show, the arrows move the highlight and Enter picks it ins
     first,
     moved,
     screen.queryByDisplayValue("Ping @keys-second ", KEEP_SPACES),
-    screen.queryByRole("list", { name: "Mention suggestions" }),
+    screen.queryByRole("listbox", { name: "Mention suggestions" }),
     await shownMessages(),
   ]).toStrictEqual(["@keys-first", "@keys-second", screen.getByLabelText("Message"), null, []]);
 
@@ -116,12 +116,12 @@ async function twoCommands(prefix: string): Promise<void> {
 
 async function suggestCommands(text: string): Promise<void> {
   type(text);
-  await screen.findByRole("list", { name: "Command suggestions" });
+  await screen.findByRole("listbox", { name: "Command suggestions" });
 }
 
 function highlightedCommand(): string | null {
-  const list = screen.getByRole("list", { name: "Command suggestions" });
-  return within(list).getByRole("button", { current: true }).textContent;
+  const list = screen.getByRole("listbox", { name: "Command suggestions" });
+  return within(list).getByRole("option", { selected: true }).textContent;
 }
 
 it("while command suggestions show, the arrows move the highlight and Tab picks it", { timeout: 5000 }, async () => {
@@ -170,7 +170,7 @@ it("escape closes the command suggestions, so Enter sends the text as a message"
   const close = await openChannel("web-keys-command-escape");
   await suggestCommands("/keys-escape-f");
   press("Escape");
-  const closed = screen.queryByRole("list", { name: "Command suggestions" });
+  const closed = screen.queryByRole("listbox", { name: "Command suggestions" });
   press("Enter");
   await within(screen.getByRole("list", { name: "Messages" })).findByText("/keys-escape-f");
 

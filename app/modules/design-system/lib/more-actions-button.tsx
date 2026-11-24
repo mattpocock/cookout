@@ -6,12 +6,13 @@ import { Trigger } from "@radix-ui/react-dropdown-menu";
 interface MoreActionsButtonParts {
   readonly label: string;
   readonly quiet: boolean;
+  readonly returning: boolean;
 }
 
 const LOOKS = {
   quiet:
-    "flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:text-foreground data-[state=open]:bg-hover data-[state=open]:text-foreground",
-  raised: `${PANEL_ACTION_LOOK} data-[state=open]:bg-hover data-[state=open]:text-foreground`,
+    "flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:text-foreground data-[state=open]:bg-hover data-[state=open]:text-foreground data-[returning=true]:visible",
+  raised: `${PANEL_ACTION_LOOK} data-[state=open]:bg-hover data-[state=open]:text-foreground data-[returning=true]:visible`,
 } as const;
 
 function lookOf(parts: MoreActionsButtonParts): string {
@@ -24,7 +25,13 @@ function lookOf(parts: MoreActionsButtonParts): string {
 export function MoreActionsButton(parts: MoreActionsButtonParts): ReactNode {
   return (
     <Trigger asChild>
-      <button aria-label={parts.label} className={lookOf(parts)} title={parts.label} type="button">
+      <button
+        aria-label={parts.label}
+        className={lookOf(parts)}
+        data-returning={String(parts.returning)}
+        title={parts.label}
+        type="button"
+      >
         <DotsIcon />
       </button>
     </Trigger>

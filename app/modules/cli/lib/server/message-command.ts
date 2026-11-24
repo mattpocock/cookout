@@ -2,13 +2,14 @@ import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Predicate, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, MessageResponse } from "../../../messages/index.ts";
 import { answer, answered, printWarning, refused } from "./output.ts";
+import { attachFlag, postAttaching } from "./attachments.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { PostMessageRequest } from "../../../messages/client.ts";
-import { callServer } from "./adapters/sdk.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 interface PostFlags {
+  readonly attach: readonly string[];
   readonly channel: string;
   readonly close: boolean;
   readonly data: Option.Option<Schema.Json>;
@@ -65,17 +66,16 @@ function warnIfMoved({ warning }: MessageResponse): Effect.Effect<void> {
   return printWarning(warning.message);
 }
 
-function posted(request: PostMessageRequest): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
-  return answered(
-    Effect.tap(
-      callServer((client) => client.createMessage(request)),
-      warnIfMoved,
-    ),
-  );
+function posted(flags: PostFlags): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
+  const posting = postAttaching({ files: flags.attach, request: postRequest(flags) });
+  return answered(Effect.tap(posting, warnIfMoved));
 }
 
 const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
-const textArgument = Argument.String("text").pipe(Argument.withDescription("The message, 1-40,000 characters."));
+const textArgument = Argument.String("text").pipe(
+  Argument.withDefault(""),
+  Argument.withDescription("The message, up to 40,000 characters."),
+);
 const jsonData = Flag.String("data").pipe(Flag.withSchema(Schema.fromJsonString(Schema.Json)));
 const dataFlag = jsonData.pipe(Flag.optional, Flag.withDescription("Any JSON value, for commands and agents to read."));
 const replyToFlag = Flag.Int("reply-to").pipe(
@@ -98,6 +98,7 @@ const closeFlag = Flag.Boolean("close").pipe(
 const messagePostCommand = Command.make(
   "post",
   {
+    attach: attachFlag,
     channel: channelArgument,
     close: closeFlag,
     data: dataFlag,
@@ -107,10 +108,14 @@ const messagePostCommand = Command.make(
   },
   (flags) =>
     Option.match(usageProblem(flags), {
-      onNone: () => posted(postRequest(flags)),
+      onNone: () => posted(flags),
       onSome: refused,
     }),
-).pipe(Command.withDescription("Post a message, or a reply with --reply-to, which --close also closes in one step."));
+).pipe(
+  Command.withDescription(
+    "Post a message, or a reply with --reply-to, which --close also closes in one step. --attach adds files.",
+  ),
+);
 
 interface ListFlags {
   readonly before: Option.Option<number>;
@@ -151,3 +156,4 @@ const messageCommand = Command.make("message").pipe(
 );
 
 export { beforeFlag, channelArgument, limitFlag, messageCommand, messageIdArgument, pageQuery };
+export { scheduleCommand } from "./schedule.ts";

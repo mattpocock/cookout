@@ -27,7 +27,7 @@ async function openThread(channel: string): Promise<OpenThread> {
   const hash = `#/channels/${channel}/threads/${String(message.id)}`;
   const close = openAt({ client: reader, hash });
   await inThread().findByText("Noon works.");
-  await inThread().findEnabledButton("Close");
+  await inThread().findEnabledButton("Close thread");
   return { close, hash, parent: message.id, reader };
 }
 
@@ -132,10 +132,10 @@ it("close in a thread header's menu closes the thread, and Reopen there reopens 
 
   const { close, parent, reader } = await openThread("web-thread-menu-close");
   await chooseFromHeader("Close");
-  await inThread().findEnabledButton("Reopen");
+  await inThread().findEnabledButton("Reopen thread");
   const closedBy = await closedByOf(reader, parent);
   await chooseFromHeader("Reopen");
-  await inThread().findEnabledButton("Close");
+  await inThread().findEnabledButton("Close thread");
 
   expect([closedBy, await closedByOf(reader, parent)]).toStrictEqual([expect.stringMatching(/-reader$/u), null]);
 

@@ -29,7 +29,7 @@ async function threadOf(channel: string): Promise<Thread> {
 
 async function replyBox(): Promise<HTMLTextAreaElement> {
   const panel = await screen.findByRole("complementary", { name: "Thread" });
-  const box = await within(panel).findByLabelText("Reply");
+  const box = await within(panel).findByLabelText("Reply", { selector: "textarea" });
   if (!(box instanceof HTMLTextAreaElement)) {
     throw new TypeError("No reply box");
   }

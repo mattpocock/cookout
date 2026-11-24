@@ -1,8 +1,10 @@
 import { Alert, BoxFrame, Form, SendButton, Suggestions, TextArea } from "../../design-system/index.tsx";
-import { useCallback, useSyncExternalStore } from "react";
+import { useId, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { PostState } from "../../board/index.ts";
 import type { ReactNode } from "react";
+import { ScheduleChoice } from "./schedule-choice.tsx";
+import { useSend } from "./use-send.ts";
 import { useSuggestions } from "./use-suggestions.ts";
 
 interface MessageBoxText {
@@ -19,6 +21,7 @@ interface MessageBoxProps {
   readonly draft: Draft;
   readonly post: PostState;
   readonly onPost: (text: string, posted: () => void) => void;
+  readonly onSchedule: (() => void) | null;
   readonly text: MessageBoxText;
   readonly focused: boolean;
 }
@@ -35,17 +38,11 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
   const { chooseHighlighted: handlePick, dismiss: handleClose, edit: handleEdit, highlight: handleMove } = draft;
   const written = useSyncExternalStore(draft.subscribe, draft.snapshot);
   const posting = post.status === "posting";
-  const handleSend = useCallback(
-    (sent: string) => {
-      if (sent.trim() !== "") {
-        onPost(sent, draft.clear);
-      }
-    },
-    [draft, onPost],
-  );
+  const handleSend = useSend({ draft, onPost });
   const shown = useSuggestions({ commands: written.commands, draft, suggestions: written.suggestions });
   const choosing = shown.options.length > NONE;
   const handleChoose = shown.onChoose;
+  const list = useId();
   return (
     <BoxFrame>
       <Form field="text" label={text.form} onSubmit={handleSend}>
@@ -54,7 +51,9 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           choosing={choosing}
           focusRequests={written.focusRequests}
           focused={props.focused}
+          highlighted={written.highlighted}
           label={text.field}
+          list={list}
           name="text"
           onClose={handleClose}
           onEdit={handleEdit}
@@ -67,10 +66,12 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           <Suggestions
             highlighted={written.highlighted}
             label={shown.label}
+            list={list}
             onChoose={handleChoose}
             options={shown.options}
           />
         )}
+        {props.onSchedule !== null && <ScheduleChoice onSchedule={props.onSchedule} />}
         <SendButton disabled={posting || written.text.trim() === ""} label={sendLabelOf(posting)} />
       </Form>
       {post.status === "failed" && <Alert>{`Couldn't post the ${text.posts} (${post.code}): ${post.message}`}</Alert>}

@@ -8,6 +8,7 @@ import { openAt } from "./render.tsx";
 const TEXTS = ["Before.", "Deploy?", "After."] as const;
 
 interface Shown {
+  readonly label: string | null;
   readonly tooltip: string | null;
   readonly named: boolean;
   readonly text: string;
@@ -32,6 +33,7 @@ function hoverBarOf(article: () => HTMLElement): readonly Shown[] {
     const tooltip = control.getAttribute("title");
     shown.push({
       drawn: drawnOf(() => control),
+      label: control.getAttribute("aria-label"),
       named: namedAs(() => bar, tooltip ?? "").includes(control),
       text: control.textContent,
       tooltip,
@@ -41,10 +43,10 @@ function hoverBarOf(article: () => HTMLElement): readonly Shown[] {
 }
 
 function iconNamed(name: string): Shown {
-  return { drawn: "icon", named: true, text: "", tooltip: name };
+  return { drawn: "icon", label: name, named: true, text: "", tooltip: name };
 }
 
-const THUMBS_UP: Shown = { drawn: "👍", named: true, text: "", tooltip: "React with 👍" };
+const THUMBS_UP: Shown = { drawn: "👍", label: "React with 👍", named: true, text: "", tooltip: "React with 👍" };
 
 function valueOf(box: () => HTMLElement): string {
   const shown = box();
@@ -63,7 +65,7 @@ async function articleIn(list: string, text: string): Promise<HTMLElement> {
   return article;
 }
 
-it("a channel message's hover bar holds 👍, Reply, Close thread and More actions, each an icon with a tooltip", {
+it("a channel message's hover bar holds 👍, Reply, Close thread and More actions, each an icon labelled as its tooltip", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -131,7 +133,9 @@ it("pressing a channel message's hover Reply opens its thread with the cursor in
   const close = openAt({ client: posted.reader, hash: `#/channels/${posted.channel}` });
   const article = await articleIn("Messages", "Deploy?");
   fireEvent.click(within(article).getByRole("link", { name: "Reply" }));
-  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByLabelText("Reply");
+  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByRole("textbox", {
+    name: "Reply",
+  });
 
   await waitFor(() => {
     expect([document.activeElement === box, globalThis.location.hash]).toStrictEqual([
@@ -163,7 +167,9 @@ it("pressing a thread reply's hover Reply puts @its-author in the reply box, kee
 
   const { close, message } = await threadWithReply("web-hover-bar-thread-reply");
   const reply = await articleIn("Replies", "Noon.");
-  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByLabelText("Reply");
+  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByRole("textbox", {
+    name: "Reply",
+  });
   fireEvent.change(box, { target: { value: "works" } });
   fireEvent.click(within(reply).getByRole("button", { name: "Reply" }));
 

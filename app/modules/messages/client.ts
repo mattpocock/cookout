@@ -1,9 +1,31 @@
 /**
- * The calls a client makes to close and reopen a thread (#216), to list open threads (#219) and to search messages
- * (#320), and the answers they share. The SDK's `CookoutClient` has them. Also the body of posting a message (#342).
+ * The calls a client makes to close and reopen a thread (#216), to list open threads (#219), to search messages
+ * (#320) and to read an attachment's bytes (#373), and the answers they share. The SDK's `CookoutClient` has them.
+ * Also the body of posting a message (#342).
  */
 import type { JsonValue, ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
+import type { AttachmentId } from "../attachments/index.ts";
 import type { SearchResponse } from "../search/index.ts";
+
+/** An attachment's bytes, as `GET /v1/assets/:id` serves them. */
+export interface AttachmentBytes {
+  readonly bytes: Uint8Array;
+  /** The type it is served as: a detected image type, or `application/octet-stream`. */
+  readonly contentType: string;
+  /** The name it was posted with, for display only: reduce it to a safe base name before writing a file by it. */
+  readonly name: string;
+}
+
+/** Reading an attachment's bytes. */
+export interface AttachmentCalls {
+  /**
+   * `GET /v1/assets/:id`: an attachment's bytes, for any signed-in identity. An unknown ID is 404
+   * `attachment_not_found`.
+   */
+  readonly getAttachment: (id: AttachmentId) => Promise<AttachmentBytes>;
+}
+
+export type { ScheduledMessageCalls } from "../scheduled-messages/client.ts";
 
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {

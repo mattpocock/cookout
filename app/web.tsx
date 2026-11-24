@@ -7,7 +7,7 @@
  * The layout keeps the theme in the browser's local storage and sets it on the
  * page's root element, as `public/assets/theme.js` does before the first paint.
  * The Inbox's read rule counts time on the page's timers while the page is
- * visible and focused.
+ * visible and focused. The keymap names keys for the browser's platform (⌘ on a Mac).
  */
 import { browserReadingTools, createReading, createUnread } from "./modules/unread/index.ts";
 import { createAgentJoinApprovals, createBoardStore, createLoginApprovals } from "./modules/board/index.ts";
@@ -15,6 +15,7 @@ import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
+import { createKeymap } from "./modules/keymap/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
 import { createRoot } from "react-dom/client";
 import { createSearch } from "./modules/search/web.ts";
@@ -33,6 +34,7 @@ if (root !== null) {
       agentJoinApprovals={createAgentJoinApprovals(client)}
       boardStore={boardStore}
       composer={createComposer({ boardStore })}
+      keymap={createKeymap({ platform: globalThis.navigator.platform })}
       layout={layout}
       live={live}
       loginApprovals={createLoginApprovals(client)}

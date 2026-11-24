@@ -23,6 +23,7 @@ export function PagePanes(props: PagePanesProps): ReactNode {
         board={stores.board}
         composer={stores.composer}
         edge={edge}
+        keymap={stores.keymap}
         me={props.me}
         reading={stores.reading}
         selected={route.selected}

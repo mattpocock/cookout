@@ -1,4 +1,6 @@
+import { changesetMissing, packageShips } from "./lib/changesets.ts";
 import { existsSync, readFileSync } from "node:fs";
+import type { Change } from "./lib/changesets.ts";
 import { MIGRATION_LISTS } from "./lib/migration-lists.ts";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
@@ -94,7 +96,7 @@ function givenBase(): string {
   return flag.slice(BASE_FLAG.length);
 }
 
-function adrBase(): string {
+function comparedBase(): string {
   const given = givenBase();
   if (given !== "") {
     return given;
@@ -118,7 +120,7 @@ function originalLines(file: string): readonly string[] {
 }
 
 function appendOnlyAdrs(): readonly string[] {
-  const base = adrBase();
+  const base = comparedBase();
   const changed = git(["diff", "--name-only", "--no-renames", "--diff-filter=M", base, "--", ADRS]);
   const diff = git(["diff", "--no-renames", "--unified=0", "--no-color", base, "--", ADRS]);
   return adrEdits({
@@ -156,6 +158,28 @@ function deployedMigrations(): readonly string[] {
   return MIGRATION_LISTS.flatMap((file) => deployedList(tag, file));
 }
 
+const MERGE_PARENTS_LINE = 3;
+
+function isMergeOnV1(): boolean {
+  const [mergeBase = ""] = git(["merge-base", "HEAD", "origin/v1"]);
+  const headAndParents = git(["rev-list", "--parents", "--max-count=1", "HEAD"]).join(" ").split(" ");
+  const [head] = headAndParents;
+  return head === mergeBase && headAndParents.length >= MERGE_PARENTS_LINE;
+}
+
+function change(line: string): Change {
+  const [status = "", file = ""] = line.split("\t");
+  return { file, status };
+}
+
+async function changesets(): Promise<readonly string[]> {
+  if (isMergeOnV1()) {
+    return [];
+  }
+  const changes = git(["diff", "--name-status", "--no-renames", comparedBase(), "HEAD"]).map((line) => change(line));
+  return changesetMissing({ changes, ships: await packageShips() });
+}
+
 const failures = [
   ...gitlinks(),
   ...workspaceFile(),
@@ -165,6 +189,7 @@ const failures = [
   ...adrNumbers(),
   ...appendOnlyAdrs(),
   ...deployedMigrations(),
+  ...(await changesets()),
 ];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);

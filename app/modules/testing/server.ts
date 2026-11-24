@@ -3,7 +3,8 @@
  * `startDev` and `startFakeRoutine` run the dev program's commands (ADR 0079) in process. It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
  * admin on a token it makes and identities seeded through `Storage`, both storage
- * Layers on fresh stores, a store that is unusable). `freshSqliteQueryPlans` and `freshPostgresQueryPlans` run work on a fresh
+ * Layers on fresh stores, a store that is unusable). `assetStoreLayers` are the asset store Layers on fresh stores, S3 on
+ * a fresh bucket in the `s3` project's throwaway container, and `s3ServeSettings` puts `cookout serve` on one. `freshSqliteQueryPlans` and `freshPostgresQueryPlans` run work on a fresh
  * SQLite or Postgres store and return the query plan of each statement it ran. It runs `cookout`
  * command lines in the test's own process, `serve` included, with their
  * output captured, and runs the `cookout` binary as a process only where a
@@ -80,7 +81,7 @@ export {
   storageLayers,
 } from "./lib/server/storage.ts";
 export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
-export { postgresContractFiles } from "./lib/server/postgres-contract-files.ts";
+export { assetStoreLayers, freshS3Bucket, s3ServeSettings } from "./lib/server/s3.ts";
 
 export {
   type BootedServer,
@@ -95,4 +96,5 @@ export {
 } from "./lib/server/cookout.ts";
 export type { LastEnd } from "./lib/server/booted.ts";
 export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
+export { triggerToken } from "../webhook-fake/server.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";

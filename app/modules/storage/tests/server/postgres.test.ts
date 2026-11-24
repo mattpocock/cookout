@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, String as Str } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import { StorageUnavailable, postgresStorage } from "../../server.ts";
 import {
   appendTo,
@@ -8,10 +8,8 @@ import {
   newMessageFixture,
   onPostgresDatabase,
   openStore,
-  postgresContractFiles,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { NodeServices } from "@effect/platform-node";
 import type { Redacted } from "effect";
 import { tokenHash } from "../../../identities/index.ts";
 
@@ -25,6 +23,11 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "DROP TABLE triggers",
+  "ALTER TABLE offline_alerts DROP COLUMN trigger_message, DROP COLUMN trigger_status, DROP COLUMN trigger_error",
+  "DROP TABLE scheduled_messages",
+  "ALTER TABLE messages DROP COLUMN scheduled_message_id",
+  "DROP TABLE attachments",
   "DROP INDEX message_search",
   "DROP FUNCTION message_search_words",
   "UPDATE schema_version SET version = 3",
@@ -207,17 +210,4 @@ it.effect("the search migration finds every message stored before search existed
       expect(Arr.map(results, ({ message }) => message.id)).toStrictEqual([said.id]);
     }),
   ),
-);
-
-it.effect("every contract file the postgres project runs exists", () =>
-  Effect.gen(function* contractFilesExist() {
-    const fs = yield* FileSystem.FileSystem;
-    const exists = yield* Effect.forEach(
-      postgresContractFiles,
-      (name) => fs.exists(`app/modules/storage/tests/server/${name}.contract.test.ts`),
-      { concurrency: "unbounded" },
-    );
-
-    expect(exists).not.toContain(false);
-  }).pipe(Effect.provide(NodeServices.layer)),
 );

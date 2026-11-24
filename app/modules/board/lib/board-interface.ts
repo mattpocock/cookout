@@ -4,6 +4,7 @@ import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ChannelsState, CommandsState } from "./listed-slices.ts";
 import type { ChannelCreation } from "./channel-creation.ts";
 import type { ClosingRefusal } from "./thread-closing.ts";
+import type { Scheduling } from "./scheduling.ts";
 import type { ThreadPlace } from "./threads-part.ts";
 
 type Subscribe = (listener: () => void) => () => void;
@@ -62,6 +63,7 @@ interface Board {
   readonly commands: Commands;
   readonly subscriptions: Subscriptions;
   readonly creation: ChannelCreation;
+  readonly scheduling: Scheduling;
   readonly closing: ThreadClosing;
   readonly messageBefore: (at: ThreadPlace) => MessageBefore;
   readonly ack: (id: MessageId) => void;

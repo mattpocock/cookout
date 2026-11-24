@@ -2,7 +2,7 @@ import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import type { ChannelName, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import { ConversationPanel, ScrollArea } from "../../design-system/index.tsx";
 import type { MessageMenu, Reader, Selection } from "../../unread/index.ts";
-import type { PanelAction, PanelEdgeParts } from "../../design-system/index.tsx";
+import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/index.tsx";
 import { ChannelConversationBody } from "./channel-conversation-body.tsx";
 import type { Composer } from "./use-channel-reply.ts";
 import type { ReactNode } from "react";
@@ -31,6 +31,7 @@ interface ChannelConversationPanelProps {
   readonly menu: MessageMenu;
   readonly reader: Reader;
   readonly actions: readonly PanelAction[];
+  readonly open: ShortcutLinkParts;
 }
 
 interface ThreadReplies {
@@ -70,8 +71,7 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
       edge={props.edge}
       label={TEXT.conversation}
       message={reply.draft.replyTo}
-      openHref={hrefOf({ channel, name: "channel" })}
-      openLabel={`Open in #${channel}`}
+      open={props.open}
     >
       <ReadNote reader={reader} />
       <ScrollArea count={posts.length} label={TEXT.messages}>

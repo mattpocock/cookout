@@ -45,7 +45,7 @@ function sendMessage(): void {
 
 async function postWithMention(): Promise<void> {
   typeMessage("Please look, @web-post-r");
-  fireEvent.click(await inPane().findByRole("button", { name: /^@web-post-reviewer/u }));
+  fireEvent.mouseDown(await inPane().findByRole("option", { name: /^@web-post-reviewer/u }));
   sendMessage();
   await within(screen.getByRole("list", { name: "Messages" })).findByText(/Please look/u);
 }

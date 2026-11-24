@@ -40,6 +40,7 @@ export function unreadFor(unread: Unread | undefined): Unread {
   return unread ?? createUnread({ client: adminClient() });
 }
 
+export { createKeymap } from "../../keymap/index.ts";
 export { createUnread } from "../../unread/index.ts";
 export type { BoardStore } from "../../board/index.ts";
 export type { Live } from "../../live/index.ts";

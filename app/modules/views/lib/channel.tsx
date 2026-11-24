@@ -69,8 +69,10 @@ export function ChannelView(props: ChannelProps): ReactNode {
       />
       <MessageFooter
         commands={props.board.commands}
+        channel={props.channel}
         draft={props.composer.channelDraft(props.channel)}
         messages={messages}
+        scheduling={props.board.scheduling}
         state={state}
       />
     </Pane>

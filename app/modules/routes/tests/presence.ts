@@ -57,8 +57,8 @@ async function rowNamed({ label, who }: Looking): Promise<HTMLElement> {
 }
 
 async function suggestionNamed({ label, who }: Looking): Promise<HTMLElement> {
-  const list = await screen.findByRole("list", { name: "Mention suggestions" });
-  return within(list).getByRole("button", { name: `${who}, ${label}` });
+  const list = await screen.findByRole("listbox", { name: "Mention suggestions" });
+  return within(list).getByRole("option", { name: `${who}, ${label}` });
 }
 
 async function openProfile(): Promise<HTMLElement> {

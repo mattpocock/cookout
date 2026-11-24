@@ -16,6 +16,7 @@ export function IdentityCardPresence(parts: IdentityCardShownParts): ReactNode {
           online={presence.online}
           place="card"
           spoken={presence.spoken}
+          unreachable={presence.unreachable}
           warning={presence.warning}
         />
       </span>

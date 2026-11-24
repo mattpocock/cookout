@@ -1,7 +1,13 @@
-import { Array as Arr, Effect, Option, Schema } from "effect";
-import { POSTGRES_SEARCH_MIGRATION } from "./search-sqlite.ts";
+import { Array as Arr, Effect, Option } from "effect";
+import {
+  POSTGRES_ATTACHMENTS_MIGRATION,
+  POSTGRES_SEARCH_MIGRATION,
+  POSTGRES_TRIGGERS_MIGRATION,
+} from "./feature-migrations.ts";
+import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
+import { currentVersion } from "./postgres-schema-version.ts";
 
 const postgresMigrations: readonly (readonly string[])[] = [
   [
@@ -231,37 +237,16 @@ const postgresMigrations: readonly (readonly string[])[] = [
        ADD COLUMN brought_in_by text COLLATE "C" REFERENCES identities (name) ON DELETE SET NULL`,
   ],
   POSTGRES_SEARCH_MIGRATION,
+  POSTGRES_ATTACHMENTS_MIGRATION,
+  POSTGRES_SCHEDULED_MESSAGES_MIGRATION,
+  POSTGRES_TRIGGERS_MIGRATION,
 ];
 
-const NO_VERSION = 0;
 const NEXT_VERSION = 1;
-
-const VersionRow = Schema.Struct({ version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(NO_VERSION)) });
-
-const SCHEMA_VERSION_TABLE = `CREATE TABLE IF NOT EXISTS schema_version (
-  only_row integer PRIMARY KEY CHECK (only_row = 1),
-  version integer NOT NULL
-)`;
-
-const unreadableVersion = StorageUnavailable.make({ message: "The database has no readable schema version." });
-
-function decodeVersion(row: unknown): Effect.Effect<number, StorageUnavailable> {
-  return Schema.decodeUnknownEffect(VersionRow)(row).pipe(
-    Effect.mapBoth({ onFailure: () => unreadableVersion, onSuccess: ({ version }) => version }),
-  );
-}
 
 function tooNew(current: number): StorageUnavailable {
   return StorageUnavailable.make({
     message: `The database is at schema version ${current}, newer than this cookout (${postgresMigrations.length}). Upgrade cookout.`,
-  });
-}
-
-function currentVersion(db: PostgresDatabase): Effect.Effect<number, StorageUnavailable> {
-  return Effect.gen(function* readVersion() {
-    yield* db.exec(SCHEMA_VERSION_TABLE);
-    yield* db.exec("INSERT INTO schema_version (only_row, version) VALUES (1, 0) ON CONFLICT DO NOTHING");
-    return yield* Effect.flatMap(db.get("SELECT version FROM schema_version"), decodeVersion);
   });
 }
 

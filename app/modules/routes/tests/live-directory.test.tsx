@@ -30,8 +30,8 @@ async function openChannel(prefix: string): Promise<Open> {
 function suggestionsFor(text: string): readonly string[] {
   fireEvent.change(screen.getByLabelText("Message"), { target: { value: text } });
   const shown: string[] = [];
-  for (const list of screen.queryAllByRole("list", { name: "Mention suggestions" })) {
-    for (const option of within(list).getAllByRole("button")) {
+  for (const list of screen.queryAllByRole("listbox", { name: "Mention suggestions" })) {
+    for (const option of within(list).getAllByRole("option")) {
       shown.push(option.textContent);
     }
   }

@@ -5,17 +5,25 @@ import type {
   CookoutClient,
   CookoutEvent,
   CreateChannelRequest,
+  IsoTime,
   MessageId,
   SearchRequest,
   SubscriptionResponse,
 } from "../../sdk/index.ts";
 import type { ClosingClient, ClosingRefusal } from "./thread-closing.ts";
+import type {
+  CreateScheduledMessageRequest,
+  PreviewScheduledMessageQuery,
+  ScheduledMessage,
+} from "../../scheduled-messages/index.ts";
 import type { SearchAnswer } from "../../search/web.ts";
 import { createMessageAcks } from "./message-acks.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
 
-type CallsClient = ClosingClient & SubscriptionsClient & Pick<CookoutClient, "ack" | "createChannel" | "search">;
+type CallsClient = ClosingClient &
+  SubscriptionsClient &
+  Pick<CookoutClient, "ack" | "createChannel" | "createScheduledMessage" | "previewScheduledMessage" | "search">;
 
 interface BoardCalls {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
@@ -25,6 +33,8 @@ interface BoardCalls {
   readonly closingRefusal: () => ClosingRefusal | null;
   readonly ack: (id: MessageId) => void;
   readonly search: (request: SearchRequest) => Promise<SearchAnswer>;
+  readonly createScheduledMessage: (request: CreateScheduledMessageRequest) => Promise<ScheduledMessage>;
+  readonly previewScheduledMessage: (query: PreviewScheduledMessageQuery) => Promise<readonly IsoTime[]>;
 }
 
 interface CallsOptions {
@@ -91,6 +101,14 @@ function createBoardCalls(options: CallsOptions): BoardCalls {
       heard({ channel, type: "channel" });
       heard({ subscription: { channel: channel.name, subscribed: true }, type: "subscription" });
       return channel;
+    },
+    createScheduledMessage: async (request) => {
+      const { scheduledMessage } = await client.createScheduledMessage(request);
+      return scheduledMessage;
+    },
+    previewScheduledMessage: async (query) => {
+      const { nextRuns } = await client.previewScheduledMessage(query);
+      return nextRuns;
     },
     reopen: closing.reopen,
     search: async (request) => {

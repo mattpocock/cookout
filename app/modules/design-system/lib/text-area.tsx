@@ -1,6 +1,7 @@
 import { useCallback, useId } from "react";
 import type { ReactNode } from "react";
 import type { TextAreaParts } from "./parts.ts";
+import { comboboxOf } from "./combobox.ts";
 import { useBoxKeys } from "./box-keys.ts";
 import { useTypedCaret } from "./use-typed-caret.ts";
 
@@ -18,10 +19,15 @@ export function TextArea(parts: TextAreaParts): ReactNode {
     }
   }, [box]);
   const handleKeyDown = useBoxKeys({ choosing, onClose, onMove, onPick, onSend: handleSend });
+  const combobox = comboboxOf({ choosing, highlighted: parts.highlighted, list: parts.list });
   return (
     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
       <label htmlFor={id}>{parts.label}</label>
       <textarea
+        aria-activedescendant={combobox.activeOption}
+        aria-autocomplete={combobox.autocomplete}
+        aria-controls={combobox.list}
+        aria-expanded={combobox.expanded}
         className="rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-muted-foreground"
         id={id}
         name={parts.name}
@@ -30,6 +36,7 @@ export function TextArea(parts: TextAreaParts): ReactNode {
         onSelect={handleEdit}
         placeholder={parts.placeholder}
         ref={box}
+        role={combobox.role}
         rows={ROWS}
         value={value}
       />

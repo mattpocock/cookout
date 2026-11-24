@@ -28,6 +28,7 @@ export function CreateAgentForm(props: CreateAgentFormProps): ReactNode {
       busy={create.status === "creating"}
       busyButton={TEXT.busy}
       button={TEXT.submit}
+      disabled={false}
       description={TEXT.description}
       label={TEXT.label}
       onCancel={handleCancel}

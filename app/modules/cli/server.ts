@@ -13,7 +13,10 @@
  *
  * Any other failure before `serve` is listening, such as a port in use or a bad setting, prints one stderr line,
  * `cookout serve failed to start: <tag>: <message>`, plus the first stack frame for a defect, and exits 1
- * (mattpocock/cookout#261). A bad setting's line names the variable and its rule, never its value.
+ * (mattpocock/cookout#261). A bad setting's line names the variable and its rule, never its value. `serve` keeps
+ * its data in Postgres when `DATABASE_URL` is set, and else in the SQLite file at `COOKOUT_DB` (`--db`); its startup
+ * line `{ database, listening }` and every failure line show a Postgres database only as
+ * `postgres://<host>/<database name>`, never its password (mattpocock/cookout#336).
  *
  * Every verb but `serve`, `join`, `login` and `logout` sends one credential. Inside a harness it is the first of:
  * the agent session token in `COOKOUT_SESSION`, the agent session this harness session joined, and `COOKOUT_TOKEN`;

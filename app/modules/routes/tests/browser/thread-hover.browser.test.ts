@@ -39,7 +39,7 @@ async function hoverReply(message: Locator): Promise<void> {
 test("a thread reply's hover Reply mentions its author once, keeping the draft", async ({ page }) => {
   const channel = "browser-panel-hover-reply";
   await openThread({ channel, page });
-  const box = inThread(page).getByLabel("Reply", { exact: true });
+  const box = inThread(page).getByRole("textbox", { exact: true, name: "Reply" });
   await box.fill("works for me");
   await hoverReply(replyNamed(page, "Noon works"));
 
@@ -53,7 +53,7 @@ test("a thread reply's hover Reply mentions its author once, keeping the draft",
 
 test("hover Reply on your own thread reply mentions nobody and focuses the reply box", async ({ page }) => {
   await openThread({ channel: "browser-panel-hover-own", page });
-  const box = inThread(page).getByLabel("Reply", { exact: true });
+  const box = inThread(page).getByRole("textbox", { exact: true, name: "Reply" });
   await hoverReply(replyNamed(page, "Or one"));
 
   await expect(box).toBeFocused();
