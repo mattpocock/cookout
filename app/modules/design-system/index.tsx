@@ -72,21 +72,18 @@
  * `RunList`, `FieldNote`. `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its
  * heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was
  * focused when it opened. `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A `Toolbar` under it holds
- * a `FilterField` (a labelled `InputGroup`, Cursor Style's input box: default, elevated, ghost or unfilled; md, lg or
- * xl; `rounded`; with `InputGroupAddon` icons such as `SearchIcon` and an `InputGroupInput` that gives its text to
- * `onEdit`) and `Chip`s, buttons pressed or not, a `ToolbarDivider`, and a `SwitchField`, Cursor Style's switch; a
+ * a `FilterField` (a labelled `InputGroup`, Cursor Style's input box, with `InputGroupAddon` icons such as
+ * `SearchIcon` and an `InputGroupInput` giving its text to `onEdit`) and `Chip`s, buttons pressed or not, a `ToolbarDivider`, and a `SwitchField`, Cursor Style's switch; a
  * named `ListArea` scrolls from the top, its `IdentityRow`s links to identities: avatar, name, tags, a muted detail
  * line. `Profile` is one identity's large avatar beside its `ProfileName` (its name and any tags, as a heading) and its
- * details; `DateText` is a moment as a date, in mono. `Feed` is a named, full-width column that scrolls, its rows lined
- * up with the header's edges, such as the inbox, read from the top: a `FeedHeading` heads a part of it, with its count,
+ * details; `DateText` is a moment as a date, in mono. `Feed` is a named, full-width column that scrolls, such as the inbox, read from the top: a `FeedHeading` heads a part of it, with its count,
  * or, with no count, as a divider line; a `FeedList` is a named list of `FeedRow`s, each a link over the whole row
  * (named by its text) leading with why it is there (`why`), then a message with its author's avatar and name (its own
  * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a short time, a `Closed`
  * marker when it is `closed` (its thread is closed), any `count` of how many of its messages are new ("3 new") and any
  * `context` line (a reply's thread), then what it holds: its `FeedText`, up to two lines, and any `RowButton`, a small
  * button raised above the row's link; given a `menu`, it is an `ActionMenu`'s target. A `for-you` row has an accent dot
- * and why, a bold name and bright text; an `activity` row has a muted dot and why, a bold name and bright text; a
- * `read` one is muted. A `current` row, the one whose conversation is shown, is highlighted and its link marked as the
+ * and why, an `activity` row a muted one, both with a bold name and bright text; a `read` one is muted. A `current` row, the one whose conversation is shown, is highlighted and its link marked as the
  * current page. A `FeedNoticeRow` sits in a `FeedList` for an Inbox entry about an identity rather than a message: its
  * why, then the identity's avatar and name (a link to `href`) and a short time, then any buttons; `for-you` or `read`
  * as a `FeedRow`. `Mention` is an `@` mention in a message's text, in the mention colour when it is the reader's own
@@ -105,10 +102,10 @@
  * key or Shift+F10 on it, opens it as a context menu at the pointer, and the More actions button opens it as a
  * dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its
  * label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a
- * chosen item's action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an
+ * chosen item's action runs once the menu has closed. An item given `keys` (a `Shortcut`) names them in `aria-keyshortcuts` and shows their label at its end. Mark unread's tooltip names its shortcut, `Alt-click`: an
  * Alt-click (Option-click on macOS) on the message, but not on a link, button or other interactive element in it, runs
- * Mark unread at once and focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one
- * named message on its own, such as a thread's parent. A message's author name and an `@name` in its text are each an
+ * Mark unread at once and focuses and selects nothing. `StandaloneMessage`, one named message on its own such as
+ * a thread's parent, does the same. A message's author name and an `@name` in its text are each an
  * `IdentityCard`: hovering it (after a short delay) or focusing it opens a card, a Radix tooltip beside the name, kept
  * inside the window: a labelled `dialog` led by a square avatar tile (grey when deactivated; an Agent chip on an
  * agent's), then its name, `@name` handle, presence or a red Deactivated, kind, description, and Message (calls the
@@ -124,16 +121,15 @@
  * replies, `ChannelStart` says a channel has nothing older, and `QuietButton` is a muted centred button, naming what it
  * `controls`, such as loading older messages. `ClosedFold` is an item of a message list standing for closed threads
  * folded away, an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares that line, in
- * place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
- * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted line across the top of a
+ * place of a day separator of its own beside it: the label centred, the button at its right end,
+ * shortening rather than overlapping it on a narrow line. `ThreadBar` is a muted line across the top of a
  * thread, such as who closed it; `QuietLink` is a muted link in such a line, such as a name linking to its profile.
  * `TextArea` takes focus when it first appears if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`, `Heading` and
  * `Muted` are a shadcn-style card and its title row, `CardBody` a padded section under it; `MutedLines` is muted text
  * that keeps its line breaks; `LinkList` and `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
- * list of plain rows; `Alert` is a refusal, read out by screen readers; `Notice` is a passing word on what just
- * happened, read out politely; `Skeleton` stands in while something loads. `Form` hands one field's value to `onSubmit`
+ * list of plain rows; `Alert` is a refusal, read out by screen readers; `Announcement` a polite live region (its text again as its count moves); `Notice` is a passing word on what just happened, read out politely; `Skeleton` stands in while something loads. `Form` hands one field's value to `onSubmit`
  * without reloading the page; `TextField` is a labelled secret input in it, such as a token, `TextArea` a labelled box
  * to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts
  * a new line, and, while its owner is `choosing` from suggestions, is a combobox naming the highlighted option as its
@@ -277,6 +273,7 @@ export {
 export { InputGroup, InputGroupAddon, InputGroupInput, SearchIcon } from "./lib/inputs.ts";
 export {
   Alert,
+  Announcement,
   Heading,
   ItemList,
   ItemRow,

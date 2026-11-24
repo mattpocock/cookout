@@ -133,7 +133,7 @@ it("c on a People row copies @name and says so, and m does nothing where there i
   pressed("m");
   pressed("c");
 
-  await expect(screen.findByRole("status")).resolves.toHaveProperty("textContent", `Copied @${first}`);
+  await expect(screen.findByRole("status", { name: "" })).resolves.toHaveProperty("textContent", `Copied @${first}`);
   expect(writeText.mock.calls).toStrictEqual([[`@${first}`]]);
 
   close();
