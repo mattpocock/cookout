@@ -21,7 +21,7 @@ export function SidebarBody(parts: SidebarBodyParts): ReactNode {
     [onFollow],
   );
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pt-1 pb-3" onClickCapture={handleFollow}>
+    <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pt-1 pb-3" onClickCapture={handleFollow}>
       {parts.children}
     </div>
   );

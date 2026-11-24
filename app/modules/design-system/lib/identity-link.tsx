@@ -16,7 +16,7 @@ export function IdentityLink(parts: IdentityLinkParts): ReactNode {
     <a
       aria-current={currentOf(parts.active)}
       aria-label={presenceNameOf({ name: displayName ?? name, presence: parts.presence })}
-      className="-mx-2 flex rounded-md px-2 py-1 hover:bg-hover"
+      className="flex rounded-lg px-1.5 py-1 hover:bg-hover focus-visible:ring-1 focus-visible:ring-link focus-visible:outline-none focus-visible:ring-inset aria-[current=page]:bg-accent"
       href={parts.href}
     >
       {displayName === null && (

@@ -24,12 +24,12 @@ export function FooterLink(parts: FooterLinkParts): ReactNode {
   return (
     <a
       aria-current={currentOf(parts.active)}
-      className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-[13.5px] ${linkStyle(parts.active)}`}
+      className={`flex min-h-[30px] items-center gap-1.5 rounded-lg px-1.5 py-[5px] text-[13px] leading-[18px] focus-visible:ring-1 focus-visible:ring-link focus-visible:outline-none focus-visible:ring-inset ${linkStyle(parts.active)}`}
       href={parts.href}
     >
       <svg
         aria-hidden="true"
-        className="h-3.5 w-3.5"
+        className="mx-[3px] size-3.5 shrink-0"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"

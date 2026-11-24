@@ -13,7 +13,7 @@ export function HeadingButton(parts: HeadingButtonParts): ReactNode {
     <button
       aria-expanded={parts.expanded}
       aria-label={parts.label}
-      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-hover hover:text-foreground"
+      className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground"
       onClick={onClick}
       title={parts.label}
       type="button"

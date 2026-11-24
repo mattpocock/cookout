@@ -55,10 +55,13 @@ export function NavAnchor(parts: NavAnchorParts): ReactNode {
   return (
     <a
       aria-current={currentOf(link.active)}
-      className={`mx-2 flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13.5px] ${linkStyle(link)}`}
+      className={`group/row flex min-h-[30px] flex-1 items-center gap-1.5 rounded-lg px-1.5 py-[5px] text-[13px] leading-[18px] focus-visible:ring-1 focus-visible:ring-link focus-visible:outline-none focus-visible:ring-inset ${linkStyle(link)}`}
       href={link.href}
     >
-      <span aria-hidden="true" className="flex w-4 justify-center text-muted-foreground">
+      <span
+        aria-hidden="true"
+        className="flex size-5 shrink-0 items-center justify-center text-muted-foreground group-aria-[current=page]/row:text-foreground"
+      >
         {ICONS[link.icon]}
       </span>
       <span className={`flex-1 truncate ${textStyle(link)}`}>{link.label}</span>
