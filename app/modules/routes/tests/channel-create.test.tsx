@@ -1,6 +1,6 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
@@ -14,12 +14,12 @@ interface NewChannel {
 
 async function openForm(): Promise<HTMLElement> {
   fireEvent.click(await inSidebar().findByRole("button", { name: "New channel" }));
-  const form = await inSidebar().findByRole("form", { name: "New channel" });
+  const form = await screen.findByRole("dialog", { name: "New channel" });
   return form;
 }
 
 function fieldNamed(name: string): HTMLInputElement {
-  const field = inSidebar().getByRole("textbox", { name });
+  const field = screen.getByRole("textbox", { name });
   if (!(field instanceof HTMLInputElement)) {
     throw new TypeError(`${name} isn't an input.`);
   }
@@ -27,10 +27,10 @@ function fieldNamed(name: string): HTMLInputElement {
 }
 
 async function submitNew(channel: NewChannel): Promise<void> {
-  await openForm();
+  const dialog = await openForm();
   fireEvent.change(fieldNamed("Name"), { target: { value: channel.name } });
   fireEvent.change(fieldNamed("Description"), { target: { value: channel.description ?? "" } });
-  fireEvent.click(inSidebar().getByRole("button", { name: "Create" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 }
 
 async function openWithChannel(client: CookoutClient, name: string): Promise<() => void> {
@@ -85,7 +85,7 @@ it("creating a channel from the sidebar adds it to the channel list and opens it
     inSidebar().getByRole("link", { name: "#web-create-earlier" }).textContent,
     globalThis.location.hash,
     channel.description,
-    inSidebar().queryByRole("form", { name: "New channel" }),
+    screen.queryByRole("dialog", { name: "New channel" }),
   ]).toStrictEqual([
     "#web-create-made",
     "#/channels/web-create-made",
@@ -140,7 +140,7 @@ it("a taken channel name is refused beside the name field, keeping what was type
   const close = openAt({ client, hash: "#/" });
 
   await submitNew({ description: "A second try.", name: "web-create-taken" });
-  const note = await inSidebar().findByText(/channel_exists/u);
+  const note = await screen.findByText(/channel_exists/u);
 
   expect([
     note.textContent,
@@ -163,7 +163,7 @@ it("a channel name that breaks the name rules is refused beside the name field",
   const close = openAt({ client: adminClient(), hash: "#/" });
 
   await submitNew({ name: "Not A Name" });
-  await inSidebar().findByText(/invalid_request/u);
+  await screen.findByText(/invalid_request/u);
 
   expect([refusedOn("Name"), refusedOn("Description"), fieldNamed("Name").value]).toStrictEqual([
     true,
@@ -180,26 +180,26 @@ it("a description that's too long is refused beside the description field", { ti
   const close = openAt({ client: adminClient(), hash: "#/" });
 
   await submitNew({ description: "x".repeat(TOO_LONG), name: "web-create-long" });
-  await inSidebar().findByText(/invalid_request/u);
+  await screen.findByText(/invalid_request/u);
 
   expect([refusedOn("Description"), refusedOn("Name")]).toStrictEqual([true, false]);
 
   close();
 });
 
-it("cancelling the new channel form closes it without creating anything", { timeout: 5000 }, async () => {
+it("cancelling the New channel dialog closes it without creating anything", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const client = adminClient();
   const close = openAt({ client, hash: "#/" });
 
-  await openForm();
+  const dialog = await openForm();
   fireEvent.change(fieldNamed("Name"), { target: { value: "web-create-cancelled" } });
-  fireEvent.click(inSidebar().getByRole("button", { name: "Cancel" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   const { channels } = await client.listChannels();
 
   expect([
-    inSidebar().queryByRole("form", { name: "New channel" }),
+    screen.queryByRole("dialog", { name: "New channel" }),
     channels.some((channel) => channel.name === "web-create-cancelled"),
   ]).toStrictEqual([null, false]);
 
@@ -213,14 +213,14 @@ it("a server that can't be reached is refused beside the name field", { timeout:
   const close = openAt({ client: { ...adminClient(), createChannel: unreachable.createChannel }, hash: "#/" });
 
   await submitNew({ name: "web-create-unreachable" });
-  await inSidebar().findByText(/unreachable/u);
+  await screen.findByText(/unreachable/u);
 
   expect([refusedOn("Name"), fieldNamed("Name").value]).toStrictEqual([true, "web-create-unreachable"]);
 
   close();
 });
 
-it("the New channel button is a plus on the Channels heading's line, and says when its form is open", {
+it("the New channel button is a plus on the Channels heading's line, and says when its dialog is open", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();

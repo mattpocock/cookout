@@ -1,5 +1,5 @@
 import type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "../../board/index.ts";
-import { InputField, PromptForm } from "../../design-system/index.tsx";
+import { FormDialog, InputField } from "../../design-system/index.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
@@ -10,6 +10,7 @@ const TEXT = {
   button: "Create",
   description: "Description",
   descriptionHelp: "What the channel is for, up to 500 characters.",
+  intro: "A place for one topic, open to everyone on the board.",
   name: "Name",
   nameHelp: "Lowercase letters, digits or '-', up to 80.",
   title: "New channel",
@@ -40,15 +41,15 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
     creation.create(openChannel);
   }, [creation]);
   return (
-    <PromptForm
+    <FormDialog
       busy={state.create.status === "creating"}
       busyButton={TEXT.busy}
       button={TEXT.button}
-      description={null}
-      label={TEXT.title}
+      description={TEXT.intro}
+      disabled={false}
       onCancel={handleCancel}
-      onEscape={handleCancel}
       onSubmit={handleSubmit}
+      open={state.open}
       title={TEXT.title}
     >
       <InputField
@@ -69,6 +70,6 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
         required={false}
         value={state.description}
       />
-    </PromptForm>
+    </FormDialog>
   );
 }

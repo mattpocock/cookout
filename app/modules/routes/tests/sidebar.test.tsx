@@ -94,8 +94,8 @@ it("a channel with unread messages is bold in the sidebar, with its count for yo
   const quiet = inSidebar().getByRole("link", { name: "#web-sidebar-quiet" });
 
   expect([
-    within(bold).getByText("#web-sidebar-bold").className.includes("font-semibold"),
-    within(quiet).getByText("#web-sidebar-quiet").className.includes("font-semibold"),
+    within(bold).getByText("web-sidebar-bold").className.includes("font-semibold"),
+    within(quiet).getByText("web-sidebar-quiet").className.includes("font-semibold"),
     quiet.getAttribute("aria-current"),
     bold.getAttribute("aria-current"),
   ]).toStrictEqual([true, false, "page", "false"]);

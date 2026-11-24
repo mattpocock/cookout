@@ -16,7 +16,12 @@ const TONES = {
 
 export function CountBadge(parts: CountBadgeParts): ReactNode {
   if (parts.tone === "unseen") {
-    return <span className="sr-only">{parts.label}</span>;
+    return (
+      <span className="sr-only">
+        {" "}
+        <span>{parts.label}</span>
+      </span>
+    );
   }
   return (
     <span className={`${SHAPE} ${SIZES[parts.size ?? "md"]} ${TONES[parts.tone]}`}>

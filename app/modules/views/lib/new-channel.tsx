@@ -10,5 +10,5 @@ interface NewChannelProps {
 export function NewChannel(props: NewChannelProps): ReactNode {
   const { creation } = props;
   const state = useSyncExternalStore(creation.subscribe, creation.snapshot);
-  return state.open && <NewChannelForm creation={creation} state={state} />;
+  return <NewChannelForm creation={creation} state={state} />;
 }

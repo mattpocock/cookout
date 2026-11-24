@@ -29,7 +29,7 @@ function badgesOn(name: string): readonly string[] {
 }
 
 function isBold(name: string): boolean {
-  return within(sidebarLink(name)).getByText(name).className.includes("font-semibold");
+  return within(sidebarLink(name)).getByText(name.replace(/^#/u, "")).className.includes("font-semibold");
 }
 
 it("a mention shows the strong badge in the sidebar and leads its Inbox row with Mentioned you, under For you", {

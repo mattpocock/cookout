@@ -42,7 +42,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   return (
     <>
       {unread.items.length + besideCountOf(unread) + markAll.held === NONE && <FeedCaughtUp>{TEXT.empty}</FeedCaughtUp>}
-      <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
+      <InboxAlerts alerts={unread.alerts} markAll={markAll.alerts} onMarkRead={props.onMarkAlertRead} />
       <InboxSection
         actions={props.actions}
         besides={markAll.besides}

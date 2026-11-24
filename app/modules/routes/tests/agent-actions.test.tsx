@@ -99,7 +99,7 @@ async function submitIn(label: string, text: string): Promise<void> {
 
 async function createAgent(name: string): Promise<void> {
   fireEvent.click(await inSettings().findByRole("button", { name: "New agent" }));
-  const form = await inDialog().findByRole("form", { name: "Create an agent" });
+  const form = await screen.findByRole("dialog", { name: "New agent" });
   fireEvent.change(within(form).getByRole("textbox"), { target: { value: name } });
   fireEvent.click(within(form).getByRole("button", { name: "Create" }));
 }
@@ -166,7 +166,7 @@ it("create makes an agent you own and shows its token once; a taken name is refu
   await createAgent("web-mine-create-bot");
   const alert = await alertSaying("Couldn't create the agent (identity_exists)");
 
-  expect([identity, screen.getByRole("form", { name: "Create an agent" }).contains(alert)]).toStrictEqual([
+  expect([identity, screen.getByRole("dialog", { name: "New agent" }).contains(alert)]).toStrictEqual([
     expect.objectContaining({ kind: "agent", owner: "web-mine-create-human" }),
     true,
   ]);

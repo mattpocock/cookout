@@ -26,7 +26,6 @@ export function AgentNameDialog(props: AgentNameDialogProps): ReactNode {
       button={TEXT.save}
       disabled={false}
       description={`How @${props.name} shows on its messages. Leave it empty to show @${props.name}.`}
-      label={`Display name of @${props.name}`}
       onCancel={handleCancel}
       onSubmit={name.handleSave}
       open={shown.open}

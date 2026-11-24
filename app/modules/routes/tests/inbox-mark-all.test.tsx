@@ -67,14 +67,14 @@ it("a message that arrives after marking all as read stays unread", { timeout: 5
   unmount();
 });
 
-it("marking all as read is off while nothing is unread", { timeout: 5000 }, async () => {
+it("with nothing unread there is no Mark all as read", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const { reader } = await subscribedReader("web-mark-all-none");
   const unmount = openAt({ client: reader, hash: "#/inbox" });
   await screen.findByText("You're all caught up.");
 
-  expect(inPane().getByRole("button", { name: "Mark all as read" })).toHaveProperty("disabled", true);
+  expect(inPane().queryByRole("button", { name: "Mark all as read" })).toBeNull();
 
   unmount();
 });

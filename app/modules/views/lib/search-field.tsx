@@ -2,7 +2,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput, SearchIcon } from "../../
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";
 
-const TEXT = { label: "Search", placeholder: "Search" } as const;
+const TEXT = { label: "Search", placeholder: "Search messages" } as const;
 
 interface SearchFieldProps {
   readonly query: string;

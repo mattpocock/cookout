@@ -7,7 +7,6 @@ const TEXT = {
   busy: "Creating…",
   description: "It gets its own token to join the board, shown once after it is created.",
   field: "Name",
-  label: "Create an agent",
   submit: "Create",
   title: "New agent",
 } as const;
@@ -30,7 +29,6 @@ export function CreateAgentForm(props: CreateAgentFormProps): ReactNode {
       button={TEXT.submit}
       disabled={false}
       description={TEXT.description}
-      label={TEXT.label}
       onCancel={handleCancel}
       onSubmit={handleCreate}
       open={state.open}

@@ -2,7 +2,6 @@ import type { Parts } from "./parts.ts";
 import type { PromptButtonsParts } from "./prompt-parts.ts";
 
 interface FormDialogContentParts extends Parts, PromptButtonsParts {
-  readonly label?: string | undefined;
   readonly title: string;
   readonly description: string;
   readonly disabled: boolean;

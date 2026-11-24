@@ -54,7 +54,7 @@ function linkStyle(parts: NavLinkParts): string {
   return "text-foreground hover:bg-hover";
 }
 
-const SPOKEN_PREFIXES = { channel: "#", inbox: "", people: "" } as const;
+const PREFIXES = { channel: "#", inbox: "", people: "" } as const;
 
 function textStyle(parts: NavLinkParts): string {
   if (parts.marked) {
@@ -89,9 +89,7 @@ export function NavAnchor(parts: NavAnchorParts): ReactNode {
         {ICONS[link.icon]}
       </span>
       <span className={`flex-1 truncate ${textStyle(link)}`}>
-        {SPOKEN_PREFIXES[link.icon] !== "" && (
-          <span className="align-top text-[0px] leading-[0]">{SPOKEN_PREFIXES[link.icon]}</span>
-        )}
+        {PREFIXES[link.icon] !== "" && <span className="align-top text-[0px] leading-[0]">{PREFIXES[link.icon]}</span>}
         {link.label}
       </span>
       <span className="flex items-center justify-end gap-1 group-focus-within/actions:min-w-6 group-focus-within/actions:opacity-0 group-hover/actions:min-w-6 group-hover/actions:opacity-0 group-has-data-[state=open]/actions:min-w-6 group-has-data-[state=open]/actions:opacity-0">

@@ -58,7 +58,12 @@ async function renameAgent(name: string, text: string): Promise<void> {
   const card = await inSettings().findByRole("group", { name: `@${name}` });
   pressed(() => within(card).getByRole("button", { name: "More actions" }));
   await chose("Edit display name");
-  await saveIn(`Display name of @${name}`, text);
+  const dialog = await screen.findByRole("dialog", { name: "Edit display name" });
+  fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: text } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
 }
 
 function rowOf(name: string): string {
@@ -154,6 +159,21 @@ it("saving an empty display name clears it, and the field then shows the identit
     "web-names-clear-human(you)Human",
     expect.objectContaining({ value: "web-names-clear-human" }),
   ]);
+
+  close();
+});
+
+it("saving the identity's own name as its display name clears the display name", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { human } = await crewOf("web-names-own");
+  await human.setDisplayName("web-names-own-human", "Grace Hopper");
+  const close = await openSettings(human);
+  await saveIn("Your display name", " web-names-own-human ");
+  await inSidebar().findByRole("link", { name: /^web-names-own-human/u });
+  await openPeople();
+
+  expect(rowOf("web-names-own-human")).toBe("web-names-own-human(you)Human");
 
   close();
 });

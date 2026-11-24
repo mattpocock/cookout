@@ -120,3 +120,27 @@ it("the Send button is a paper-plane icon named Send, with a tooltip", { timeout
 
   close();
 });
+
+function sendDisabledWith(text: string): boolean {
+  typeMessage(text);
+  return inPane().getByRole("button", { name: "Send" }).hasAttribute("disabled");
+}
+
+it("the Send button is disabled while the box is empty or only spaces, and enabled once there is text", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const poster = await newIdentity({ kind: "human", name: "web-post-blank" });
+  await channelWith("web-post-blank", "Earlier");
+  const close = openAt({ client: poster.client, hash: "#/channels/web-post-blank" });
+  await shownMessages();
+
+  expect([sendDisabledWith(""), sendDisabledWith("   "), sendDisabledWith("Ship it")]).toStrictEqual([
+    true,
+    true,
+    false,
+  ]);
+
+  close();
+});

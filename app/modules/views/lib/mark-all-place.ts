@@ -9,6 +9,7 @@ type LoadedState = Extract<UnreadState, { readonly status: "loaded" }>;
 interface MarkAllPlaces {
   readonly besides: number;
   readonly held: number;
+  readonly alerts: MarkAllReadProps | null;
   readonly forYou: MarkAllReadProps | null;
   readonly activity: MarkAllReadProps | null;
 }
@@ -24,10 +25,14 @@ function markAllPlaces(where: MarkAllWhere): MarkAllPlaces {
   const markAll = { state, unread: where.store };
   const held = state.heldDeactivatedQuietAgents.length;
   const besides = state.nudges.length + state.deactivationOffers.length + state.deactivatedQuietAgents.length;
-  if (where.rows.rows.some((row) => row.forYou) || besides + held > NONE) {
-    return { activity: null, besides, forYou: markAll, held };
+  const none = { activity: null, alerts: null, besides, forYou: null, held };
+  if (state.alerts.length > NONE) {
+    return { ...none, alerts: markAll };
   }
-  return { activity: markAll, besides, forYou: null, held };
+  if (where.rows.rows.some((row) => row.forYou) || besides + held > NONE) {
+    return { ...none, forYou: markAll };
+  }
+  return { ...none, activity: markAll };
 }
 
 export { markAllPlaces };
