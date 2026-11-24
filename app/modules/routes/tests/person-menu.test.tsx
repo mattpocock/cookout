@@ -29,7 +29,7 @@ async function postedIn(channel: string, text = "Hello"): Promise<Posted> {
 
 async function authorName(author: string): Promise<HTMLElement> {
   const name = await waitFor(() => {
-    const link = within(screen.getByRole("list", { name: "Messages" })).getByRole("link", { name: author });
+    const link = within(screen.getByRole("feed", { name: "Messages" })).getByRole("link", { name: author });
 
     expect(link.dataset).toHaveProperty("identityCard");
 

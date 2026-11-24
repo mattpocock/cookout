@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { messageClass } from "./message-class.ts";
 import { useScrollWhenLinked } from "./use-scroll-when-linked.ts";
 
-const FOCUSABLE = 0;
+const FOCUSABLE = -1;
 
 const TEXT = { menu: "Message actions" } as const;
 
@@ -27,6 +27,7 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
   return (
     <ActionContextMenu choices={choices} label={TEXT.menu}>
       <article
+        aria-label={`${message.displayName ?? message.name}, ${message.time.full}`}
         aria-current={message.mark === "open" || message.mark === "linked"}
         className={messageClass(message)}
         data-for-you={message.mark === "for-you"}

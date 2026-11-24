@@ -41,7 +41,7 @@ function channelRow(page: Page, channel: string): Locator {
 async function openQuestion(page: Page, row: Locator): Promise<void> {
   await row.click();
   const question = page
-    .getByRole("list", { name: "Messages" })
+    .getByRole("feed", { name: "Messages" })
     .getByRole("article")
     .filter({ hasText: /Can you review the deploy/u });
   await question.hover();
@@ -114,7 +114,7 @@ test("a person logs in, opens a mention's thread, replies with a picked @-mentio
   await replyMentioning(page, cookout, board);
   await agentAnswers(board, `Over to @${agent.name} for the review.`);
 
-  await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText([
+  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toHaveText([
     shownMessage({ body: `Over to @${agent.name} for the review.`, header: person.name }),
     shownMessage({ body: "Looking now.", header: `${agent.name}agent` }),
   ]);

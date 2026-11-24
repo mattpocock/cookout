@@ -53,7 +53,7 @@ it("pressing Enter in the message box sends the message and empties the box", { 
   const close = await openChannel("web-keys-enter");
   type("Sent with Enter");
   press("Enter");
-  await within(screen.getByRole("list", { name: "Messages" })).findByText("Sent with Enter");
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText("Sent with Enter");
 
   expect([await shownMessages(), screen.queryByDisplayValue("Sent with Enter")]).toStrictEqual([
     ["adminSent with Enter"],
@@ -172,7 +172,7 @@ it("escape closes the command suggestions, so Enter sends the text as a message"
   press("Escape");
   const closed = screen.queryByRole("listbox", { name: "Command suggestions" });
   press("Enter");
-  await within(screen.getByRole("list", { name: "Messages" })).findByText("/keys-escape-f");
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText("/keys-escape-f");
 
   expect([closed, await shownMessages()]).toStrictEqual([null, ["admin/keys-escape-f"]]);
 

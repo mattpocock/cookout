@@ -109,7 +109,7 @@ it("posting a reply shows it in the thread", { timeout: 5000 }, async () => {
   await shownReplies();
 
   sendReply("My reply");
-  await within(screen.getByRole("list", { name: "Replies" })).findByText("My reply");
+  await within(screen.getByRole("feed", { name: "Replies" })).findByText("My reply");
 
   const { replies } = await adminClient().getThread(parent.id);
 

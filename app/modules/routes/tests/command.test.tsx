@@ -39,7 +39,7 @@ it("a command call and its result reply show their data in the thread", { timeou
   });
   const close = openAt({ client: adminClient(), hash: `#/channels/web-command-shows/threads/${String(threadId)}` });
 
-  const reply = await within(await screen.findByRole("list", { name: "Replies" })).findByRole("listitem");
+  const reply = await within(await screen.findByRole("feed", { name: "Replies" })).findByRole("article");
   const parent = screen.getByRole("article", { name: "Parent message" });
 
   expect([

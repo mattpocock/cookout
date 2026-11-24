@@ -29,14 +29,14 @@ function drawn(rows: () => readonly HTMLElement[]): readonly Drawn[] {
 }
 
 function messageRows(): readonly Drawn[] {
-  const list = screen.getByRole("list", { name: "Messages" });
+  const list = screen.getByRole("feed", { name: "Messages" });
   return drawn(() => within(list).getAllByRole("article"));
 }
 
 function threadRows(): readonly Drawn[] {
   const panel = screen.getByRole("complementary", { name: "Thread" });
   const parent = within(panel).getByRole("article", { name: "Parent message" });
-  return drawn(() => [parent, ...within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("article")]);
+  return drawn(() => [parent, ...within(within(panel).getByRole("feed", { name: "Replies" })).getAllByRole("article")]);
 }
 
 async function botThread(): Promise<Message> {

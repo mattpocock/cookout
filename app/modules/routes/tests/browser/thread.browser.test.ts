@@ -32,7 +32,7 @@ test("a human opens a thread, replies, and the thread leaves their inbox", async
   await logIn({ page, token: reader.token });
   await replyInThread(page, "browser-thread", "I am");
 
-  await expect(page.getByRole("list", { name: "Replies" }).getByRole("article")).toContainText(["Not me", "I am"]);
+  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toContainText(["Not me", "I am"]);
   await expect
     .poll(async () => {
       const after = await reader.client.inbox();

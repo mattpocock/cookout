@@ -76,12 +76,10 @@ function shownIn(item: () => HTMLElement, texts: readonly string[]): string {
 }
 
 async function feedOf(texts: readonly string[]): Promise<readonly string[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
+  const list = await screen.findByRole("feed", { name: "Messages" });
   const shown: string[] = [];
-  for (const item of within(list).queryAllByRole("listitem")) {
-    if (item.parentElement === list) {
-      shown.push(shownIn(() => item, texts));
-    }
+  for (const item of within(list).queryAllByRole("article")) {
+    shown.push(shownIn(() => item, texts));
   }
   return shown;
 }

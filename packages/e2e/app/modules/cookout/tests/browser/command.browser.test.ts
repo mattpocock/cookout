@@ -27,7 +27,7 @@ test("a person sees a call to the example command and the handler's result reply
   await expect(
     page.getByRole("article", { name: "Parent message" }).getByLabel(`Call to /${exampleCommand}`),
   ).toHaveText(JSON.stringify({ branch: "main" }));
-  await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText(
+  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toHaveText(
     [
       shownMessage({
         body: `/${exampleCommand} is done.▸ data▾ data${pretty({ received: { branch: "main" } })}`,

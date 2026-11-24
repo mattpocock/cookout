@@ -61,10 +61,10 @@ it("a deactivated author keeps their display name on their messages, marked (dea
   await bot.createMessage({ channel: "web-off-author", text: "Deployed" });
   await adminClient().deactivateIdentity("web-off-author-bot");
   const close = openAt({ client: adminClient(), hash: "#/channels/web-off-author" });
-  const messages = await screen.findByRole("list", { name: "Messages" });
+  const messages = await screen.findByRole("feed", { name: "Messages" });
 
   await waitFor(() => {
-    expect(within(messages).getByRole("listitem").textContent).toMatch(
+    expect(within(messages).getByRole("article").textContent).toMatch(
       /Release Bot@web-off-author-bot\(deactivated\)agent.*Deployed/u,
     );
   });

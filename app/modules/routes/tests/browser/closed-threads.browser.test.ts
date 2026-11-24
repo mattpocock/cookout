@@ -28,7 +28,7 @@ async function openAs({ browser, token }: Opening): Promise<Page> {
 }
 
 function messagesOn(page: Page): Locator {
-  return inPane(page).getByRole("list", { name: "Messages" });
+  return inPane(page).getByRole("feed", { name: "Messages" });
 }
 
 async function posted(): Promise<Tokens> {

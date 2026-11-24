@@ -136,7 +136,7 @@ it("text starting with / that names no registered command posts as a message", {
 
   type("/shrug at the build");
   fireEvent.click(inPane().getByRole("button", { name: "Send" }));
-  await within(screen.getByRole("list", { name: "Messages" })).findByText("/shrug at the build");
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText("/shrug at the build");
   const { messages } = await adminClient().listMessages("web-command-not-one");
 
   expect(messages.map(({ data = "no data", text }) => [text, data])).toStrictEqual([

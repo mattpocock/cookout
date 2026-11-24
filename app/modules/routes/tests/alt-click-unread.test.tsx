@@ -3,15 +3,15 @@ import { altClicked, boardOpen, countsOn, newAbove } from "./alt-click.ts";
 import { expect, it } from "vitest";
 
 function inFeed(text: string): () => HTMLElement {
-  return () => within(screen.getByRole("list", { name: "Messages" })).getByText(text);
+  return () => within(screen.getByRole("feed", { name: "Messages" })).getByText(text);
 }
 
 function inReplies(text: string): () => HTMLElement {
-  return () => within(screen.getByRole("list", { name: "Replies" })).getByText(text);
+  return () => within(screen.getByRole("feed", { name: "Replies" })).getByText(text);
 }
 
 function threadLink(): HTMLElement {
-  return within(screen.getByRole("list", { name: "Messages" })).getByRole("link", { name: /2 replies/u });
+  return within(screen.getByRole("feed", { name: "Messages" })).getByRole("link", { name: /2 replies/u });
 }
 
 async function threadMarkedByAltClick(): Promise<void> {

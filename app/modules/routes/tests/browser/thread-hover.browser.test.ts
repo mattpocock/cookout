@@ -21,7 +21,7 @@ async function openThread({ channel, page }: Opened): Promise<void> {
 }
 
 function replyNamed(page: Page, text: string): Locator {
-  return inThread(page).getByRole("list", { name: "Replies" }).getByRole("article").filter({ hasText: text });
+  return inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").filter({ hasText: text });
 }
 
 async function hoverReply(message: Locator): Promise<void> {

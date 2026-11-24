@@ -57,7 +57,7 @@ function shown(text: string): Box {
 
 async function replyNamed(text: string): Promise<HTMLElement> {
   const panel = await screen.findByRole("complementary", { name: "Thread" });
-  const replies = await within(panel).findByRole("list", { name: "Replies" });
+  const replies = await within(panel).findByRole("feed", { name: "Replies" });
   const message = await within(replies).findByText(text);
   const article = message.closest("article");
   if (article === null) {

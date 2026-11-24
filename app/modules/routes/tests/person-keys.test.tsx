@@ -155,7 +155,7 @@ async function authorIn(channel: string, deactivated: boolean): Promise<Authored
     await adminClient().deactivateIdentity(author);
   }
   const close = openAt({ client: reader.client, hash: `#/channels/${channel}` });
-  const name = await within(await screen.findByRole("list", { name: "Messages" })).findByRole("link", { name: author });
+  const name = await within(await screen.findByRole("feed", { name: "Messages" })).findByRole("link", { name: author });
   return { author, close, name };
 }
 

@@ -15,6 +15,12 @@ interface ListParts extends Parts {
   readonly label: string;
 }
 
+interface FeedParts extends ListParts {
+  readonly feed?: string;
+  readonly more: boolean;
+  readonly busy: boolean;
+}
+
 interface FormParts extends Parts {
   readonly label: string;
   readonly field: string;
@@ -268,6 +274,7 @@ export type {
   DataBlockParts,
   FormParts,
   LinkParts,
+  FeedParts,
   ListParts,
   Parts,
   SkeletonParts,

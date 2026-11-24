@@ -45,7 +45,7 @@ async function dotWithin(region: (looking: Looking) => Promise<HTMLElement>, loo
 }
 
 async function articleWith({ at }: Looking): Promise<HTMLElement> {
-  const messages = await screen.findByRole("list", { name: "Messages" });
+  const messages = await screen.findByRole("feed", { name: "Messages" });
   const shown = await within(messages).findByText(at);
   return shown.closest("article") ?? messages;
 }

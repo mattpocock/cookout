@@ -12,6 +12,7 @@ type Loaded = Extract<ChannelMessagesState, { readonly status: "loaded" }>;
 
 interface FeedStreamProps {
   readonly label: string;
+  readonly feed: string;
   readonly state: Loaded;
   readonly messages: ChannelMessages;
   readonly me: string;
@@ -35,7 +36,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
   });
   return (
     <>
-      <MessageList label={props.label}>
+      <MessageList busy={state.older.status === "loading"} feed={props.feed} label={props.label} more={state.hasMore}>
         {rows.map((row) => {
           if (row.kind === "fold") {
             return (

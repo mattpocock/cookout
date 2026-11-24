@@ -12,7 +12,7 @@ test("a human logs in with their token, sees the channel list and opens a channe
   await inSidebar(page).getByRole("link", { name: "#browser-lobby" }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("#browser-lobby");
-  await expect(page.getByRole("list", { name: "Messages" }).getByRole("article")).toContainText(["Welcome in"]);
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText(["Welcome in"]);
 });
 
 test("the session cookie keeps a human logged in across a reload", async ({ page }) => {

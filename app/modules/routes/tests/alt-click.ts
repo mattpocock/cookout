@@ -79,10 +79,11 @@ export function altClicked(element: () => HTMLElement): { readonly pressKeptItsD
 }
 
 export function newAbove(label: string): string | null {
-  const list = screen.getByRole("list", { name: label });
-  for (const item of within(list).queryAllByRole("listitem")) {
-    if (within(item).queryByRole("separator", { name: "New" }) !== null) {
-      return within(item).getByRole("article").textContent;
+  const feed = screen.getByRole("feed", { name: label });
+  for (const article of within(feed).queryAllByRole("article")) {
+    const item = article.parentElement;
+    if (item !== null && within(item).queryByRole("separator", { name: "New" }) !== null) {
+      return article.textContent;
     }
   }
   return null;

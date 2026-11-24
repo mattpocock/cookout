@@ -1,4 +1,4 @@
-import { IdentityDeletedNotice, ReconnectingView, SearchableMain } from "../../views/index.tsx";
+import { IdentityDeletedNotice, MessageListKeys, ReconnectingView, SearchableMain } from "../../views/index.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
@@ -17,6 +17,7 @@ export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
   const { stores } = props;
   return (
     <WorkspaceColumn>
+      <MessageListKeys keymap={stores.keymap} />
       {stores.live !== null && <ReconnectingView live={stores.live} />}
       <IdentityDeletedNotice identities={stores.composer.identities} />
       <SearchableMain

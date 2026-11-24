@@ -8,31 +8,30 @@
  *
  * `Workspace` is the page around every route once logged in: a `Sidebar` on the left (on a narrow screen, behind a
  * button that opens and closes it), which a `CollapseButton` at its top left hides on a wide screen (`collapsed`), the
- * same button, as Expand sidebar, then leading the `PaneHeader` from the `PaneLead` it is given (its icon is
- * SidebarLeftIcon: every icon here is from Hugeicons' free set, MIT, copied as paths, so none is a dependency), and,
+ * same button, as Expand sidebar, then leading the `PaneHeader` from the `PaneLead` it is given (icons here are
+ * Hugeicons' free set, MIT, copied as paths), and,
  * given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops
  * at its narrowest), with its `SidebarBody` of links (following one, but not pressing a button, closes it on a narrow
  * screen; it fades at an edge it can scroll past) and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes
- * on the right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live region that shows its text in a bar,
- * in the attention colours, only while `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold
+ * on the right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live region showing its text in a bar,
+ * in the attention colours, while `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold
  * when it has something new (`marked`), highlighted when it is the open item, with an icon and any `CountBadge` after
  * it: a count read out by its label, loud (the accent), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
  * `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens
- * its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
- * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's; under a `PersonKeysArea`, its
- * keys (View profile, Message, Copy name, which a polite status announces) act on the name while focus is in it.
- * `NavHeading` heads a `NavList`
- * of links: its label is a button that folds the list away (`folded`), and any `HeadingButton` on its line, shown while
+ * its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or
+ * `buttonLabel`), shown on hover or focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's;
+ * under a `PersonKeysArea`, its keys (View profile, Message, Copy name, announced politely) act on the focused name.
+ * `NavHeading` heads a `NavList` of links: its label is a button that folds the list away (`folded`), and any `HeadingButton` on its line, shown while
  * the pointer is on the sidebar, is a plus named by its label that starts something new, such as a channel; in the
  * footer, `FooterLink` is a gear button-link named by its label, such as Settings, beside the identity, highlighted
  * when open. `Pane` is the main column, with a `PaneHeader`, Cursor Style's 40px top bar (the title as a tab, the
  * description, then the `PaneSearch` it is given and any action on its right, such as a `PressButton`, a button that is
  * on or off), a named `Page` that scrolls a centred column of `PageSection`s, each headed by a link to itself, its
  * heading focused when `focused`, and any `add` as a plus button on its right, such as Settings' New agent, that says
- * it is `expanded` while what it adds is open (such as Settings, where `ChoiceGroup` is a radio group of a few choices), a
+ * it is `expanded` while what it adds is open (in Settings, `ChoiceGroup` is a radio group of a few choices), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless scrolled up, and anything under it,
- * such as a message box in a `BoxFrame` (a rounded frame one line tall that grows with its text up to five lines, then
- * scrolls, a short hint as the placeholder, and its round send button at its bottom right); `SidePanel` is a named
+ * such as a message box in a `BoxFrame` (a rounded frame that grows with its text up to five lines, then
+ * scrolls, its round send button at its bottom right); `SidePanel` is a named
  * column on its right with a close link (the whole width on a narrow screen), its title an `ActionMenu`'s target given
  * a `menu`. Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as its edge says on a wide screen (never
  * more than 60% of the space beside it), and its left edge is a `PanelEdge`: a focusable vertical separator, a line on
@@ -51,8 +50,7 @@
  * the owner's warning ("Offline, went offline unexpectedly"), named for a screen reader and as a tooltip ("Offline,
  * last seen 5 minutes ago"), as a `Suggestions` option shows it beside the name; `Author` is a message's avatar and
  * name (a display name, with the `@name` muted beside it), with an `agent` `Badge`, a small label (Cursor Style's, on
- * the app's tokens): a `variant` (secondary, primary, outline, ghost), a `tone` in the colour roles (neutral, muted,
- * faint, mention, destructive), a `size` and `rounded`. `StatusDot` is a for-you or activity dot. `IdentityLink` is the
+ * the app's tokens): a `variant`, a `tone` in the colour roles, a `size` and `rounded`. `StatusDot` is a for-you or activity dot. `IdentityLink` is the
  * logged-in identity's avatar and name as a link, highlighted when open. Wherever an identity has a display name
  * (`IdentityLink`, `IdentityRow`, `ProfileName`, a `Suggestions` option's muted detail) it shows first and the `@name`
  * muted beside it. `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save
@@ -94,8 +92,9 @@
  * as a `FeedRow`. `Mention` is an `@` mention in a message's text, in the mention colour when it is the reader's own
  * (`mine`). `FeedNote` is a muted line in a feed: why a part is `empty`, or that it has reached the `end`;
  * `FeedCaughtUp` centres a read-out feed's note under an icon; `MoreButton` is a quiet full-width row under a list that
- * loads more of it, with a spinner while `loading`. `MessageList` is a named list of `MessageItem`s: one message each,
- * which takes focus, with its avatar, name and time, or only its time on hover when `grouped` under the one before; the
+ * loads more of it, with a spinner while `loading`. `MessageList` is a named `feed` of `MessageItem`s (`aria-busy` while
+ * `busy`; `aria-setsize` -1 while `more`) with one Tab stop: the item focused last or the newest (see its ADR); `feed`
+ * is its element ID. A `MessageItem` is an `article` labelled by its author and time, which takes focus, with its avatar, name and time, or only its time on hover when `grouped` under the one before; the
  * day's separator and the "New" line above it when it starts them; a mark (`for-you`, the filled accent block, when it
  * mentions or answers the reader, or `open`); and, shown on hover or focus, a "Quick actions" group of icon buttons,
  * each with no text and named by its tooltip: a button for each of its `menu`'s `reactions` that is `inHoverBar`, then,
@@ -122,9 +121,9 @@
  * takes focus, and hovering or focusing it opens a tooltip with the full date and time and, when the message has one,
  * its read receipt. `ReactionChips` is a message's named row of `ReactionChip`s, each a reaction and its count, pressed
  * (in the accent) when one is the reader's own, with who reacted as its tooltip. `RepliesDivider` heads a thread's
- * replies, `ChannelStart` says a channel has nothing older, and `QuietButton` is a muted centred button, such as
- * loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away, a button on
- * a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares that line, in
+ * replies, `ChannelStart` says a channel has nothing older, and `QuietButton` is a muted centred button, naming what it
+ * `controls`, such as loading older messages. `ClosedFold` is an item of a message list standing for closed threads
+ * folded away, an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares that line, in
  * place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
  * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted line across the top of a
  * thread, such as who closed it; `QuietLink` is a muted link in such a line, such as a name linking to its profile.

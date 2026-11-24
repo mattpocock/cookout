@@ -50,7 +50,7 @@ async function dayLine(page: Page): Promise<Day> {
 
   await expect(fold).toBeVisible();
 
-  const line = inPane(page).getByRole("listitem").filter({ hasText: named });
+  const line = inPane(page).getByRole("article").filter({ hasText: named });
   return {
     date: await boxOf(page, line.getByText("Today", { exact: true })),
     fold: await boxOf(page, fold),

@@ -78,8 +78,8 @@ test("a message, a reply and an unread count from while the live link was down a
     await poster.client.createMessage({ channel: OTHER, text: "Lunch?" });
   });
 
-  await expect(inPane(page).getByRole("list", { name: "Messages" })).toContainText("Or at one?");
-  await expect(inThread(page).getByRole("list", { name: "Replies" })).toContainText("Noon works");
+  await expect(inPane(page).getByRole("feed", { name: "Messages" })).toContainText("Or at one?");
+  await expect(inThread(page).getByRole("feed", { name: "Replies" })).toContainText("Noon works");
   await expect(rowOf(page, OTHER)).toHaveAccessibleName(`#${OTHER} 1 unread`);
   await expect(rowOf(page, CHANNEL)).toHaveAccessibleName(`#${CHANNEL}`);
   await expect(pageKept(page)).resolves.toBe(true);

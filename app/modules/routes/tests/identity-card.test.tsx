@@ -23,7 +23,7 @@ async function readerOn(channel: string): Promise<() => void> {
 }
 
 async function authorName(name: string): Promise<HTMLElement> {
-  const messages = await screen.findByRole("list", { name: "Messages" });
+  const messages = await screen.findByRole("feed", { name: "Messages" });
   const link = await within(messages).findByRole("link", { name });
   return link;
 }

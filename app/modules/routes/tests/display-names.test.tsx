@@ -202,12 +202,10 @@ it("a display name set elsewhere shows on the open channel's messages without a 
 
   const { human, stream, unmount } = await watchChannel("web-names-live");
   await human.setDisplayName("web-names-live-bot", "Release Bot");
-  const messages = screen.getByRole("list", { name: "Messages" });
+  const messages = screen.getByRole("feed", { name: "Messages" });
 
   await waitFor(() => {
-    expect(within(messages).getByRole("listitem").textContent).toMatch(
-      /Release Bot@web-names-live-botagent.*Deployed/u,
-    );
+    expect(within(messages).getByRole("article").textContent).toMatch(/Release Bot@web-names-live-botagent.*Deployed/u);
   });
 
   await closeBoth(unmount, stream);

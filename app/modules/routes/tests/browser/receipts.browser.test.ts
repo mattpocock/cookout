@@ -40,7 +40,7 @@ async function answered(): Promise<Answered> {
 test("when the second person opens the thread, the first sees that they have seen the reply", async ({ browser }) => {
   const opened = await answered();
   const annPage = await openAs({ browser, hash: opened.hash, token: opened.ann.token });
-  const reply = annPage.getByRole("list", { name: "Replies" }).getByRole("article");
+  const reply = annPage.getByRole("feed", { name: "Replies" }).getByRole("article");
 
   await reply.locator("time").focus();
 
@@ -49,6 +49,6 @@ test("when the second person opens the thread, the first sees that they have see
 
   const bobPage = await openAs({ browser, hash: opened.hash, token: opened.bob.token });
 
-  await expect(bobPage.getByRole("list", { name: "Replies" })).toContainText("Noon works");
+  await expect(bobPage.getByRole("feed", { name: "Replies" })).toContainText("Noon works");
   await expect(annPage.getByRole("tooltip")).toContainText(`Seen by @${bob} just now`);
 });

@@ -44,7 +44,7 @@ async function postedAndOpen(page: Page, channel: string): Promise<Posted> {
 }
 
 function authorOf(page: Page, author: string): Locator {
-  return page.getByRole("list", { name: "Messages" }).getByRole("link", { exact: true, name: author });
+  return page.getByRole("feed", { name: "Messages" }).getByRole("link", { exact: true, name: author });
 }
 
 async function boxHolds(page: Page, name: string): Promise<void> {
@@ -113,7 +113,7 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
 }) => {
   await copiesRecorded(page);
   const { mentioned } = await postedAndOpen(page, "browser-person-keys-mention");
-  const mention = page.getByRole("list", { name: "Messages" }).getByRole("link", { name: `@${mentioned}` });
+  const mention = page.getByRole("feed", { name: "Messages" }).getByRole("link", { name: `@${mentioned}` });
   await mention.focus();
   await page.keyboard.press("c");
 
@@ -127,7 +127,7 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
 
 test("Tab to a message's author, then m, puts @author in the message box", async ({ page }) => {
   const { author } = await postedAndOpen(page, "browser-person-keys-author");
-  await page.getByRole("list", { name: "Messages" }).getByRole("article").first().focus();
+  await page.getByRole("feed", { name: "Messages" }).getByRole("article").first().focus();
   await page.keyboard.press("Tab");
 
   await expect(authorOf(page, author)).toBeFocused();

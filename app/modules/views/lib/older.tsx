@@ -9,6 +9,7 @@ const TEXT = { idle: "Load older messages", loading: "Loading…" } as const;
 interface OlderProps {
   readonly older: OlderState;
   readonly onLoad: () => void;
+  readonly feed: string;
 }
 
 export function Older(props: OlderProps): ReactNode {
@@ -16,7 +17,7 @@ export function Older(props: OlderProps): ReactNode {
   const loading = older.status === "loading";
   return (
     <>
-      <QuietButton disabled={loading} onClick={props.onLoad}>
+      <QuietButton controls={props.feed} disabled={loading} onClick={props.onLoad}>
         {loading && TEXT.loading}
         {!loading && TEXT.idle}
       </QuietButton>

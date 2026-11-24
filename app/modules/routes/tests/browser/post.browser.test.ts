@@ -30,7 +30,7 @@ test("a human posts a top-level message with an @ mention from the channel view,
   await logInWithStream({ page, token: poster.token });
   await postWithMention(page);
 
-  await expect(page.getByRole("list", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
     "Can @browser-post-reviewer look?",
   ]);
   await expect(page.getByLabel("Message", { exact: true })).toHaveValue("");

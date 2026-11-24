@@ -35,7 +35,7 @@ async function rowInSecondTab(page: Page, channel: string): Promise<Locator> {
 async function openChannel(page: Page, row: Locator, newest: string): Promise<void> {
   await row.click();
 
-  await expect(page.getByRole("list", { name: "Messages" })).toContainText(newest);
+  await expect(page.getByRole("feed", { name: "Messages" })).toContainText(newest);
 }
 
 async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<void> {

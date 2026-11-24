@@ -54,7 +54,7 @@ async function postFromElsewhere(browser: Browser, poster: Person, channel: stri
   await page.getByLabel("Message", { exact: true }).fill("Rolled out to everyone");
   await inPane(page).getByRole("button", { name: "Send" }).click();
 
-  await expect(page.getByRole("list", { name: "Messages" })).toContainText("Rolled out to everyone");
+  await expect(page.getByRole("feed", { name: "Messages" })).toContainText("Rolled out to everyone");
 
   await context.close();
 }
@@ -72,7 +72,7 @@ test("a post from another identity appears live in the open channel conversation
 
   await postFromElsewhere(browser, poster, channel);
 
-  await expect(inConversation(page).getByRole("list", { name: "Posts" }).getByRole("article")).toContainText([
+  await expect(inConversation(page).getByRole("feed", { name: "Posts" }).getByRole("article")).toContainText([
     "Rolling out 1.5",
     "Rolled out to everyone",
   ]);

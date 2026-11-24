@@ -95,7 +95,7 @@ async function openChannel(page: Page, channel: string, text: string): Promise<v
     .getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") })
     .click();
 
-  await expect(page.getByRole("list", { name: "Messages" })).toContainText(text);
+  await expect(page.getByRole("feed", { name: "Messages" })).toContainText(text);
 }
 
 test("acking in one tab moves the item from Activity to Earlier in another", async ({ page }) => {
@@ -130,7 +130,7 @@ async function replyFromElsewhere(browser: Browser, poster: Person, thread: stri
   await inThread(page).getByRole("textbox", { exact: true, name: "Reply" }).fill("Noon works");
   await inThread(page).getByRole("button", { name: "Send" }).click();
 
-  await expect(inThread(page).getByRole("list", { name: "Replies" })).toContainText("Noon works");
+  await expect(inThread(page).getByRole("feed", { name: "Replies" })).toContainText("Noon works");
 
   await context.close();
 }

@@ -24,7 +24,7 @@ async function crewOf(prefix: string): Promise<Crew> {
 }
 
 async function clickAuthor(name: string): Promise<void> {
-  const messages = await inPane().findByRole("list", { name: "Messages" });
+  const messages = await inPane().findByRole("feed", { name: "Messages" });
   fireEvent.click(await within(messages).findByRole("link", { name }));
 }
 
@@ -109,9 +109,9 @@ it("an owner renames their agent in the panel and the new name shows on its mess
 
   const { close, events } = await watchAsOwner("web-panel-rename");
   await rename("Release Bot");
-  const messages = await inPane().findByRole("list", { name: "Messages" });
+  const messages = await inPane().findByRole("feed", { name: "Messages" });
   await waitFor(() => {
-    expect(within(messages).getByRole("listitem").textContent).toMatch(/Release Bot@web-panel-rename-bot/u);
+    expect(within(messages).getByRole("article").textContent).toMatch(/Release Bot@web-panel-rename-bot/u);
   });
 
   expect(inProfile().getByRole("button", { name: "Rotate token" })).toBeDefined();

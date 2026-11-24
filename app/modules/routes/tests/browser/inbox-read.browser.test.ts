@@ -51,7 +51,7 @@ test("the first person sees a read receipt about 2 s after the second selects th
 }) => {
   const opened = await answered();
   const annPage = await openAs({ browser, hash: opened.thread, token: opened.ann.token });
-  await annPage.getByRole("list", { name: "Replies" }).getByRole("article").locator("time").focus();
+  await annPage.getByRole("feed", { name: "Replies" }).getByRole("article").locator("time").focus();
 
   await expect(annPage.getByRole("tooltip")).toContainText(`Not seen yet: @${bob}`);
 

@@ -61,7 +61,7 @@ async function openWatched(channel: string): Promise<OpenInbox> {
 
 async function readAndComeBack(href: string): Promise<void> {
   globalThis.location.hash = href;
-  await screen.findByRole("list", { name: "Posts" });
+  await screen.findByRole("feed", { name: "Posts" });
   fireEvent.click(inConversation().getByRole("button", { name: "Mark conversation read" }));
   await inConversation().findByText("Marked as read");
   globalThis.location.hash = "#/inbox";

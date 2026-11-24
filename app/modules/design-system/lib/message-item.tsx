@@ -6,10 +6,10 @@ import type { ReactNode } from "react";
 
 export function MessageItem(parts: MessageItemParts): ReactNode {
   return (
-    <li className="flex flex-col">
+    <div className="flex flex-col">
       {parts.day !== null && <DaySeparator label={parts.day} />}
       {parts.unreadLine && <NewLine />}
       <ItemArticle message={parts} />
-    </li>
+    </div>
   );
 }

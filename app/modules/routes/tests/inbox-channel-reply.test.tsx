@@ -47,7 +47,7 @@ async function messageSaying(text: string): Promise<HTMLElement> {
 
 function textsIn(label: string): readonly string[] {
   const texts: string[] = [];
-  for (const article of within(inConversation().getByRole("list", { name: label })).getAllByRole("article")) {
+  for (const article of within(inConversation().getByRole("feed", { name: label })).getAllByRole("article")) {
     texts.push(article.textContent);
   }
   return texts;
@@ -61,7 +61,7 @@ it("in a channel conversation, the box replies to the newest post's author, and 
   const posts = await twoPostsBy("web-inbox-channel-reply");
   const unmount = openWithClockStopped({ client: posts.reader, hash: `#/inbox/${posts.channel}` });
   const box = await sent("Reply to @web-inbox-channel-reply-bob", "Nice");
-  await inConversation().findByRole("list", { name: "Replies to the post" });
+  await inConversation().findByRole("feed", { name: "Replies to the post" });
   await waitFor(() => {
     expect(box).toHaveProperty("value", "");
   });
@@ -85,7 +85,7 @@ it("reply on an older post in a channel conversation retargets the box to that p
   fireEvent.contextMenu(await messageSaying("Deploy at noon?"));
   await chose("Reply");
   const box = await sent("Reply to @web-inbox-channel-retarget-ada", "Noon works");
-  await within(await inConversation().findByRole("list", { name: "Replies to the post" })).findByText("Noon works");
+  await within(await inConversation().findByRole("feed", { name: "Replies to the post" })).findByText("Noon works");
 
   expect([
     await repliesIn(posts.reader, posts.older),

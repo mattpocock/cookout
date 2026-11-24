@@ -41,7 +41,7 @@ async function openAsReader(page: Page, channel: string): Promise<void> {
 }
 
 async function cardTrigger(page: Page, name: string): Promise<Locator> {
-  const trigger = page.getByRole("list", { name: "Messages" }).getByRole("link", { exact: true, name });
+  const trigger = page.getByRole("feed", { name: "Messages" }).getByRole("link", { exact: true, name });
 
   await expect(trigger).toHaveAttribute("data-identity-card");
   await expect(trigger).toBeInViewport();

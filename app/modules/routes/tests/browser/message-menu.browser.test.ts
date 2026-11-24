@@ -26,7 +26,7 @@ async function openChannel(page: Page, channel: string): Promise<Locator> {
   const { token } = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}`);
-  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
 
   await expect(message).toBeVisible();
 

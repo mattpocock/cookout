@@ -47,7 +47,7 @@ async function postWithMention(): Promise<void> {
   typeMessage("Please look, @web-post-r");
   fireEvent.mouseDown(await inPane().findByRole("option", { name: /^@web-post-reviewer/u }));
   sendMessage();
-  await within(screen.getByRole("list", { name: "Messages" })).findByText(/Please look/u);
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText(/Please look/u);
 }
 
 async function openedThenRevoked(name: string, channel: string): Promise<() => void> {

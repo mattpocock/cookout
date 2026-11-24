@@ -30,7 +30,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
   });
   return (
     <>
-      <MessageList label={props.label}>
+      <MessageList busy={false} label={props.label} more={false}>
         {rows.map((row) => (
           <MessageEntry
             closing={null}

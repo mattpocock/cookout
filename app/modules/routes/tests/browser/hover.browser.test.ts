@@ -14,7 +14,7 @@ async function openChannel(page: Page, channel: string): Promise<void> {
 
 test("hovering a thread in the channel shows its Close button, which closes the thread", async ({ page }) => {
   await openChannel(page, "browser-hover");
-  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   const closeThread = message.getByRole("button", { name: "Close thread" });
 
   await expect(closeThread).toBeHidden();
@@ -35,7 +35,7 @@ test("hovering a thread in the channel shows its Close button, which closes the 
 
 test("tabbing to a thread in the channel shows its Close button", async ({ page }) => {
   await openChannel(page, "browser-tab");
-  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   const closeThread = message.getByRole("button", { name: "Close thread" });
 
   await expect(closeThread).toBeHidden();
@@ -47,7 +47,7 @@ test("tabbing to a thread in the channel shows its Close button", async ({ page 
 
 test("Reply in a thread's More actions menu opens the thread with the cursor in the reply box", async ({ page }) => {
   await openChannel(page, "browser-hover-reply");
-  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   await message.hover();
   await message.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Reply" }).click();
@@ -68,7 +68,7 @@ async function hoverBarIn({ page, theme }: Shot): Promise<void> {
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
-  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   const bar = message.getByRole("group", { name: "Quick actions" });
 
   await expect(async () => {

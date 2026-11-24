@@ -29,23 +29,23 @@ test("a message posted by another identity appears in the open channel and threa
   const channel = "browser-live";
   const { parent, poster } = await openChannel(page, channel);
 
-  await expect(page.getByRole("list", { name: "Messages" }).getByRole("article")).toContainText(["Deploy at noon?"]);
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText(["Deploy at noon?"]);
 
   await poster.client.createMessage({ channel, text: "Or at one?" });
   await poster.client.createMessage({ channel, replyTo: parent.id, text: "Noon works" });
 
-  await expect(page.getByRole("list", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
     "Deploy at noon?1 reply",
     "Or at one?",
   ]);
 
   await inPane(page).getByRole("link", { name: "1 reply" }).click();
 
-  await expect(page.getByRole("list", { name: "Replies" })).toContainText("Noon works");
+  await expect(page.getByRole("feed", { name: "Replies" })).toContainText("Noon works");
 
   await poster.client.createMessage({ channel, replyTo: parent.id, text: "Then noon it is" });
 
-  await expect(page.getByRole("list", { name: "Replies" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toContainText([
     "Noon works",
     "Then noon it is",
   ]);

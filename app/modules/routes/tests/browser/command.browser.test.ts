@@ -78,7 +78,7 @@ test("a command call and its result reply show their data", async ({ page }) => 
   await expect(
     page.getByRole("article", { name: "Parent message" }).getByLabel("Call to /browser-show-call"),
   ).toHaveText(JSON.stringify({ branch: "main" }));
-  await expect(page.getByRole("list", { name: "Replies" }).getByRole("article")).toContainText(["Shipped main."]);
+  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toContainText(["Shipped main."]);
 });
 
 test("a person calls a command from the message box by keyboard, and a refusal shows by its field", async ({
@@ -98,7 +98,7 @@ test("a person calls a command from the message box by keyboard, and a refusal s
 
   await typeAndSend({ page, text: "-main" });
 
-  await expect(page.getByRole("list", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
     `/browser-call-box${JSON.stringify({ branch: "x-main" })}`,
   ]);
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue("");
