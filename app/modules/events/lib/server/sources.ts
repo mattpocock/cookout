@@ -11,12 +11,13 @@ import {
 import { allChannels, channels, reactions, readReceipts, threads } from "./all-channels.ts";
 import { connected, presence } from "./connected.ts";
 import { identities, identityDeletions } from "./identities.ts";
-import { offlineAlerts, subscriptions } from "./subscriptions.ts";
+import { offlineAlerts, subscriptions, triggers } from "./subscriptions.ts";
 import type { AllChannelsNeeds } from "./all-channels.ts";
 import type { BoardChangesNeeds } from "./board-changes.ts";
 import type { EventSource } from "./source.ts";
 import type { IdentityChanges } from "../../../identities/server.ts";
 import type { LiveConnectionNeeds } from "./connected.ts";
+import type { TriggerNeeds } from "./subscriptions.ts";
 import { boardChanges } from "./board-changes.ts";
 import { heartbeat } from "./source.ts";
 import { readPositions } from "./read-positions.ts";
@@ -29,7 +30,8 @@ type SourceNeeds =
   | AllChannelsNeeds
   | IdentityChanges
   | BoardChangesNeeds
-  | LiveConnectionNeeds;
+  | LiveConnectionNeeds
+  | TriggerNeeds;
 
 const sources: readonly EventSource<SourceNeeds>[] = [
   connected,
@@ -43,6 +45,7 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   readPositions,
   subscriptions,
   offlineAlerts,
+  triggers,
   allChannels,
   threads,
   identities,

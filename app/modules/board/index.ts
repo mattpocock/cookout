@@ -114,6 +114,7 @@ export {
   reactionRefusal,
   reactionsOf,
 } from "./lib/board-store.ts";
+export { calledTrigger } from "./lib/triggers-slice.ts";
 export {
   channelList,
   channelPage,

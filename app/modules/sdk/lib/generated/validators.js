@@ -52509,9 +52509,10 @@ return errors === 0;
 }
 validate90.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
-export const isTriggerResponse = validate91;
-const schema828 = {"type":"object","properties":{"trigger":{"anyOf":[{"type":"object","properties":{"headerNames":{"type":"array","items":{"type":"string"}},"lastResult":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"error":{"type":"string"},"ok":{"type":"boolean"},"status":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["at","ok"],"additionalProperties":true},"url":{"type":"string"}},"required":["url"],"additionalProperties":true},{"type":"null"}]}},"required":["trigger"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
-const schema829 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
+export const isTriggerEvent = validate91;
+const schema828 = {"type":"object","properties":{"identity":{"$ref":"#/$defs/IdentityName"},"trigger":{"type":"object","properties":{"headerNames":{"type":"array","items":{"type":"string"}},"lastResult":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"error":{"type":"string"},"ok":{"type":"boolean"},"status":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["at","ok"],"additionalProperties":true},"url":{"type":"string"}},"required":["url"],"additionalProperties":true},"type":{"type":"string","enum":["trigger"]}},"required":["identity","trigger","type"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
+const schema829 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
+const schema830 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
 
 function validate91(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -52526,8 +52527,248 @@ evaluated0.items = undefined;
 if(errors === 0){
 if(data && typeof data == "object" && !Array.isArray(data)){
 let missing0;
-if((data.trigger === undefined) && (missing0 = "trigger")){
+if((((data.identity === undefined) && (missing0 = "identity")) || ((data.trigger === undefined) && (missing0 = "trigger"))) || ((data.type === undefined) && (missing0 = "type"))){
 validate91.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.identity !== undefined){
+let data0 = data.identity;
+const _errs2 = errors;
+const _errs3 = errors;
+if(errors === _errs3){
+if(typeof data0 === "string"){
+if(!pattern6.test(data0)){
+validate91.errors = [{instancePath:instancePath+"/identity",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"+"\""}];
+return false;
+}
+}
+else {
+validate91.errors = [{instancePath:instancePath+"/identity",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid0 = _errs2 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.trigger !== undefined){
+let data1 = data.trigger;
+const _errs5 = errors;
+if(errors === _errs5){
+if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
+let missing1;
+if((data1.url === undefined) && (missing1 = "url")){
+validate91.errors = [{instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data1.headerNames !== undefined){
+let data2 = data1.headerNames;
+const _errs8 = errors;
+if(errors === _errs8){
+if(Array.isArray(data2)){
+var valid3 = true;
+const len0 = data2.length;
+for(let i0=0; i0<len0; i0++){
+const _errs10 = errors;
+if(typeof data2[i0] !== "string"){
+validate91.errors = [{instancePath:instancePath+"/trigger/headerNames/" + i0,schemaPath:"#/properties/trigger/properties/headerNames/items/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid3 = _errs10 === errors;
+if(!valid3){
+break;
+}
+}
+}
+else {
+validate91.errors = [{instancePath:instancePath+"/trigger/headerNames",schemaPath:"#/properties/trigger/properties/headerNames/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+return false;
+}
+}
+var valid2 = _errs8 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.lastResult !== undefined){
+let data4 = data1.lastResult;
+const _errs12 = errors;
+if(errors === _errs12){
+if(data4 && typeof data4 == "object" && !Array.isArray(data4)){
+let missing2;
+if(((data4.at === undefined) && (missing2 = "at")) || ((data4.ok === undefined) && (missing2 = "ok"))){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/properties/lastResult/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"}];
+return false;
+}
+else {
+if(data4.at !== undefined){
+let data5 = data4.at;
+const _errs15 = errors;
+const _errs16 = errors;
+if(errors === _errs16){
+if(typeof data5 === "string"){
+if(!pattern5.test(data5)){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid4 = _errs15 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data4.error !== undefined){
+const _errs18 = errors;
+if(typeof data4.error !== "string"){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/error",schemaPath:"#/properties/trigger/properties/lastResult/properties/error/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid4 = _errs18 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data4.ok !== undefined){
+const _errs20 = errors;
+if(typeof data4.ok !== "boolean"){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/ok",schemaPath:"#/properties/trigger/properties/lastResult/properties/ok/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+var valid4 = _errs20 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data4.status !== undefined){
+let data8 = data4.status;
+const _errs22 = errors;
+if(!(((typeof data8 == "number") && (!(data8 % 1) && !isNaN(data8))) && (isFinite(data8)))){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/properties/lastResult/properties/status/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+return false;
+}
+if(errors === _errs22){
+if((typeof data8 == "number") && (isFinite(data8))){
+if(data8 > 9007199254740991 || isNaN(data8)){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/properties/lastResult/properties/status/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
+return false;
+}
+else {
+if(data8 < -9007199254740991 || isNaN(data8)){
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/properties/lastResult/properties/status/minimum",keyword:"minimum",params:{comparison: ">=", limit: -9007199254740991},message:"must be >= -9007199254740991"}];
+return false;
+}
+}
+}
+}
+var valid4 = _errs22 === errors;
+}
+else {
+var valid4 = true;
+}
+}
+}
+}
+}
+}
+else {
+validate91.errors = [{instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/properties/lastResult/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid2 = _errs12 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.url !== undefined){
+const _errs24 = errors;
+if(typeof data1.url !== "string"){
+validate91.errors = [{instancePath:instancePath+"/trigger/url",schemaPath:"#/properties/trigger/properties/url/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid2 = _errs24 === errors;
+}
+else {
+var valid2 = true;
+}
+}
+}
+}
+}
+else {
+validate91.errors = [{instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid0 = _errs5 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.type !== undefined){
+let data10 = data.type;
+const _errs26 = errors;
+if(typeof data10 !== "string"){
+validate91.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+if(!(data10 === "trigger")){
+validate91.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/enum",keyword:"enum",params:{allowedValues: schema828.properties.type.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid0 = _errs26 === errors;
+}
+else {
+var valid0 = true;
+}
+}
+}
+}
+}
+else {
+validate91.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate91.errors = vErrors;
+return errors === 0;
+}
+validate91.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isTriggerResponse = validate92;
+const schema831 = {"type":"object","properties":{"trigger":{"anyOf":[{"type":"object","properties":{"headerNames":{"type":"array","items":{"type":"string"}},"lastResult":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"error":{"type":"string"},"ok":{"type":"boolean"},"status":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["at","ok"],"additionalProperties":true},"url":{"type":"string"}},"required":["url"],"additionalProperties":true},{"type":"null"}]}},"required":["trigger"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
+const schema832 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
+
+function validate92(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate92.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if((data.trigger === undefined) && (missing0 = "trigger")){
+validate92.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
 return false;
 }
 else {
@@ -52801,7 +53042,7 @@ else {
 vErrors.push(err15);
 }
 errors++;
-validate91.errors = vErrors;
+validate92.errors = vErrors;
 return false;
 }
 else {
@@ -52819,12 +53060,12 @@ vErrors = null;
 }
 }
 else {
-validate91.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+validate92.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
 return false;
 }
 }
-validate91.errors = vErrors;
+validate92.errors = vErrors;
 return errors === 0;
 }
-validate91.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+validate92.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 

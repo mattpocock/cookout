@@ -142,3 +142,18 @@ it("saving again without editing the URL keeps it, and replaces every header", {
     trigger: { ...first, headerNames: ["anthropic-beta"] },
   });
 });
+
+it("the last call line follows a call made while the trigger form is open", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { bot, owner } = await ownedAgent("web-trigger-live");
+  await owner.setTrigger(bot, { token: "routine-secret", url: UNREACHABLE_URL });
+  await adminClient().createChannel({ name: "web-trigger-live" });
+  await openedBy({ client: owner, hash: `#/people/${bot}` });
+  await inProfile().findByText("Not called yet.");
+  await adminClient().createMessage({ channel: "web-trigger-live", text: `@${bot} are you there?` });
+
+  await expect(
+    inProfile().findByText("Last call failed: the trigger URL couldn't be reached, just now"),
+  ).resolves.toBeDefined();
+});

@@ -10,7 +10,7 @@ import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedR
 import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse, ListOpenThreadsResponse } from "../../../messages/index.ts";
 import type { ListScheduledMessagesResponse, ScheduledMessagePreviewResponse, ScheduledMessageResponse } from "../../../scheduled-messages/index.ts";
 import type { SearchResponse } from "../../../search/index.ts";
-import type { TriggerResponse } from "../../../triggers/index.ts";
+import type { TriggerEvent, TriggerResponse } from "../../../triggers/index.ts";
 
 export declare function isAgentJoinCollectedResponse(data: unknown): data is AgentJoinCollectedResponse;
 export declare function isAgentJoinRequestResponse(data: unknown): data is AgentJoinRequestResponse;
@@ -83,4 +83,5 @@ export declare function isListScheduledMessagesResponse(data: unknown): data is 
 export declare function isScheduledMessagePreviewResponse(data: unknown): data is ScheduledMessagePreviewResponse;
 export declare function isScheduledMessageResponse(data: unknown): data is ScheduledMessageResponse;
 export declare function isSearchResponse(data: unknown): data is SearchResponse;
+export declare function isTriggerEvent(data: unknown): data is TriggerEvent;
 export declare function isTriggerResponse(data: unknown): data is TriggerResponse;

@@ -7,6 +7,7 @@ import type {
   SessionState,
   Sessions,
 } from "./identity-parts.ts";
+import type { CalledPart, CalledTriggers } from "./triggers-slice.ts";
 import type { IdentityName, Message, ReactionCount, Refusal } from "../../sdk/index.ts";
 import type { OwnClient, OwnShowing, OwnState } from "./own-showing.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
@@ -15,6 +16,8 @@ import type { Toggle, ToggleClient } from "./reaction-toggle.ts";
 import { reactionsIn, reactionsSlice } from "./reactions-slice.ts";
 import type { Live } from "../../live/index.ts";
 import type { Part } from "./slice.ts";
+import { createCalledTriggers } from "./triggers-slice.ts";
+import { createListeners } from "./listeners.ts";
 import { createOwn } from "./own-showing.ts";
 import { createPart } from "./slice.ts";
 import { createReactionToggle } from "./reaction-toggle.ts";
@@ -23,6 +26,7 @@ import { presenceSlice } from "./presence-slice.ts";
 
 interface BoardState extends OwnState {
   readonly presence: Presences;
+  readonly triggers: CalledTriggers;
   readonly reactions: Reactions;
   readonly reactionRefusal: Refusal | null;
   readonly identities: Identities;
@@ -30,7 +34,15 @@ interface BoardState extends OwnState {
   readonly session: SessionState;
 }
 
-type Shown = "channels" | "commands" | "identities" | "presence" | "reactions" | "session" | "subscriptions";
+type Shown =
+  | "channels"
+  | "commands"
+  | "identities"
+  | "presence"
+  | "reactions"
+  | "session"
+  | "subscriptions"
+  | "triggers";
 
 type Subscribe = (listener: () => void) => () => void;
 
@@ -62,32 +74,10 @@ interface BoardStoreOptions {
 
 const PAGE_SIZE = 50;
 
-interface Listeners {
-  readonly subscribe: Subscribe;
-  readonly notify: () => void;
-}
-
 interface Showing {
   readonly part: Pick<Part<unknown>, "hide" | "show">;
   readonly follow: () => void;
   readonly subscribe: Subscribe;
-}
-
-function createListeners(): Listeners {
-  const listeners = new Set<() => void>();
-  return {
-    notify: () => {
-      for (const listener of listeners) {
-        listener();
-      }
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
 }
 
 type Followed = Pick<Part<unknown>, "apply" | "back">;
@@ -123,6 +113,13 @@ function showingUnfollowed({ part, subscribe }: Omit<Showing, "follow">): Subscr
       unsubscribe();
       part.hide();
     };
+  };
+}
+
+function followedOnly(follow: () => void, subscribe: Subscribe): Subscribe {
+  return (listener) => {
+    follow();
+    return subscribe(listener);
   };
 }
 
@@ -178,6 +175,7 @@ function reactionPartsOf(changed: () => void, client: BoardStoreClient): Reactio
 
 interface Parts extends IdentityParts, ReactionParts {
   readonly presence: Part<Presences>;
+  readonly triggers: CalledPart;
   readonly own: ReturnType<typeof createOwn>;
 }
 
@@ -188,6 +186,7 @@ function partsOf(changed: () => void, options: BoardStoreOptions): Parts {
     ...identityPartsOf({ changed, client, url }),
     own: createOwn({ changed, client, pageSize }),
     presence: createPart({ changed, client, slice: presenceSlice }),
+    triggers: createCalledTriggers(changed),
   };
 }
 
@@ -198,17 +197,22 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
     snapshot = null;
     notify();
   }
-  const { identities, identityCalls, own, presence, reactionToggle, reactions, session, sessions } = partsOf(
+  const { identities, identityCalls, own, presence, reactionToggle, reactions, session, sessions, triggers } = partsOf(
     changed,
     options,
   );
-  const follow = follower(options.live, [own.parts, presence, reactions, identities, sessions], [session.back]);
+  const follow = follower(
+    options.live,
+    [own.parts, presence, reactions, identities, sessions, triggers],
+    [session.back],
+  );
   const subscribers = {
     ...own.subscribers({ follow, subscribe }),
     identities: showing({ follow, part: identities, subscribe }),
     presence: showing({ follow, part: presence, subscribe }),
     reactions: showing({ follow, part: reactions, subscribe }),
     session: showingUnfollowed({ part: session, subscribe }),
+    triggers: followedOnly(follow, subscribe),
   };
   function snapshotOf(): BoardState {
     snapshot ??= {
@@ -219,6 +223,7 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
       reactionRefusal: reactionToggle.refusal(),
       reactions: reactions.state(),
       session: session.shown(identities.state()),
+      triggers: triggers.state(),
     };
     return snapshot;
   }

@@ -58,7 +58,7 @@ it.effect("the call goes through the HTTP client as a POST of JSON { text } with
     expect(made).toStrictEqual([
       {
         authorization: `Bearer ${TOKEN}`,
-        body: { text: `/#/channels/grill/threads/1/messages/1\n\n@${AGENT} look` },
+        body: { text: `${on.cookout.url}/#/channels/grill/threads/1/messages/1\n\n@${AGENT} look` },
         method: "POST",
         path: "/fire",
       },

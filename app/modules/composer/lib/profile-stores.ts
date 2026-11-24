@@ -28,7 +28,7 @@ function profileStoresOf(list: IdentityList): ProfileStores {
     displayName: cachedBy((name) =>
       createDisplayName({ list, name, ownNameClears: true, set: list.calls.setDisplayName }),
     ),
-    trigger: cachedBy((name) => createTriggerSettings({ calls: list.calls, name, show: list.show })),
+    trigger: cachedBy((name) => createTriggerSettings({ calls: list.calls, name, show: list.show, store: list.store })),
   };
 }
 

@@ -35,6 +35,7 @@ import {
   presenceLayer,
   scheduledMessageRoutes,
   scheduledMessagesLayer,
+  triggerChangesLayer,
 } from "./live-routes.ts";
 import { messageRoutes, messagesLayer, reactionsLayer, readReceiptsLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
@@ -96,10 +97,17 @@ export const domainLayers = Layer.mergeAll(
 ).pipe(
   Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer, deactivationOffersLayer)),
   Layer.provideMerge(
-    Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer, offlineAlertsLayer),
+    Layer.mergeAll(
+      identityChangesLayer,
+      commandChangesLayer,
+      readReceiptsLayer,
+      reactionsLayer,
+      offlineAlertsLayer,
+      triggerChangesLayer,
+    ),
   ),
   (board) => Layer.provideMerge(mentionTriggersLayer, board),
 );
 
 export { SpawnSettings } from "../../../commands/server.ts";
-export { triggerCallerLive } from "./live-routes.ts";
+export { BoardUrl, boardUrlLayer, triggerCallerLive } from "./live-routes.ts";

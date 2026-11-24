@@ -35,7 +35,7 @@ The server, `cookout serve`:
 - `COOKOUT_S3_REGION` (no default): The bucket's region, such as `eu-west-2`; `auto` on R2 and Tigris.
 - `COOKOUT_S3_ACCESS_KEY_ID` (no default): The access key ID every request to the bucket is signed with. It needs to read, write and delete the bucket's objects.
 - `COOKOUT_S3_SECRET_ACCESS_KEY` (no default): That access key's secret. Never shown.
-- `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`).
+- `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`). The message link a trigger URL is sent starts with it; without it, the link starts with the address the board serves on.
 - `COOKOUT_MAX_IDLE_EXPIRY` (default `90d`): The longest idle expiry `cookout join --idle-expiry` may ask for. An agent session token expires once it goes that long unused (default `7d`); each request sent with it moves its expiry on.
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.
 - `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default `10`): How long the server waits before it first retries a webhook delivery that got no `2xx`.

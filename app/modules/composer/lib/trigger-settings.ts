@@ -1,5 +1,6 @@
+import type { BoardStore, IdentityCalls } from "../../board/index.ts";
 import type { IdentityName, Refusal, Trigger, TriggerHeader } from "../../sdk/index.ts";
-import type { IdentityCalls } from "../../board/index.ts";
+import { calledTrigger } from "../../board/index.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -28,9 +29,12 @@ interface TriggerSettings {
 
 interface TriggerOptions {
   readonly calls: Pick<IdentityCalls, "clearTrigger" | "readTrigger" | "setTrigger">;
+  readonly store: Pick<BoardStore, "snapshot" | "subscribeShowing">;
   readonly name: IdentityName;
   readonly show: () => () => void;
 }
+
+type Hearing = (stopListening: () => void) => () => void;
 
 const IDLE: SaveState = { status: "idle" };
 const NO_HEADERS = "";
@@ -67,6 +71,25 @@ async function cleared({ calls, name }: TriggerOptions): Promise<null> {
   return null;
 }
 
+function hearingCalls({ name, store }: TriggerOptions, heard: (trigger: Trigger) => void): Hearing {
+  const calledNow = calledTrigger(name);
+  let called = calledNow(store.snapshot());
+  function heardCall(): void {
+    const latest = calledNow(store.snapshot());
+    if (latest !== called && latest !== null) {
+      called = latest;
+      heard(latest);
+    }
+  }
+  return (stopListening) => {
+    const stopHearing = store.subscribeShowing("triggers")(heardCall);
+    return () => {
+      stopHearing();
+      stopListening();
+    };
+  };
+}
+
 function createTriggerSettings(options: TriggerOptions): TriggerSettings {
   const { calls, name } = options;
   const listeners = listenersOf(options.show);
@@ -77,6 +100,10 @@ function createTriggerSettings(options: TriggerOptions): TriggerSettings {
     current = next;
     listeners.notify();
   }
+
+  const hearCalls = hearingCalls(options, (trigger) => {
+    publish({ ...current, loaded: { status: "loaded", trigger } });
+  });
 
   async function sent(call: Promise<Trigger | null>, edit: "kept" | "dropped"): Promise<void> {
     publish({ ...current, save: { status: "saving" } });
@@ -105,7 +132,7 @@ function createTriggerSettings(options: TriggerOptions): TriggerSettings {
     snapshot: () => current,
     subscribe: (listener) => {
       pending ??= sent(calls.readTrigger(name), "kept");
-      return listeners.add(listener);
+      return hearCalls(listeners.add(listener));
     },
   };
 }
