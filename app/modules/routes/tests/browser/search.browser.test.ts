@@ -73,7 +73,7 @@ for (const { channel, key } of SHORTCUTS) {
   }) => {
     const opened = await openedOn(page, channel);
     await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
-    await page.getByLabel("Reply", { exact: true }).click();
+    await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
     await page.evaluate(recordingShortcut);
     await page.keyboard.press(key);
 

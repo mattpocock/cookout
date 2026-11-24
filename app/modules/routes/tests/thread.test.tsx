@@ -48,7 +48,7 @@ async function followedThreadIn(channel: string, client: CookoutClient): Promise
 }
 
 function sendReply(text: string): void {
-  fireEvent.change(screen.getByLabelText("Reply"), { target: { value: text } });
+  fireEvent.change(screen.getByRole("textbox", { name: "Reply" }), { target: { value: text } });
   fireEvent.click(inThread().getByRole("button", { name: "Send" }));
 }
 
@@ -186,7 +186,7 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   expect([alert.textContent, await shownReplies(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the reply \(token_revoked\)/u),
     ["adminFirst reply", "Second reply"],
-    screen.getByLabelText("Reply"),
+    screen.getByRole("textbox", { name: "Reply" }),
   ]);
 
   close();

@@ -23,6 +23,8 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "DROP TABLE scheduled_messages",
+  "ALTER TABLE messages DROP COLUMN scheduled_message_id",
   "DROP TABLE attachments",
   "DROP INDEX message_search",
   "DROP FUNCTION message_search_words",

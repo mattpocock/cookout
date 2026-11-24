@@ -25,6 +25,8 @@ export interface AttachmentCalls {
   readonly getAttachment: (id: AttachmentId) => Promise<AttachmentBytes>;
 }
 
+export type { ScheduledMessageCalls } from "../scheduled-messages/client.ts";
+
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {
   /**

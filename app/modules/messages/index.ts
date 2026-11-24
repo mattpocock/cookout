@@ -14,10 +14,7 @@ const LOWEST_ID = 1;
 const FIRST = 0;
 const ONE_MORE = 1;
 
-/**
- * A message's ID: a positive whole number. Message IDs are one increasing
- * sequence across the whole server, so they order messages.
- */
+/** A message's ID: a positive whole number, from one increasing sequence across the server, so IDs order messages. */
 export type MessageId = number & { readonly [brand]: "MessageId" };
 
 /**
@@ -34,6 +31,12 @@ export const messageTextLength = { maximum: 40_000, minimum: 1 } as const;
 
 /** Any JSON value. */
 export type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+
+/** The Scheduled message that posted a message, and whether it has since been deleted (read now, not when posted). */
+export interface ScheduledMessageMarker {
+  readonly id: number & { readonly [brand]: "ScheduledMessageId" };
+  readonly deleted: boolean;
+}
 
 /** Who posted a message, as they were when they posted it, so it survives the identity being deleted. */
 export interface Author {
@@ -54,6 +57,7 @@ export interface MessageFields extends WithAttachments {
   readonly mentions: readonly IdentityName[];
   /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
   readonly harness?: Harness;
+  readonly scheduledMessage?: ScheduledMessageMarker;
   readonly createdAt: IsoTime;
   /**
    * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order, on the
@@ -274,10 +278,7 @@ export const threadPath = "/v1/messages/:id/thread";
  */
 export const reactionPath = "/v1/messages/:id/reactions/:reaction";
 
-/**
- * The codes the message routes refuse with: a missing message (404), a reply in another channel (400) and a reaction
- * not in `reactionNames` (404).
- */
+/** The codes the message routes refuse with: a missing message or reaction (404), a reply in another channel (400). */
 export const messageErrorCodes = ["message_not_found", "reply_in_other_channel", "reaction_not_found"] as const;
 
 /** The answer to closing or reopening a thread: its top-level message as it now stands. */

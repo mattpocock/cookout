@@ -97,6 +97,9 @@ interface Listing {
 }
 
 function receiptsOf({ db, ids }: Listing): Fails<readonly ReadReceipt[]> {
+  if (Arr.isReadonlyArrayEmpty(ids)) {
+    return Effect.succeed([]);
+  }
   const places = Arr.join(
     Arr.map(ids, () => "?"),
     ", ",

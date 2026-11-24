@@ -2,7 +2,7 @@ import { Array as Arr, DateTime, Effect, Option, Predicate, String as Str, pipe 
 import type { Attaching, Post, StoredFiles } from "../../../attachments/server.ts";
 import type { Author, JsonValue, Message, MessageId, MessageResponse, Reply } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
-import type { NewMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type { NewMessage, ScheduledRun, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { PubSub, Scope } from "effect";
 import { closeWithoutReplyTo, messageNotFound, replyInOtherChannel, seenWithoutReplyTo } from "./refusals.ts";
 import { movedSince, threadMovedWarning } from "./thread-moved.ts";
@@ -101,7 +101,7 @@ type Appended = Effect.Success<ReturnType<Append>>;
 
 interface Posting {
   readonly hub: Hub;
-  readonly append: Append;
+  readonly append: (message: NewMessage) => Fails<Appended>;
   readonly attaching: Attaching;
   readonly storage: Storage["Service"];
 }
@@ -173,4 +173,39 @@ function postWith(posting: Posting): (author: Identity, message: PostMessage) =>
     });
 }
 
-export { type Appended, type Hub, type PostMessage, postWith };
+type ScheduledRunParts = Omit<ScheduledRun, "message">;
+
+type RunResult = Effect.Success<ReturnType<Storage["Service"]["runScheduledMessage"]>>;
+
+const runMoved: Refusal = {
+  code: "scheduled_message_not_found",
+  message: "The Scheduled message changed before its run posted.",
+  status: 409,
+};
+
+function isAppendResult(result: RunResult): result is Appended {
+  return result.status !== "run_moved" && result.status !== "skipped";
+}
+
+function postScheduledWith({
+  attaching,
+  hub,
+  storage,
+}: Omit<Posting, "append">): (
+  author: Identity,
+  message: PostMessage,
+  run: ScheduledRunParts,
+) => Fails<MessageResponse> {
+  return (author, message, run) => {
+    function append(stored: NewMessage): Fails<Appended> {
+      return Effect.filterOrFail(
+        storage.runScheduledMessage({ ...run, message: stored }),
+        isAppendResult,
+        () => runMoved,
+      );
+    }
+    return postWith({ append, attaching, hub, storage })(author, message);
+  };
+}
+
+export { type Appended, type Hub, type PostMessage, type ScheduledRunParts, postScheduledWith, postWith };

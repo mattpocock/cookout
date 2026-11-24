@@ -116,6 +116,9 @@ function remove(db: SqlDatabase, { identity, messageId, reaction }: ReactionKey)
 }
 
 function list(db: SqlDatabase, ids: readonly MessageId[]): Fails<readonly Reaction[]> {
+  if (Arr.isReadonlyArrayEmpty(ids)) {
+    return Effect.succeed([]);
+  }
   return Effect.flatMap(
     db.all(`SELECT ${COLUMNS} FROM reactions AS r WHERE r.message_id IN (${placesFor(ids)})`, ...ids),
     reactionRows,
@@ -134,6 +137,9 @@ function unseen(db: SqlDatabase, author: IdentityName): Fails<readonly Reaction[
 }
 
 function markSeen(db: SqlDatabase, author: IdentityName, ids: readonly MessageId[]): Fails<void> {
+  if (Arr.isReadonlyArrayEmpty(ids)) {
+    return Effect.void;
+  }
   return db.run(
     `UPDATE reactions SET seen = TRUE WHERE ${isFalse[db.dialect]("seen")} AND message_id IN (${placesFor(ids)})
      AND message_id IN (SELECT id FROM messages WHERE author_name = ?)`,

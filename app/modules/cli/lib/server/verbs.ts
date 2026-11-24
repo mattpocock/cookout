@@ -7,6 +7,7 @@ import {
   messageCommand,
   messageIdArgument,
   pageQuery,
+  scheduleCommand,
 } from "./message-command.ts";
 import { identityCommand, keepCommand } from "./identity.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
@@ -152,6 +153,7 @@ export const verbCommands = [
   unfollowCommand,
   subscribeCommand,
   unsubscribeCommand,
+  scheduleCommand,
   commandCommand,
   helpCommand,
 ] as const;

@@ -16,7 +16,7 @@ function hashOf(parent: Message): string {
 }
 
 async function typeInReply(text: string): Promise<HTMLElement> {
-  const box = await screen.findByLabelText("Reply");
+  const box = await screen.findByRole("textbox", { name: "Reply" });
   fireEvent.change(box, { target: { value: text } });
   return box;
 }

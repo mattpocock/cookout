@@ -1,3 +1,4 @@
+export type * from "./scheduled-messages.ts";
 export type {
   Author,
   JsonValue,

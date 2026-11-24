@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Option, Schema } from "effect";
 import { POSTGRES_ATTACHMENTS_MIGRATION } from "./attachments.ts";
+import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import { POSTGRES_SEARCH_MIGRATION } from "./search-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -233,6 +234,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   ],
   POSTGRES_SEARCH_MIGRATION,
   POSTGRES_ATTACHMENTS_MIGRATION,
+  POSTGRES_SCHEDULED_MESSAGES_MIGRATION,
 ];
 
 const NO_VERSION = 0;

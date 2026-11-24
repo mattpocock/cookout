@@ -6,6 +6,7 @@ import { sqlHealth } from "./health.ts";
 import { sqlIdentitySections } from "./identity-sections.ts";
 import { sqlMessageReader } from "./messages-sqlite.ts";
 import { sqlMessageSections } from "./sql-message-sections.ts";
+import { sqlScheduledMessages } from "./scheduled-messages-sqlite.ts";
 import { sqlSearch } from "./search-sqlite.ts";
 
 function sqlStorage(db: SqlDatabase): StorageService {
@@ -16,6 +17,7 @@ function sqlStorage(db: SqlDatabase): StorageService {
     ...sqlAgentSessionSections(db),
     ...sqlCommands(db),
     ...sqlSearch({ db, reader: sqlMessageReader(db) }),
+    ...sqlScheduledMessages(db),
   };
 }
 

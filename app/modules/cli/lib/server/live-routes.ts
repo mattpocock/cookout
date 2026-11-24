@@ -5,3 +5,4 @@ const liveRoutes = [...eventRoutes, ...presenceRoutes] as const;
 
 export { liveRoutes };
 export { presenceLayer } from "../../../presence/server.ts";
+export { scheduledMessageRoutes, scheduledMessagesLayer } from "../../../scheduled-messages/server.ts";

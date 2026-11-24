@@ -250,10 +250,7 @@ interface NewAttachment {
   readonly bytes: Uint8Array;
 }
 declare const brand$4: unique symbol;
-/**
- * A message's ID: a positive whole number. Message IDs are one increasing
- * sequence across the whole server, so they order messages.
- */
+/** A message's ID: a positive whole number, from one increasing sequence across the server, so IDs order messages. */
 type MessageId = number & {
   readonly [brand$4]: "MessageId";
 };
@@ -261,6 +258,13 @@ type MessageId = number & {
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
   readonly [key: string]: JsonValue;
 };
+/** The Scheduled message that posted a message, and whether it has since been deleted (read now, not when posted). */
+interface ScheduledMessageMarker {
+  readonly id: number & {
+    readonly [brand$4]: "ScheduledMessageId";
+  };
+  readonly deleted: boolean;
+}
 /** Who posted a message, as they were when they posted it, so it survives the identity being deleted. */
 interface Author {
   readonly name: IdentityName;
@@ -279,6 +283,7 @@ interface MessageFields extends WithAttachments {
   readonly mentions: readonly IdentityName[];
   /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
   readonly harness?: Harness;
+  readonly scheduledMessage?: ScheduledMessageMarker;
   readonly createdAt: IsoTime;
   /**
    * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order, on the
@@ -979,6 +984,97 @@ interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
+/** A Scheduled message's ID: a positive whole number, from its own sequence. */
+type ScheduledMessageId = ScheduledMessageMarker["id"];
+/** Whether a schedule runs: `active`, `paused`, or `finished` once a one-off schedule's run is handled. */
+declare const scheduledMessageStatuses: readonly ["active", "paused", "finished"];
+/** A schedule's status. */
+type ScheduledMessageStatus = (typeof scheduledMessageStatuses)[number];
+/** Why a schedule was paused for its creator rather than by them: its creator was Deactivated. */
+declare const scheduledMessagePauseReasons: readonly ["creator_deactivated"];
+/** The reason a schedule was paused, when it wasn't paused by hand. */
+type ScheduledMessagePauseReason = (typeof scheduledMessagePauseReasons)[number];
+/** What a handled run did: posted its message, or was skipped as 10 minutes or more late. */
+declare const scheduledRunOutcomes: readonly ["posted", "skipped"];
+/** The outcome of a handled run. */
+type ScheduledRunOutcome = (typeof scheduledRunOutcomes)[number];
+/** The latest run a schedule handled. */
+interface ScheduledMessageRun {
+  /** The moment the run was due. */
+  readonly due: IsoTime;
+  readonly outcome: ScheduledRunOutcome;
+  /** The message it posted. Absent when it was skipped. */
+  readonly messageId?: MessageId;
+}
+/** A Scheduled message as the server shows it. It has exactly one of `cron` and `at`. */
+interface ScheduledMessage {
+  readonly id: ScheduledMessageId;
+  readonly channel: ChannelName;
+  /** Who created it, and whom each post is written as. */
+  readonly creator: Author;
+  readonly text: string;
+  /** A 5-field cron expression, read in `timeZone`. Absent on a one-off schedule. */
+  readonly cron?: string;
+  /** The one moment a one-off schedule posts. Absent on a recurring schedule. */
+  readonly at?: IsoTime;
+  /** The IANA time zone the cron expression is read in, such as `Europe/London`. */
+  readonly timeZone: string;
+  readonly status: ScheduledMessageStatus;
+  /** Present while it is paused because its creator was Deactivated. */
+  readonly pausedBecause?: ScheduledMessagePauseReason;
+  /** Its next runs, at most `scheduleTiming.shownRuns`, soonest first. Empty while it is paused or finished. */
+  readonly nextRuns: readonly IsoTime[];
+  /** The latest run it handled. Absent before its first. */
+  readonly lastRun?: ScheduledMessageRun;
+  readonly createdAt: IsoTime;
+  readonly updatedAt: IsoTime;
+}
+/**
+ * The body of `POST /v1/scheduled-messages`: a channel, a text, exactly one of `cron` and `at`, and a time zone. An
+ * `at` with no offset is read in `timeZone`.
+ */
+interface CreateScheduledMessageRequest {
+  readonly channel: string;
+  readonly text: string;
+  readonly cron?: string;
+  /** An ISO 8601 date and time, such as `2026-12-01T09:00` or `2026-12-01T09:00:00Z`. */
+  readonly at?: string;
+  readonly timeZone: string;
+}
+/** The query of `GET /v1/scheduled-messages`: only one channel's schedules. */
+interface ListScheduledMessagesQuery {
+  readonly channel?: string;
+}
+/** The answer to creating, getting, pausing, resuming or deleting a Scheduled message. */
+interface ScheduledMessageResponse {
+  readonly scheduledMessage: ScheduledMessage;
+}
+/** The answer to `GET /v1/scheduled-messages`: every schedule asked for, oldest first. */
+interface ListScheduledMessagesResponse {
+  readonly scheduledMessages: readonly ScheduledMessage[];
+}
+/** Creating, reading and changing Scheduled messages. */
+interface ScheduledMessageCalls {
+  /**
+   * `POST /v1/scheduled-messages`: schedules `text` to post in `channel` as the caller, on a 5-field `cron` read in
+   * `timeZone`, or once `at` a moment. Refused with 400 `cron_invalid`, `cron_too_frequent` (more often than every 30
+   * minutes), `cron_never_runs`, `time_zone_invalid`, `at_in_past` or `cron_or_at`, and 404 `channel_not_found`.
+   */
+  readonly createScheduledMessage: (request: CreateScheduledMessageRequest) => Promise<ScheduledMessageResponse>;
+  /** `GET /v1/scheduled-messages`: every Scheduled message, or one channel's, oldest first. */
+  readonly listScheduledMessages: (query?: ListScheduledMessagesQuery) => Promise<ListScheduledMessagesResponse>;
+  /** `GET /v1/scheduled-messages/:id`. A missing one is 404 `scheduled_message_not_found`. */
+  readonly getScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
+  /** `POST /v1/scheduled-messages/:id/pause`: its creator, an agent creator's owner or an admin (403 `not_owner`). */
+  readonly pauseScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
+  /**
+   * `POST /v1/scheduled-messages/:id/resume`: it runs from now on, and runs missed while it was paused are not caught
+   * up. 409 `creator_deactivated` while its creator is Deactivated.
+   */
+  readonly resumeScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
+  /** `DELETE /v1/scheduled-messages/:id`: stops it. The messages it posted stay, marked as from a deleted schedule. */
+  readonly deleteScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
+}
 /** One search result: the message as a channel listing or thread shows it, and whether its thread is Closed. */
 interface SearchResult {
   readonly message: Message;
@@ -1292,7 +1388,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "attachment_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1357,7 +1453,8 @@ interface IdentityDeletionCalls {
 }
 type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-type CallGroups = ApprovalCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & Pick<EventCalls, "presence">;
+type CallGroups = ApprovalCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & Pick<EventCalls, "presence">;
+declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
   readonly [brand]: "UnknownErrorCode";
@@ -1581,5 +1678,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedWarning, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageId, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedWarning, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

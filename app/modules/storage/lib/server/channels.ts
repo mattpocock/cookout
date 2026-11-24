@@ -93,6 +93,7 @@ const CHANNEL_DELETES: readonly string[] = [
   "DELETE FROM deliveries WHERE channel = ?",
   "DELETE FROM subscriptions WHERE channel = ?",
   "DELETE FROM channel_read_positions WHERE channel = ?",
+  "DELETE FROM scheduled_messages WHERE channel = ?",
   "DELETE FROM messages WHERE channel = ? AND reply_to IS NOT NULL",
   "DELETE FROM messages WHERE channel = ?",
   "DELETE FROM channels WHERE name = ?",

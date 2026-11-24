@@ -2,6 +2,7 @@ import { Array as Arr, Effect, Option, Schema } from "effect";
 import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { SqlDatabase, SqlDialect } from "./adapters/sql-database.ts";
+import { PAUSE_SCHEDULES_OF } from "./scheduled-messages.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isFalse } from "./adapters/sql-database.ts";
 import { unreadable } from "./errors.ts";
@@ -59,6 +60,7 @@ function switchOff(dialect: SqlDialect): readonly string[] {
     "DELETE FROM command_tokens WHERE handler_name = ?",
     "DELETE FROM login_credentials WHERE identity_name = ?",
     "DELETE FROM login_requests WHERE approved_by = ?",
+    PAUSE_SCHEDULES_OF,
   ];
 }
 

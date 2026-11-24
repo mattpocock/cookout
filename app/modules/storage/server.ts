@@ -35,6 +35,10 @@ export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
 export type { SearchPageRequest, SearchQuery } from "./lib/server/search.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
+export type {
+  ScheduledRun,
+  StoredScheduledMessage,
+} from "./lib/server/scheduled-messages.ts";
 export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactivation-offers.ts";
 export type { StoredDeactivatedQuietAgent } from "./lib/server/deactivated-quiet-agents.ts";
 export type { StoredPresence } from "./lib/server/presence.ts";
