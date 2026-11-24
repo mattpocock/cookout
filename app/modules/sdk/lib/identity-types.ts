@@ -21,6 +21,7 @@ export type {
   SetTriggerRequest,
   Trigger,
   TriggerFailure,
+  TriggerHeader,
   TriggerResponse,
   TriggerResult,
 } from "../../triggers/index.ts";

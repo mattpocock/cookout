@@ -14,8 +14,9 @@
  * stops the browser's own handling. Off a text field every row fires. In a
  * text field only chords held with Ctrl, Cmd or Alt fire, and the rows of the
  * text scopes (the search box and text box), which fire only there, so a
- * letter typed or dictated is always typed. `Mod` is Ctrl or Cmd: either
- * works, and on a Mac it is named Cmd (⌘, `Meta`), elsewhere Ctrl (`Control`).
+ * letter typed or dictated is always typed. `Mod` is Cmd on a Mac (⌘, `Meta`)
+ * and Ctrl elsewhere (`Control`), and only that key matches it, so on a Mac
+ * Ctrl+K stays the text box's own delete-to-end-of-line.
  * `shortcutOf` names an action's chords, for `aria-keyshortcuts` and for
  * people (⌘K and ⌥ on a Mac, Ctrl+K and Alt elsewhere), so no view writes a
  * key by hand. The browser's own keys (F6, and Ctrl or Cmd with T, W, N, L, D
@@ -66,6 +67,12 @@ interface Bound {
   readonly within: (() => Element | null) | null;
 }
 
+interface Pressing {
+  readonly bound: Bound;
+  readonly event: KeyboardEvent;
+  readonly platform: Platform;
+}
+
 const MAC = /^(?:Mac|iPhone|iPad|iPod)/u;
 const TEXT_FIELDS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 const KEY_SEPARATOR = " ";
@@ -103,10 +110,10 @@ function rowsOf(scope: Scope, actions: Readonly<Record<string, Act>>): readonly 
   );
 }
 
-function actOn(bound: Bound, event: KeyboardEvent): boolean {
+function actOn({ bound, event, platform }: Pressing): boolean {
   const inTextField = isTextField(event.target);
   return bound.rows.some(
-    ({ act, key }) => fires(key, inTextField) && matches({ chord: chordOf(key.chord), event }) && act(event),
+    ({ act, key }) => fires(key, inTextField) && matches({ chord: chordOf(key.chord), event, platform }) && act(event),
   );
 }
 
@@ -133,7 +140,7 @@ function createKeymap(options: { readonly platform: string }): Keymap {
     if (isLeft(event) || store.snapshot().shortcutListOpen) {
       return;
     }
-    if (boundInOrder(bindings, event.target).some((bound) => actOn(bound, event))) {
+    if (boundInOrder(bindings, event.target).some((bound) => actOn({ bound, event, platform }))) {
       event.preventDefault();
     }
   }

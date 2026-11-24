@@ -3,6 +3,7 @@ import {
   POSTGRES_ATTACHMENTS_MIGRATION,
   POSTGRES_SEARCH_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
+  POSTGRES_TRIGGER_HEADERS_MIGRATION,
 } from "./feature-migrations.ts";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
@@ -240,6 +241,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   POSTGRES_ATTACHMENTS_MIGRATION,
   POSTGRES_SCHEDULED_MESSAGES_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
+  POSTGRES_TRIGGER_HEADERS_MIGRATION,
 ];
 
 const NEXT_VERSION = 1;

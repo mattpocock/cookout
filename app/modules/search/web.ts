@@ -6,8 +6,9 @@
  * or the server's refusal without keeping it. `edit` takes the query as typed and opens the list; a short `pause`
  * after the last edit it asks for the first page, and an answer to an older query that arrives after a newer one is
  * dropped. A query with neither words nor filters, as the shared parser reads it, asks nothing. `loadMore` asks for
- * the next page and adds it to the list; `move` moves the highlight down or up, and moving onto the last result loaded
- * loads the next page. `open` and `close` open and close the list, keeping the query and its results.
+ * the next page and adds it to the list. The highlight starts on the first entry of the box's list, which may list
+ * `ahead` places, channels and people before the messages; `move` moves it down or up through both, and moving onto
+ * the last message loaded loads the next page. `open` and `close` open and close the list, keeping the query and its results.
  */
 export {
   type Search,

@@ -3,7 +3,8 @@
  * set and clear the agent's trigger URL and token; the token is stored for the call alone and never answered.
  * `mentionTriggersLayer` subscribes to every stored message, whatever posted it, and for each agent it mentions that
  * has a trigger URL, is active and isn't its author, POSTs `{ text }` (the message's link and text) to the URL with
- * `Authorization: Bearer <token>` in the background, through the `TriggerCaller` seam: one attempt, given up after
+ * `Authorization: Bearer <token>` and the owner's extra headers (mattpocock/cookout#440), whose values are kept like
+ * the token and never answered, in the background, through the `TriggerCaller` seam: one attempt, given up after
  * 10 s, never retried, and never holding up or failing the post. Each result is stored as the URL's last result and
  * given to presence, so the agent shows online while its last call didn't fail and Unreachable once one did. The first
  * failure of a streak raises one `trigger failed` offline alert in the owner's Inbox, and the next success clears it,

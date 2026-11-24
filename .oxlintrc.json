@@ -524,7 +524,10 @@
       "files": [
         "app/modules/design-system/lib/panel-edge.tsx",
         "app/modules/design-system/lib/suggestions.tsx",
-        "app/modules/design-system/lib/suggestion-option.tsx"
+        "app/modules/design-system/lib/suggestion-option.tsx",
+        "app/modules/design-system/lib/result-list.tsx",
+        "app/modules/design-system/lib/result-group.tsx",
+        "app/modules/design-system/lib/result-option.tsx"
       ],
       "rules": {
         "jsx-a11y/prefer-tag-over-role": "off"
@@ -537,7 +540,7 @@
       }
     },
     {
-      "files": ["app/modules/keymap/**", "app/modules/*/tests/**"],
+      "files": ["app/modules/keymap/**"],
       "rules": {
         "web-rules/keymap-owner": "off"
       }

@@ -32,6 +32,7 @@ it.effect("a mention POSTs the message's link and text to the trigger URL with t
 
     expect(calls).toStrictEqual([
       {
+        headers: [],
         text: `${PUBLIC_URL}/#/channels/grill/threads/${id}/messages/${id}\n\n@${AGENT} look`,
         token: triggerToken(TOKEN),
         url: URL_OF,

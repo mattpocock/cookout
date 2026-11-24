@@ -97,7 +97,7 @@ function callMade(
     const now = yield* DateTime.now;
     const at = isoTimeOf(now);
     const text = textFor(publicUrl, message);
-    return yield* caller.call({ text, token: trigger.token, url: trigger.url }).pipe(
+    return yield* caller.call({ headers: trigger.headers ?? [], text, token: trigger.token, url: trigger.url }).pipe(
       Effect.timeoutOrElse({ duration: Duration.seconds(TIMEOUT_SECONDS), orElse: () => Effect.fail(TIMED_OUT) }),
       Effect.match({
         onFailure: (error): TriggerResult => ({ at, error, ok: false }),
@@ -107,8 +107,19 @@ function callMade(
   });
 }
 
+function headerLines({ headers = [] }: StoredTrigger): string {
+  return Arr.join(
+    Arr.map(headers, ({ name, value }) => `${name}: ${value}`),
+    "\n",
+  );
+}
+
+function sameSecrets(stored: StoredTrigger, made: StoredTrigger): boolean {
+  return stored.token === made.token && headerLines(stored) === headerLines(made);
+}
+
 function sameTrigger(stored: StoredTrigger | undefined, made: StoredTrigger): stored is StoredTrigger {
-  return Predicate.isNotUndefined(stored) && stored.url === made.url && stored.token === made.token;
+  return Predicate.isNotUndefined(stored) && stored.url === made.url && sameSecrets(stored, made);
 }
 
 function failedBefore(stored: StoredTrigger): boolean {

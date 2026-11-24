@@ -21,3 +21,7 @@
 - **Mark scopes on the page with data attributes**: rejected. A binding's own element (or none, for the whole page) says what it covers, and the fixed scope order says which comes first, without markup only the keymap reads.
 - **Match `Mod` strictly by platform** (Cmd only on a Mac): not now. Ctrl+K and Cmd+K both worked everywhere before, and their tests stay; it can tighten later without changing a view.
 - **React context for the keymap**: rejected. The frontend passes its stores down through `CookoutApp`'s props (`docs/web-components.md`), and the keymap is one more.
+
+Superseded in part on 2026-11-24 by [ADR 0090](0090-tests-get-no-keymap-owner-exemption.md): test files no longer get the lint rule's exemption.
+
+Superseded in part on 2026-11-24 by [ADR 0091](0091-mod-is-cmd-on-a-mac-and-ctrl-elsewhere.md): `Mod` matches Cmd on a Mac and Ctrl elsewhere, not either key everywhere.

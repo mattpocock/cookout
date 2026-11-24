@@ -122,7 +122,7 @@ it("loading more adds the next page, and moving onto the last result loaded load
   await shownTexts(shown, ["Dingopage 5", "Dingopage 4"]);
   shown.loadMore();
   await shownTexts(shown, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2"]);
-  for (const direction of ["up", "down", "down"] as const) {
+  for (const direction of ["down", "down", "up", "down", "down"] as const) {
     shown.move(direction);
   }
 
@@ -141,6 +141,6 @@ it("a query with neither words nor filters asks nothing, and closing keeps the q
 
   expect([search.mock.calls, shown.snapshot()]).toStrictEqual([
     [],
-    { found: { status: "idle" }, highlighted: null, open: false, query: "   " },
+    { found: { status: "idle" }, highlighted: 0, open: false, query: "   " },
   ]);
 });

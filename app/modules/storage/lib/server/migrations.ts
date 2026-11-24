@@ -1,4 +1,9 @@
-import { ATTACHMENTS_MIGRATION, SEARCH_MIGRATION, TRIGGERS_MIGRATION } from "./feature-migrations.ts";
+import {
+  ATTACHMENTS_MIGRATION,
+  SEARCH_MIGRATION,
+  TRIGGERS_MIGRATION,
+  TRIGGER_HEADERS_MIGRATION,
+} from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
@@ -221,6 +226,7 @@ const migrations: readonly string[] = [
    CREATE INDEX scheduled_messages_by_creator ON scheduled_messages (creator);
    ALTER TABLE messages ADD COLUMN scheduled_message_id INTEGER;`,
   TRIGGERS_MIGRATION,
+  TRIGGER_HEADERS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

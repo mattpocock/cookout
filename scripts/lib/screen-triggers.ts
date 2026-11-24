@@ -18,6 +18,7 @@ const WAKING_AGENT = "release-bot";
 const UNREACHABLE_AGENT = "rollback";
 const WAKING_URL = "https://routines.example.com/release-bot";
 const UNREACHABLE_URL = "https://127.0.0.1:1/rollback";
+const ROUTINE_HEADERS = [{ name: "anthropic-version", value: "2023-06-01" }];
 const POLL_MS = 50;
 const TRIES = 100;
 const ONE = 1;
@@ -37,7 +38,7 @@ async function untilCalled(owner: CookoutClient, tries: number): Promise<void> {
 
 async function setScreenTriggers({ ownerToken, url }: Owner): Promise<void> {
   const owner = createCookoutClient({ env: {}, token: ownerToken, url });
-  await owner.setTrigger(WAKING_AGENT, { token: "screenshot-token", url: WAKING_URL });
+  await owner.setTrigger(WAKING_AGENT, { headers: ROUTINE_HEADERS, token: "screenshot-token", url: WAKING_URL });
   await owner.setTrigger(UNREACHABLE_AGENT, { token: "screenshot-token", url: UNREACHABLE_URL });
   await owner.createMessage({ channel: "general", text: `@${UNREACHABLE_AGENT} are you there?` });
   await untilCalled(owner, TRIES);

@@ -50856,7 +50856,7 @@ return errors === 0;
 validate89.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isTriggerResponse = validate90;
-const schema805 = {"type":"object","properties":{"trigger":{"anyOf":[{"type":"object","properties":{"lastResult":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"error":{"type":"string"},"ok":{"type":"boolean"},"status":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["at","ok"],"additionalProperties":true},"url":{"type":"string"}},"required":["url"],"additionalProperties":true},{"type":"null"}]}},"required":["trigger"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
+const schema805 = {"type":"object","properties":{"trigger":{"anyOf":[{"type":"object","properties":{"headerNames":{"type":"array","items":{"type":"string"}},"lastResult":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"error":{"type":"string"},"ok":{"type":"boolean"},"status":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["at","ok"],"additionalProperties":true},"url":{"type":"string"}},"required":["url"],"additionalProperties":true},{"type":"null"}]}},"required":["trigger"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
 const schema806 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
 
 function validate90(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
@@ -50896,14 +50896,17 @@ vErrors.push(err0);
 errors++;
 }
 else {
-if(data0.lastResult !== undefined){
-let data1 = data0.lastResult;
+if(data0.headerNames !== undefined){
+let data1 = data0.headerNames;
 const _errs7 = errors;
 if(errors === _errs7){
-if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
-let missing2;
-if(((data1.at === undefined) && (missing2 = "at")) || ((data1.ok === undefined) && (missing2 = "ok"))){
-const err1 = {instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"};
+if(Array.isArray(data1)){
+var valid3 = true;
+const len0 = data1.length;
+for(let i0=0; i0<len0; i0++){
+const _errs9 = errors;
+if(typeof data1[i0] !== "string"){
+const err1 = {instancePath:instancePath+"/trigger/headerNames/" + i0,schemaPath:"#/properties/trigger/anyOf/0/properties/headerNames/items/type",keyword:"type",params:{type: "string"},message:"must be string"};
 if(vErrors === null){
 vErrors = [err1];
 }
@@ -50912,133 +50915,19 @@ vErrors.push(err1);
 }
 errors++;
 }
+var valid3 = _errs9 === errors;
+if(!valid3){
+break;
+}
+}
+}
 else {
-if(data1.at !== undefined){
-let data2 = data1.at;
-const _errs10 = errors;
-const _errs11 = errors;
-if(errors === _errs11){
-if(typeof data2 === "string"){
-if(!pattern5.test(data2)){
-const err2 = {instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""};
+const err2 = {instancePath:instancePath+"/trigger/headerNames",schemaPath:"#/properties/trigger/anyOf/0/properties/headerNames/type",keyword:"type",params:{type: "array"},message:"must be array"};
 if(vErrors === null){
 vErrors = [err2];
 }
 else {
 vErrors.push(err2);
-}
-errors++;
-}
-}
-else {
-const err3 = {instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err3];
-}
-else {
-vErrors.push(err3);
-}
-errors++;
-}
-}
-var valid3 = _errs10 === errors;
-}
-else {
-var valid3 = true;
-}
-if(valid3){
-if(data1.error !== undefined){
-const _errs13 = errors;
-if(typeof data1.error !== "string"){
-const err4 = {instancePath:instancePath+"/trigger/lastResult/error",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/error/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err4];
-}
-else {
-vErrors.push(err4);
-}
-errors++;
-}
-var valid3 = _errs13 === errors;
-}
-else {
-var valid3 = true;
-}
-if(valid3){
-if(data1.ok !== undefined){
-const _errs15 = errors;
-if(typeof data1.ok !== "boolean"){
-const err5 = {instancePath:instancePath+"/trigger/lastResult/ok",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/ok/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"};
-if(vErrors === null){
-vErrors = [err5];
-}
-else {
-vErrors.push(err5);
-}
-errors++;
-}
-var valid3 = _errs15 === errors;
-}
-else {
-var valid3 = true;
-}
-if(valid3){
-if(data1.status !== undefined){
-let data5 = data1.status;
-const _errs17 = errors;
-if(!(((typeof data5 == "number") && (!(data5 % 1) && !isNaN(data5))) && (isFinite(data5)))){
-const err6 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
-if(vErrors === null){
-vErrors = [err6];
-}
-else {
-vErrors.push(err6);
-}
-errors++;
-}
-if(errors === _errs17){
-if((typeof data5 == "number") && (isFinite(data5))){
-if(data5 > 9007199254740991 || isNaN(data5)){
-const err7 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
-if(vErrors === null){
-vErrors = [err7];
-}
-else {
-vErrors.push(err7);
-}
-errors++;
-}
-else {
-if(data5 < -9007199254740991 || isNaN(data5)){
-const err8 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/minimum",keyword:"minimum",params:{comparison: ">=", limit: -9007199254740991},message:"must be >= -9007199254740991"};
-if(vErrors === null){
-vErrors = [err8];
-}
-else {
-vErrors.push(err8);
-}
-errors++;
-}
-}
-}
-}
-var valid3 = _errs17 === errors;
-}
-else {
-var valid3 = true;
-}
-}
-}
-}
-}
-}
-else {
-const err9 = {instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/type",keyword:"type",params:{type: "object"},message:"must be object"};
-if(vErrors === null){
-vErrors = [err9];
-}
-else {
-vErrors.push(err9);
 }
 errors++;
 }
@@ -51049,10 +50938,121 @@ else {
 var valid2 = true;
 }
 if(valid2){
-if(data0.url !== undefined){
+if(data0.lastResult !== undefined){
+let data3 = data0.lastResult;
+const _errs11 = errors;
+if(errors === _errs11){
+if(data3 && typeof data3 == "object" && !Array.isArray(data3)){
+let missing2;
+if(((data3.at === undefined) && (missing2 = "at")) || ((data3.ok === undefined) && (missing2 = "ok"))){
+const err3 = {instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"};
+if(vErrors === null){
+vErrors = [err3];
+}
+else {
+vErrors.push(err3);
+}
+errors++;
+}
+else {
+if(data3.at !== undefined){
+let data4 = data3.at;
+const _errs14 = errors;
+const _errs15 = errors;
+if(errors === _errs15){
+if(typeof data4 === "string"){
+if(!pattern5.test(data4)){
+const err4 = {instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""};
+if(vErrors === null){
+vErrors = [err4];
+}
+else {
+vErrors.push(err4);
+}
+errors++;
+}
+}
+else {
+const err5 = {instancePath:instancePath+"/trigger/lastResult/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err5];
+}
+else {
+vErrors.push(err5);
+}
+errors++;
+}
+}
+var valid4 = _errs14 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data3.error !== undefined){
+const _errs17 = errors;
+if(typeof data3.error !== "string"){
+const err6 = {instancePath:instancePath+"/trigger/lastResult/error",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/error/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err6];
+}
+else {
+vErrors.push(err6);
+}
+errors++;
+}
+var valid4 = _errs17 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data3.ok !== undefined){
 const _errs19 = errors;
-if(typeof data0.url !== "string"){
-const err10 = {instancePath:instancePath+"/trigger/url",schemaPath:"#/properties/trigger/anyOf/0/properties/url/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(typeof data3.ok !== "boolean"){
+const err7 = {instancePath:instancePath+"/trigger/lastResult/ok",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/ok/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"};
+if(vErrors === null){
+vErrors = [err7];
+}
+else {
+vErrors.push(err7);
+}
+errors++;
+}
+var valid4 = _errs19 === errors;
+}
+else {
+var valid4 = true;
+}
+if(valid4){
+if(data3.status !== undefined){
+let data7 = data3.status;
+const _errs21 = errors;
+if(!(((typeof data7 == "number") && (!(data7 % 1) && !isNaN(data7))) && (isFinite(data7)))){
+const err8 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err8];
+}
+else {
+vErrors.push(err8);
+}
+errors++;
+}
+if(errors === _errs21){
+if((typeof data7 == "number") && (isFinite(data7))){
+if(data7 > 9007199254740991 || isNaN(data7)){
+const err9 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
+if(vErrors === null){
+vErrors = [err9];
+}
+else {
+vErrors.push(err9);
+}
+errors++;
+}
+else {
+if(data7 < -9007199254740991 || isNaN(data7)){
+const err10 = {instancePath:instancePath+"/trigger/lastResult/status",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/properties/status/minimum",keyword:"minimum",params:{comparison: ">=", limit: -9007199254740991},message:"must be >= -9007199254740991"};
 if(vErrors === null){
 vErrors = [err10];
 }
@@ -51061,16 +51061,21 @@ vErrors.push(err10);
 }
 errors++;
 }
-var valid2 = _errs19 === errors;
+}
+}
+}
+var valid4 = _errs21 === errors;
 }
 else {
-var valid2 = true;
+var valid4 = true;
+}
+}
 }
 }
 }
 }
 else {
-const err11 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf/0/type",keyword:"type",params:{type: "object"},message:"must be object"};
+const err11 = {instancePath:instancePath+"/trigger/lastResult",schemaPath:"#/properties/trigger/anyOf/0/properties/lastResult/type",keyword:"type",params:{type: "object"},message:"must be object"};
 if(vErrors === null){
 vErrors = [err11];
 }
@@ -51080,11 +51085,16 @@ vErrors.push(err11);
 errors++;
 }
 }
-var _valid0 = _errs4 === errors;
-valid1 = valid1 || _valid0;
-const _errs21 = errors;
-if(data0 !== null){
-const err12 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf/1/type",keyword:"type",params:{type: "null"},message:"must be null"};
+var valid2 = _errs11 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data0.url !== undefined){
+const _errs23 = errors;
+if(typeof data0.url !== "string"){
+const err12 = {instancePath:instancePath+"/trigger/url",schemaPath:"#/properties/trigger/anyOf/0/properties/url/type",keyword:"type",params:{type: "string"},message:"must be string"};
 if(vErrors === null){
 vErrors = [err12];
 }
@@ -51093,15 +51103,48 @@ vErrors.push(err12);
 }
 errors++;
 }
-var _valid0 = _errs21 === errors;
-valid1 = valid1 || _valid0;
-if(!valid1){
-const err13 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf",keyword:"anyOf",params:{},message:"must match a schema in anyOf"};
+var valid2 = _errs23 === errors;
+}
+else {
+var valid2 = true;
+}
+}
+}
+}
+}
+else {
+const err13 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf/0/type",keyword:"type",params:{type: "object"},message:"must be object"};
 if(vErrors === null){
 vErrors = [err13];
 }
 else {
 vErrors.push(err13);
+}
+errors++;
+}
+}
+var _valid0 = _errs4 === errors;
+valid1 = valid1 || _valid0;
+const _errs25 = errors;
+if(data0 !== null){
+const err14 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf/1/type",keyword:"type",params:{type: "null"},message:"must be null"};
+if(vErrors === null){
+vErrors = [err14];
+}
+else {
+vErrors.push(err14);
+}
+errors++;
+}
+var _valid0 = _errs25 === errors;
+valid1 = valid1 || _valid0;
+if(!valid1){
+const err15 = {instancePath:instancePath+"/trigger",schemaPath:"#/properties/trigger/anyOf",keyword:"anyOf",params:{},message:"must match a schema in anyOf"};
+if(vErrors === null){
+vErrors = [err15];
+}
+else {
+vErrors.push(err15);
 }
 errors++;
 validate90.errors = vErrors;

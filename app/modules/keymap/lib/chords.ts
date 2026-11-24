@@ -19,6 +19,10 @@ interface Labelling {
   readonly platform: Platform;
 }
 
+interface Matching extends Labelling {
+  readonly event: Pressed;
+}
+
 interface Names {
   readonly aria: Readonly<Record<Modifier, string>>;
   readonly shown: Readonly<Record<Modifier, string>>;
@@ -64,11 +68,10 @@ function isModified(chord: Chord): boolean {
   return [...chord.modifiers].some((modifier) => modifier !== "Shift");
 }
 
-function primaryHeld(chord: Chord, event: Pressed): boolean {
-  if (chord.modifiers.has("Mod")) {
-    return event.ctrlKey || event.metaKey;
-  }
-  return event.ctrlKey === chord.modifiers.has("Control") && !event.metaKey;
+function primaryHeld({ chord, event, platform }: Matching): boolean {
+  const control = chord.modifiers.has("Control") || (chord.modifiers.has("Mod") && platform === "other");
+  const command = chord.modifiers.has("Mod") && platform === "mac";
+  return event.ctrlKey === control && event.metaKey === command;
 }
 
 function shiftHeld(chord: Chord, event: Pressed): boolean {
@@ -85,10 +88,11 @@ function keyMatches(chord: Chord, key: string): boolean {
   return chord.key === key;
 }
 
-function matches({ chord, event }: { readonly chord: Chord; readonly event: Pressed }): boolean {
+function matches(matching: Matching): boolean {
+  const { chord, event } = matching;
   return (
     keyMatches(chord, event.key) &&
-    primaryHeld(chord, event) &&
+    primaryHeld(matching) &&
     event.altKey === chord.modifiers.has("Alt") &&
     shiftHeld(chord, event)
   );

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { pressedPrevented } from "./prevented.ts";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
@@ -27,18 +28,7 @@ async function openedOn(page: Page, channel: string): Promise<Opened> {
   return { reply: reply.id, thread: message.id };
 }
 
-function recordingShortcut(): void {
-  globalThis.document.addEventListener("keydown", (event) => {
-    if (event.key === "k") {
-      globalThis.document.body.dataset["shortcutPrevented"] = String(event.defaultPrevented);
-    }
-  });
-}
-
-const SHORTCUTS = [
-  { channel: "browser-search-ctrl", key: "Control+k" },
-  { channel: "browser-search-meta", key: "Meta+k" },
-] as const;
+const SHORTCUT = { ctrlKey: true, key: "k" } as const;
 const BOTH = 2;
 
 async function searched(page: Page, query: string): Promise<void> {
@@ -67,27 +57,25 @@ async function selectedInInbox(page: Page, channel: string): Promise<string> {
   return page.url();
 }
 
-for (const { channel, key } of SHORTCUTS) {
-  test(`${key} focuses the search box from a message box, with the browser's own shortcut prevented`, async ({
-    page,
-  }) => {
-    const opened = await openedOn(page, channel);
-    await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
-    await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
-    await page.evaluate(recordingShortcut);
-    await page.keyboard.press(key);
+test("ctrl+K focuses the search box from a message box, with the browser's own shortcut prevented", async ({
+  page,
+}) => {
+  const channel = "browser-search-ctrl";
+  const opened = await openedOn(page, channel);
+  await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
+  await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
+  const prevented = await pressedPrevented({ ...SHORTCUT, page });
 
-    await expect(page.getByRole("searchbox", BOX)).toBeFocused();
-    await expect(page.locator("body")).toHaveAttribute("data-shortcut-prevented", "true");
-  });
-}
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
+  expect(prevented).toBe(true);
+});
 
 test("Inbox keys typed in the search box change nothing in the Inbox", async ({ page }) => {
   const selected = await selectedInInbox(page, "browser-search-letters");
   await searched(page, "jkeu");
 
-  await expect(page.getByRole("searchbox", BOX)).toHaveValue("jkeu");
-  await expect(page.getByRole("searchbox", BOX)).toBeFocused();
+  await expect(page.getByRole("combobox", BOX)).toHaveValue("jkeu");
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
 
   expect(page.url()).toBe(selected);
 });
@@ -97,11 +85,11 @@ test("Escape closes the list, gives focus back, and the Inbox's selected row sta
   const selected = await selectedInInbox(page, channel);
   await searched(page, `pangolinkey ${channel}`);
 
-  await expect(page.getByRole("list", RESULTS)).toBeVisible();
+  await expect(page.getByRole("listbox", RESULTS)).toBeVisible();
 
   await page.keyboard.press("Escape");
 
-  await expect(page.getByRole("list", RESULTS)).toBeHidden();
+  await expect(page.getByRole("listbox", RESULTS)).toBeHidden();
   await expect(inPane(page).locator(`a[data-feed-row][href="${new URL(selected).hash}"]`)).toBeFocused();
 
   expect(page.url()).toBe(selected);
@@ -113,12 +101,14 @@ test("Down, Up and Enter open the highlighted result", async ({ page }) => {
   await page.goto("/#/inbox");
   await searched(page, `pangolinkey ${channel}`);
 
-  await expect(page.getByRole("list", RESULTS).getByRole("listitem")).toHaveCount(BOTH);
+  await expect(
+    page.getByRole("listbox", RESULTS).getByRole("group", { name: "Messages" }).getByRole("option"),
+  ).toHaveCount(BOTH);
 
   await pressed(page, ["ArrowDown", "ArrowDown", "ArrowUp", "Enter"]);
 
   await expect(page).toHaveURL(
     new RegExp(`#/channels/${channel}/threads/${String(opened.thread)}/messages/${String(opened.reply)}$`, "u"),
   );
-  await expect(page.getByRole("list", RESULTS)).toBeHidden();
+  await expect(page.getByRole("listbox", RESULTS)).toBeHidden();
 });

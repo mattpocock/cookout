@@ -21,7 +21,7 @@ interface SearchState {
   readonly query: string;
   readonly open: boolean;
   readonly found: Found;
-  readonly highlighted: number | null;
+  readonly highlighted: number;
 }
 
 type Direction = "down" | "up";
@@ -33,7 +33,7 @@ interface Search {
   readonly open: () => void;
   readonly close: () => void;
   readonly loadMore: () => void;
-  readonly move: (direction: Direction) => void;
+  readonly move: (direction: Direction, ahead?: number) => void;
 }
 
 interface SearchOptions {
@@ -85,21 +85,8 @@ function foundAfter(earlier: readonly SearchResult[], answer: SearchAnswer): Fou
   return { cursor: cursorOf(page), loadingMore: false, results: [...earlier, ...page.results], status: "found" };
 }
 
-function startOf(direction: Direction, count: number): number {
-  if (direction === "down") {
-    return FIRST;
-  }
-  return count - ONE;
-}
-
-function movedTo(at: number | null, direction: Direction, count: number): number | null {
-  if (count === FIRST) {
-    return null;
-  }
-  if (at === null) {
-    return startOf(direction, count);
-  }
-  return Math.min(Math.max(at + STEPS[direction], FIRST), count - ONE);
+function movedTo(at: number, direction: Direction, count: number): number {
+  return Math.max(Math.min(at + STEPS[direction], count - ONE), FIRST);
 }
 
 function foundWhileEditing(query: string): Found {
@@ -117,7 +104,7 @@ interface Held {
 
 function heldState(): Held {
   const listeners = new Set<() => void>();
-  let state: SearchState = { found: IDLE, highlighted: null, open: false, query: "" };
+  let state: SearchState = { found: IDLE, highlighted: FIRST, open: false, query: "" };
   return {
     set: (next) => {
       state = { ...state, ...next };
@@ -188,7 +175,7 @@ function createSearch(options: SearchOptions): Search {
   }
   return {
     close: () => {
-      held.set({ highlighted: null, open: false });
+      held.set({ highlighted: FIRST, open: false });
     },
     edit: (query) => {
       if (waiting !== null) {
@@ -196,17 +183,17 @@ function createSearch(options: SearchOptions): Search {
       }
       asker.drop();
       const found = foundWhileEditing(query);
-      held.set({ found, highlighted: null, open: true, query });
+      held.set({ found, highlighted: FIRST, open: true, query });
       if (found === SEARCHING) {
         waiting = globalThis.setTimeout(firstPage, options.pause ?? PAUSE_MS);
       }
     },
     loadMore,
-    move: (direction) => {
-      const count = resultsOf(held.state().found).length;
+    move: (direction, ahead = FIRST) => {
+      const count = ahead + resultsOf(held.state().found).length;
       const highlighted = movedTo(held.state().highlighted, direction, count);
       held.set({ highlighted });
-      if (highlighted === count - ONE) {
+      if (highlighted > ahead - ONE && highlighted === count - ONE) {
         loadMore();
       }
     },

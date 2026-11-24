@@ -1,3 +1,4 @@
+import type { BoxOption } from "./search-options.ts";
 import type { ReactNode } from "react";
 import { SearchResultRows } from "./search-result-rows.tsx";
 import type { SearchState } from "../../search/web.ts";
@@ -7,6 +8,9 @@ const NONE = 0;
 
 interface SearchResultsProps {
   readonly state: SearchState;
+  readonly options: readonly BoxOption[];
+  readonly list: string;
+  readonly onChoose: (href: string) => void;
 }
 
 function noteOf(state: SearchState): string | null {
@@ -26,12 +30,17 @@ function noteOf(state: SearchState): string | null {
 export function SearchResults(props: SearchResultsProps): ReactNode {
   const { state } = props;
   const note = noteOf(state);
+  const handleChoose = props.onChoose;
   return (
     <div className="absolute top-full right-0 w-[28rem] max-w-[calc(100vw-2rem)] z-30 mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-background p-1 shadow-lg">
+      <SearchResultRows
+        highlighted={state.highlighted}
+        list={props.list}
+        onChoose={handleChoose}
+        options={props.options}
+        query={state.query}
+      />
       {note !== null && <output className="block px-3 py-2 text-sm text-muted-foreground">{note}</output>}
-      {state.found.status === "found" && (
-        <SearchResultRows highlighted={state.highlighted} query={state.query} results={state.found.results} />
-      )}
     </div>
   );
 }

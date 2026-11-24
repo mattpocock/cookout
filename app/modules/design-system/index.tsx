@@ -142,12 +142,16 @@
  * `RowButton` and `PressButton` are outline ones), and `SendButton` is its paper-plane icon form, named and tooltipped
  * by `label`; `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any
  * muted detail after it), one selected, which leaves the box focused even when a pointer picks one; it sits in the
- * overlay layer, above everything else in the pane. `DataArea` is a labelled box to write JSON in, whose text its owner
- * holds. `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel
- * and a submit button, its first field focused, and Escape anywhere in it calls `onEscape`; in it `InputField` (text, a
- * number, an integer, a date or a time), `PickField` (one of a list, or none) and `CheckField` (a checkbox) are
- * labelled fields whose value their owner holds, each marked when required, with its help text and any error under it,
- * both read out as its description.
+ * overlay layer, above everything else in the pane. `ComboboxField` is a named search input (`box` its ID) led by a search
+ * icon, that is a combobox controlling the listbox `list`, its option at `active` the active one while
+ * `expanded`; `ResultList` is a named listbox (`list` its ID) of named `ResultGroup`s of `ResultOption`s, each a label,
+ * any muted detail and its children, highlighted (and scrolled into view) when `highlighted`; pressing one calls
+ * `onChoose` with its `href`, leaving the box focused. `DataArea` is a labelled box to write JSON in, `LinesArea` an
+ * optional one for lines (`name: value` headers), whose text its owner holds. `PromptForm` is a named card in place of
+ * a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused, and
+ * Escape anywhere in it calls `onEscape`; in it `InputField` (text, a number, an integer, a date or a time), `PickField`
+ * (one of a list, or none) and `CheckField` (a checkbox) are labelled fields whose value their owner holds, each marked
+ * when required, with its help text and any error under it, both read out as its description.
  */
 export {
   AppShell,
@@ -241,6 +245,7 @@ export {
   CheckField,
   ChoiceGroup,
   DataArea,
+  LinesArea,
   Form,
   LineForm,
   SettingForm,
@@ -254,6 +259,10 @@ export {
   PickField,
   PromptForm,
   Suggestions,
+  ComboboxField,
+  ResultGroup,
+  ResultList,
+  ResultOption,
   SendButton,
   SubmitButton,
   TextArea,

@@ -37,19 +37,20 @@ Only a person can do these steps.
 
    Paste the prompt from [cookout-worker.md](cookout-worker.md), everything below its line. If the routine limits pushes to `claude/…` branches, allow unrestricted pushes for this repository: the worker pushes `ticket-<N>`.
 2. **Create its API trigger** and its token, as for `/spawn-agent` below. Keep the token with whoever fires it.
-3. **For each worker that should wake on mention**, its owner sets the trigger URL in their own terminal, with the token on stdin:
+3. **For each worker that should wake on mention**, its owner sets the trigger URL in their own terminal, with the token on stdin and the headers a routine's fire URL asks for (mattpocock/cookout#440):
 
    ```sh
-   cookout identity trigger set bella <fire URL> < token-file
+   cookout identity trigger set bella <fire URL> \
+     --header 'anthropic-version: 2023-06-01' \
+     --header 'anthropic-beta: experimental-cc-routine-2026-04-01' < token-file
    ```
 
    Only the owner can: the chief of staff, which brought it in, is refused with `not_owner`.
 
-The run needs `@ai-hero/cookout` 0.5.0 or later, the first release with `approve-join` and trigger URLs.
+The run needs `@ai-hero/cookout` 0.5.0 or later, the first release with `approve-join` and trigger URLs. The owner's `--header` needs the first release after 0.5.0.
 
 ### Not yet
 
-- The board's trigger POST sends only `Authorization` and `{ "text" }`. A routine's fire URL also asks for an `anthropic-version` header, which `/spawn-agent` sends and the trigger doesn't, so a mention may be refused there and the worker show Unreachable. Check `cookout identity trigger get <agent>` after the first mention.
 - Nothing on the board lists a pending join request: the code is only in the run's session, so the approver opens the session to read it. A mention-triggered run is listed in the routine's history on claude.ai, not on the board.
 
 ## Spawning with `/spawn-agent`

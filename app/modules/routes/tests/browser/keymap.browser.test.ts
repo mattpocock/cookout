@@ -54,8 +54,8 @@ test("ctrl+K opens the search box from the reply box, and Escape gives focus bac
   await reply.click();
   await page.keyboard.press("Control+k");
 
-  await expect(page.getByRole("searchbox", BOX)).toBeFocused();
-  await expect(page.getByRole("searchbox", BOX)).toHaveAttribute("placeholder", "Search messages (Ctrl+K)");
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
+  await expect(page.getByRole("combobox", BOX)).toHaveAttribute("placeholder", "Go to or search (Ctrl+K)");
 
   await page.keyboard.press("Escape");
 
@@ -68,9 +68,31 @@ test("on a Mac, Cmd+K opens the search box and its placeholder names ⌘K", asyn
   await page.getByRole("textbox", REPLY).click();
   await page.keyboard.press("Meta+k");
 
-  await expect(page.getByRole("searchbox", BOX)).toBeFocused();
-  await expect(page.getByRole("searchbox", BOX)).toHaveAttribute("placeholder", "Search messages (⌘K)");
-  await expect(page.getByRole("searchbox", BOX)).toHaveAttribute("aria-keyshortcuts", "Meta+K");
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
+  await expect(page.getByRole("combobox", BOX)).toHaveAttribute("placeholder", "Go to or search (⌘K)");
+  await expect(page.getByRole("combobox", BOX)).toHaveAttribute("aria-keyshortcuts", "Meta+K");
+});
+
+test("on a Mac, Ctrl+K in the reply box leaves the search box closed", async ({ page }) => {
+  await reportingMac(page);
+  await openedOnThread(page, "browser-keymap-mac-ctrl");
+  const reply = page.getByRole("textbox", REPLY);
+  await reply.click();
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("still here");
+
+  await expect(reply).toBeFocused();
+  await expect(reply).toHaveValue("still here");
+});
+
+test("off a Mac, Cmd+K leaves the search box closed", async ({ page }) => {
+  await openedOnThread(page, "browser-keymap-other-meta");
+  const reply = page.getByRole("textbox", REPLY);
+  await reply.click();
+  await page.keyboard.press("Meta+k");
+  await page.keyboard.type("still here");
+
+  await expect(reply).toBeFocused();
 });
 
 test("escape closes the profile panel", async ({ page }) => {
