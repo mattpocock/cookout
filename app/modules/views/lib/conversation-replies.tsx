@@ -16,7 +16,7 @@ const LAST = -1;
 const NO_THREADS: ReadonlyMap<MessageId, ThreadNews> = new Map();
 
 const plural = new Intl.PluralRules("en");
-const EARLIER = { one: "earlier reply", other: "earlier replies" } as const;
+const EARLIER = { one: "earlier reply", other: "older replies" } as const;
 
 interface ConversationRepliesProps {
   readonly parent: TopLevelMessage;
