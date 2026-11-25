@@ -105,14 +105,6 @@ if (fixesRedV1) {
     vouchedBy: "merge-ticket-",
   });
 }
-requireGreen({
-  advice: `A red ticket-${ticket} run's failed jobs are rerun once, by a fresh run or --continue alike. If they failed again, fix ticket-${ticket}, push it and wait until every job of its Check run passes.`,
-  args: ["--branch", `ticket-${ticket}`, "--commit", gitOutput("rev-parse", `ticket-${ticket}`)],
-  base: ["--branch", "v1", "--commit", gitOutput("merge-base", `ticket-${ticket}`, "origin/v1")],
-  rerunRed: true,
-  subject: `ticket-${ticket}`,
-  vouchedBy: "",
-});
 
 function migrationsBase(): string {
   verdict.failingAt("migrations base");

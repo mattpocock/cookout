@@ -50,6 +50,7 @@ interface Ended {
 }
 
 interface View {
+  readonly headSha?: string;
   readonly jobs: readonly Job[];
   readonly status: string;
   readonly url?: string;
@@ -117,8 +118,8 @@ function ranFor({ job, minutes }: { readonly job: Job; readonly minutes: number 
   return { ...job, completedAt, startedAt: STARTED_AT };
 }
 
-function view({ jobs, status, url = URL }: View): unknown {
-  return { jobs: jobs.map((job) => ({ ...job, databaseId: JOB_ID })), status, url };
+function view({ headSha, jobs, status, url = URL }: View): unknown {
+  return { headSha, jobs: jobs.map((job) => ({ ...job, databaseId: JOB_ID })), status, url };
 }
 
 function stateDir(responses: Responses, workflow = ""): string {

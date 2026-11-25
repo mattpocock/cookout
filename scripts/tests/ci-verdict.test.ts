@@ -110,17 +110,17 @@ it("ends ci:wait with its own exit code when a job was cut off at its time limit
   });
 });
 
-it("ends merge-ticket with a fail verdict naming the red ticket's jobs", { timeout: 20_000 }, () => {
+it("ends merge-ticket with a fail verdict naming v1's red jobs", { timeout: 20_000 }, () => {
   expect.hasAssertions();
 
-  const gh = { list: [RUN], log: [BUDGET_LOG, "e2e-docker\tpnpm e2e:docker\tboom"], view: [BUDGET_WARNED, RED] };
+  const gh = { list: [RUN], log: ["e2e-docker\tpnpm e2e:docker\tboom"], view: [RED] };
 
   expect(lastLine({ args: ["7"], cwd: ticketRepo(), gh, script: "scripts/merge-ticket.ts" })).toBe(
-    "RESULT: FAIL (ticket-7's Check run: e2e-docker)",
+    "RESULT: FAIL (v1's Check run: e2e-docker)",
   );
 });
 
-it("ends merge-ticket with ci:wait's exit code when a ticket job was cut off at its time limit", {
+it("ends merge-ticket with ci:wait's exit code when a v1 job was cut off at its time limit", {
   timeout: 20_000,
 }, () => {
   expect.hasAssertions();
@@ -129,11 +129,15 @@ it("ends merge-ticket with ci:wait's exit code when a ticket job was cut off at 
   mkdirSync(path.join(cwd, ".github", "workflows"), { recursive: true });
   writeFileSync(path.join(cwd, ".github", "workflows", "check.yml"), LIMITED_WORKFLOW);
   const job = ended({ conclusion: "cancelled", failedStep: "pnpm check", name: "browser 1/3" });
-  const cut = view({ jobs: [done("lint"), ranFor({ job, minutes: LIMIT_MINUTES })], status: COMPLETED });
-  const gh = { list: [RUN], view: [view({ jobs: [done("lint")], status: COMPLETED }), cut] };
+  const cut = view({
+    headSha: "abc",
+    jobs: [done("static"), ranFor({ job, minutes: LIMIT_MINUTES })],
+    status: COMPLETED,
+  });
+  const gh = { list: [RUN], view: [cut] };
 
   expect(ranScript({ args: ["7"], cwd, gh, script: "scripts/merge-ticket.ts" })).toStrictEqual({
-    lastLine: "RESULT: FAIL (ticket-7's Check run: browser 1/3 cut off at its time limit)",
+    lastLine: "RESULT: FAIL (v1's Check run: browser 1/3 cut off at its time limit)",
     status: CUT_OFF_EXIT,
   });
 });

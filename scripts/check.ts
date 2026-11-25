@@ -147,7 +147,12 @@ const checks: readonly Check[] = scripted
   .map((check) => commandOf(check));
 
 const ciOnly: readonly CiOnly[] = [
-  { ciJob: "e2e-docker", command: "pnpm e2e:docker", name: "the e2e suite (packages/e2e on the Docker image)" },
+  {
+    ciJob: "e2e-docker",
+    command: "pnpm e2e:docker",
+    name: "the e2e suite (packages/e2e on the Docker image)",
+    workflow: "Release",
+  },
   ...browserSkipped,
 ];
 
