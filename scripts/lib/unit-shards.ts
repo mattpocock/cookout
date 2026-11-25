@@ -1,5 +1,7 @@
+import { COSTS_REPORT, readCosts } from "./file-costs.ts";
 import type { Plan, Planning } from "./timed-shards.ts";
 import { field, list, parseJson, text } from "./json.ts";
+import type { FileTiming } from "./slowest-files.ts";
 import type { Outcome } from "./tools.ts";
 import path from "node:path";
 import { readTimings } from "./slowest-files.ts";
@@ -9,6 +11,7 @@ import { spawnSync } from "node:child_process";
 const BLOB_DIR = ".vitest/blob";
 const VITEST = "node_modules/vitest/vitest.mjs";
 const EXIT_SUCCESS = 0;
+const NONE = 0;
 
 interface UnitPlanning extends Planning {
   readonly cwd: string;
@@ -31,6 +34,14 @@ function unitTestFiles(cwd: string): Outcome<readonly string[]> {
   return { ok: true, value: [...new Set(files)].toSorted() };
 }
 
+function recordedCosts(report: string, cwd: string): readonly FileTiming[] {
+  const costs = readCosts(path.join(path.dirname(report), COSTS_REPORT));
+  if (costs.length > NONE) {
+    return costs;
+  }
+  return readTimings({ base: cwd, file: report, runner: "vitest" });
+}
+
 function unitShardPlan({ cwd, ...planning }: UnitPlanning): Plan {
   return shardPlan({
     ...planning,
@@ -38,7 +49,7 @@ function unitShardPlan({ cwd, ...planning }: UnitPlanning): Plan {
       fallback: "file count",
       name: "unit",
       prefix: "test-timings-tests-",
-      read: (file) => readTimings({ base: cwd, file, runner: "vitest" }),
+      read: (file) => recordedCosts(file, cwd),
       report: "tests.json",
       runArgs: (shard, files) => [
         `--outputFile.blob=${BLOB_DIR}/blob-${shard.replace("/", "-")}.json`,

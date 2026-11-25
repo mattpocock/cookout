@@ -90,7 +90,8 @@ jobs:
 
   # Split by file count, 3 shards took 288, 177 and 157s of tests on a 4-core runner, and the first
   # was cut off at the 5-minute limit (#707). So 6 jobs each run the test files that give it a sixth
-  # of the test time the newest earlier Check run recorded in its test-timings-tests-* artifacts,
+  # of the time the newest earlier Check run recorded in its test-timings-tests-* artifacts (each
+  # file's whole cost, setup and import included, read from its blob report, #751),
   # falling back to Vitest's --shard by file count when there are none (scripts/lib/timed-shards.ts).
   # A shard whose gh call fails reading them fails instead: the others split by the timings, so a
   # split of its own would leave files to no shard and coverage short (#737).
@@ -122,6 +123,9 @@ jobs:
           path: .vitest/blob
           include-hidden-files: true
           retention-days: 1
+      - name: Record each test file's whole cost from the blob report
+        if: always()
+        run: node scripts/test-file-costs.ts
       - name: Upload the per-file test timings
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,6 +134,7 @@ jobs:
           path: |
             .timings/*.txt
             .timings/tests.json
+            .timings/tests-costs.json
           include-hidden-files: true
           if-no-files-found: ignore
 

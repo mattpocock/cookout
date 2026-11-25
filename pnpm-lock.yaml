@@ -99,6 +99,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: 7.1.1
         version: 7.1.1(eslint@10.15.0(jiti@2.7.0))
+      flatted:
+        specifier: 3.4.4
+        version: 3.4.4
       jsdom:
         specifier: ^31.0.1
         version: 31.0.1
