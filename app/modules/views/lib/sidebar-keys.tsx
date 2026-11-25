@@ -1,4 +1,3 @@
-import { Announcement } from "../../design-system/content.tsx";
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";
 import type { ScheduleList } from "../../board/index.ts";
@@ -13,5 +12,6 @@ interface SidebarKeysProps {
 }
 
 export function SidebarKeys(props: SidebarKeysProps): ReactNode {
-  return <Announcement said={useSidebarKeys(props)} />;
+  useSidebarKeys(props);
+  return null;
 }

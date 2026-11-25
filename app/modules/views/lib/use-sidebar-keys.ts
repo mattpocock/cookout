@@ -1,7 +1,7 @@
 import { markRead, markShownRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
 import { useBoardStore, useChannels } from "./use-board.ts";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { LandingContext } from "../../landing/index.ts";
@@ -10,19 +10,11 @@ import type { Unread } from "../../unread/index.ts";
 import { channelOrder } from "./channel-order.ts";
 import { useSidebarCounts } from "./use-unread-levels.ts";
 
-const FIRST = 0;
-const ONE = 1;
-
 interface SidebarKeys {
   readonly keymap: Keymap;
   readonly me: string;
   readonly scheduleList: ScheduleList;
   readonly unread: Unread;
-}
-
-interface Said {
-  readonly count: number;
-  readonly text: string;
 }
 
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
@@ -45,13 +37,9 @@ function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): C
   );
 }
 
-function useSidebarKeys(props: SidebarKeys): Said {
+function useSidebarKeys(props: SidebarKeys): void {
   const { keymap } = props;
-  const [said, setSaid] = useState<Said>({ count: FIRST, text: "" });
-  const announce = useCallback((text: string) => {
-    setSaid((last) => ({ count: last.count + ONE, text }));
-  }, []);
-  const keys = useChannelKeys(props, announce);
+  const keys = useChannelKeys(props, keymap.announce);
   useEffect(() => roving(), []);
   useEffect(() => {
     const unbind = [
@@ -89,7 +77,6 @@ function useSidebarKeys(props: SidebarKeys): Said {
       }
     };
   }, [keymap, keys]);
-  return said;
 }
 
 export { useSidebarKeys };

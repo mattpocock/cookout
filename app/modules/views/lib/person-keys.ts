@@ -10,6 +10,7 @@ function messagePersonOf(message: Act | null): { readonly messagePerson?: Act } 
 
 function personKeysOf(keymap: Keymap): PersonKeysSource {
   return {
+    announce: keymap.announce,
     bind: ({ acts, within }) =>
       keymap.bind({
         actions: { copyName: acts.copyName, viewProfile: acts.viewProfile, ...messagePersonOf(acts.message) },
@@ -25,7 +26,13 @@ function personKeysOf(keymap: Keymap): PersonKeysSource {
 }
 
 function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
-  return { openThread: keymap.shortcutOf("openThread"), reply: keymap.shortcutOf("replyToMessage") };
+  return {
+    copyLink: keymap.shortcutOf("copyMessageLink"),
+    markUnread: keymap.shortcutOf("markUnread"),
+    openThread: keymap.shortcutOf("openThread"),
+    reply: keymap.shortcutOf("replyToMessage"),
+    thread: keymap.shortcutOf("toggleThreadClosed"),
+  };
 }
 
 export { messageShortcutsOf, personKeysOf };

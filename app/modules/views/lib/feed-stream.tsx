@@ -59,6 +59,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
               news={props.threads.get(row.row.message.id) ?? null}
               open={props.open}
               parent={null}
+              threadParent={null}
               receipts={state.receipts}
               reply={null}
               row={row.row}

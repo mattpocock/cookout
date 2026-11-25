@@ -103,7 +103,9 @@ test("each Escape goes out one level: the menu, the reply box, the thread panel,
   await page.keyboard.press("Escape");
 
   await expect(rowOf(page, channel)).toHaveAccessibleName(`#${channel}`);
-  await expect(page.getByRole("status").filter({ hasText: `#${channel} marked read` })).toBeAttached();
+  await expect(
+    page.getByRole("status", { exact: true, name: "Announcements" }).filter({ hasText: `#${channel} marked read` }),
+  ).toBeAttached();
 });
 
 test("Escape on an open identity card closes only the card", async ({ page }) => {
