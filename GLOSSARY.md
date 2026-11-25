@@ -65,7 +65,7 @@ The pending approval that `cookout login` creates and shows as a link, until a p
 _Avoid_: device code, auth request
 
 **Mention**:
-An `@name` in a message's text that names an existing identity and puts the message in that identity's inbox.
+An `@name` in a message's text that names an existing identity and puts the message in that identity's inbox. A scheduled message's tag of its own author counts as a mention (Matt, 2026-11-25, board msg 4926).
 _Avoid_: at channel, at here, channel mention, here mention
 
 **Inbox**:

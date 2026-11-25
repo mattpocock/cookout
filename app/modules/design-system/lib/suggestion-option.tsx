@@ -1,11 +1,13 @@
+import { Avatar } from "./avatar.tsx";
 import { PresenceDot } from "./presence-dot.tsx";
 import type { ReactNode } from "react";
 import type { SuggestionOptionParts } from "./avatar-parts.ts";
 
 export function SuggestionOption(parts: SuggestionOptionParts): ReactNode {
-  const { option, presence } = parts;
+  const { identity, option, presence } = parts;
   return (
     <>
+      {identity !== null && <Avatar agent={identity.agent} name={identity.name} presence={null} size="tiny" />}
       {presence !== null && (
         <PresenceDot
           label={presence.label}

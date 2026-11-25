@@ -18,15 +18,22 @@ async function nodeBlob(): Promise<unknown> {
   return blob.constructor;
 }
 
-async function postedWithFiles({ client, ...post }: FilePost): Promise<Message> {
+async function withNodeForms<Answer>(send: () => Promise<Answer>): Promise<Answer> {
   vi.stubGlobal("FormData", await nodeFormData());
   vi.stubGlobal("Blob", await nodeBlob());
   try {
-    const { message } = await client.createMessage(post);
-    return message;
+    return await send();
   } finally {
     vi.unstubAllGlobals();
   }
 }
 
-export { postedWithFiles };
+async function postedWithFiles({ client, ...post }: FilePost): Promise<Message> {
+  const { message } = await withNodeForms(async () => {
+    const answer = await client.createMessage(post);
+    return answer;
+  });
+  return message;
+}
+
+export { postedWithFiles, withNodeForms };

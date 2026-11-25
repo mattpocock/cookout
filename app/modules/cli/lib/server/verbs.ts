@@ -14,8 +14,8 @@ import { searchCommand, threadCommandFor } from "./thread.ts";
 import { Option } from "effect";
 import { answer } from "./output.ts";
 import { assetCommand } from "./attachments.ts";
-import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
+import { webhookCommandVerb } from "./command.ts";
 
 const NOTHING = {};
 
@@ -155,6 +155,6 @@ export const verbCommands = [
   subscribeCommand,
   unsubscribeCommand,
   scheduleCommand,
-  commandCommand,
+  webhookCommandVerb,
   helpCommand,
 ] as const;

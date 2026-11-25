@@ -3,7 +3,7 @@ import type { Act } from "../../keymap/index.ts";
 const BOX = 'textarea[name="text"]';
 const MESSAGE = "article";
 const LAST = -1;
-const EMPTY = "";
+const FIRST_CHARACTER = 0;
 
 interface MessageBoxKeys {
   readonly remember: (target: unknown, relatedTarget: unknown) => void;
@@ -17,9 +17,9 @@ function boxOf(target: unknown): HTMLTextAreaElement | null {
   return null;
 }
 
-function emptyBoxOf(target: unknown): HTMLTextAreaElement | null {
+function boxAtFirstCharacter(target: unknown): HTMLTextAreaElement | null {
   const box = boxOf(target);
-  if (box === null || box.value !== EMPTY) {
+  if (box === null || box.selectionStart !== FIRST_CHARACTER || box.selectionEnd !== FIRST_CHARACTER) {
     return null;
   }
   return box;
@@ -68,7 +68,7 @@ function createMessageBoxKeys(): MessageBoxKeys {
         }
         return true;
       },
-      newestMessage: ({ target }) => focusedOn(newestNear(emptyBoxOf(target))),
+      newestMessage: ({ target }) => focusedOn(newestNear(boxAtFirstCharacter(target))),
     },
     remember: (target, relatedTarget) => {
       const box = boxOf(target);

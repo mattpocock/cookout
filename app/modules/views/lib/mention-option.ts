@@ -8,6 +8,7 @@ interface MentionOption {
   readonly detail: string | null;
   readonly spoken: string;
   readonly presence: PresenceShown | null;
+  readonly identity: { readonly name: string; readonly agent: boolean } | null;
 }
 
 function spokenMention(identity: Identity): string {
@@ -26,6 +27,7 @@ interface Mentioning {
 function mentionOptionOf({ identity, presences }: Mentioning): MentionOption {
   return {
     detail: identity.displayName ?? null,
+    identity: { agent: identity.kind === "agent", name: identity.name },
     option: `@${identity.name}`,
     presence: shownIn({ name: identity.name, presences }),
     spoken: spokenMention(identity),

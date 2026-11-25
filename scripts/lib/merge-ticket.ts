@@ -1,9 +1,10 @@
 import type { Attempt, PushOptions } from "./merge-push.ts";
-import type { Command, Step } from "./merge-steps.ts";
+import type { Command, Step, Stopped } from "./merge-steps.ts";
 import { DONE, firstStop, git, lines, run, stepOf, stop, tail } from "./merge-steps.ts";
 import { asOneTicketMerge, cleanTree } from "./merge-branch.ts";
 import { branchOf, deleteRemoteBranch, push } from "./merge-push.ts";
 import { failedStep, mergeInto, regenerateFiles } from "./merge-resolve.ts";
+import type { Landed } from "./merge-pull-request.ts";
 import type { MergeRules } from "./merge-resolve.ts";
 import { appendOnlyMigrations } from "./merge-migrations.ts";
 import { lintApproval } from "./merge-lint.ts";
@@ -11,6 +12,7 @@ import { renumberAdrs } from "./merge-adrs.ts";
 
 interface MergeOptions extends PushOptions {
   readonly approved?: string;
+  readonly attempts: number;
   readonly check: Command;
   readonly cwd: string;
   readonly install: Command;
@@ -31,6 +33,7 @@ type Merged =
 
 const LOCKFILE = "pnpm-lock.yaml";
 const NONE = 0;
+const FIRST_ROUND = 1;
 
 function install(options: MergeOptions): Step {
   const ticket = `ticket-${options.ticket}`;
@@ -98,7 +101,7 @@ function attempt(options: MergeOptions): Attempt {
   return push({ options });
 }
 
-function finished(outcome: Attempt): Merged {
+function finished(outcome: Landed | Stopped): Merged {
   if (outcome.kind === "landed") {
     return { ok: true, sha: outcome.sha };
   }
@@ -149,6 +152,24 @@ function mergeMovedV1(options: MergeOptions): Attempt {
   return checkAndPush({ base, options });
 }
 
+function afterAttempt(options: MergeOptions, outcome: Attempt, round: number): Merged {
+  if (outcome.kind !== "moved") {
+    return finished(outcome);
+  }
+  const next = round + FIRST_ROUND;
+  if (next > options.attempts) {
+    return {
+      files: [],
+      ok: false,
+      reason: `v1 kept moving: gave up after ${options.attempts} rounds. Nothing was pushed to v1.`,
+    };
+  }
+  options.log(
+    `v1 moved before the push. Round ${next} of ${options.attempts}: merging the new origin/v1 into ${branchOf(options)}`,
+  );
+  return afterAttempt(options, mergeMovedV1(options), next);
+}
+
 function cleanedUp(options: MergeOptions, merged: Merged): Merged {
   if (merged.ok) {
     deleteRemoteBranch(options);
@@ -162,7 +183,7 @@ function mergeTicket(options: MergeOptions): Merged {
     return finished(clean);
   }
   options.log(`Merging ticket-${options.ticket} into origin/v1`);
-  return cleanedUp(options, finished(attempt(options)));
+  return cleanedUp(options, afterAttempt(options, attempt(options), FIRST_ROUND));
 }
 
 function pushOntoV1(options: MergeOptions): Attempt {
@@ -196,7 +217,7 @@ function continueAttempt(options: MergeOptions): Attempt {
 
 function continueMerge(options: MergeOptions): Merged {
   options.log(`Checking and pushing merge-ticket-${options.ticket}`);
-  return cleanedUp(options, finished(continueAttempt(options)));
+  return cleanedUp(options, afterAttempt(options, continueAttempt(options), FIRST_ROUND));
 }
 
 export type { MergeOptions, Merged };

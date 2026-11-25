@@ -72,6 +72,7 @@
     ],
     "local/no-unsafe-as": "error",
     "local/no-overloads": "error",
+    "local/no-pick-intersections": "error",
     "local/sort-imports": "error",
     "web-rules/page-title-owner": "error",
     "web-rules/keymap-owner": "error",

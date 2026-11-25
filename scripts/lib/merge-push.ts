@@ -1,23 +1,18 @@
-import { DONE, git, lines, stop, tail } from "./merge-steps.ts";
-import type { Landed, Landing } from "./merge-queue.ts";
+import { DONE, firstStop, git, lines, stop, tail } from "./merge-steps.ts";
+import type { Landed, Landing, PullRequest } from "./merge-pull-request.ts";
 import type { Step, Stopped } from "./merge-steps.ts";
 import { titleOf } from "./merge-branch.ts";
-
-interface Queue {
-  readonly land: (landing: Landing) => Landed | Stopped;
-  readonly required: boolean;
-}
 
 interface PushOptions {
   readonly ci: (branch: string, sha: string) => Step;
   readonly cwd: string;
   readonly log: (line: string) => void;
-  readonly queue: Queue;
+  readonly pullRequest: (landing: Landing) => PullRequest | Stopped;
   readonly ticket: number;
   readonly title: string;
 }
 
-type Attempt = Landed | Stopped;
+type Attempt = Landed | { readonly kind: "moved" } | Stopped;
 
 const NONE = 0;
 const NEXT = 1;
@@ -62,7 +57,7 @@ function pushBranch(options: PushOptions, sha: string): Step {
   deleteRemoteBranches(options, branch);
   const pushed = git(options, "push", "-q", "origin", `${sha}:${HEADS}${branch}`);
   if (!pushed.ok) {
-    return stop(`git push origin ${sha}:${branch} failed; nothing was merged.\n${tail(pushed.output)}`);
+    return stop(`git push origin ${sha}:${branch} failed; nothing was pushed to v1.\n${tail(pushed.output)}`);
   }
   options.log(`Pushed ${branch} at ${sha}.`);
   return DONE;
@@ -80,45 +75,53 @@ function adviceOn(options: PushOptions, watched: Stopped): string {
   return `The merge is on ${branch}: its failed jobs were rerun once, so fix it there and commit, then ${resume}.`;
 }
 
-function nothingMerged(options: PushOptions, stopped: Stopped, on: string): Stopped {
-  return { ...stopped, reason: `${stopped.reason}\n${on}\nNothing was merged. ${adviceOn(options, stopped)}` };
+function nothingPushed(options: PushOptions, stopped: Stopped, on: string): Stopped {
+  return { ...stopped, reason: `${stopped.reason}\n${on}\nNothing was pushed to v1. ${adviceOn(options, stopped)}` };
 }
 
 function greenOnCi(options: PushOptions, sha: string): Step {
   const branch = attemptBranchOf(options, sha);
-  if (options.queue.required) {
-    options.log(`v1 lands through the merge queue: its merge_group Check run is the gate, not ${branch}'s push run.`);
-    return DONE;
-  }
-  options.log(`v1 has no merge queue yet: waiting for ${branch}'s Check run before enqueuing.`);
+  options.log(`Waiting for ${branch}'s Check run before fast-forwarding v1 to ${sha}.`);
   const watched = options.ci(branch, sha);
   if (watched.kind === "stopped") {
-    return nothingMerged(options, watched, `That Check run was on ${branch} at ${sha}.`);
+    return nothingPushed(options, watched, `That Check run was on ${branch} at ${sha}.`);
   }
   return DONE;
 }
 
-function pushedAndGreen(options: PushOptions, sha: string): Step {
-  const pushed = pushBranch(options, sha);
-  if (pushed.kind === "stopped") {
-    return pushed;
+function openedPullRequest(options: PushOptions, sha: string): Step {
+  const opened = options.pullRequest({ branch: attemptBranchOf(options, sha), sha, title: titleOf(options) });
+  if ("kind" in opened) {
+    return nothingPushed(options, opened, `${attemptBranchOf(options, sha)} is on origin at ${sha}.`);
   }
-  return greenOnCi(options, sha);
+  return DONE;
+}
+
+function fastForwardV1(options: PushOptions, sha: string): Attempt {
+  const pushed = git(options, "push", "-q", "origin", `${sha}:${HEADS}v1`);
+  if (pushed.ok) {
+    options.log(`Fast-forwarded v1 to ${sha}, whose Check run is green.`);
+    return { kind: "landed", sha };
+  }
+  git(options, "fetch", "-q", "origin");
+  if (git(options, "merge-base", "--is-ancestor", "origin/v1", sha).ok) {
+    return stop(`git push origin ${sha}:${HEADS}v1 failed, though v1 has not moved.\n${tail(pushed.output)}`);
+  }
+  return { kind: "moved" };
 }
 
 function push({ options }: { readonly options: PushOptions }): Attempt {
   const sha = git(options, "rev-parse", "HEAD").output;
-  const branch = attemptBranchOf(options, sha);
-  const watched = pushedAndGreen(options, sha);
-  if (watched.kind === "stopped") {
-    return watched;
+  const ready = firstStop([
+    (): Step => pushBranch(options, sha),
+    (): Step => openedPullRequest(options, sha),
+    (): Step => greenOnCi(options, sha),
+  ]);
+  if (ready.kind === "stopped") {
+    return ready;
   }
-  const landed = options.queue.land({ branch, sha, title: titleOf(options) });
-  if (landed.kind === "stopped") {
-    return nothingMerged(options, landed, `The pull request's head is ${branch} at ${sha}.`);
-  }
-  return landed;
+  return fastForwardV1(options, sha);
 }
 
-export type { Attempt, PushOptions, Queue };
+export type { Attempt, PushOptions };
 export { branchOf, deleteRemoteBranch, push };

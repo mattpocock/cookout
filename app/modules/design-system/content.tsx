@@ -2,7 +2,8 @@
  * The design system's content: text, names, avatars, lists and live regions (`layout.tsx` has the design system as a whole).
  *
  * - `Pill` is a count read out by its label, loud (the unread colour), quiet, or unseen (read out only).
- * - A name's avatar is its coloured initials, one of eight hues hashed from the name, a circle for a human and a rounded square for an agent, with its `PresenceDot` in the corner once its presence is known.
+ * - A name's avatar is its picture, from the nearest `AvatarImages` source, named by its display name; or, when it has none or the picture fails to load, its coloured initials, one of eight hues hashed from the name. It is a circle for a human and a rounded square for an agent, with its `PresenceDot` in the corner once its presence is known. Every avatar of a name (a message's, a row's, a profile's, a mention suggestion's, an identity card's tile) shows the same picture, and a new one as soon as the source has it.
+ * - `AvatarImages` is the source of avatar pictures the views provide, by name; with none, every avatar shows its initials.
  * - `PresenceDot` is filled in the online colour while online, a hollow grey ring while offline, a ring in the accent with a dot in its middle for the owner's warning ("Offline, went offline unexpectedly"), named for a screen reader and as a tooltip ("Offline, last seen 5 minutes ago"), as a `Suggestions` option shows it beside the name.
  * - `Author` is a message's avatar and name (a display name, with the `@name` muted beside it), with an `agent` tag for an agent.
  * - `Tag` is one such small tag, such as `admin`.
@@ -48,4 +49,6 @@ export {
   IdentityRow,
   Profile,
   ProfileName,
+  AvatarImages,
 } from "./lib/content.ts";
+export type { AvatarImage, AvatarImageSource } from "./lib/avatar-parts.ts";

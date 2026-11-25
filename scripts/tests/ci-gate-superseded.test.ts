@@ -69,6 +69,11 @@ it.each<Responses & { readonly name: string }>([
     name: "the commit's only merge-ticket run is its pull request's",
     view: [V1_RUNNING, HEAD, V1_RUNNING],
   },
+  {
+    list: [RUN, [{ databaseId: 40, event: "merge_group", headBranch: "gh-readonly-queue/v1/pr-9-abc" }]],
+    name: "the commit's only other run is a merge_group run",
+    view: [V1_RUNNING, HEAD, V1_RUNNING],
+  },
   { list: [RUN, ON_COMMIT], name: "the run's commit cannot be read", view: [V1_RUNNING, "fail", V1_RUNNING] },
   { list: [RUN, "fail"], name: "the commit's runs cannot be listed", view: [V1_RUNNING, HEAD, V1_RUNNING] },
 ])("waits for a v1 run still in progress when $name", { timeout: 10_000 }, (responses) => {
@@ -138,28 +143,6 @@ it("passes a cancelled v1 run when the same commit's merge-ticket run is green",
     { kind: "done" },
     [
       `v1's latest Check run is still running or was cancelled, but merge-ticket-7's Check run on the same commit is green: ${MERGE_URL}`,
-    ],
-  ]);
-});
-
-it("counts a v1 run still in progress as green when the merge queue's run on the same commit is green", {
-  timeout: 10_000,
-}, () => {
-  expect.hasAssertions();
-
-  const queueRun = { databaseId: 40, event: "merge_group", headBranch: "gh-readonly-queue/v1/pr-9-abc" };
-  const gh = fake({
-    list: [RUN, [{ databaseId: 42, event: "push", headBranch: "v1" }, queueRun]],
-    view: [V1_RUNNING, HEAD, view({ jobs: [done("lint"), done("e2e-docker")], status: COMPLETED, url: MERGE_URL })],
-    vouchedBy: VOUCHED_BY,
-  });
-
-  const { logs, step } = gh.gate(["--branch", "v1"]);
-
-  expect([step, logs]).toStrictEqual([
-    { kind: "done" },
-    [
-      `v1's latest Check run is still running or was cancelled, but gh-readonly-queue/v1/pr-9-abc's Check run on the same commit is green: ${MERGE_URL}`,
     ],
   ]);
 });

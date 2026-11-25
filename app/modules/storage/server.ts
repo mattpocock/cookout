@@ -42,6 +42,7 @@ export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages
 export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
 export type { SearchPageRequest, SearchQuery } from "./lib/server/search.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
+export { mentionsOwnAuthor } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
 export type {
   ScheduledRun,

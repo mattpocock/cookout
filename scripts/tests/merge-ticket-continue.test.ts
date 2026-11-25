@@ -48,11 +48,11 @@ it("merges the moved v1 into merge-ticket-N on --continue before pushing it", { 
   expect([merged, ran.lines.includes(MOVED_LINE), ran.shas]).toStrictEqual([
     { ok: true, sha: git(origin, "rev-parse", "v1") },
     true,
-    [git(origin, "rev-parse", "v1^2")],
+    [git(origin, "rev-parse", "v1")],
   ]);
   expect([
-    git(origin, "rev-parse", "v1^2^1"),
-    git(origin, "rev-parse", "v1^2^2"),
+    git(origin, "rev-parse", "v1^1"),
+    git(origin, "rev-parse", "v1^2"),
     git(origin, "show", "v1:fixed.txt"),
     git(origin, "log", "-1", "--format=%s", "v1"),
   ]).toStrictEqual([
@@ -76,7 +76,7 @@ it("pushes merge-ticket-N as it is on --continue when v1 has not moved", { timeo
 
   expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(ran.lines).toContain(UNMOVED_LINE);
-  expect([ran.shas, git(origin, "rev-parse", "v1^2")]).toStrictEqual([[pushed], pushed]);
+  expect([ran.shas, git(origin, "rev-parse", "v1")]).toStrictEqual([[pushed], pushed]);
 });
 
 it("stops on --continue when the moved v1 conflicts, then continues once that is resolved", { timeout: 10_000 }, () => {
@@ -98,6 +98,6 @@ it("stops on --continue when the moved v1 conflicts, then continues once that is
   expect([
     git(origin, "show", "v1:notes.txt"),
     git(origin, "log", "-1", "--format=%s", "v1^1"),
-    git(origin, "rev-parse", "v1^2^2"),
+    git(origin, "rev-parse", "v1^2"),
   ]).toStrictEqual(["both", "v1 moves on", git(work, "rev-parse", BRANCH)]);
 });

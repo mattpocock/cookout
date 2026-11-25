@@ -21,6 +21,7 @@ interface CiOnly {
   readonly ciJob: string;
   readonly command: string;
   readonly name: string;
+  readonly workflow?: string;
 }
 
 interface Checks {
@@ -202,13 +203,21 @@ function exitCodeOf(failed: readonly string[]): number {
   return EXIT_FAILURE;
 }
 
+function ownerOf(suite: CiOnly): string {
+  const workflow = suite.workflow ?? "";
+  if (workflow === "") {
+    return "its";
+  }
+  return `the ${workflow} workflow's`;
+}
+
 function reportSkipped({ ciOnly, inCi, job }: Checks): void {
   if (inCi || job !== "") {
     return;
   }
   for (const suite of ciOnly) {
     console.log(
-      `skipped: ${suite.name}, which CI runs as its ${suite.ciJob} job. Run it here on purpose with ${suite.command}.`,
+      `skipped: ${suite.name}, which CI runs as ${ownerOf(suite)} ${suite.ciJob} job. Run it here on purpose with ${suite.command}.`,
     );
   }
 }

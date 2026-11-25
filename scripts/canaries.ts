@@ -34,9 +34,14 @@ const otherPluginRules: ReadonlySet<string> = new Set([
   "region-lookups",
 ]);
 
+const rulesByModule: ReadonlyMap<string, readonly string[]> = new Map([
+  ["type-declarations", ["no-overloads", "no-pick-intersections"]],
+]);
+
 const localRules = readdirSync("lint/rules")
   .filter((file) => file.endsWith(".js"))
   .map((file) => file.slice(0, -".js".length))
+  .flatMap((module) => rulesByModule.get(module) ?? [module])
   .filter((rule) => !otherPluginRules.has(rule));
 
 const nativeRules: readonly (readonly [string, string])[] = [

@@ -45,7 +45,9 @@ function focusedMessage(page: Page): Locator {
   return page.locator("article:focus");
 }
 
-test("↑ in an empty message box focuses the newest message, and with text in the box it doesn't", async ({ page }) => {
+test("↑ in an empty message box focuses the newest message, and with the caret after the first character it doesn't", async ({
+  page,
+}) => {
   const channel = unique("browser-box-up");
   await channelOpened(page, channel);
   await messageBox(page).focus();

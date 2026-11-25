@@ -204,7 +204,7 @@ async function openedThread(page: Page, channel: string): Promise<void> {
   await page.goto(`/#/channels/${channel}/threads/${String(parent.id)}`);
 }
 
-test("the same keys move between an open thread's replies", async ({ page }) => {
+test("the same keys move between an open thread's replies, with Home on its top message", async ({ page }) => {
   await openedThread(page, unique("browser-keys-thread"));
   const replies = inThread(page).getByRole("feed", { exact: true, name: "Replies" });
   await replies
@@ -215,6 +215,6 @@ test("the same keys move between an open thread's replies", async ({ page }) => 
   await pressAndSee(page, "ArrowUp", noteOf(REPLIES - FIRST));
   await pressAndSee(page, "k", noteOf(REPLIES - FIRST - FIRST));
   await pressAndSee(page, "j", noteOf(REPLIES - FIRST));
-  await pressAndSee(page, "Home", noteOf(FIRST));
+  await pressAndSee(page, "Home", "The parent.");
   await pressAndSee(page, "End", noteOf(REPLIES));
 });

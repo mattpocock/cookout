@@ -28,6 +28,6 @@ it("stops on merge-ticket-N's run cut off at its time limit, keeping the cut-off
     cutOff: ["browser 2/3"],
     files: [],
     ok: false,
-    reason: `browser 2/3 was cut off at its time limit of 5 minutes.\nThat Check run was on ${pushed} at ${sha}.\nNothing was merged. The merge is on ${MERGE_BRANCH}: a rerun would hit the same limit, so make the job fit it, commit, then run pnpm merge-ticket ${TICKET} --continue.`,
+    reason: `browser 2/3 was cut off at its time limit of 5 minutes.\nThat Check run was on ${pushed} at ${sha}.\nNothing was pushed to v1. The merge is on ${MERGE_BRANCH}: a rerun would hit the same limit, so make the job fit it, commit, then run pnpm merge-ticket ${TICKET} --continue.`,
   });
 });

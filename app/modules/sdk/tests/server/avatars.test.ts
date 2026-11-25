@@ -1,13 +1,11 @@
-import type { CookoutClient, CookoutEvent, EventStream } from "../../index.ts";
 import { Effect, Option, String as Str } from "effect";
-import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, refusal, testCookout, watchingAllChannels } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { avatarPng, hillsPng } from "../../../testing/index.ts";
 import { expect, it } from "@effect/vitest";
 import { request, requestBytes } from "../../../http/client.ts";
 import type { AvatarId } from "../../../avatars/index.ts";
 import type { HttpResponse } from "../../../http/client.ts";
-import type { Scope } from "effect";
 
 const FIRST = 0;
 const BAD_REQUEST = 400;
@@ -76,16 +74,6 @@ function asked(
 ): Effect.Effect<HttpResponse> {
   return answer(() =>
     request({ baseUrl: cookout.url, headers, method: "GET", params: { id: requested }, path: AVATAR }),
-  );
-}
-
-function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
-  return Effect.map(
-    Effect.acquireRelease(
-      answer(() => client.watch({ allChannels: true })),
-      (events: EventStream) => answer(() => events.close()),
-    ),
-    (events) => events[Symbol.asyncIterator](),
   );
 }
 
@@ -245,7 +233,7 @@ it.effect("setting an avatar reaches every all-channels watcher at once as an id
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     const { identity } = yield* answer(() => ada.client.setAvatar("ada", avatarPng()));
     const event = yield* answer(() => events.next());
 

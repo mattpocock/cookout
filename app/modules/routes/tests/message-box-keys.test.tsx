@@ -54,7 +54,7 @@ async function opened(channel: string): Promise<() => void> {
   return close;
 }
 
-it("↑ in an empty message box focuses the newest message, and with text in the box it moves the cursor", {
+it("↑ in an empty message box focuses the newest message, and with the caret after the first character it moves the cursor", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();

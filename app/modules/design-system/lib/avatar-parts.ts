@@ -11,6 +11,21 @@ interface PresenceDotParts extends PresenceShown {
   readonly place?: "avatar" | "card" | "inline";
 }
 
+interface AvatarImage {
+  readonly src: string;
+  readonly alt: string;
+}
+
+interface AvatarImageSource {
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly imageOf: (name: string) => AvatarImage | null;
+}
+
+interface SuggestedIdentity {
+  readonly name: string;
+  readonly agent: boolean;
+}
+
 interface AvatarParts {
   readonly name: string;
   readonly agent: boolean;
@@ -23,6 +38,7 @@ interface SuggestionOptionParts {
   readonly detail: string | null;
   readonly spoken: string;
   readonly presence: PresenceShown | null;
+  readonly identity: SuggestedIdentity | null;
 }
 
 interface SuggestionsParts {
@@ -34,4 +50,12 @@ interface SuggestionsParts {
   readonly place?: "above" | "below";
 }
 
-export type { AvatarParts, PresenceDotParts, PresenceShown, SuggestionOptionParts, SuggestionsParts };
+export type {
+  AvatarImage,
+  AvatarImageSource,
+  AvatarParts,
+  PresenceDotParts,
+  PresenceShown,
+  SuggestionOptionParts,
+  SuggestionsParts,
+};

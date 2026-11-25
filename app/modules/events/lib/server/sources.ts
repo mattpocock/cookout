@@ -33,8 +33,7 @@ type SourceNeeds =
   | LiveConnectionNeeds
   | TriggerNeeds;
 
-const sources: readonly EventSource<SourceNeeds>[] = [
-  connected,
+const listening: readonly EventSource<SourceNeeds>[] = [
   inboxItems,
   reactionItems,
   nudges,
@@ -57,5 +56,7 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   presence,
   heartbeat,
 ];
+
+const sources = { connected, listening } as const;
 
 export { type SourceNeeds, sources };

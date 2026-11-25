@@ -1,22 +1,10 @@
-import type { CookoutClient, CookoutEvent, EventStream } from "../../index.ts";
-import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, testCookout, watchingAllChannels } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
 
 const A_MINUTE_IN = "2026-01-01T00:01:00.000Z";
-
-function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
-  return Effect.map(
-    Effect.acquireRelease(
-      answer(() => client.watch({ allChannels: true })),
-      (events: EventStream) => answer(() => events.close()),
-    ),
-    (events) => events[Symbol.asyncIterator](),
-  );
-}
 
 interface InGrill {
   readonly cookout: TestCookout["Service"];
@@ -126,7 +114,7 @@ it.effect("the all-channels feed sends a read-receipt event for a new receipt, a
     const { ann, bob, cookout } = yield* annAndBobInGrill;
     const dan = yield* cookout.createIdentity("dan");
     const cat = yield* cookout.createIdentity("cat", { kind: "human" });
-    const events = yield* watchingAllChannels(cat.client);
+    const events = yield* watchingAllChannels(cat);
     const { message } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob look" }));
     yield* answer(() => events.next());
 

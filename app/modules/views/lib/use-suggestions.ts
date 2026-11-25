@@ -32,6 +32,7 @@ function shownFor({ commands, suggestions }: SuggestionsOf, handlers: Handlers, 
   if (commands.length > NONE) {
     const options = commands.map((command) => ({
       detail: command.description ?? null,
+      identity: null,
       option: `/${command.name}`,
       presence: null,
       spoken: `/${command.name}`,

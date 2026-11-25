@@ -95,7 +95,7 @@ function unboxed(): void {
 function pressedRightOnOthers(): readonly boolean[] {
   const pressed: boolean[] = [];
   for (const link of globalThis.document.querySelectorAll(
-    'nav[aria-label="Sidebar"] a[href]:not([href^="#/channels/"])',
+    'nav[aria-label="Sidebar"] a[href]:not([href^="#/channels/"]):not([href="#/inbox"])',
   )) {
     pressed.push(pressedOn(link, RIGHT));
   }
@@ -157,7 +157,7 @@ it("→ on another channel's link opens it and lands on its newest message", { t
   close();
 });
 
-it("→ leaves a key alone on a sidebar link that isn't a channel's, or a row's button", {
+it("→ leaves a key alone on a sidebar link that isn't a channel's or the Inbox's, or a row's button", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();

@@ -19,6 +19,7 @@ import type { Scope } from "effect";
 import { hrefOf } from "../../../paths/index.ts";
 import { isOkStatus } from "../../index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
+import { mentionsOwnAuthor } from "../../../storage/server.ts";
 import { shownTrigger } from "./wire.ts";
 
 interface Mentioned {
@@ -48,12 +49,16 @@ function textFor(boardUrl: string, message: Message): string {
   return `${boardUrl}/${href}\n\n${message.text}`;
 }
 
-function callable(storage: Storage["Service"], author: IdentityName) {
+function isMentionedBy(message: Message, agent: IdentityName): boolean {
+  return agent !== message.author.name || mentionsOwnAuthor(message);
+}
+
+function callable(storage: Storage["Service"], message: Message) {
   return (agent: IdentityName): Effect.Effect<readonly StoredTrigger[], StorageUnavailable> =>
     Effect.gen(function* findCallable() {
       const identity = yield* storage.findIdentityByName(agent);
       const active = Predicate.isNotUndefined(identity) && identity.kind === "agent" && identity.deactivated !== true;
-      if (!active || agent === author) {
+      if (!active || !isMentionedBy(message, agent)) {
         return [];
       }
       const trigger = yield* storage.findTrigger(agent);
@@ -62,7 +67,7 @@ function callable(storage: Storage["Service"], author: IdentityName) {
 }
 
 function mentionedIn(storage: Storage["Service"], message: Message): Effect.Effect<readonly Mentioned[]> {
-  return Effect.forEach(message.mentions, callable(storage, message.author.name), ONE_AT_A_TIME).pipe(
+  return Effect.forEach(message.mentions, callable(storage, message), ONE_AT_A_TIME).pipe(
     Effect.map((found: readonly (readonly StoredTrigger[])[]) =>
       Arr.map(Arr.flatten(found), (trigger) => ({ message, trigger })),
     ),

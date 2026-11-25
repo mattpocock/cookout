@@ -28,7 +28,6 @@ const GREEN = "success";
 const COMPLETED = "completed";
 const UNVOUCHED = "unvouched";
 const PUSH = "push";
-const MERGE_GROUP = "merge_group";
 const LIST = ["run", "list", "--workflow", "Check", "--json", "databaseId,headBranch,event"];
 
 function ghJson(options: Vouch, args: readonly string[]): unknown {
@@ -58,7 +57,7 @@ function voucherOf(options: Vouch, sha: string): Listed | typeof UNVOUCHED {
   const runs = list(ghJson(options, [...LIST, "--commit", sha])) ?? [];
   const found = runs
     .flatMap((value) => listedOf(value))
-    .find(({ branch, event }) => event === MERGE_GROUP || (event === PUSH && branch.startsWith(options.branchPrefix)));
+    .find(({ branch, event }) => event === PUSH && branch.startsWith(options.branchPrefix));
   return found ?? UNVOUCHED;
 }
 

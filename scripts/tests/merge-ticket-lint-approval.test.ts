@@ -212,7 +212,7 @@ it.each(loosenings)(
     const merged = repo(work).merge({ approved: APPROVAL });
 
     expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
-    expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe(
+    expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe(
       `board msg ${APPROVAL}`,
     );
   },
@@ -227,7 +227,7 @@ it.each(tightenings)("lands a ticket with $name without an approval", { timeout:
   const merged = repo(work).merge({});
 
   expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
-  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe("");
+  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe("");
 });
 
 it("keeps the approval trailer when merge-ticket --continue lands a merge resolved by hand", {
@@ -244,7 +244,7 @@ it("keeps the approval trailer when merge-ticket --continue lands a merge resolv
   const merged = repo(work).continueMerge({ approved: APPROVAL });
 
   expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
-  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe(
+  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe(
     `board msg ${APPROVAL}`,
   );
 });

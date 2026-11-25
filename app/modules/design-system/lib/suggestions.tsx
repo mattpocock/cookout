@@ -27,6 +27,7 @@ export function Suggestions(parts: SuggestionsParts): ReactNode {
     (suggested: Suggested) => (
       <SuggestionOption
         detail={suggested.suggestion.detail}
+        identity={suggested.suggestion.identity}
         option={suggested.suggestion.option}
         presence={suggested.suggestion.presence}
         spoken={suggested.suggestion.spoken}

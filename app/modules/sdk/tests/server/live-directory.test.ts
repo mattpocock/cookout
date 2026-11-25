@@ -1,26 +1,14 @@
-import type { CookoutClient, CookoutEvent, EventStream } from "../../index.ts";
-import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, testCookout, watchingAllChannels } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import type { Scope } from "effect";
 import { createTestAgent } from "../../../testing/index.ts";
-
-function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
-  return Effect.map(
-    Effect.acquireRelease(
-      answer(() => client.watch({ allChannels: true })),
-      (events: EventStream) => answer(() => events.close()),
-    ),
-    (events) => events[Symbol.asyncIterator](),
-  );
-}
 
 it.effect("a new agent reaches every all-channels watcher as an identity event", () =>
   Effect.gen(function* newAgentArrives() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     const { identity } = yield* answer(() =>
       createTestAgent({ by: ada.client, displayName: "ada/helper", name: "ada/helper" }),
     );
@@ -35,7 +23,7 @@ it.effect("an agent that joining creates reaches every all-channels watcher as a
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     yield* answer(() => ada.client.join({ as: "release-bot", displayName: "Release bot" }));
     const event = yield* answer(() => events.next());
 
@@ -51,7 +39,7 @@ it.effect("deactivating a human sends it as an identity event, and nothing for t
     yield* cookout.createIdentity("ada", { kind: "human" });
     yield* cookout.createIdentity("ada/helper", { owner: "ada" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     const { identity } = yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const first = yield* answer(() => events.next());
     yield* answer(() => cookout.client.setDisplayName("grace", "Grace"));
@@ -70,7 +58,7 @@ it.effect("reactivating an agent and transferring it each send it as an identity
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     yield* cookout.createIdentity("release-bot");
     yield* answer(() => cookout.client.deactivateIdentity("release-bot"));
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     const reactivated = yield* answer(() => cookout.client.reactivateIdentity("release-bot"));
     const afterReactivating = yield* answer(() => events.next());
     const transferred = yield* answer(() => cookout.client.transferAgent("release-bot", "grace"));
@@ -88,7 +76,7 @@ it.effect("making and removing an admin each send the identity as an identity ev
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("grace", { kind: "human" });
     const eve = yield* cookout.createIdentity("eve", { kind: "human" });
-    const events = yield* watchingAllChannels(eve.client);
+    const events = yield* watchingAllChannels(eve);
     const promoted = yield* answer(() => cookout.client.makeAdmin("grace"));
     const afterPromoting = yield* answer(() => events.next());
     const demoted = yield* answer(() => cookout.client.removeAdmin("grace"));
@@ -106,7 +94,7 @@ it.effect("a new channel reaches every all-channels watcher as a channel event",
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const events = yield* watchingAllChannels(grace.client);
+    const events = yield* watchingAllChannels(grace);
     const { channel } = yield* answer(() => ada.client.createChannel({ name: "grill" }));
     const event = yield* answer(() => events.next());
 

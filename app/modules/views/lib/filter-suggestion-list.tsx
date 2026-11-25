@@ -27,7 +27,13 @@ function optionOf(suggestion: FilterSuggestion, presences: Presences): MentionOp
   if (suggestion.identity !== null) {
     return mentionOptionOf({ identity: suggestion.identity, presences });
   }
-  return { detail: suggestion.detail, option: suggestion.option, presence: null, spoken: spokenOf(suggestion) };
+  return {
+    detail: suggestion.detail,
+    identity: null,
+    option: suggestion.option,
+    presence: null,
+    spoken: spokenOf(suggestion),
+  };
 }
 
 export function FilterSuggestionList(props: FilterSuggestionListProps): ReactNode {

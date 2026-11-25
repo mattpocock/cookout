@@ -12,3 +12,5 @@
 ## Considered options
 
 - **Make → on another channel's link land on its message box, as Alt+↓ does**: rejected; the key says "into the messages".
+
+Superseded in part on 2026-11-25 by [ADR 0106](0106-the-inbox-is-a-column-and-up-leaves-a-box-from-its-first-character.md): the Inbox's rows are a column too, and ↑ leaves a box from its first character, not only an empty one (mattpocock/cookout#587).

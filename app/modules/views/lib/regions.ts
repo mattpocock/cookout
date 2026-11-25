@@ -2,11 +2,14 @@ import type { Act } from "../../keymap/index.ts";
 
 const SIDEBAR = 'nav[aria-label="Sidebar"]';
 const FEED = 'main [role="feed"]';
+const ROW = "main a[data-feed-row]";
 const MESSAGES = "section[aria-label]";
 const PANEL = "main aside";
 const MESSAGE_BOX = "main form";
 const ENTRIES = [
   'article[tabindex="0"], a[tabindex="0"]',
+  'a[data-feed-row][aria-current="page"]',
+  "a[data-feed-row]",
   "textarea",
   'a[href], button, input, select, [tabindex]:not([tabindex="-1"])',
 ] as const;
@@ -32,7 +35,7 @@ function outsidePanel(selector: string): Element | null {
 }
 
 function messagesRegion(): Element | null {
-  const feed = outsidePanel(FEED);
+  const feed = outsidePanel(FEED) ?? outsidePanel(ROW);
   if (feed === null) {
     return null;
   }

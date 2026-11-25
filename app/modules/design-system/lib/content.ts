@@ -18,3 +18,4 @@ export { DateText } from "./date-text.tsx";
 export { IdentityRow } from "./identity-row.tsx";
 export { Profile } from "./profile.tsx";
 export { ProfileName } from "./profile-name.tsx";
+export { AvatarImages } from "./avatar-images.ts";

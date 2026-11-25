@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inThread } from "./regions.ts";
+import { inPane, inThread } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -10,6 +10,7 @@ const test = base.extend(probeFixtures);
 
 const UP = "ArrowUp";
 const DOWN = "ArrowDown";
+const RIGHT = "ArrowRight";
 const REPLY_BOX = { exact: true, name: "Reply" } as const;
 
 interface Opening {
@@ -91,4 +92,54 @@ test("the actions menu opens from the keyboard on the top message reached by ↑
   await page.keyboard.press("Shift+F10");
 
   await expect(page.getByRole("menu", { exact: true, name: "Message actions" })).toBeVisible();
+});
+
+function channelMessage(page: Page, text: string): Locator {
+  return inPane(page)
+    .getByRole("feed", { exact: true, name: "Messages" })
+    .getByRole("article")
+    .filter({ hasText: text });
+}
+
+async function enteredByArrow(page: Page): Promise<void> {
+  const channel = unique("browser-top-enter");
+  await opened({ channel, page, replied: true });
+  await page.goto(`/#/channels/${channel}`);
+  const top = channelMessage(page, "The top message.");
+
+  await expect(top).toBeVisible();
+
+  await top.focus();
+  await page.keyboard.press(RIGHT);
+
+  await expect(topMessage(page)).toBeFocused();
+}
+
+test("→ then ↓ focuses the first reply, and k on it focuses the top message again", async ({ page }) => {
+  await enteredByArrow(page);
+  await page.keyboard.press(DOWN);
+
+  await expect(replySaying(page, "The first reply.")).toBeFocused();
+
+  await page.keyboard.press("k");
+
+  await expect(topMessage(page)).toBeFocused();
+});
+
+test("j on the top message focuses the first reply", async ({ page }) => {
+  await enteredByArrow(page);
+  await page.keyboard.press("j");
+
+  await expect(replySaying(page, "The first reply.")).toBeFocused();
+});
+
+test("Home and End in the thread panel focus the top message and the newest reply", async ({ page }) => {
+  await enteredByArrow(page);
+  await page.keyboard.press("End");
+
+  await expect(replySaying(page, "The last reply.")).toBeFocused();
+
+  await page.keyboard.press("Home");
+
+  await expect(topMessage(page)).toBeFocused();
 });

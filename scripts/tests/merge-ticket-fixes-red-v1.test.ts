@@ -8,23 +8,23 @@ import { tmpdir } from "node:os";
 const LAST = -1;
 const EXECUTABLE = 0o755;
 const PR = "https://github.com/o/r/pull/9";
-const QUEUE_RUN = { databaseId: 50, headBranch: "gh-readonly-queue/v1/pr-9-abc", headSha: "abc" };
-const GREEN = view({ jobs: [done("lint"), done("checked")], status: COMPLETED });
+const GREEN = view({ jobs: [done("lint"), done("tests")], status: COMPLETED });
 const EXIT_OK = 0;
-const ENQUEUED = new RegExp(`^merge-ticket: Enqueued ${PR} in v1's merge queue at [0-9a-f]{40}\\.$`, "u");
+const START = 0;
+const SHORT = 12;
+const FAST_FORWARDED = /^merge-ticket: Fast-forwarded v1 to [0-9a-f]{40}, whose Check run is green\.$/u;
 const IDENTITY = [
   ["user.email", "test@example.com"],
   ["user.name", "Test"],
   ["commit.gpgsign", "false"],
 ] as const;
-const MERGED = { autoMergeRequest: null, mergeCommit: { oid: "m3rg3" }, state: "MERGED" };
 
 function git(cwd: string, ...args: readonly string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
 
 function initRepos(): { readonly origin: string; readonly work: string } {
-  const root = mkdtempSync(path.join(tmpdir(), "merge-queue-"));
+  const root = mkdtempSync(path.join(tmpdir(), "merge-fixes-red-v1-"));
   onTestFinished(() => {
     rmSync(root, { force: true, recursive: true });
   });
@@ -57,12 +57,9 @@ function ticketRepo(): { readonly origin: string; readonly work: string } {
 
 function stubbedBin(): string {
   const bin = ghOnPath({
-    "api repos/{owner}/{repo}/rules/branches/v1": ["1"],
     "issue view": ["Add the c table"],
-    list: [RUN, [QUEUE_RUN], [{ databaseId: 50 }]],
+    list: [RUN],
     "pr list": [[{ number: 9, url: PR }]],
-    "pr merge": [""],
-    "pr view": [MERGED],
     view: [GREEN],
   });
   writeFileSync(path.join(bin, "pnpm"), "#!/bin/sh\nexit 0\n");
@@ -79,30 +76,33 @@ function mergeTicket(bin: string, work: string): { readonly lines: readonly stri
   return { lines: ran.stdout.trimEnd().split("\n"), status: ran.status };
 }
 
-it("lands a --fixes-red-v1 merge through the queue, printing the merge queue's run and v1's new SHA", {
+it("lands a --fixes-red-v1 merge by fast-forwarding v1 to merge-ticket-N's green commit, printing v1's new SHA", {
   timeout: 20_000,
 }, () => {
   expect.hasAssertions();
 
   const bin = stubbedBin();
   const { origin, work } = ticketRepo();
-  const before = git(origin, "rev-parse", "v1");
 
   const { lines, status } = mergeTicket(bin, work);
 
   const calls = readFileSync(path.join(bin, "calls.log"), "utf8").trim().split("\n");
+  const v1 = git(origin, "rev-parse", "v1");
 
-  expect([status, lines.at(LAST)]).toStrictEqual([EXIT_OK, "RESULT: MERGED m3rg3"]);
+  expect([status, lines.at(LAST), git(origin, "rev-parse", "v1^2")]).toStrictEqual([
+    EXIT_OK,
+    `RESULT: MERGED ${v1}`,
+    git(work, "rev-parse", "ticket-7"),
+  ]);
   expect(lines).toStrictEqual(
     expect.arrayContaining([
-      expect.stringMatching(
-        /^merge-ticket: v1 lands through the merge queue: its merge_group Check run is the gate, not merge-ticket-7-[0-9a-f]{12}'s push run\.$/u,
-      ),
-      expect.stringMatching(ENQUEUED),
-      "merge-ticket: Watching the merge queue's Check run of gh-readonly-queue/v1/pr-9-abc, run 50.",
-      "merge-ticket: merged ticket-7 into v1 at m3rg3, through its pull request from merge-ticket-7.",
+      `merge-ticket: Reusing merge-ticket-7-${v1.slice(START, SHORT)}'s pull request into v1: ${PR}`,
+      expect.stringMatching(FAST_FORWARDED),
+      `merge-ticket: merged ticket-7 into v1 at ${v1}, whose merge-ticket-7 Check run is green.`,
     ]),
   );
-  expect(calls.filter((call) => call.includes("--branch v1"))).toStrictEqual([]);
-  expect(git(origin, "rev-parse", "v1")).toBe(before);
+  expect([
+    calls.filter((call) => call.includes("--branch v1")),
+    calls.filter((call) => /^pr merge|isInMergeQueue/u.test(call)),
+  ]).toStrictEqual([[], []]);
 });

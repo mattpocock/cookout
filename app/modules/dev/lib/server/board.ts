@@ -170,7 +170,7 @@ function postConversation(cast: Cast): Effect.Effect<Conversation, SeedFailure> 
   });
 }
 
-function callCommand(
+function callWebhookCommand(
   { token, url }: BoardConnection,
   cast: Cast,
 ): Effect.Effect<Pick<SeededMessages, "rollbackCall" | "rollbackResult">, SeedFailure> {
@@ -270,7 +270,7 @@ function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, Seed
     const cast = yield* createCast(connection);
     const conversation = yield* postConversation(cast);
     yield* react(cast, conversation);
-    const command = yield* callCommand(connection, cast);
+    const command = yield* callWebhookCommand(connection, cast);
     const broughtIn = yield* postBroughtIn(connection, cast);
     const last = yield* postLast(connection, cast);
     const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);

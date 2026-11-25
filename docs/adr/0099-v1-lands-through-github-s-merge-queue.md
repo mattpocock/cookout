@@ -1,5 +1,7 @@
 # v1 lands through GitHub's merge queue
 
+Superseded on 2026-11-25 by [ADR 0104](0104-v1-moves-only-by-fast-forward-from-a-green-merge-ticket-branch.md): a merge queue isn't available on a user-owned repository, so v1 moves only by fast-forward from a green merge-ticket-N.
+
 2026-11-25 (mattpocock/cookout#522). Matt decided on the board on 2026-11-25 (thread 4334, msg 4340, "4 yes") to turn on GitHub's merge queue for v1, so a landing doesn't lose its green CI when v1 moves. Agents write the code; Matt turns the queue on by hand, with the ruleset in #522. Agents never change repo settings.
 
 ## Context
