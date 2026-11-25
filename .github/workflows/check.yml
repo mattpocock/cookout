@@ -1,14 +1,13 @@
 name: Check
 
-# Check runs once per commit, on v1 and the merge-ticket-* branches only (#605): a worker runs
-# `pnpm check` before opening a pull request, and the merge-ticket run is the gate. It doesn't run on
-# pull_request or on ticket-* pushes, which ran it twice per commit and queued the landing runs behind
-# them. A push to main doesn't run it: main is only fast-forwarded to a commit v1's push run already
+# Check runs on pushes to v1 and on workflow_dispatch only (#634): a worker runs `pnpm check` before
+# it lands its own pull request, and v1's push run covers the merged result. It doesn't run on
+# pull_request or on ticket-* pushes, which ran it twice per commit. A push to main doesn't run it: main is only fast-forwarded to a commit v1's push run already
 # checked. A Check run has 8 jobs, so 2 fit at once in GitHub's 20 concurrent jobs. The e2e suite, the
 # published client and pack smoke run in the Release workflow, before it publishes.
 on:
   push:
-    branches: [v1, "merge-ticket-*"]
+    branches: [v1]
   workflow_dispatch:
 
 permissions:

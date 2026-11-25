@@ -63,7 +63,6 @@
     "validators": "node scripts/generate-validators.ts",
     "validators:check": "node scripts/generate-validators.ts --check",
     "hygiene": "node scripts/hygiene.ts",
-    "merge-ticket": "node scripts/merge-ticket.ts",
     "ci:wait": "node scripts/ci-wait.ts",
     "test": "vitest run --coverage",
     "test:shard": "vitest run --coverage --reporter=blob --reporter=default --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0",

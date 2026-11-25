@@ -144,15 +144,15 @@ function headList(file: string): string {
   return readFileSync(file, "utf8");
 }
 
-function deployedList(tag: string, file: string): readonly string[] {
-  if (!git(["ls-tree", "--name-only", tag, "--", file]).includes(file)) {
+function listSince(ref: string, name: string, file: string): readonly string[] {
+  if (!git(["ls-tree", "--name-only", ref, "--", file]).includes(file)) {
     return [];
   }
-  const shown = spawnSync("git", ["show", `${tag}:${file}`], GIT_OUTPUT);
+  const shown = spawnSync("git", ["show", `${ref}:${file}`], GIT_OUTPUT);
   if (failed(shown)) {
-    return [`git show ${tag}:${file} failed: ${shown.stderr}`];
+    return [`git show ${ref}:${file} failed: ${shown.stderr}`];
   }
-  return migrationsInserted({ base: shown.stdout, baseName: tag, file, head: headList(file) });
+  return migrationsInserted({ base: shown.stdout, baseName: name, file, head: headList(file) });
 }
 
 function deployedMigrations(): readonly string[] {
@@ -162,7 +162,15 @@ function deployedMigrations(): readonly string[] {
       "found no deploy/* tag that HEAD contains, so can't check the migrations list against production's. Run git fetch --tags; the Deploy workflow tags each deployed commit deploy/<short-sha>.",
     ];
   }
-  return MIGRATION_LISTS.flatMap((file) => deployedList(tag, file));
+  return MIGRATION_LISTS.flatMap((file) => listSince(tag, tag, file));
+}
+
+function v1Migrations(): readonly string[] {
+  const base = comparedBase();
+  if (base === "") {
+    return [];
+  }
+  return MIGRATION_LISTS.flatMap((file) => listSince(base, "v1", file));
 }
 
 const MERGE_PARENTS_LINE = 3;
@@ -205,6 +213,7 @@ const failures = [
   ...adrNumbers(),
   ...appendOnlyAdrs(),
   ...deployedMigrations(),
+  ...v1Migrations(),
   ...(await changesets()),
 ];
 for (const failure of failures) {
