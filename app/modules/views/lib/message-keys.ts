@@ -78,13 +78,24 @@ function closeThread(): boolean {
   return close !== null && closedTo(close.hash);
 }
 
-type MessageAction = "backToChannel" | "openThread" | "replyToMessage" | "toggleThumbsDown" | "toggleThumbsUp";
+type MessageAction =
+  | "backToChannel"
+  | "copyMessageLink"
+  | "markUnread"
+  | "openThread"
+  | "replyToMessage"
+  | "toggleThreadClosed"
+  | "toggleThumbsDown"
+  | "toggleThumbsUp";
 
 function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   return {
     backToChannel,
+    copyMessageLink: click(keymap, "copyMessageLink"),
+    markUnread: click(keymap, "markUnread"),
     openThread: press({ action: "openThread", keymap, whenOpen: PANEL_PARENT }),
     replyToMessage: press({ action: "replyToMessage", keymap, whenOpen: PANEL_REPLY_BOX }),
+    toggleThreadClosed: click(keymap, "toggleThreadClosed"),
     toggleThumbsDown: click(keymap, "toggleThumbsDown"),
     toggleThumbsUp: click(keymap, "toggleThumbsUp"),
   };

@@ -1,10 +1,10 @@
 import { Avatar } from "./avatar.tsx";
+import { ChoiceKeys } from "./choice-keys.tsx";
 import { HoverButtons } from "./hover-buttons.tsx";
 import { MessageHeader } from "./message-header.tsx";
 import type { MessageLayoutParts } from "./message-parts.ts";
 import { MessageTime } from "./message-time.tsx";
 import type { ReactNode } from "react";
-import { ReactionKeys } from "./reaction-keys.tsx";
 
 export function MessageLayout(parts: MessageLayoutParts): ReactNode {
   const { time } = parts;
@@ -40,7 +40,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         thread={parts.thread}
         threadHref={parts.threadHref}
       />
-      <ReactionKeys reactions={parts.reactions} />
+      <ChoiceKeys choices={parts.choices} />
     </>
   );
 }

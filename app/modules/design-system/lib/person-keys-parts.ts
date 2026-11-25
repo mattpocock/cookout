@@ -21,13 +21,10 @@ interface BoundPerson {
 interface PersonKeysSource {
   readonly shortcuts: Readonly<Record<keyof PersonActs, Shortcut>>;
   readonly bind: (person: BoundPerson) => () => void;
-}
-
-interface PersonKeysShared extends PersonKeysSource {
   readonly announce: (text: string) => void;
 }
 
-const PersonKeys = createContext<PersonKeysShared | null>(null);
+const PersonKeys = createContext<PersonKeysSource | null>(null);
 
 export { PersonKeys };
-export type { PersonActs, PersonKeysShared, PersonKeysSource };
+export type { PersonActs, PersonKeysSource };

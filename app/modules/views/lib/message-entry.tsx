@@ -1,4 +1,4 @@
-import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
+import type { ChannelName, Message, MessageId, ReadReceipt, TopLevelMessage } from "../../sdk/index.ts";
 import type { MenuClosing, Reply } from "./use-message-menu.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { openThreadHref, threadHref, useMarkOf } from "./message-marks.ts";
@@ -29,6 +29,7 @@ interface MessageEntryProps {
   readonly receipts: readonly ReadReceipt[];
   readonly menu: MessageMenu;
   readonly closing: MenuClosing;
+  readonly threadParent: TopLevelMessage | null;
   readonly reply: Reply | null;
 }
 
@@ -36,7 +37,13 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
   const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
-  const menu = useMessageMenu({ closing: props.closing, me: props.me, menu: props.menu, message });
+  const menu = useMessageMenu({
+    closing: props.closing,
+    me: props.me,
+    menu: props.menu,
+    message,
+    threadParent: props.threadParent,
+  });
   const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (
     <MessageItem
@@ -55,7 +62,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       onAction={handleReply}
       replyOnHover={message.kind === "top-level" || props.reply !== null}
       threadHref={openThreadHref({ channel: props.channel, message })}
-      threadOnHover
+      threadOnHover={message.kind === "top-level"}
       time={useMessageTime({ message, parent: props.parent, receipts: props.receipts })}
       unreadLine={props.row.unreadLine}
     >

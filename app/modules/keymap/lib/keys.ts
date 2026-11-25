@@ -99,6 +99,9 @@ const KEYS = [
   { action: "openThread", chord: "t", does: "Open its thread", scope: "message" },
   { action: "openThread", chord: "Enter", does: "Open its thread", scope: "message" },
   { action: "backToChannel", chord: "ArrowLeft", does: "Back to the thread's channel message", scope: "message" },
+  { action: "markUnread", chord: "Alt+Enter", does: "Mark it and everything after it unread", scope: "message" },
+  { action: "copyMessageLink", chord: "l", does: "Copy its link", scope: "message" },
+  { action: "toggleThreadClosed", chord: "x", does: "Close its thread, or reopen it", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {

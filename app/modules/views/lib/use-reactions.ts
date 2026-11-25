@@ -2,6 +2,7 @@ import type { Message, ReactionCount, ReactionName, Refusal } from "../../sdk/in
 import { reactionNames, reactionSymbols } from "../../messages/index.ts";
 import { reactionRefusal, reactionsOf } from "../../board/index.ts";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+import type { Announce } from "./announcer.ts";
 import type { ReactionChoice } from "../../design-system/messages.tsx";
 import { useBoardStore } from "./use-board.ts";
 
@@ -12,6 +13,26 @@ const IN_HOVER_BAR: Readonly<Record<ReactionName, boolean>> = { thumbs_down: fal
 interface Reacting {
   readonly message: Message;
   readonly me: string;
+}
+
+interface Announcing extends Reacting {
+  readonly announce: Announce;
+}
+
+const TEXT = { added: "Reaction added", removed: "Reaction removed" } as const;
+
+interface Toggled {
+  readonly reactions: readonly ReactionCount[];
+  readonly reaction: ReactionName;
+  readonly me: string;
+}
+
+function announcedOf({ me, reaction, reactions }: Toggled): string {
+  const mine = reactions.some((each) => each.reaction === reaction && each.by.some((name) => name === me));
+  if (mine) {
+    return TEXT.removed;
+  }
+  return TEXT.added;
 }
 
 interface Shown {
@@ -33,19 +54,21 @@ function useShownReactions({ me, message }: Reacting): Shown {
   return { reactions, toggle };
 }
 
-function useReactionChoices(reacting: Reacting): readonly ReactionChoice[] {
-  const { toggle } = useShownReactions(reacting);
+function useReactionChoices({ announce, ...reacting }: Announcing): readonly ReactionChoice[] {
+  const { reactions, toggle } = useShownReactions(reacting);
+  const { me } = reacting;
   return useMemo(
     () =>
       reactionNames.map((reaction) => ({
         inHoverBar: IN_HOVER_BAR[reaction],
         key: KEYS[reaction],
         onReact: () => {
+          announce(announcedOf({ me, reaction, reactions }));
           toggle(reaction);
         },
         symbol: reactionSymbols[reaction],
       })),
-    [toggle],
+    [announce, me, reactions, toggle],
   );
 }
 

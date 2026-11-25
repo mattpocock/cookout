@@ -44,6 +44,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         reply={props.reply}
       />
       <ThreadReplies
+        closing={props.closing}
         me={props.me}
         menu={props.menu}
         parent={state.parent}
