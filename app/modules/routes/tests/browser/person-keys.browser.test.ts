@@ -77,7 +77,7 @@ async function arrowsMove(page: Page, { first, second }: Pair): Promise<void> {
   await inPane(page).getByRole("button", { exact: true, name: "Show deactivated" }).focus();
   await page.keyboard.press("Tab");
 
-  await expect(people.getByRole("link", { exact: true, name: `${first}, Offline` })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${first}, Online` })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
@@ -85,7 +85,7 @@ async function arrowsMove(page: Page, { first, second }: Pair): Promise<void> {
 
   await page.keyboard.press("ArrowUp");
 
-  await expect(people.getByRole("link", { exact: true, name: `${first}, Offline` })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${first}, Online` })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
@@ -189,7 +189,7 @@ test("in the People list a row offers no m: its menu has no Message, m does noth
   const { first } = await peopleShown(page, unique("browser-people-no-m"));
   const row = page
     .getByRole("list", { exact: true, name: "Identities" })
-    .getByRole("link", { exact: true, name: `${first}, Offline` });
+    .getByRole("link", { exact: true, name: `${first}, Online` });
   await mLeavesRow(page, row);
   await menuHasNoMessage(page, { name: first, row });
   await row.focus();

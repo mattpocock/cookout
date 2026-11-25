@@ -3,8 +3,9 @@
  * Events stream (ADR 0002). The stream merges separate event sources, each
  * started when the caller connects with the caller and the request, so each
  * new kind of event is one more entry in `sources` (`lib/server/sources.ts`):
- * a first `connected` event with the board's latest message ID, read once
- * every other source is listening; the
+ * a `connected` event with the board's latest message ID, its live connection
+ * held only once every other source is listening, so the caller's own coming
+ * online reaches the `presence` source of this very stream; the
  * caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's Nudges as the `Nudges` scheduler raises them, and as the `Inbox` marks them read; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
@@ -84,14 +85,12 @@ const eventsRoute: Route<Needs> = {
       const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();
       yield* holdStreamPlace.pipe(Scope.provide(connection));
-      const streams = yield* Effect.forEach(
-        sources,
-        (source) => source({ authorization: headers["authorization"], caller, lastEventId, url }),
-        {
-          concurrency: "unbounded",
-        },
-      ).pipe(Scope.provide(connection));
-      const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
+      const request = { authorization: headers["authorization"], caller, lastEventId, url };
+      const listening = yield* Effect.forEach(sources.listening, (source) => source(request), {
+        concurrency: "unbounded",
+      }).pipe(Scope.provide(connection));
+      const held = yield* sources.connected(request).pipe(Scope.provide(connection));
+      const body = Stream.mergeAll([held, ...listening], { concurrency: "unbounded" }).pipe(
         Stream.takeUntil(isLast),
         Stream.map(sseText),
         Stream.prepend([OPENED]),

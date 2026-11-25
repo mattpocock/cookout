@@ -1,10 +1,9 @@
 import { Array as Arr, Effect, Record as Rec, String as Str } from "effect";
-import type { CookoutEvent, EventStream, NewAttachment } from "../../index.ts";
-import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, refusal, testCookout, watchingAllChannels } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { HttpResponse } from "../../../http/client.ts";
-import type { Scope } from "effect";
+import type { NewAttachment } from "../../index.ts";
 import { request } from "../../../http/client.ts";
 
 const BAD_REQUEST = 400;
@@ -40,22 +39,12 @@ function file(name: string, size = FILL): NewAttachment {
 const TEN: readonly NewAttachment[] = Arr.makeBy(LIMIT, (index) => file(`part-${String(index)}.bin`, index + ONE));
 const ELEVEN: readonly NewAttachment[] = Arr.makeBy(OVER_LIMIT, (index) => file(`f${String(index)}.bin`));
 
-function watching(who: TestIdentity): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
-  return Effect.map(
-    Effect.acquireRelease(
-      answer(() => who.client.watch({ allChannels: true })),
-      (events: EventStream) => answer(() => events.close()),
-    ),
-    (events) => events[Symbol.asyncIterator](),
-  );
-}
-
 it.effect("ten attachments post in order, read back byte for byte, and arrive on the live feed", () =>
   Effect.scoped(
     Effect.gen(function* tenPosted() {
       const cookout = yield* TestCookout;
       const { ann, bob } = yield* board(cookout);
-      const events = yield* watching(bob);
+      const events = yield* watchingAllChannels(bob);
       const { message } = yield* answer(() =>
         ann.client.createMessage({ attachments: TEN, channel: "grill", text: "ten files" }),
       );
