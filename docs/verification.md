@@ -479,12 +479,12 @@ env $(cat /tmp/cookout-dev.env) node --input-type=module -e 'import { createCook
 
 ## Check the web guards
 
-Every response carries a strict CSP and `X-Frame-Options: DENY`; a write from another site's `Origin` is refused with 403 `foreign_origin`, and a `Host` that isn't the server's own (`127.0.0.1`, `localhost` or `[::1]` at its port, or the address it listens on, or the host of `COOKOUT_PUBLIC_URL` when it is set) with 421 `foreign_host`. A write from the `COOKOUT_PUBLIC_URL` origin counts as the server's own:
+Every response carries a strict CSP and `X-Frame-Options: DENY`; a write from another site's `Origin` is refused with 403 `foreign_origin`, and a `Host` that isn't the server's own (`127.0.0.1`, `localhost` or `[::1]` at its port, or the address it listens on, or the host of `COOKOUT_PUBLIC_URL` when it is set) with 421 `foreign_host`, except at `/v1/health`, which answers any `Host` so a platform probe needs none. With `COOKOUT_PUBLIC_URL` unset and `FLY_APP_NAME` set, as on Fly, the public URL is `https://<FLY_APP_NAME>.fly.dev`. A write from the `COOKOUT_PUBLIC_URL` origin counts as the server's own:
 
 ```sh
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -si "$COOKOUT_URL/v1/health" | grep -i -e content-security-policy -e x-frame-options'
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Origin: https://elsewhere.example" "$COOKOUT_URL/v1/channels"'
-env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/health"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/channels"'
 ```
 
 ## Run the storage tests on Postgres
@@ -531,7 +531,13 @@ To run the suite against the Docker image instead, in one command:
 pnpm e2e:docker
 ```
 
-`scripts/e2e-docker.sh` builds the image and runs the suite against it twice, once per store. The SQLite leg makes a `COOKOUT_ADMIN_TOKEN`, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token, and fails if any channel whose name starts with `e2e-` remains after it. The Postgres leg does the same with a throwaway `postgres:18-alpine` container beside the cookout's, on a Docker network of their own, and `DATABASE_URL` pointing at it with a password made for the run; it also checks that the logs don't show that password and that the startup line names `postgres://<container>:5432/cookout`. It removes every container, volume, network and image it made again, also when a test fails or on Ctrl-C. It exits with the first failing suite's code. The one `[env]` value it replaces is `COOKOUT_PUBLIC_URL`, with the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, on each leg, once the cookout listens, adds the command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch` from [packages/handler-example/command.schema.json](../packages/handler-example/command.schema.json), which `scripts/handler-provision.sh` also reads) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler containers and image with the rest. Passing it, on both legs, is required before any `fly deploy`.
+`scripts/e2e-docker.sh` builds the image and runs the suite against it twice, once per store. The SQLite leg makes a `COOKOUT_ADMIN_TOKEN`, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token, and fails if any channel whose name starts with `e2e-` remains after it. The Postgres leg does the same with a throwaway `postgres:18-alpine` container beside the cookout's, on a Docker network of their own, and `DATABASE_URL` pointing at it with a password made for the run; it also checks that the logs don't show that password and that the startup line names `postgres://<container>:5432/cookout`. It removes every container, volume, network and image it made again, also when a test fails or on Ctrl-C. It exits with the first failing suite's code. It adds `COOKOUT_PUBLIC_URL`, which fly.toml leaves unset, as the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, on each leg, once the cookout listens, adds the command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch` from [packages/handler-example/command.schema.json](../packages/handler-example/command.schema.json), which `scripts/handler-provision.sh` also reads) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler containers and image with the rest. Passing it, on both legs, is required before any `fly deploy`.
+
+## Reproduce a flaky browser test
+
+`pnpm browser:flaky <file> [N]` runs one browser test file N times (25 by default) and prints each test's pass and fail counts, then a `RESULT:` line. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
+
+Browser tests share one live board, and every page streams every channel's events, so a flake that disappears at `--workers=1` is likely other tests' live traffic, not CPU load. Reproduce it by posting replies into an unrelated thread while the test runs, never with a CPU-load generator.
 
 ## Log in as a human with a session cookie
 
@@ -603,7 +609,7 @@ docker volume rm cookout-data
 
 ## Deploy it to Fly
 
-The cookout runs on Fly.io as the app `cookout` (`$COOKOUT_APP` in the README) in Matt's `personal` org: one machine in `lhr`, with the SQLite file on the volume `cookout_data` at `/data`, at https://cookout.fly.dev. [fly.toml](../fly.toml) sets `COOKOUT_HOST = "::"`, because Fly reaches the machine over IPv6 as well as IPv4, and `COOKOUT_PUBLIC_URL = "https://cookout.fly.dev"`, so the server answers that host. Its HTTP health check polls `/v1/health` with that `Host`, and auto-stop is off: a stopped machine would drop every open `/v1/events` stream. Every command needs `fly auth whoami` to work. Run `pnpm e2e:docker` first, then deploy, check it and read its logs:
+The cookout runs on Fly.io as the app `cookout` (`$COOKOUT_APP` in the README) in Matt's `personal` org: one machine in `lhr`, with the SQLite file on the volume `cookout_data` at `/data`, at https://cookout.fly.dev. [fly.toml](../fly.toml) sets `COOKOUT_HOST = "::"`, because Fly reaches the machine over IPv6 as well as IPv4, and leaves `COOKOUT_PUBLIC_URL` unset, so the server takes `https://cookout.fly.dev` from Fly's `FLY_APP_NAME` and answers that host. Its HTTP health check polls `/v1/health`, which answers any `Host`, and auto-stop is off: a stopped machine would drop every open `/v1/events` stream. Every command needs `fly auth whoami` to work. Run `pnpm e2e:docker` first, then deploy, check it and read its logs:
 
 ```sh
 fly deploy -a cookout --ha=false

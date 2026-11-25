@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NARROW = { height: 900, width: 600 };
 const WIDE = { height: 900, width: 1400 };
@@ -43,7 +44,7 @@ async function dragEdge(page: Page, by: number): Promise<void> {
 }
 
 test("dragging the thread panel's edge left widens it, and a reload keeps the width", async ({ page }) => {
-  await threadOpen(page, "browser-resize-panel");
+  await threadOpen(page, unique("browser-resize-panel"));
 
   await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
 
@@ -60,7 +61,7 @@ test("dragging the thread panel's edge left widens it, and a reload keeps the wi
 });
 
 test("dragging the thread panel's edge past its narrowest closes the thread", async ({ page }) => {
-  const message = await threadOpen(page, "browser-resize-panel-close");
+  const message = await threadOpen(page, unique("browser-resize-panel-close"));
 
   await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
 
@@ -71,7 +72,7 @@ test("dragging the thread panel's edge past its narrowest closes the thread", as
 });
 
 test("on a narrow screen the thread panel has no edge to drag", async ({ page }) => {
-  await threadOpen(page, "browser-resize-panel-narrow");
+  await threadOpen(page, unique("browser-resize-panel-narrow"));
   await page.setViewportSize(NARROW);
 
   await expect(page.getByRole("complementary", { name: "Thread" })).toContainText("Resizable parent");

@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 const DRAFT = "Half a thought";
 
@@ -39,7 +40,7 @@ function focusedMessage(page: Page): Locator {
 }
 
 test("↑ in an empty message box focuses the newest message, and with text in the box it doesn't", async ({ page }) => {
-  const channel = "browser-box-up";
+  const channel = unique("browser-box-up");
   await channelOpened(page, channel);
   await messageBox(page).focus();
 
@@ -54,7 +55,7 @@ test("↑ in an empty message box focuses the newest message, and with text in t
 });
 
 test("Escape in the message box keeps the draft and returns focus to the message focused before", async ({ page }) => {
-  const channel = "browser-box-escape";
+  const channel = unique("browser-box-escape");
   await channelOpened(page, channel);
   await messageSaying(page, "The middle.").focus();
   await typedInto(messageBox(page));
@@ -74,7 +75,7 @@ async function threadOf(channel: string): Promise<MessageId> {
 }
 
 test("Escape in a thread's reply box keeps the draft and returns focus to where it was", async ({ page }) => {
-  const channel = "browser-box-thread-escape";
+  const channel = unique("browser-box-thread-escape");
   const parent = await threadOf(channel);
   await openedAt(page, channel, `/threads/${String(parent)}`);
   const replies = inThread(page).getByRole("feed", { name: "Replies" });
@@ -101,7 +102,7 @@ async function pressAndSee({ chip, key, page }: Pressing): Promise<void> {
 }
 
 test("+ and - on a focused message toggle its 👍 and 👎", async ({ page }) => {
-  const channel = "browser-box-react";
+  const channel = unique("browser-box-react");
   await channelOpened(page, channel);
   const message = messageSaying(page, "The middle.");
   await message.focus();

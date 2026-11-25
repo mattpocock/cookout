@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 async function openChannel(page: Page, channel: string): Promise<void> {
   await adminClient().createChannel({ name: channel });
@@ -13,7 +14,7 @@ async function openChannel(page: Page, channel: string): Promise<void> {
 }
 
 test("hovering a thread in the channel shows its Close button, which closes the thread", async ({ page }) => {
-  await openChannel(page, "browser-hover");
+  await openChannel(page, unique("browser-hover"));
   const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   const closeThread = message.getByRole("button", { name: "Close thread" });
 
@@ -34,7 +35,7 @@ test("hovering a thread in the channel shows its Close button, which closes the 
 });
 
 test("tabbing to a thread in the channel shows its Close button", async ({ page }) => {
-  await openChannel(page, "browser-tab");
+  await openChannel(page, unique("browser-tab"));
   const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   const closeThread = message.getByRole("button", { name: "Close thread" });
 
@@ -46,7 +47,7 @@ test("tabbing to a thread in the channel shows its Close button", async ({ page 
 });
 
 test("Reply in a thread's More actions menu opens the thread with the cursor in the reply box", async ({ page }) => {
-  await openChannel(page, "browser-hover-reply");
+  await openChannel(page, unique("browser-hover-reply"));
   const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
   await message.hover();
   await message.getByRole("button", { name: "More actions" }).click();
@@ -85,7 +86,7 @@ async function hoverBarIn({ page, theme }: Shot): Promise<void> {
 test("a channel message's hover bar draws 👍, Reply, Close thread and More actions as icons in both themes", async ({
   page,
 }) => {
-  await openChannel(page, "browser-hover-bar");
+  await openChannel(page, unique("browser-hover-bar"));
   await hoverBarIn({ page, theme: "dark" });
   await hoverBarIn({ page, theme: "light" });
 });

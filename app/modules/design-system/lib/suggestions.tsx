@@ -18,6 +18,8 @@ function suggestedOf(suggestion: SuggestionOptionParts): Suggested {
   };
 }
 
+const LOOKS = { above: "menu", below: "menu below" } as const;
+
 export function Suggestions(parts: SuggestionsParts): ReactNode {
   const handleChoose = parts.onChoose;
   const groups = useMemo(() => [{ label: null, options: parts.options.map(suggestedOf) }], [parts.options]);
@@ -38,7 +40,7 @@ export function Suggestions(parts: SuggestionsParts): ReactNode {
       highlighted={parts.highlighted}
       label={parts.label}
       list={parts.list}
-      look="menu"
+      look={LOOKS[parts.place ?? "above"]}
       onChoose={handleChoose}
     >
       {renderOption}

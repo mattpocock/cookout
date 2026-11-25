@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { inSidebar } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 interface Watching {
   readonly poster: Person;
@@ -48,7 +49,7 @@ async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<
 test("a channel's unread count goes up when another identity posts, then to zero once it is opened", async ({
   page,
 }) => {
-  const channel = "browser-unread";
+  const channel = unique("browser-unread");
   const { poster, row } = await watchList(page, channel);
 
   await expect(row).toHaveAccessibleName(`#${channel}`);
@@ -69,7 +70,7 @@ test("a channel's unread count goes up when another identity posts, then to zero
 test("a message that mentions the reader shows in the channel's count for you, apart from its unread count", async ({
   page,
 }) => {
-  const channel = "browser-unread-mention";
+  const channel = unique("browser-unread-mention");
   const { poster, row } = await watchList(page, channel);
 
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
@@ -80,7 +81,7 @@ test("a message that mentions the reader shows in the channel's count for you, a
 });
 
 test("a message that arrives in a channel the reader has open counts as read, in every tab", async ({ page }) => {
-  const channel = "browser-unread-open";
+  const channel = unique("browser-unread-open");
   const { poster, reader, row } = await watchList(page, channel);
   const otherRow = await rowInSecondTab(page, channel);
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });

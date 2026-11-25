@@ -3,6 +3,12 @@ import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
+
+interface Mentioning {
+  readonly reviewers: string;
+  readonly token: string;
+}
 
 async function threadIn(channel: string): Promise<void> {
   const admin = adminClient();
@@ -20,30 +26,31 @@ async function openThread(page: Page, token: string, channel: string): Promise<v
   await page.getByRole("menuitem", { name: "Reply" }).click();
 }
 
-async function mentionerAndReviewers(): Promise<string> {
+async function mentionerAndReviewers(): Promise<Mentioning> {
   const admin = adminClient();
-  const { token } = await admin.createIdentity({ kind: "human", name: "browser-mentioner" });
-  await admin.createIdentity({ kind: "agent", name: "browser-reviewer-bot" });
-  await admin.createIdentity({ kind: "human", name: "browser-reviewer-ada" });
-  await threadIn("browser-composer");
-  return token;
+  const reviewers = unique("browser-reviewer");
+  const { token } = await admin.createIdentity({ kind: "human", name: unique("browser-mentioner") });
+  await admin.createIdentity({ kind: "agent", name: `${reviewers}-bot` });
+  await admin.createIdentity({ kind: "human", name: `${reviewers}-ada` });
+  await threadIn(unique("browser-composer"));
+  return { reviewers, token };
 }
 
 test("typing @ and a prefix in the reply box suggests the matching identities, and choosing one inserts the mention", async ({
   page,
 }) => {
-  const token = await mentionerAndReviewers();
+  const { reviewers, token } = await mentionerAndReviewers();
 
-  await openThread(page, token, "browser-composer");
+  await openThread(page, token, unique("browser-composer"));
   const box = page.getByRole("textbox", { exact: true, name: "Reply" });
-  await box.pressSequentially("Could @browser-rev");
+  await box.pressSequentially(`Could @${reviewers}`);
   const suggestions = page.getByRole("listbox", { name: "Mention suggestions" });
 
-  await expect(suggestions.getByRole("option")).toHaveText(["@browser-reviewer-ada", "@browser-reviewer-bot"]);
+  await expect(suggestions.getByRole("option")).toHaveText([`@${reviewers}-ada`, `@${reviewers}-bot`]);
 
-  await suggestions.getByRole("option", { name: "@browser-reviewer-bot" }).click();
+  await suggestions.getByRole("option", { name: `@${reviewers}-bot` }).click();
   await page.keyboard.type("look?");
 
-  await expect(box).toHaveValue("Could @browser-reviewer-bot look?");
+  await expect(box).toHaveValue(`Could @${reviewers}-bot look?`);
   await expect(suggestions).toBeHidden();
 });

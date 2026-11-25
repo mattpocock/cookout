@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane, inSidebar } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 interface Look {
   readonly arrow: boolean;
@@ -28,7 +29,7 @@ async function openSummary(page: Page, channel: string): Promise<Locator> {
   await adminClient().createChannel({ name: channel });
   const { message: parent } = await adminClient().createMessage({ channel, text: "Ship it?" });
   await adminClient().createMessage({ channel, replyTo: parent.id, text: "Yes" });
-  const reader = await newIdentity({ kind: "human", name: "browser-summary-reader" });
+  const reader = await newIdentity({ kind: "human", name: unique("browser-summary-reader") });
   await logIn({ page, token: reader.token });
   await inSidebar(page)
     .getByRole("link", { name: `#${channel}` })
@@ -43,7 +44,7 @@ async function openSummary(page: Page, channel: string): Promise<Locator> {
 test("hovering a thread's summary keeps its last reply text, adds an arrow, and never makes it narrower", async ({
   page,
 }) => {
-  const link = await openSummary(page, "browser-reply-arrow");
+  const link = await openSummary(page, unique("browser-reply-arrow"));
   const atRest = await lookOf(link);
   await link.hover();
 

@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NEAR = 4;
 const INSET = 40;
@@ -65,7 +66,7 @@ function near(shown: number, wanted: number): boolean {
 }
 
 test("right-clicking a message opens its actions menu at the pointer", async ({ page }) => {
-  const message = await openChannel(page, "browser-menu-at");
+  const message = await openChannel(page, unique("browser-menu-at"));
   const article = await boxOf(message);
   const point = { left: article.left + INSET, top: article.top + EDGE };
   const menu = await menuAt(page, point);
@@ -76,7 +77,7 @@ test("right-clicking a message opens its actions menu at the pointer", async ({ 
 test("right-clicking a message by the window's right edge opens its menu leftwards from the pointer, inside the window", async ({
   page,
 }) => {
-  const message = await openChannel(page, "browser-menu-edge");
+  const message = await openChannel(page, unique("browser-menu-edge"));
   const article = await boxOf(message);
   const point = { left: article.right - EDGE, top: article.top + EDGE };
   const menu = await menuAt(page, point);
@@ -98,7 +99,7 @@ async function downTo(page: Page, name: string): Promise<void> {
 test("the More actions menu takes focus, moves with the arrow keys and gives focus back on Escape", async ({
   page,
 }) => {
-  const message = await openChannel(page, "browser-menu-keys");
+  const message = await openChannel(page, unique("browser-menu-keys"));
   await message.focus();
   const more = message.getByRole("button", { name: "More actions" });
   await more.focus();
@@ -117,7 +118,7 @@ test("the More actions menu takes focus, moves with the arrow keys and gives foc
 test("the More actions button stays shown while its menu is open, so Escape can give focus back to it", async ({
   page,
 }) => {
-  const message = await openChannel(page, "browser-menu-shown");
+  const message = await openChannel(page, unique("browser-menu-shown"));
   await message.getByRole("button", { name: "More actions" }).focus();
   await page.keyboard.press("Enter");
 
@@ -130,7 +131,7 @@ test("the More actions button stays shown while its menu is open, so Escape can 
 test("Escape in the More actions menu gives focus back to its button with the mouse away from the message", async ({
   page,
 }) => {
-  const message = await openChannel(page, "browser-menu-unhovered");
+  const message = await openChannel(page, unique("browser-menu-unhovered"));
   await page.mouse.move(CORNER, CORNER);
   await message.focus();
   const more = message.getByRole("button", { name: "More actions" });

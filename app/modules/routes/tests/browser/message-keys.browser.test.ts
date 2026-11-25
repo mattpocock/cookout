@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 const REPLY_BOX = { exact: true, name: "Reply" } as const;
 
@@ -35,7 +36,7 @@ async function focusOn(message: Locator): Promise<void> {
 test("R on a focused message opens its thread with the cursor in the reply box, and Enter posts the reply there", async ({
   page,
 }) => {
-  const thread = await openedChannel(page, "browser-message-keys-reply");
+  const thread = await openedChannel(page, unique("browser-message-keys-reply"));
   await focusOn(channelMessage(page, "The parent."));
 
   await page.keyboard.press("r");
@@ -52,8 +53,8 @@ test("R on a focused message opens its thread with the cursor in the reply box, 
 });
 
 test("R on a focused reply in the thread panel puts the cursor in that thread's reply box", async ({ page }) => {
-  const thread = await openedChannel(page, "browser-message-keys-panel-reply");
-  await page.goto(`/#/channels/browser-message-keys-panel-reply/threads/${String(thread)}`);
+  const thread = await openedChannel(page, unique("browser-message-keys-panel-reply"));
+  await page.goto(`/#/channels/${unique("browser-message-keys-panel-reply")}/threads/${String(thread)}`);
   const reply = inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").filter({
     hasText: "An answer.",
   });
@@ -68,7 +69,7 @@ for (const key of ["ArrowRight", "t", "Enter"]) {
   test(`${key} on a focused message opens its thread with focus on the thread's top-level message`, async ({
     page,
   }) => {
-    await openedChannel(page, `browser-message-keys-open-${key.toLowerCase()}`);
+    await openedChannel(page, unique(`browser-message-keys-open-${key.toLowerCase()}`));
     await focusOn(channelMessage(page, "The parent."));
 
     await page.keyboard.press(key);
@@ -79,7 +80,7 @@ for (const key of ["ArrowRight", "t", "Enter"]) {
 }
 
 test("← in the thread panel puts focus on the channel message, with the panel still open", async ({ page }) => {
-  await openedChannel(page, "browser-message-keys-back");
+  await openedChannel(page, unique("browser-message-keys-back"));
   await focusOn(channelMessage(page, "The parent."));
   await page.keyboard.press("t");
 
@@ -97,7 +98,7 @@ test("← in the thread panel puts focus on the channel message, with the panel 
 });
 
 test("R typed in a text box types an r", async ({ page }) => {
-  await openedChannel(page, "browser-message-keys-typed");
+  await openedChannel(page, unique("browser-message-keys-typed"));
   const box = page.getByRole("textbox", { exact: true, name: "Message" });
   await box.focus();
 
@@ -108,7 +109,7 @@ test("R typed in a text box types an r", async ({ page }) => {
 });
 
 test("R again on a message whose thread is open puts the cursor back in its reply box", async ({ page }) => {
-  await openedChannel(page, "browser-message-keys-reply-again");
+  await openedChannel(page, unique("browser-message-keys-reply-again"));
   const parent = channelMessage(page, "The parent.");
   await focusOn(parent);
   await page.keyboard.press("r");
@@ -122,7 +123,7 @@ test("R again on a message whose thread is open puts the cursor back in its repl
 });
 
 test("T again on a message whose thread is open focuses its top-level message", async ({ page }) => {
-  await openedChannel(page, "browser-message-keys-open-again");
+  await openedChannel(page, unique("browser-message-keys-open-again"));
   await focusOn(channelMessage(page, "The parent."));
   await page.keyboard.press("t");
 
@@ -135,7 +136,7 @@ test("T again on a message whose thread is open focuses its top-level message", 
 });
 
 test("the message menu's Reply and Open thread show their keys", async ({ page }) => {
-  await openedChannel(page, "browser-message-keys-menu");
+  await openedChannel(page, unique("browser-message-keys-menu"));
   await focusOn(channelMessage(page, "The parent."));
   await page.keyboard.press("Shift+F10");
   const openThread = page.getByRole("menuitem", { name: "Open thread" });

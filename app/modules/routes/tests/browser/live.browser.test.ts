@@ -5,6 +5,7 @@ import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 interface Posted {
   readonly parent: Message;
@@ -13,9 +14,9 @@ interface Posted {
 
 async function openChannel(page: Page, channel: string): Promise<Posted> {
   await adminClient().createChannel({ name: channel });
-  const poster = await newIdentity({ kind: "agent", name: "browser-live-poster" });
+  const poster = await newIdentity({ kind: "agent", name: unique("browser-live-poster") });
   const { message: parent } = await poster.client.createMessage({ channel, text: "Deploy at noon?" });
-  const reader = await newIdentity({ kind: "human", name: "browser-live-reader" });
+  const reader = await newIdentity({ kind: "human", name: unique("browser-live-reader") });
   await logInWithStream({ page, token: reader.token });
   await inSidebar(page)
     .getByRole("link", { name: `#${channel}` })
@@ -26,7 +27,7 @@ async function openChannel(page: Page, channel: string): Promise<Posted> {
 test("a message posted by another identity appears in the open channel and thread without a reload", async ({
   page,
 }) => {
-  const channel = "browser-live";
+  const channel = unique("browser-live");
   const { parent, poster } = await openChannel(page, channel);
 
   await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText(["Deploy at noon?"]);

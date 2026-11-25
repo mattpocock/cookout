@@ -1,6 +1,6 @@
 {
   "name": "@ai-hero/cookout",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "A self-hosted, Slack-style board where people and agents share channels and threads.",
   "type": "module",
   "packageManager": "pnpm@9.12.3",
@@ -71,6 +71,7 @@
     "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest",
     "browser": "playwright test",
+    "browser:flaky": "node scripts/browser-flaky.ts",
     "browser:coverage": "COOKOUT_BROWSER_COVERAGE=.browser-coverage/records node scripts/browser-coverage.ts",
     "screenshots": "node scripts/screenshots.ts"
   },

@@ -5,6 +5,7 @@ import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 async function followedThread(channel: string, reader: Person): Promise<Message> {
   const admin = adminClient();
@@ -25,12 +26,13 @@ async function replyInThread(page: Page, channel: string, text: string): Promise
 }
 
 test("a human opens a thread, replies, and the thread leaves their inbox", async ({ page }) => {
-  const reader = await newIdentity({ kind: "human", name: "browser-replier" });
-  await followedThread("browser-thread", reader);
+  const channel = unique("browser-thread");
+  const reader = await newIdentity({ kind: "human", name: unique("browser-replier") });
+  await followedThread(channel, reader);
   const before = await reader.client.inbox();
 
   await logIn({ page, token: reader.token });
-  await replyInThread(page, "browser-thread", "I am");
+  await replyInThread(page, channel, "I am");
 
   await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toContainText(["Not me", "I am"]);
   await expect

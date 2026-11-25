@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 const CHANNEL = "browser-suggestions-layer";
 const EARLIER_MESSAGES = 30;
@@ -16,22 +17,22 @@ const SPOTS = Array.from({ length: SPOTS_ACROSS }, (_value, at) => (at + HALF) /
 
 type Point = readonly [number, number];
 
-async function threadSummaryAboveTheBox(): Promise<string> {
+async function threadSummaryAboveTheBox(channel: string): Promise<string> {
   const admin = adminClient();
-  await admin.createChannel({ name: CHANNEL });
+  await admin.createChannel({ name: channel });
   await Promise.all(
     EARLIER.map(async (text) => {
-      await admin.createMessage({ channel: CHANNEL, text });
+      await admin.createMessage({ channel, text });
     }),
   );
-  const { message } = await admin.createMessage({ channel: CHANNEL, text: "Who can review this?" });
+  const { message } = await admin.createMessage({ channel, text: "Who can review this?" });
   await Promise.all(
     REPLIERS.map(async (name) => {
-      const { client } = await newIdentity({ kind: "human", name: `${CHANNEL}-${name}` });
-      await client.createMessage({ channel: CHANNEL, replyTo: message.id, text: "I can" });
+      const { client } = await newIdentity({ kind: "human", name: `${channel}-${name}` });
+      await client.createMessage({ channel, replyTo: message.id, text: "I can" });
     }),
   );
-  const { token } = await newIdentity({ kind: "human", name: `${CHANNEL}-reader` });
+  const { token } = await newIdentity({ kind: "human", name: `${channel}-reader` });
   return token;
 }
 
@@ -61,13 +62,14 @@ async function coveredPoints(list: Locator): Promise<number> {
 test("the @ suggestion box is the topmost element everywhere it shows, over the messages and their thread summaries", async ({
   page,
 }) => {
-  const token = await threadSummaryAboveTheBox();
+  const channel = unique(CHANNEL);
+  const token = await threadSummaryAboveTheBox(channel);
   await logIn({ page, token });
-  await page.goto(`/#/channels/${CHANNEL}`);
+  await page.goto(`/#/channels/${channel}`);
 
   await expect(inPane(page).getByRole("link", { name: /3 replies/u })).toBeVisible();
 
-  await inPane(page).getByLabel("Message", { exact: true }).pressSequentially(`@${CHANNEL}`);
+  await inPane(page).getByLabel("Message", { exact: true }).pressSequentially(`@${channel}`);
   const list = inPane(page).getByRole("listbox", { name: "Mention suggestions" });
 
   await expect(list).toBeVisible();

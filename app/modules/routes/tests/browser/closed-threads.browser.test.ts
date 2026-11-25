@@ -3,11 +3,11 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
-const channel = "browser-closed-threads";
-const ann = `${channel}-ann`;
-const bob = `${channel}-bob`;
-const hash = `#/channels/${channel}`;
+function channelName(): string {
+  return unique("browser-closed-threads");
+}
 
 interface Opening {
   readonly browser: Browser;
@@ -23,7 +23,7 @@ async function openAs({ browser, token }: Opening): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await logInWithStream({ page, token });
-  await page.goto(`/${hash}`);
+  await page.goto(`/#/channels/${channelName()}`);
   return page;
 }
 
@@ -32,9 +32,10 @@ function messagesOn(page: Page): Locator {
 }
 
 async function posted(): Promise<Tokens> {
+  const channel = channelName();
   await adminClient().createChannel({ name: channel });
-  const author = await newIdentity({ kind: "human", name: ann });
-  const closer = await newIdentity({ kind: "human", name: bob });
+  const author = await newIdentity({ kind: "human", name: `${channel}-ann` });
+  const closer = await newIdentity({ kind: "human", name: `${channel}-bob` });
   await author.client.createMessage({ channel, text: "Before." });
   await author.client.createMessage({ channel, text: "Ship it?" });
   await author.client.createMessage({ channel, text: "After." });

@@ -15,11 +15,15 @@ const FOREIGN_ORIGIN = "https://elsewhere.example";
 const PUBLIC_URL = "https://cookout.example";
 const STRICT_POLICY = /^default-src 'none';.*frame-ancestors 'none'$/u;
 
-function withHost(url: string, host: string): Effect.Effect<{ readonly json: unknown; readonly status: number }> {
+function withHost(
+  url: string,
+  host: string,
+  path: string = channelsPath,
+): Effect.Effect<{ readonly json: unknown; readonly status: number }> {
   return Effect.gen(function* sendWithHost() {
     const client = yield* HttpClient.HttpClient;
     const response = yield* client.execute(
-      HttpClientRequest.get(`${url}${healthPath}`).pipe(HttpClientRequest.setHeader("host", host)),
+      HttpClientRequest.get(`${url}${path}`).pipe(HttpClientRequest.setHeader("host", host)),
     );
     const json = yield* response.json;
     return { json, status: response.status };
@@ -63,7 +67,18 @@ it.effect("a request whose Host isn't the server's own is refused with 421 forei
     const localhost = yield* withHost(cookout.url, `localhost:${port}`);
 
     expect(foreign).toMatchObject({ json: { error: { code: "foreign_host" } }, status: MISDIRECTED });
-    expect(localhost.status).toBe(OK);
+    expect(localhost.status).toBe(UNAUTHORIZED);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("the health check is answered whatever the Host, so a platform's probe needs no Host of its own", () =>
+  Effect.gen(function* healthAnyHost() {
+    const cookout = yield* TestCookout;
+    const health = yield* withHost(cookout.url, "[fdaa:0:1::2]:8080", healthPath);
+    const other = yield* withHost(cookout.url, "[fdaa:0:1::2]:8080");
+
+    expect(health).toMatchObject({ json: { status: "ok" }, status: OK });
+    expect(other).toMatchObject({ json: { error: { code: "foreign_host" } }, status: MISDIRECTED });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -85,7 +100,7 @@ it.effect(
         }),
       );
 
-      expect(read.status).toBe(OK);
+      expect(read.status).toBe(UNAUTHORIZED);
       expect(foreign.status).toBe(MISDIRECTED);
       expect(write.json).toMatchObject({ error: { code: "token_missing" } });
     }).pipe(Effect.provide(testCookout({ publicUrl: PUBLIC_URL }))),

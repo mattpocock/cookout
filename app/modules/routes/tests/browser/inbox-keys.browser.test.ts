@@ -4,6 +4,7 @@ import { inConversation, inPane } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NARROW = { height: 900, width: 600 };
 const WIDE = { height: 700, width: 1280 };
@@ -74,7 +75,7 @@ async function pressedTimes(page: Page, key: string, times: number): Promise<voi
 }
 
 test("at 600 px wide, j opens the first conversation and Esc returns to the list", async ({ page }) => {
-  await openedWithReadThreads({ channel: "browser-inbox-keys-narrow", count: ONE, page, size: NARROW });
+  await openedWithReadThreads({ channel: unique("browser-inbox-keys-narrow"), count: ONE, page, size: NARROW });
   await page.keyboard.press("j");
 
   await expect(inConversation(page)).toContainText("Thread 1");
@@ -87,7 +88,12 @@ test("at 600 px wide, j opens the first conversation and Esc returns to the list
 });
 
 test("at full width, the selected row stays in view after many j presses down a long list", async ({ page }) => {
-  const addresses = await openedWithReadThreads({ channel: "browser-inbox-keys-long", count: MANY, page, size: WIDE });
+  const addresses = await openedWithReadThreads({
+    channel: unique("browser-inbox-keys-long"),
+    count: MANY,
+    page,
+    size: WIDE,
+  });
   const target = addresses[PRESSES - ONE] ?? "";
   await pressedTimes(page, "j", PRESSES);
 

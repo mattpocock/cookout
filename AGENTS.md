@@ -13,7 +13,7 @@ The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattp
 - [docs/adr/](docs/adr/): why the code is shaped as it is.
 - [docs/lint-opt-outs.md](docs/lint-opt-outs.md): every lint rule that is off or loosened, and why.
 - `node_modules/effect/AGENTS.md` and `node_modules/effect/ai-docs/src/`: Effect's docs for the installed version. Read them before guessing an Effect v4 API.
-- [docs/verification.md](docs/verification.md): how to run and drive the cookout to prove a change works.
+- [docs/verification.md](docs/verification.md): how to run and drive the cookout to prove a change works; its "Reproduce a flaky browser test" section covers `pnpm browser:flaky`.
 - [docs/web-components.md](docs/web-components.md): the React component shape the UI lint rules accept. Read it before writing or changing a `.tsx` file. `pnpm screenshots` takes the standard screens in both themes.
 - Only Matt approves a domain term. A term counts as approved only with a dated decision of Matt's cited next to it, in an ADR under `docs/adr/` or a comment on a mattpocock/cookout issue; without one it stays proposed.
 - In a git worktree, create files with the Write tool (not `cat > … <<EOF`), run every command from the worktree root, and add root dependencies with `pnpm add -w`.

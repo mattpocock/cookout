@@ -28,7 +28,6 @@ APP=<your-app-name>
 REGION=<region>
 git clone https://github.com/mattpocock/cookout.git
 cd cookout
-sed -i.bak -e "s/^app = .*/app = \"$APP\"/" -e "s/cookout\.fly\.dev/$APP.fly.dev/g" fly.toml
 fly launch --copy-config --name "$APP" --region "$REGION" --no-deploy --yes
 fly volumes create cookout_data --size 1 --region "$REGION" --app "$APP" --yes
 COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)
@@ -36,7 +35,7 @@ echo "COOKOUT_ADMIN_TOKEN=$COOKOUT_ADMIN_TOKEN" | fly secrets import --app "$APP
 fly deploy --app "$APP" --ha=false
 ```
 
-The `sed` points [fly.toml](fly.toml) at your app: its name, `COOKOUT_PUBLIC_URL`, and the health check's `Host` header. The server answers only its own host (any other gets 421 `foreign_host`), so a check still sent as `cookout.fly.dev` would fail and the deploy with it. `fly secrets import` reads the admin token from stdin, so it never sits on a command line. `--ha=false` keeps it to one machine: a second would have its own SQLite file, and live events and Presence are held in the process. To keep the data in Postgres instead of on the volume, also import `DATABASE_URL=postgres://...` the same way before `fly deploy`; an empty database is migrated on the first start.
+[fly.toml](fly.toml) needs no edit: `fly launch` names the app, and with `COOKOUT_PUBLIC_URL` unset the server takes `https://<your-app-name>.fly.dev` from the `FLY_APP_NAME` Fly sets, so it answers that host. The health check needs no `Host`: `/v1/health` is answered whatever the host, while every other route refuses a host that isn't its own with 421 `foreign_host`. `fly secrets import` reads the admin token from stdin, so it never sits on a command line. `--ha=false` keeps it to one machine: a second would have its own SQLite file, and live events and Presence are held in the process. To keep the data in Postgres instead of on the volume, also import `DATABASE_URL=postgres://...` the same way before `fly deploy`; an empty database is migrated on the first start.
 
 Check it, and that the admin token logs in:
 
@@ -67,7 +66,8 @@ The server, `cookout serve`:
 - `COOKOUT_S3_REGION` (no default): The bucket's region, such as `eu-west-2`; `auto` on R2 and Tigris.
 - `COOKOUT_S3_ACCESS_KEY_ID` (no default): The access key ID every request to the bucket is signed with. It needs to read, write and delete the bucket's objects.
 - `COOKOUT_S3_SECRET_ACCESS_KEY` (no default): That access key's secret. Never shown.
-- `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`). The message link a trigger URL is sent starts with it; without it, the link starts with the address the board serves on.
+- `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`). The message link a trigger URL is sent starts with it; without it, the link starts with the address the board serves on. Unset on Fly, it is `https://<FLY_APP_NAME>.fly.dev`.
+- `FLY_APP_NAME` (no default): The Fly app it runs as, which Fly sets on every machine. With `COOKOUT_PUBLIC_URL` unset, the public URL is `https://<FLY_APP_NAME>.fly.dev`. Leave it to Fly.
 - `COOKOUT_MAX_IDLE_EXPIRY` (default `90d`): The longest idle expiry `cookout join --idle-expiry` may ask for. An agent session token expires once it goes that long unused (default `7d`); each request sent with it moves its expiry on.
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.
 - `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default `10`): How long the server waits before it first retries a webhook delivery that got no `2xx`.

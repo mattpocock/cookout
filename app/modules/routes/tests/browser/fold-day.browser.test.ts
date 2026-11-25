@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NARROW = { height: 900, width: 600 };
 const HALF = 2;
@@ -67,14 +68,14 @@ function overlap(day: Day): number {
 }
 
 test("the day line's date sits in the centre with the fold to its right", async ({ page }) => {
-  await foldBeforeToday(page, "browser-fold-day-wide");
+  await foldBeforeToday(page, unique("browser-fold-day-wide"));
   const day = await dayLine(page);
 
   expect([offCentre(day) < CENTRED, overlap(day), day.fold.left > day.date.left]).toStrictEqual([true, NONE, true]);
 });
 
 test("at the narrowest width the date stays centred and the fold doesn't overlap it", async ({ page }) => {
-  await foldBeforeToday(page, "browser-fold-day-narrow");
+  await foldBeforeToday(page, unique("browser-fold-day-narrow"));
   await page.setViewportSize(NARROW);
   const day = await dayLine(page);
 

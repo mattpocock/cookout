@@ -5,6 +5,7 @@ import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { inConversation } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NONE = 0;
 const ONE = 1;
@@ -79,7 +80,7 @@ async function shownInLight(page: Page): Promise<void> {
 }
 
 test("clicking an unseen Inbox item deep in a long thread shows its message in view, highlighted", async ({ page }) => {
-  const { reader } = await mentionedDeepInThread("browser-inbox-open-unseen");
+  const { reader } = await mentionedDeepInThread(unique("browser-inbox-open-unseen"));
   await logInToChannels({ page, token: reader.token });
   await openFromInbox(page, "For you");
 
@@ -87,7 +88,7 @@ test("clicking an unseen Inbox item deep in a long thread shows its message in v
 });
 
 test("clicking a seen Inbox item shows its thread, with its message in view", async ({ page }) => {
-  const { mention, reader } = await mentionedDeepInThread("browser-inbox-open-seen");
+  const { mention, reader } = await mentionedDeepInThread(unique("browser-inbox-open-seen"));
   await reader.client.ack(mention);
   await logInToChannels({ page, token: reader.token });
   await openFromInbox(page, "Earlier");
@@ -100,7 +101,7 @@ test("clicking a seen Inbox item shows its thread, with its message in view", as
 });
 
 test("an Inbox thread address without a message still opens, scrolled to the newest message", async ({ page }) => {
-  const channel = "browser-inbox-open-old-link";
+  const channel = unique("browser-inbox-open-old-link");
   const { parent, reader } = await mentionedDeepInThread(channel);
   await logInToChannels({ page, token: reader.token });
   await page.goto(`/#/inbox/${channel}/${String(parent)}`);
@@ -110,7 +111,7 @@ test("an Inbox thread address without a message still opens, scrolled to the new
 });
 
 test("clicking a seen Inbox item in a Closed thread shows its thread, with its message in view", async ({ page }) => {
-  const { mention, parent, poster, reader } = await mentionedDeepInThread("browser-inbox-open-closed");
+  const { mention, parent, poster, reader } = await mentionedDeepInThread(unique("browser-inbox-open-closed"));
   await reader.client.ack(mention);
   await poster.client.closeThread(parent);
   await logInToChannels({ page, token: reader.token });

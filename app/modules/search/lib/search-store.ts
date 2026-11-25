@@ -19,6 +19,9 @@ type Found =
 
 interface SearchState {
   readonly query: string;
+  readonly caret: number;
+  readonly suggestion: number;
+  readonly dismissed: boolean;
   readonly sort: SearchSort;
   readonly open: boolean;
   readonly found: Found;
@@ -30,12 +33,14 @@ type Direction = "down" | "up";
 interface Search {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => SearchState;
-  readonly edit: (query: string) => void;
+  readonly edit: (query: string, caret?: number) => void;
   readonly sortBy: (sort: SearchSort) => void;
   readonly open: () => void;
   readonly close: () => void;
   readonly loadMore: () => void;
   readonly move: (direction: Direction, ahead?: number) => void;
+  readonly moveSuggestion: (direction: Direction, count: number) => void;
+  readonly dismissSuggestions: () => void;
 }
 
 interface SearchOptions {
@@ -93,6 +98,11 @@ function movedTo(at: number, direction: Direction, count: number): number {
   return Math.max(Math.min(at + STEPS[direction], count - ONE), FIRST);
 }
 
+function wrappedTo(at: number, direction: Direction, count: number): number {
+  const total = Math.max(count, ONE);
+  return (at + STEPS[direction] + total) % total;
+}
+
 function foundWhileEditing(query: string): Found {
   if (isEmptyQuery(parseQuery(query))) {
     return IDLE;
@@ -108,7 +118,16 @@ interface Held {
 
 function heldState(): Held {
   const listeners = new Set<() => void>();
-  let state: SearchState = { found: IDLE, highlighted: FIRST, open: false, query: "", sort: "newest" };
+  let state: SearchState = {
+    caret: FIRST,
+    dismissed: false,
+    found: IDLE,
+    highlighted: FIRST,
+    open: false,
+    query: "",
+    sort: "newest",
+    suggestion: FIRST,
+  };
   return {
     set: (next) => {
       state = { ...state, ...next };
@@ -218,10 +237,13 @@ function createSearch(options: SearchOptions): Search {
     close: () => {
       held.set({ highlighted: FIRST, open: false });
     },
-    edit: (query) => {
+    dismissSuggestions: () => {
+      held.set({ dismissed: true, suggestion: FIRST });
+    },
+    edit: (query, caret = query.length) => {
       firstPage.stop();
       const found = foundWhileEditing(query);
-      held.set({ found, highlighted: FIRST, open: true, query });
+      held.set({ caret, dismissed: false, found, highlighted: FIRST, open: true, query, suggestion: FIRST });
       if (found === SEARCHING) {
         firstPage.later();
       }
@@ -234,6 +256,9 @@ function createSearch(options: SearchOptions): Search {
       if (highlighted > ahead - ONE && highlighted === count - ONE) {
         loadMore();
       }
+    },
+    moveSuggestion: (direction, count) => {
+      held.set({ suggestion: wrappedTo(held.state().suggestion, direction, count) });
     },
     open: () => {
       held.set({ open: true });

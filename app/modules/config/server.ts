@@ -34,6 +34,15 @@ const isPublicUrl = Schema.makeFilter(
     url === "" || URL.canParse(url) || "COOKOUT_PUBLIC_URL must be empty or a URL such as https://cookout.fly.dev.",
 );
 
+const flyAppName = Config.String("FLY_APP_NAME").pipe(Config.withDefault(""));
+
+function publicUrlOf({ app, url }: Readonly<{ app: string; url: string }>): string {
+  if (url !== "" || app === "") {
+    return url;
+  }
+  return `https://${app}.fly.dev`;
+}
+
 const adminTokenRule = `COOKOUT_ADMIN_TOKEN must be set to a token of at least ${String(SHORTEST_ADMIN_TOKEN)} characters, such as one made by \`openssl rand -hex 32\`. It becomes the admin identity's token.`;
 
 const isStrongEnoughToken = Schema.makeFilter(
@@ -63,11 +72,13 @@ export const host = Config.String("COOKOUT_HOST").pipe(Config.withDefault("0.0.0
 /**
  * `COOKOUT_PUBLIC_URL`: the address the cookout is deployed at, such as
  * `https://cookout.fly.dev`. Its host is answered as well as the server's own
- * (Matt, 2026-11-23, mattpocock/cookout#56). Empty counts as unset.
+ * (Matt, 2026-11-23, mattpocock/cookout#56). Empty counts as unset, and then on Fly, where `FLY_APP_NAME` names the
+ * app, it is `https://<app>.fly.dev`, so the repo's `fly.toml` deploys to a new app unedited (mattpocock/cookout#489).
  */
-export const publicUrl = Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(
-  Config.withDefault(""),
-);
+export const publicUrl = Config.all({
+  app: flyAppName,
+  url: Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(Config.withDefault("")),
+}).pipe(Config.map(publicUrlOf));
 
 /**
  * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, required by `cookout serve`. Every boot makes it the

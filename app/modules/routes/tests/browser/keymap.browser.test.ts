@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { inConversation, inPane, inProfile } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const BOX = { name: "Search" } as const;
 const REPLY = { exact: true, name: "Reply" } as const;
@@ -49,7 +50,7 @@ async function reportingMac(page: Page): Promise<void> {
 test("ctrl+K opens the search box from the reply box, and Escape gives focus back to the reply box", async ({
   page,
 }) => {
-  await openedOnThread(page, "browser-keymap-ctrl-k");
+  await openedOnThread(page, unique("browser-keymap-ctrl-k"));
   const reply = page.getByRole("textbox", REPLY);
   await reply.click();
   await page.keyboard.press("Control+k");
@@ -64,7 +65,7 @@ test("ctrl+K opens the search box from the reply box, and Escape gives focus bac
 
 test("on a Mac, Cmd+K opens the search box and its placeholder names ⌘K", async ({ page }) => {
   await reportingMac(page);
-  await openedOnThread(page, "browser-keymap-mac");
+  await openedOnThread(page, unique("browser-keymap-mac"));
   await page.getByRole("textbox", REPLY).click();
   await page.keyboard.press("Meta+k");
 
@@ -75,7 +76,7 @@ test("on a Mac, Cmd+K opens the search box and its placeholder names ⌘K", asyn
 
 test("on a Mac, Ctrl+K in the reply box leaves the search box closed", async ({ page }) => {
   await reportingMac(page);
-  await openedOnThread(page, "browser-keymap-mac-ctrl");
+  await openedOnThread(page, unique("browser-keymap-mac-ctrl"));
   const reply = page.getByRole("textbox", REPLY);
   await reply.click();
   await page.keyboard.press("Control+k");
@@ -86,7 +87,7 @@ test("on a Mac, Ctrl+K in the reply box leaves the search box closed", async ({ 
 });
 
 test("off a Mac, Cmd+K leaves the search box closed", async ({ page }) => {
-  await openedOnThread(page, "browser-keymap-other-meta");
+  await openedOnThread(page, unique("browser-keymap-other-meta"));
   const reply = page.getByRole("textbox", REPLY);
   await reply.click();
   await page.keyboard.press("Meta+k");
@@ -96,7 +97,7 @@ test("off a Mac, Cmd+K leaves the search box closed", async ({ page }) => {
 });
 
 test("escape closes the profile panel", async ({ page }) => {
-  const reader = await openedOnThread(page, "browser-keymap-profile");
+  const reader = await openedOnThread(page, unique("browser-keymap-profile"));
   await page.goto(`/#/people/${reader}`);
 
   await expect(inProfile(page)).toBeVisible();
@@ -108,7 +109,7 @@ test("escape closes the profile panel", async ({ page }) => {
 });
 
 test("single-letter keys typed in the reply box type their letters and trigger nothing", async ({ page }) => {
-  const selected = await inboxRowSelected(page, "browser-keymap-letters");
+  const selected = await inboxRowSelected(page, unique("browser-keymap-letters"));
   const reply = inConversation(page).getByRole("textbox", REPLY);
   await reply.click();
   await page.keyboard.type("jkeuor");

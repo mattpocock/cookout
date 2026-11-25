@@ -4,6 +4,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 const THIRTY = 30;
 const REPLIES = 5;
@@ -110,7 +111,7 @@ async function walkedInFeed({ key, left, page }: Walk): Promise<readonly string[
 test("a channel of 30 messages is one Tab stop: Tab walks one message's own controls, then leaves the list", async ({
   page,
 }) => {
-  await openedWith(page, { channel: "browser-keys-tab", count: THIRTY, replyTo: null });
+  await openedWith(page, { channel: unique("browser-keys-tab"), count: THIRTY, replyTo: null });
   await page.getByRole("textbox", { name: "Message" }).focus();
 
   const backwards = await walkedInFeed({ key: "Shift+Tab", left: TAB_LIMIT, page });
@@ -128,7 +129,7 @@ test("a channel of 30 messages is one Tab stop: Tab walks one message's own cont
 });
 
 test("arrow keys, j and k move one message, and Home and End reach the ends", async ({ page }) => {
-  await openedWith(page, { channel: "browser-keys-arrows", count: THIRTY, replyTo: null });
+  await openedWith(page, { channel: unique("browser-keys-arrows"), count: THIRTY, replyTo: null });
   await focusNewest(page, noteOf(THIRTY));
 
   await pressAndSee(page, "ArrowUp", noteOf(THIRTY - FIRST));
@@ -140,7 +141,7 @@ test("arrow keys, j and k move one message, and Home and End reach the ends", as
 });
 
 test("a live message arriving keeps focus on the message it was on", async ({ page }) => {
-  const channel = "browser-keys-live";
+  const channel = unique("browser-keys-live");
   await openedWith(page, { channel, count: THIRTY, replyTo: null });
   await focusNewest(page, noteOf(THIRTY));
   await page.keyboard.press("Home");
@@ -152,7 +153,7 @@ test("a live message arriving keeps focus on the message it was on", async ({ pa
 });
 
 test("up past the oldest loaded message loads older ones, and focus stays where it was", async ({ page }) => {
-  await openedWith(page, { channel: "browser-keys-older", count: MORE_THAN_A_PAGE, replyTo: null });
+  await openedWith(page, { channel: unique("browser-keys-older"), count: MORE_THAN_A_PAGE, replyTo: null });
   await focusNewest(page, noteOf(MORE_THAN_A_PAGE));
   await page.keyboard.press("Home");
 
@@ -178,7 +179,7 @@ async function openedWithFold(page: Page, channel: string): Promise<void> {
 }
 
 test("Enter on a fold of closed threads unfolds it", async ({ page }) => {
-  await openedWithFold(page, "browser-keys-fold");
+  await openedWithFold(page, unique("browser-keys-fold"));
   await focusNewest(page, "Still open.");
 
   await page.keyboard.press("ArrowUp");
@@ -201,7 +202,7 @@ async function openedThread(page: Page, channel: string): Promise<void> {
 }
 
 test("the same keys move between an open thread's replies", async ({ page }) => {
-  await openedThread(page, "browser-keys-thread");
+  await openedThread(page, unique("browser-keys-thread"));
   const replies = inThread(page).getByRole("feed", { name: "Replies" });
   await replies
     .getByRole("article")

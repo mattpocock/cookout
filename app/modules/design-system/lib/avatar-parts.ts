@@ -31,6 +31,7 @@ interface SuggestionsParts {
   readonly options: readonly SuggestionOptionParts[];
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
+  readonly place?: "above" | "below";
 }
 
 export type { AvatarParts, PresenceDotParts, PresenceShown, SuggestionOptionParts, SuggestionsParts };

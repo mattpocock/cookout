@@ -62,6 +62,24 @@ it.effect("with a public URL, the served page's link preview points at that URL"
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
+it.effect("on Fly with no public URL set, the public URL is the app's fly.dev address, and a set one wins", () =>
+  Effect.gen(function* flyPublicUrl() {
+    const web = yield* builtWebFolder;
+    const database = yield* freshDatabasePath;
+    const fly = yield* startServe({ database, env: { FLY_APP_NAME: "new-app" }, webFolder: web.folder });
+    const set = yield* startServe({
+      database: `${database}-set`,
+      env: { COOKOUT_PUBLIC_URL: "https://cookout.example.com", FLY_APP_NAME: "new-app" },
+      webFolder: web.folder,
+    });
+    const flyPage = yield* fetched(`${fly.url}/`);
+    const setPage = yield* fetched(`${set.url}/`);
+
+    expect(flyPage.body).toContain('<meta property="og:url" content="https://new-app.fly.dev/" />');
+    expect(setPage.body).toContain('<meta property="og:url" content="https://cookout.example.com/" />');
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
 it.effect("an asset the build doesn't have, or a path out of the build's folder, is not found", () =>
   Effect.gen(function* missingAssets() {
     const web = yield* builtWebFolder;

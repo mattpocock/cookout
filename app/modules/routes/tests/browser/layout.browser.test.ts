@@ -4,6 +4,7 @@ import { inSidebar, inTopBar } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const NARROW = { height: 900, width: 600 };
 const NONE = 0;
@@ -30,9 +31,9 @@ async function reloaded(page: Page): Promise<string> {
 }
 
 async function narrowLogIn(page: Page): Promise<Message> {
-  const { token } = await newIdentity({ kind: "human", name: "browser-narrow" });
-  await adminClient().createChannel({ name: "browser-narrow" });
-  const { message } = await adminClient().createMessage({ channel: "browser-narrow", text: "Narrow parent" });
+  const { token } = await newIdentity({ kind: "human", name: unique("browser-narrow") });
+  await adminClient().createChannel({ name: unique("browser-narrow") });
+  const { message } = await adminClient().createMessage({ channel: unique("browser-narrow"), text: "Narrow parent" });
   await logInToChannels({ page, token });
   await page.setViewportSize(NARROW);
   return message;
@@ -54,11 +55,13 @@ test("on a narrow screen the sidebar hides behind a button, and the thread panel
   await expect(inSidebar(page)).toBeHidden();
 
   await inTopBar(page).getByRole("button", { name: "Open the sidebar" }).click();
-  await inSidebar(page).getByRole("link", { name: "#browser-narrow" }).click();
+  await inSidebar(page)
+    .getByRole("link", { name: `#${unique("browser-narrow")}` })
+    .click();
 
   await expect(inSidebar(page)).toBeHidden();
 
-  await page.goto(`/#/channels/browser-narrow/threads/${String(message.id)}`);
+  await page.goto(`/#/channels/${unique("browser-narrow")}/threads/${String(message.id)}`);
 
   await expect(page.getByRole("complementary", { name: "Thread" })).toContainText("Narrow parent");
   await expect
@@ -72,7 +75,7 @@ test("on a narrow screen the sidebar hides behind a button, and the thread panel
 test("the theme switch changes the theme at once, keeps it across a reload, and System follows the system", async ({
   page,
 }) => {
-  const { token } = await newIdentity({ kind: "human", name: "browser-theme" });
+  const { token } = await newIdentity({ kind: "human", name: unique("browser-theme") });
   await page.emulateMedia({ colorScheme: "dark" });
   await logInToChannels({ page, token });
   const systemDark = await backgroundOf(page);

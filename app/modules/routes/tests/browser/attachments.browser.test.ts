@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import { hillsPng } from "../../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const OUTSIDE = { left: 4, top: 4 } as const;
 const NATURAL_WIDTH = 480;
@@ -36,7 +37,7 @@ async function openedFullSize(page: Page, channel: string): Promise<Opened> {
 test("Enter on a thumbnail opens the image at full size, and Escape closes it, back on the thumbnail", async ({
   page,
 }) => {
-  const { dialog, thumbnail } = await openedFullSize(page, "browser-attachments-escape");
+  const { dialog, thumbnail } = await openedFullSize(page, unique("browser-attachments-escape"));
 
   await expect(dialog.getByRole("img", { name: "hills.png" })).toHaveJSProperty("naturalWidth", NATURAL_WIDTH);
 
@@ -47,7 +48,7 @@ test("Enter on a thumbnail opens the image at full size, and Escape closes it, b
 });
 
 test("a click outside the full-size image closes it, back on the thumbnail", async ({ page }) => {
-  const { dialog, thumbnail } = await openedFullSize(page, "browser-attachments-outside");
+  const { dialog, thumbnail } = await openedFullSize(page, unique("browser-attachments-outside"));
 
   await expect(dialog.getByRole("img", { name: "hills.png" })).toBeVisible();
 

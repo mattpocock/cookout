@@ -5,6 +5,7 @@ import type { Person } from "./people.ts";
 import type { TopLevelMessage } from "../../../sdk/index.ts";
 import { clockFixtures } from "./clock.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 const test = base.extend<ClockFixtures>(clockFixtures);
 
@@ -27,7 +28,7 @@ async function threadStarted(cookout: OwnCookout, channel: string): Promise<Star
 }
 
 test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
-  const started = await threadStarted(ownCookout, "browser-nudges");
+  const started = await threadStarted(ownCookout, unique("browser-nudges"));
   await ownCookout.daysPass(QUIET_DAYS);
   await logIn({ page, token: started.starter.token, url: "/#/inbox" });
 
@@ -36,6 +37,8 @@ test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
     .getByRole("link", { name: new RegExp(NUDGE.replace("?", String.raw`\?`), "u") })
     .click();
 
-  await expect(page).toHaveURL(new RegExp(`#/channels/browser-nudges/threads/${String(started.parent.id)}$`, "u"));
+  await expect(page).toHaveURL(
+    new RegExp(`#/channels/${unique("browser-nudges")}/threads/${String(started.parent.id)}$`, "u"),
+  );
   await expect(inThread(page)).toContainText("Who owns the release notes?");
 });

@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const BOX = { name: "Search" } as const;
 const RESULTS = { name: "Search results" } as const;
@@ -12,17 +13,23 @@ const NONE = 0;
 const ONE = 1;
 
 interface Opened {
+  readonly channel: string;
   readonly reader: string;
   readonly thread: number;
 }
 
-async function openedOn(page: Page, channel: string): Promise<Opened> {
+async function openedOn(page: Page, name: string): Promise<Opened> {
+  const channel = unique(name);
   const admin = adminClient();
   await admin.createChannel({ name: channel });
   const { message } = await admin.createMessage({ channel, text: `Jump hello ${channel}` });
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await logInToChannels({ page, token: reader.token });
-  return { reader: `${channel}-reader`, thread: message.id };
+  return { channel, reader: `${channel}-reader`, thread: message.id };
+}
+
+function moonbeam(): string {
+  return `Quetzal ${unique("Moonbeam")}`;
 }
 
 function results(page: Page): Locator {
@@ -42,43 +49,39 @@ async function pressedDown(page: Page, times: number): Promise<void> {
 }
 
 test("ctrl+K, part of a channel's name and Enter open that channel", async ({ page }) => {
-  await openedOn(page, "browser-jump-zebrachan");
+  const { channel } = await openedOn(page, "browser-jump-zebrachan");
   await page.goto("/#/inbox");
-  await searched(page, "ZEBRACH");
+  await searched(page, channel.replace("browser-jump-", "").toUpperCase());
 
-  await expect(results(page).getByRole("group", { name: "Channels" }).getByRole("option")).toHaveText([
-    "#browser-jump-zebrachan",
-  ]);
+  await expect(results(page).getByRole("group", { name: "Channels" }).getByRole("option")).toHaveText([`#${channel}`]);
 
   await page.keyboard.press("Enter");
 
-  await expect(page).toHaveURL(/#\/channels\/browser-jump-zebrachan$/u);
+  await expect(page).toHaveURL(new RegExp(`#/channels/${channel}$`, "u"));
   await expect(results(page)).toBeHidden();
 });
 
 test("a person's Display name and Enter open their profile", async ({ page }) => {
   await openedOn(page, "browser-jump-person");
-  await newIdentity({ kind: "human", name: "browser-jump-person-target" });
-  await adminClient().setDisplayName("browser-jump-person-target", "Quetzal Moonbeam");
+  await newIdentity({ kind: "human", name: unique("browser-jump-person-target") });
+  await adminClient().setDisplayName(unique("browser-jump-person-target"), moonbeam());
   await page.goto("/#/inbox");
-  await searched(page, "quetzal moon");
+  await searched(page, moonbeam().toLowerCase());
 
   await expect(
-    results(page)
-      .getByRole("group", { name: "People" })
-      .getByRole("option", { name: /Quetzal Moonbeam/u }),
+    results(page).getByRole("group", { name: "People" }).getByRole("option", { name: moonbeam() }),
   ).toBeVisible();
 
   await page.keyboard.press("Enter");
 
-  await expect(page).toHaveURL(/#\/people\/browser-jump-person-target$/u);
+  await expect(page).toHaveURL(new RegExp(`#/people/${unique("browser-jump-person-target")}$`, "u"));
   await expect(inProfile(page)).toBeVisible();
 });
 
 for (const [at, place] of PLACES.entries()) {
   test(`with nothing typed the box lists Inbox, People and Settings, and Enter opens ${place}`, async ({ page }) => {
-    const opened = await openedOn(page, `browser-jump-place-${place.toLowerCase()}`);
-    await page.goto(`/#/channels/browser-jump-place-${place.toLowerCase()}/threads/${String(opened.thread)}`);
+    const { channel, thread } = await openedOn(page, `browser-jump-place-${place.toLowerCase()}`);
+    await page.goto(`/#/channels/${channel}/threads/${String(thread)}`);
 
     await expect(page.getByRole("textbox", REPLY)).toBeFocused();
 
@@ -98,23 +101,23 @@ for (const [at, place] of PLACES.entries()) {
 }
 
 test("a word from a message still lists the message, and Enter opens it in its thread", async ({ page }) => {
-  const opened = await openedOn(page, "browser-jump-message");
+  const { channel, thread } = await openedOn(page, "browser-jump-message");
   await page.goto("/#/inbox");
-  await searched(page, "jump hello browser-jump-message");
+  await searched(page, `jump hello ${channel}`);
 
   await expect(results(page).getByRole("group", { name: "Messages" }).getByRole("option")).toContainText([
-    "Jump hello browser-jump-message",
+    `Jump hello ${channel}`,
   ]);
 
   await page.keyboard.press("Enter");
 
-  await expect(page).toHaveURL(new RegExp(`#/channels/browser-jump-message/threads/${String(opened.thread)}$`, "u"));
-  await expect(inPane(page).getByText("Jump hello browser-jump-message").first()).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`#/channels/${channel}/threads/${String(thread)}$`, "u"));
+  await expect(inPane(page).getByText(`Jump hello ${channel}`).first()).toBeVisible();
 });
 
 test("escape closes the box and gives focus back to the reply box", async ({ page }) => {
-  const opened = await openedOn(page, "browser-jump-escape");
-  await page.goto(`/#/channels/browser-jump-escape/threads/${String(opened.thread)}`);
+  const { channel, thread } = await openedOn(page, "browser-jump-escape");
+  await page.goto(`/#/channels/${channel}/threads/${String(thread)}`);
   const reply = page.getByRole("textbox", REPLY);
   await reply.click();
   await page.keyboard.press("Control+k");

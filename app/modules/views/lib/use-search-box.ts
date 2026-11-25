@@ -1,19 +1,24 @@
 import { aheadOf, boxOptionsOf } from "./search-options.ts";
+import { filterSuggestionsOf, pickedOf } from "./filter-suggestions.ts";
 import { useCallback, useEffect, useRef } from "react";
 import type { Board } from "../../board/index.ts";
 import type { BoxOption } from "./search-options.ts";
+import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { RefObject } from "react";
 import type { Search } from "../../search/web.ts";
+import { recentDays } from "../../format/index.ts";
 
 const NEAR_END_PX = 48;
 const CAPTURE = { capture: true } as const;
 const ONE = 1;
+const NONE = 0;
 
 interface SearchBox {
   readonly area: RefObject<HTMLDivElement | null>;
   readonly choose: (href: string) => void;
+  readonly pick: (at: number) => void;
 }
 
 interface SearchBoxStores {
@@ -27,6 +32,7 @@ interface SearchBoxStores {
 interface Place {
   readonly search: Search;
   readonly options: () => readonly BoxOption[];
+  readonly suggestions: () => readonly FilterSuggestion[];
   readonly area: () => HTMLDivElement | null;
   readonly box: () => Element | null;
   readonly back: () => unknown;
@@ -72,6 +78,32 @@ function chooseHighlighted(place: Place): void {
   }
 }
 
+function pick(place: Place, at: number): void {
+  const state = place.search.snapshot();
+  for (const chosen of place.suggestions().slice(at, at + ONE)) {
+    const picked = pickedOf({ state, suggestion: chosen });
+    for (const box of inputs(place.box())) {
+      box.value = picked.query;
+      box.setSelectionRange(picked.caret, picked.caret);
+    }
+    place.search.edit(picked.query, picked.caret);
+  }
+}
+
+function isSuggesting(place: Place): boolean {
+  const { dismissed, open } = place.search.snapshot();
+  return open && !dismissed && place.suggestions().length > NONE;
+}
+
+function moved(place: Place, direction: "down" | "up"): true {
+  if (isSuggesting(place)) {
+    place.search.moveSuggestion(direction, place.suggestions().length);
+  } else {
+    place.search.move(direction, aheadOf(place.options()));
+  }
+  return true;
+}
+
 function bindBox(place: Place, keymap: Keymap): () => void {
   const { search } = place;
   return keymap.bind({
@@ -81,16 +113,24 @@ function bindBox(place: Place, keymap: Keymap): () => void {
         goBack(place);
         return true;
       },
-      highlightNext: () => {
-        search.move("down", aheadOf(place.options()));
+      dismissSuggestions: () => {
+        if (!isSuggesting(place)) {
+          return false;
+        }
+        search.dismissSuggestions();
         return true;
       },
-      highlightPrevious: () => {
-        search.move("up", aheadOf(place.options()));
-        return true;
-      },
+      highlightNext: () => moved(place, "down"),
+      highlightPrevious: () => moved(place, "up"),
       openHighlighted: () => {
         chooseHighlighted(place);
+        return true;
+      },
+      pickSuggestion: () => {
+        if (!isSuggesting(place)) {
+          return false;
+        }
+        pick(place, search.snapshot().suggestion);
         return true;
       },
     },
@@ -119,7 +159,7 @@ function typedOf(place: Place): Listener {
   return (event) => {
     for (const box of inputs(place.box())) {
       if (box === event.target) {
-        place.search.edit(box.value);
+        place.search.edit(box.value, Number(box.selectionEnd));
       }
     }
   };
@@ -197,6 +237,13 @@ function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStore
         back.current = element;
       },
       search,
+      suggestions: () =>
+        filterSuggestionsOf({
+          channels: board.snapshot().channels,
+          days: recentDays(),
+          identities: identities.snapshot(),
+          state: search.snapshot(),
+        }),
     }),
     [board, box, identities, search],
   );
@@ -207,7 +254,13 @@ function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStore
     },
     [place],
   );
-  return { area, choose };
+  const pickAt = useCallback(
+    (at: number) => {
+      pick(place(), at);
+    },
+    [place],
+  );
+  return { area, choose, pick: pickAt };
 }
 
 export { useSearchBox };

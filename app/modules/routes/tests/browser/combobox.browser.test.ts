@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { unique } from "./names.ts";
 
 const nowhere = "http://127.0.0.1:9/command";
 const schema = { properties: { branch: { type: "string" } }, type: "object" } as const;
@@ -22,7 +23,8 @@ async function activeOption(box: Locator): Promise<string | null> {
   return box.page().locator(`[id="${id}"]`).textContent();
 }
 
-async function twoCommands(prefix: string): Promise<void> {
+async function twoCommands(base: string): Promise<string> {
+  const prefix = unique(base);
   const admin = adminClient();
   await Promise.all(
     [`${prefix}-first`, `${prefix}-second`].map(async (name) => {
@@ -30,35 +32,37 @@ async function twoCommands(prefix: string): Promise<void> {
       await admin.addCommand({ name, schema, url: nowhere });
     }),
   );
+  return prefix;
 }
 
 function listIn(page: Page, name: string): Locator {
   return inPane(page).getByRole("listbox", { name });
 }
 
-test("typing @gr shows the mention list as a combobox's listbox, and Tab writes @grace", async ({ page }) => {
-  await newIdentity({ kind: "human", name: "grace" });
-  const box = await messageBoxIn(page, "browser-combobox-tab");
-  await box.pressSequentially("@gr");
+test("typing @grace's name shows the mention list as a combobox's listbox, and Tab writes @grace", async ({ page }) => {
+  const grace = unique("grace");
+  await newIdentity({ kind: "human", name: grace });
+  const box = await messageBoxIn(page, unique("browser-combobox-tab"));
+  await box.pressSequentially(`@${grace}`);
 
   await expect(inPane(page).getByRole("combobox", { name: "Message" })).toHaveAttribute("aria-expanded", "true");
-  await expect(listIn(page, "Mention suggestions").getByRole("option", { selected: true })).toHaveText("@grace");
+  await expect(listIn(page, "Mention suggestions").getByRole("option", { selected: true })).toHaveText(`@${grace}`);
   await expect
     .poll(async () => {
       const active = await activeOption(box);
       return active;
     })
-    .toBe("@grace");
+    .toBe(`@${grace}`);
 
   await page.keyboard.press("Tab");
 
-  await expect(box).toHaveValue("@grace ");
+  await expect(box).toHaveValue(`@${grace} `);
   await expect(box).toBeFocused();
 });
 
 test("Escape closes the mention list and keeps the text, with focus still in the box", async ({ page }) => {
-  await newIdentity({ kind: "human", name: "browser-combobox-escape-reader" });
-  const box = await messageBoxIn(page, "browser-combobox-escape");
+  await newIdentity({ kind: "human", name: unique("browser-combobox-escape-reader") });
+  const box = await messageBoxIn(page, unique("browser-combobox-escape"));
   await box.pressSequentially("Ping @browser-combobox-escape-r");
 
   await expect(listIn(page, "Mention suggestions")).toBeVisible();
@@ -71,55 +75,55 @@ test("Escape closes the mention list and keeps the text, with focus still in the
 });
 
 test("typing / lists commands with the same roles, and the arrows move the active option", async ({ page }) => {
-  await twoCommands("browser-combobox");
-  const box = await messageBoxIn(page, "browser-combobox-command");
+  const prefix = await twoCommands("browser-combobox");
+  const box = await messageBoxIn(page, unique("browser-combobox-command"));
   await box.pressSequentially("/");
 
   await expect(listIn(page, "Command suggestions")).toBeVisible();
 
-  await box.pressSequentially("browser-combobox-");
+  await box.pressSequentially(`${prefix}-`);
 
   await expect(listIn(page, "Command suggestions").getByRole("option")).toHaveText([
-    "/browser-combobox-first",
-    "/browser-combobox-second",
+    `/${prefix}-first`,
+    `/${prefix}-second`,
   ]);
   await expect
     .poll(async () => {
       const active = await activeOption(box);
       return active;
     })
-    .toBe("/browser-combobox-first");
+    .toBe(`/${prefix}-first`);
 
   await page.keyboard.press("ArrowDown");
 
   await expect(listIn(page, "Command suggestions").getByRole("option", { selected: true })).toHaveText(
-    "/browser-combobox-second",
+    `/${prefix}-second`,
   );
   await expect
     .poll(async () => {
       const active = await activeOption(box);
       return active;
     })
-    .toBe("/browser-combobox-second");
+    .toBe(`/${prefix}-second`);
 });
 
 test("Escape closes the command list keeping the text, and Tab picks a command", async ({ page }) => {
-  await twoCommands("browser-combo-keys");
-  const box = await messageBoxIn(page, "browser-combobox-command-keys");
-  await box.pressSequentially("/browser-combo-keys-");
+  const prefix = await twoCommands("browser-combo-keys");
+  const box = await messageBoxIn(page, unique("browser-combobox-command-keys"));
+  await box.pressSequentially(`/${prefix}-`);
 
   await expect(listIn(page, "Command suggestions").getByRole("option")).toHaveText([
-    "/browser-combo-keys-first",
-    "/browser-combo-keys-second",
+    `/${prefix}-first`,
+    `/${prefix}-second`,
   ]);
 
   await page.keyboard.press("Escape");
 
   await expect(listIn(page, "Command suggestions")).toBeHidden();
-  await expect(box).toHaveValue("/browser-combo-keys-");
+  await expect(box).toHaveValue(`/${prefix}-`);
 
   await box.pressSequentially("s");
   await page.keyboard.press("Tab");
 
-  await expect(page.getByRole("form", { name: "Call /browser-combo-keys-second" })).toBeVisible();
+  await expect(page.getByRole("form", { name: `Call /${prefix}-second` })).toBeVisible();
 });

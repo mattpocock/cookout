@@ -13,7 +13,7 @@ interface ListboxGroup<Option extends ListboxOption> {
   readonly options: readonly Option[];
 }
 
-type Look = "menu" | "results";
+type Look = "menu" | "menu below" | "results";
 
 interface ListboxParts<Option extends ListboxOption> {
   readonly list: string;
@@ -47,6 +47,12 @@ const LOOKS = {
   menu: {
     listbox:
       "absolute bottom-full left-0 z-50 mb-2 flex min-w-56 flex-col rounded-md border bg-background py-1 text-sm shadow-lg",
+    option: "flex w-full cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
+    scrolls: false,
+  },
+  "menu below": {
+    listbox:
+      "absolute top-full left-4 z-50 mt-1 flex min-w-56 flex-col rounded-md border bg-background py-1 text-sm shadow-lg",
     option: "flex w-full cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
     scrolls: false,
   },

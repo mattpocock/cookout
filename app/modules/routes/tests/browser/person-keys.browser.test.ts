@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { unique } from "./names.ts";
 
 const BOX = { name: "Message" } as const;
 const TWO_PEOPLE = 2;
@@ -91,7 +92,7 @@ async function arrowsMove(page: Page, { first, second }: Pair): Promise<void> {
 test("one Tab enters the People list, arrows move between people, Tab leaves it, and Enter opens a profile", async ({
   page,
 }) => {
-  const pair = await peopleShown(page, "browser-people-keys");
+  const pair = await peopleShown(page, unique("browser-people-keys"));
   await arrowsMove(page, pair);
   const people = page.getByRole("list", { name: "Identities" });
   await page.keyboard.press("Tab");
@@ -112,7 +113,7 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
   page,
 }) => {
   await copiesRecorded(page);
-  const { mentioned } = await postedAndOpen(page, "browser-person-keys-mention");
+  const { mentioned } = await postedAndOpen(page, unique("browser-person-keys-mention"));
   const mention = page.getByRole("feed", { name: "Messages" }).getByRole("link", { name: `@${mentioned}` });
   await mention.focus();
   await page.keyboard.press("c");
@@ -126,7 +127,7 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
 });
 
 test("Tab to a message's author, then m, puts @author in the message box", async ({ page }) => {
-  const { author } = await postedAndOpen(page, "browser-person-keys-author");
+  const { author } = await postedAndOpen(page, unique("browser-person-keys-author"));
   await page.getByRole("feed", { name: "Messages" }).getByRole("article").first().focus();
   await page.keyboard.press("Tab");
 
@@ -137,7 +138,7 @@ test("Tab to a message's author, then m, puts @author in the message box", async
 });
 
 test("the person menu shows Enter, m and c beside View profile, Message and Copy name", async ({ page }) => {
-  const { author } = await postedAndOpen(page, "browser-person-keys-menu");
+  const { author } = await postedAndOpen(page, unique("browser-person-keys-menu"));
   await authorOf(page, author).click({ button: "right" });
   const menu = page.getByRole("menu", { name: `@${author} actions` });
 
@@ -174,7 +175,7 @@ async function menuHasNoMessage(
 test("in the People list a row offers no m: its menu has no Message, m does nothing, and the shortcut list says m needs a message box", async ({
   page,
 }) => {
-  const { first } = await peopleShown(page, "browser-people-no-m");
+  const { first } = await peopleShown(page, unique("browser-people-no-m"));
   const row = page.getByRole("list", { name: "Identities" }).getByRole("link", { name: first });
   await mLeavesRow(page, row);
   await menuHasNoMessage(page, { name: first, row });
@@ -188,7 +189,7 @@ test("in the People list a row offers no m: its menu has no Message, m does noth
 });
 
 test("→ in the kind filter chooses Humans", async ({ page }) => {
-  const reader = await newIdentity({ kind: "human", name: "browser-person-keys-kinds" });
+  const reader = await newIdentity({ kind: "human", name: unique("browser-person-keys-kinds") });
   await logInToChannels({ page, token: reader.token, url: "/#/people" });
   const kinds = page.getByRole("radiogroup", { name: "Kind" });
   await kinds.getByRole("radio", { name: /^All/u }).focus();
@@ -199,7 +200,7 @@ test("→ in the kind filter chooses Humans", async ({ page }) => {
 });
 
 test("→ in the theme choice chooses Light", async ({ page }) => {
-  const reader = await newIdentity({ kind: "human", name: "browser-person-keys-themes" });
+  const reader = await newIdentity({ kind: "human", name: unique("browser-person-keys-themes") });
   await logInToChannels({ page, token: reader.token, url: "/#/settings/theme" });
   const themes = page.getByRole("radiogroup", { name: "Theme" });
   await themes.getByRole("radio", { name: "System" }).focus();
