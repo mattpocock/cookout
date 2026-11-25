@@ -16,6 +16,7 @@ const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const NONE = 0;
 const TYPES: Named = { command: ["node_modules/.bin/tsc", "--noEmit", "--incremental"], name: "types" };
+const KNIP: Named = { command: ["pnpm", "run", "--silent", "knip"], name: "knip" };
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -44,9 +45,9 @@ function run({ command, name }: Named): Ran {
 
 function checksOf(files: readonly string[]): readonly Named[] {
   if (files.length === NONE) {
-    return [TYPES];
+    return [TYPES, KNIP];
   }
-  return [{ command: ["node", "scripts/lint-ratchet.ts", ...files], name: "lint" }, TYPES];
+  return [{ command: ["node", "scripts/lint-ratchet.ts", ...files], name: "lint" }, TYPES, KNIP];
 }
 
 function exitCodeOf(checks: readonly Named[]): number {

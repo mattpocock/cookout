@@ -125,7 +125,7 @@ function stage(work: string, ...files: readonly string[]): void {
   git(work, "add", ...files);
 }
 
-function mergeTicketTwo(other: string): void {
+function landTicketTwo(other: string): void {
   git(other, "checkout", "--quiet", "-b", "ticket-2");
   change(other, "a.txt", "Ticket 2 first");
   change(other, "b.txt", "Ticket 2 second");
@@ -186,7 +186,7 @@ it("a ticket merged into origin/v1 shows as its one merge commit, beside v1's ow
   expect.hasAssertions();
 
   const { work, other } = branchCutFromV1();
-  mergeTicketTwo(other);
+  landTicketTwo(other);
   landOnV1(other, ["a.txt", "Rework a on v1"]);
   stage(work, "a.txt", "b.txt");
 

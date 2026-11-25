@@ -1,4 +1,4 @@
 ---
 ---
 
-The merge-ticket script is gone: a worker lands its own pull request (repository tooling only).
+A worker lands its own pull request after merging v1 in; the old landing script is gone (repository tooling only).
