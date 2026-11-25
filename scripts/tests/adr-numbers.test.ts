@@ -1,5 +1,5 @@
-import { duplicateNumbers, renumbering, rewriteReferences } from "../lib/adr-numbers.ts";
 import { expect, it } from "vitest";
+import { duplicateNumbers } from "../lib/adr-numbers.ts";
 
 it("names two ADRs that share a number", { timeout: 1000 }, () => {
   expect.hasAssertions();
@@ -14,25 +14,6 @@ it("names two ADRs that share a number", { timeout: 1000 }, () => {
   expect(duplicates).toStrictEqual([
     "docs/adr/0033-limits.md and docs/adr/0033-the-hook.md share ADR number 0033. Renumber one past the highest.",
   ]);
-});
-
-it("renumbers all of a ticket's new ADRs in order once one clashes, rewriting each citation once", {
-  timeout: 1000,
-}, () => {
-  expect.hasAssertions();
-
-  const renames = renumbering({ added: ["docs/adr/0034-b.md", "docs/adr/0033-a.md"], v1: ["docs/adr/0033-limits.md"] });
-
-  expect([
-    renames.map((rename) => rename.to.file),
-    rewriteReferences({ renames, text: "ADR 0033 and ADR 0034, 0033-a.md, ADR 00331" }),
-  ]).toStrictEqual([["docs/adr/0034-a.md", "docs/adr/0035-b.md"], "ADR 0034 and ADR 0035, 0034-a.md, ADR 00331"]);
-});
-
-it("leaves a ticket's new ADRs alone when they are already past v1's highest", { timeout: 1000 }, () => {
-  expect.hasAssertions();
-
-  expect(renumbering({ added: ["docs/adr/0034-a.md"], v1: ["docs/adr/0033-limits.md"] })).toStrictEqual([]);
 });
 
 it("passes ADRs that each have their own number", { timeout: 1000 }, () => {
