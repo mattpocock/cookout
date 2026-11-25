@@ -3,7 +3,6 @@ import type { MenuChoice as Choice } from "./menu-parts.ts";
 import { MENU_ITEM } from "./menu-style.ts";
 import { MenuChoiceText } from "./menu-choice-text.tsx";
 import type { ReactNode } from "react";
-import { ShortcutTooltip } from "./shortcut-tooltip.tsx";
 
 interface ItemShape {
   readonly asChild: true;
@@ -47,20 +46,11 @@ export function MenuChoice(parts: MenuChoiceParts): ReactNode {
       </RadixItem>
     );
   }
-  const item = (
+  return (
     <RadixItem asChild disabled={choice.disabled ?? false} onSelect={handleSelect}>
       <div aria-keyshortcuts={keysOf(choice)} className={MENU_ITEM}>
         {createElement(MenuChoiceText, { choice })}
       </div>
     </RadixItem>
-  );
-  const shortcut = choice.shortcut ?? null;
-  if (shortcut === null) {
-    return item;
-  }
-  return (
-    <ShortcutTooltip label={choice.label} shortcut={shortcut}>
-      {item}
-    </ShortcutTooltip>
   );
 }

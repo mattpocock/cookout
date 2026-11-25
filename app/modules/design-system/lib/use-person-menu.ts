@@ -1,6 +1,6 @@
 import type { ActionMenuParts, MenuChoice } from "./menu-parts.ts";
 import { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
-import type { PersonActs, PersonKeysShared } from "./person-keys-parts.ts";
+import type { PersonActs, PersonKeysSource } from "./person-keys-parts.ts";
 import { useContext, useMemo, useSyncExternalStore } from "react";
 import { PersonKeys } from "./person-keys-parts.ts";
 
@@ -14,13 +14,13 @@ interface PersonMenuOf {
 interface PersonMenu extends ActionMenuParts {
   readonly buttonLabel: string;
   readonly acts: PersonActs;
-  readonly keys: PersonKeysShared;
+  readonly keys: PersonKeysSource;
 }
 
 interface PersonChoicesOf extends PersonMenuOf {
   readonly compose: ((name: string) => void) | null;
   readonly deactivated: boolean;
-  readonly keys: PersonKeysShared;
+  readonly keys: PersonKeysSource;
 }
 
 interface Choosing {

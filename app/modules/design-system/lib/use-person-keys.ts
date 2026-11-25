@@ -1,8 +1,8 @@
-import type { PersonActs, PersonKeysShared } from "./person-keys-parts.ts";
+import type { PersonActs, PersonKeysSource } from "./person-keys-parts.ts";
 import { useEffect } from "react";
 
 interface PersonKeysOf {
-  readonly person: { readonly acts: PersonActs; readonly keys: PersonKeysShared } | null;
+  readonly person: { readonly acts: PersonActs; readonly keys: PersonKeysSource } | null;
   readonly within: () => Element | null;
 }
 

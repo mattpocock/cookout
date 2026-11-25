@@ -46,6 +46,7 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
         reply={props.reply}
       />
       <ConversationReplies
+        closing={props.closing}
         linked={props.linked}
         me={props.me}
         menu={props.menu}
