@@ -9,7 +9,7 @@ export function useRegionKeys(keymap: Keymap): void {
   const { watch } = useContext(LandingContext);
   useEffect(() => {
     const regions = createRegionKeys();
-    const { intoMessageBox, intoMessages, toSidebar } = columnActions({ watch });
+    const { intoMessages, ...messageKeys } = columnActions({ watch });
     const { document } = globalThis;
     function remember(event: Readonly<Event>): void {
       regions.remember(event.target);
@@ -17,7 +17,7 @@ export function useRegionKeys(keymap: Keymap): void {
     document.addEventListener("focusin", remember);
     const unbind = [
       keymap.bind({ actions: regions.actions, scope: "everywhere" }),
-      keymap.bind({ actions: { intoMessageBox, toSidebar }, scope: "message" }),
+      keymap.bind({ actions: messageKeys, scope: "message" }),
       keymap.bind({ actions: { intoMessages }, scope: "channel row", within: sidebar }),
     ];
     return (): void => {
