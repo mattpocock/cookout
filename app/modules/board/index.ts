@@ -35,7 +35,7 @@
  * The board's own slices: `channels`, the channel list (`channelList`), read with `GET /v1/channels`, joined by each
  * `channel` event and left by each `channel-deleted` (if the page is on that channel, it goes to the Inbox with the
  * name as `deletedChannelNotice` until `dismissNotice`); a message in a channel the list doesn't have reads it again.
- * `commands` (`commandList`), every registered command, changed by `command` events; `subscriptions`
+ * `webhookCommands` (`webhookCommandList`), every registered Webhook command, changed by `command` events; `subscriptions`
  * (`subscribedChannels`), the channels the logged-in identity subscribes to, sorted, changed by `subscription` events
  * and left by `channel-deleted`, with `calls.setSubscribed` keeping the server's refusal, with the channel and the control it was asked `from`;
  * `schedules`, every Scheduled message, read with `GET /v1/scheduled-messages` and shown a channel at a time by
@@ -52,7 +52,7 @@
  * shown, each new top-level message heard live joins it and is acked; each time it is opened again it reads the newest
  * page again, keeping older pages, and acks the newest; on a link back each open page reads again, paging back to what
  * it shows (`docs/adr/0068-a-page-catches-up-by-reading-again.md`). `loadOlder` pages further back; `post` posts a
- * top-level message with any files (#377), adds it, and only then calls `posted`, so a refused post keeps its text and files; `call` calls a command
+ * top-level message with any files (#377), adds it, and only then calls `posted`, so a refused post keeps its text and files; `call` calls a Webhook command
  * with data typed as JSON, keeping the schema errors of data it refuses, and only a successful call empties
  * `callData` and calls `called`; `showClosed` keeps how many threads of a run of closed threads the feed shows.
  * `threads.subscribeShowing(place, acking)` shows a thread (`threadOf(place)`): read when first shown and again when
@@ -146,7 +146,7 @@ export {
   type SchedulingSnapshot,
   createScheduling,
 } from "./lib/scheduling.ts";
-export type { ChannelsState, CommandsState } from "./lib/listed-slices.ts";
+export type { ChannelsState, WebhookCommandsState } from "./lib/listed-slices.ts";
 export {
   type ScheduleList,
   type ScheduleListState,
@@ -154,7 +154,7 @@ export {
 } from "./lib/schedule-list.ts";
 export { cronWords } from "./lib/cron-words.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
-export type { CallState } from "./lib/command-call.ts";
+export type { CallState } from "./lib/webhook-command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Outgoing } from "./lib/outgoing.ts";
@@ -215,7 +215,7 @@ export {
   channelList,
   channelPage,
   closingRefusal,
-  commandList,
+  webhookCommandList,
   deletedChannelNotice,
   deletedSchedules,
   messageBeforeOf,
