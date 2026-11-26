@@ -34,9 +34,10 @@ import {
   isTriggerEvent,
   isWakeRunResponse,
 } from "./generated/validators.js";
-import { presencePath, runnerQuery, wakeRunPath } from "../../presence/index.ts";
+import { presencePath, runnerQuery, wakeRunFailurePath, wakeRunPath } from "../../presence/index.ts";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
+import type { WakeRunFailure } from "../../presence/index.ts";
 
 type EventType = CookoutEvent["type"];
 
@@ -225,6 +226,15 @@ function eventCalls(server: ClientConnection): EventCalls {
       const said = await sayWakeRun(server, "DELETE");
       return said;
     },
+    failWakeRun: async (failure) => {
+      const said = await send(server, {
+        body: failure,
+        isExpected: isWakeRunResponse,
+        method: "POST",
+        path: wakeRunFailurePath,
+      });
+      return said;
+    },
     presence: async () => {
       const everyone = await getJson(server, presencePath, isPresenceResponse);
       return everyone;
@@ -258,6 +268,7 @@ interface EventCalls {
   readonly presence: () => Promise<PresenceResponse>;
   readonly startWakeRun: () => Promise<WakeRunResponse>;
   readonly endWakeRun: () => Promise<WakeRunResponse>;
+  readonly failWakeRun: (failure: WakeRunFailure) => Promise<WakeRunResponse>;
 }
 
 export { type EventCalls, type EventStream, type WatchOptions, eventCalls, eventOf };

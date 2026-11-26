@@ -1,10 +1,11 @@
-import { Array as Arr, Effect, Order, Queue, Ref } from "effect";
+import { Array as Arr, Effect, Option, Order, Queue, Ref } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import type { Registration } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
+import type { WakeRunFailure } from "../../../presence/index.ts";
 import { callClient } from "./adapters/sdk.ts";
 import { printLine } from "./output.ts";
 import { wakeRun } from "./wake-run.ts";
@@ -120,12 +121,43 @@ interface Queued extends Waking {
   readonly take: Effect.Effect<readonly InboxItem[]>;
 }
 
-function presenceDuring(
-  asAgent: ClientWithAgentSessionState,
-): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
-  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
-  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
-  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
+function failureText(failure: WakeRunFailure): string {
+  if ("exitCode" in failure) {
+    return `My wake run exited ${String(failure.exitCode)}.`;
+  }
+  return `My wake run timed out after ${String(failure.timedOutAfterMinutes)} min.`;
+}
+
+function repliedTo(asAgent: ClientWithAgentSessionState, given: readonly InboxItem[]) {
+  return (failure: WakeRunFailure): Effect.Effect<void> =>
+    Effect.forEach(
+      given,
+      ({ channel, message }) =>
+        Effect.ignore(
+          callClient((client) =>
+            client.createMessage({ channel: channel.name, replyTo: message.id, text: failureText(failure) }),
+          )(asAgent),
+        ),
+      { concurrency: 1, discard: true },
+    );
+}
+
+interface RunPresence {
+  readonly started: Effect.Effect<void>;
+  readonly ended: Effect.Effect<void>;
+  readonly failed: (failure: WakeRunFailure) => Effect.Effect<void>;
+}
+
+function runPresence(asAgent: ClientWithAgentSessionState, given: readonly InboxItem[]): RunPresence {
+  return {
+    ended: Effect.ignore(callClient((client) => client.endWakeRun())(asAgent)),
+    failed: (failure) =>
+      Effect.andThen(
+        repliedTo(asAgent, given)(failure),
+        Effect.ignore(callClient((client) => client.failWakeRun(failure))(asAgent)),
+      ),
+    started: Effect.ignore(callClient((client) => client.startWakeRun())(asAgent)),
+  };
 }
 
 function runGiven({ asAgent, change, place, registration }: Queued) {
@@ -133,7 +165,10 @@ function runGiven({ asAgent, change, place, registration }: Queued) {
     Effect.gen(function* runAndRetry() {
       yield* change(withRun(given));
       const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
-      yield* presenceDuring(asAgent)(run);
+      const { ended, failed, started } = runPresence(asAgent, given);
+      yield* started;
+      const failure = yield* Effect.onInterrupt(run, () => ended);
+      yield* Option.match(failure, { onNone: () => ended, onSome: failed });
       const unread = yield* stillUnread(asAgent, given);
       yield* change(withRetried(unread));
     });

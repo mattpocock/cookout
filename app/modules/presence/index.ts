@@ -48,6 +48,7 @@ export const offlineReasons = [
   "deactivated",
   "connection lost",
   "trigger failed",
+  "wake run failed",
 ] as const;
 
 /** One of `offlineReasons`. */
@@ -68,7 +69,8 @@ export type OfflineReason = (typeof offlineReasons)[number];
  * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
  * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
  * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
- * wake run starts and ends at `wakeRunPath`.
+ * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
+ * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
  */
 export interface Presence {
   readonly identity: IdentityName;
@@ -101,6 +103,17 @@ export const runnerQuery = { as: "runner" } as const;
  * caller holds no live connection opened with `runnerQuery`.
  */
 export const wakeRunPath = `${presencePath}/wake-run`;
+
+/**
+ * `POST /v1/presence/wake-run/failure`, with a `WakeRunFailure`: a wake run of the caller's runner has ended with a
+ * non-zero exit or was killed at its timeout. The agent is then Unreachable, and the first failure of a streak raises
+ * one `wake run failed` offline alert in its owner's Inbox; the next wake run that ends with exit 0 (`DELETE` at
+ * `wakeRunPath`) clears both. Answers `WakeRunResponse`, or 404 `not_found` as `wakeRunPath` does.
+ */
+export const wakeRunFailurePath = `${wakeRunPath}/failure`;
+
+/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
+export type WakeRunFailure = { readonly exitCode: number } | { readonly timedOutAfterMinutes: number };
 
 /** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
 export interface WakeRunResponse {

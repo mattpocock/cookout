@@ -1,6 +1,12 @@
-import { Argument, Command } from "effect/cli";
+import { Argument, Command, Flag } from "effect/cli";
 import { Array as Arr, Deferred, Effect, Fiber, Option, Stream } from "effect";
-import { SESSION_ID_PLACEHOLDER, opened, registerHere, registeredSessions } from "./registrations.ts";
+import {
+  SESSION_ID_PLACEHOLDER,
+  TIMEOUT_DESCRIPTION,
+  opened,
+  registerHere,
+  registeredSessions,
+} from "./registrations.ts";
 import { answered, printErrorLine, refused } from "./output.ts";
 import { source, start } from "./watch-connection.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
@@ -108,12 +114,17 @@ const wakeCommandArgument = Argument.String("wake-command").pipe(
   ),
 );
 
-const registerCommand = Command.make("register", { wake: wakeCommandArgument }, ({ wake }) =>
-  answered(registerHere(wake)),
+const timeoutFlag = Flag.Int("timeout").pipe(Flag.optional, Flag.withDescription(TIMEOUT_DESCRIPTION));
+
+const registerCommand = Command.make(
+  "register",
+  { timeout: timeoutFlag, wake: wakeCommandArgument },
+  ({ timeout, wake }) => answered(registerHere({ timeoutMinutes: timeout, words: wake })),
 ).pipe(
   Command.withDescription(
-    "Register this joined harness session with the runner: cookout runner register -- <wake command…>. Keeps the " +
-      `agent, the board, this folder, PATH and the wake command (with ${SESSION_ID_PLACEHOLDER} filled in) in a ` +
+    "Register this joined harness session with the runner: cookout runner register [--timeout <minutes>] -- " +
+      "<wake command…>. Keeps the agent, the board, this folder, PATH, the timeout if given and the wake command " +
+      `(with ${SESSION_ID_PLACEHOLDER} filled in) in a ` +
       "mode-600 file beside the session's agent session state. Refused with not_joined before join.",
   ),
 );

@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Path } from "effect";
+import { Array as Arr, Effect, FileSystem, Option, Path } from "effect";
 import type { BoardAgent, WakeBoard } from "./wake-board.ts";
 import type { TestCookout, TestIdentity } from "./cookout.ts";
 import { WAKE_CHANNEL, boardAgent } from "./wake-board.ts";
@@ -13,14 +13,23 @@ import { runCookout } from "./command-line.ts";
 
 const SUCCESS = 0;
 
+function timeoutArgs(timeoutMinutes: number | undefined): readonly string[] {
+  return Option.match(Option.fromUndefinedOr(timeoutMinutes), {
+    onNone: () => [],
+    onSome: (minutes) => ["--timeout", String(minutes)],
+  });
+}
+
 function joinWaking({
   name,
   on,
   settings,
+  timeoutMinutes,
 }: {
   readonly name: string;
   readonly on: WakeBoard;
   readonly settings: FakeWakeSettings;
+  readonly timeoutMinutes?: number | undefined;
 }): Effect.Effect<BoardAgent, never, CommandLineNeeds | TestCookout | Scope.Scope> {
   return Effect.gen(function* joinAndRegister() {
     const fs = yield* FileSystem.FileSystem;
@@ -30,7 +39,7 @@ function joinWaking({
     yield* Effect.orDie(fs.writeFileString(tokenFile, joined.agent.token));
     const wake = yield* fakeWakeCommand({ ...settings, tokenFile });
     const { exitCode, stderr } = yield* runCookout({
-      args: ["join", "--as", name, "--wake", "--", ...wake],
+      args: ["join", "--as", name, "--wake", ...timeoutArgs(timeoutMinutes), "--", ...wake],
       env: joined.env,
     });
     if (exitCode !== SUCCESS) {

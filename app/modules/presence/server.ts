@@ -10,7 +10,7 @@
  * (ADR "one live connection per agent"): a newer one ends the one before with `watchReplacedRefusal`.
  */
 import type { Config, Option, PubSub, Scope } from "effect";
-import type { Connection, Registry, RegistryNeeds } from "./lib/server/registry.ts";
+import type { Connection, Registry, RegistryNeeds, WakeRunSaid } from "./lib/server/registry.ts";
 import { Context, Duration, Effect, Layer } from "effect";
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { LiveConnectionId, Presence } from "./index.ts";
@@ -88,10 +88,11 @@ export interface PresenceService {
   readonly setReach: (identity: IdentityName, reach: Option.Option<TriggerReach>) => Effect.Effect<void>;
   /**
    * Says whether a wake run of agent `identity`'s runner is in progress: while one is, the runner's live connection
-   * shows it plain online, and otherwise waking on mention. Answers false when `identity` holds no live connection
-   * opened by `cookout runner`.
+   * shows it plain online, and otherwise waking on mention. A run that ended `failed` makes it Unreachable, and the
+   * first failure of a streak raises one `wake run failed` offline alert, until a run ends with exit 0. Answers false
+   * when `identity` holds no live connection opened by `cookout runner`.
    */
-  readonly wakeRun: (identity: IdentityName, running: boolean) => Effect.Effect<boolean>;
+  readonly wakeRun: (identity: IdentityName, said: WakeRunSaid) => Effect.Effect<boolean>;
 }
 
 /** What presence knows of an agent's trigger URL: how its last call went, if it has been called. */
@@ -149,8 +150,8 @@ export const holdLiveConnection = Effect.fnUntraced(function* holdCallersLiveCon
 });
 
 /**
- * `GET /v1/presence`, for the server's route list, behind the token gate, and `PUT` and `DELETE
- * /v1/presence/wake-run`. The caller reads its own agents' warnings.
+ * `GET /v1/presence`, for the server's route list, behind the token gate, `PUT` and `DELETE
+ * /v1/presence/wake-run`, and `POST /v1/presence/wake-run/failure`. The caller reads its own agents' warnings.
  */
 export const presenceRoutes: readonly Route<PresenceRegistry | PresenceRouteNeeds>[] = [
   presenceRouteOn(Effect.flatMap(PresenceRegistry, (presence: PresenceService) => presence.everyone)),
