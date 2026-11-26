@@ -109,6 +109,12 @@ it("--all runs every check and every test, and skips only the e2e suite", { time
   ]).toStrictEqual([EVERY_CHECK, [["test"]], ["e2e-docker"]]);
 });
 
+it("names the Check workflow as the one that runs the e2e suite", { timeout: 1000 }, () => {
+  expect.hasAssertions();
+
+  expect(checkPlan(ALL).skipped.map((skip) => [skip.ciJob, skip.workflow])).toStrictEqual([["e2e-docker", "Check"]]);
+});
+
 it("says in one line which file made it run every unit and browser test", { timeout: 1000 }, () => {
   expect.hasAssertions();
 

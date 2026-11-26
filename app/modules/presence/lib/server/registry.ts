@@ -18,7 +18,7 @@ import {
   release,
 } from "./book.ts";
 import { endsEndedTokens, heldEnding, openEnds } from "./endings.ts";
-import { reachablePresenceIn, withReach } from "./reach.ts";
+import { reachablePresenceIn, withReach, withWakeRun } from "./reach.ts";
 import { IdentityChanges } from "../../../identities/server.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -40,6 +40,7 @@ interface Registry {
   readonly changed: Effect.Effect<PubSub.Subscription<Presence>, never, Scope.Scope>;
   readonly liveConnections: (identity: IdentityName) => Effect.Effect<number>;
   readonly setReach: (identity: IdentityName, reach: Option.Option<Reach>) => Effect.Effect<void>;
+  readonly wakeRun: (identity: IdentityName, running: boolean) => Effect.Effect<boolean>;
 }
 
 const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
@@ -146,6 +147,7 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
       livePresenceOf: (identity) => Effect.map(book.read, (state) => presenceIn({ identity, state })),
       presenceOf: (identity) => Effect.map(book.read, (state) => reachablePresenceIn({ identity, state })),
       setReach: (identity, reach) => changed(book, identity, (state) => withReach({ identity, reach, state })),
+      wakeRun: (identity, running) => book.modify(identity, (state) => withWakeRun({ identity, running, state })),
     };
   });
 }
@@ -153,4 +155,5 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
 export { type Registry, type RegistryNeeds, openRegistry };
 export { openReplacements, watchReplacedRefusal } from "./replacement.ts";
 export { connectionOf } from "./connection.ts";
+export { wakeRunRoutesOn } from "./wake-run.ts";
 export type { Connection } from "./book.ts";

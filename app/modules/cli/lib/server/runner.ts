@@ -38,11 +38,12 @@ interface Listening {
 function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
   return Effect.gen(function* listenAndWake() {
     const asAgent = yield* opened(listening.registered);
-    const first = yield* start(asAgent);
+    const runnerOf = { opened: asAgent, runner: true };
+    const first = yield* start(runnerOf);
     const { place, registered } = listening;
     const { catchUp, hear } = yield* wakeQueue({ asAgent, place, registration: registered.registration });
     yield* catchUp;
-    yield* source({ first, opened: asAgent }).pipe(
+    yield* source({ first, listening: runnerOf }).pipe(
       Stream.tap((event) => Effect.when(listening.connected, Effect.succeed(event.type === "connected"))),
       Stream.filter(isMention),
       Stream.runForEach((event) => hear(event.item)),

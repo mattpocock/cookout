@@ -1,4 +1,4 @@
-import type { Presence, PresenceResponse } from "../../index.ts";
+import type { Presence, PresenceResponse, WakeRunResponse } from "../../index.ts";
 import { IdentityNameSchema } from "../../../identities/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -44,4 +44,6 @@ export const PresenceSchema = matchesWire<Presence>()(
 export const PresenceResponseSchema = matchesWire<PresenceResponse>()(
   Schema.Struct({ presence: Schema.Array(PresenceSchema) }),
 );
+export const WakeRunResponseSchema = matchesWire<WakeRunResponse>()(Schema.Struct({ wakeRun: Schema.Boolean }));
+
 export { TriggerResultSchema };

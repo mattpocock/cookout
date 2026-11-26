@@ -120,11 +120,20 @@ interface Queued extends Waking {
   readonly take: Effect.Effect<readonly InboxItem[]>;
 }
 
+function presenceDuring(
+  asAgent: ClientWithAgentSessionState,
+): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
+  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
+  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
+  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
+}
+
 function runGiven({ asAgent, change, place, registration }: Queued) {
   return (given: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
     Effect.gen(function* runAndRetry() {
       yield* change(withRun(given));
-      yield* wakeRun({ items: given, place, registration });
+      const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
+      yield* presenceDuring(asAgent)(run);
       const unread = yield* stillUnread(asAgent, given);
       yield* change(withRetried(unread));
     });

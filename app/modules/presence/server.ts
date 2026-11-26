@@ -14,7 +14,13 @@ import type { Connection, Registry, RegistryNeeds } from "./lib/server/registry.
 import { Context, Duration, Effect, Layer } from "effect";
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { LiveConnectionId, Presence } from "./index.ts";
-import { connectionOf, openRegistry, openReplacements, watchReplacedRefusal } from "./lib/server/registry.ts";
+import {
+  connectionOf,
+  openRegistry,
+  openReplacements,
+  wakeRunRoutesOn,
+  watchReplacedRefusal,
+} from "./lib/server/registry.ts";
 import type { PresenceRouteNeeds } from "./lib/server/seen-by-caller.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
@@ -80,6 +86,12 @@ export interface PresenceService {
    * Unreachable.
    */
   readonly setReach: (identity: IdentityName, reach: Option.Option<TriggerReach>) => Effect.Effect<void>;
+  /**
+   * Says whether a wake run of agent `identity`'s runner is in progress: while one is, the runner's live connection
+   * shows it plain online, and otherwise waking on mention. Answers false when `identity` holds no live connection
+   * opened by `cookout runner`.
+   */
+  readonly wakeRun: (identity: IdentityName, running: boolean) => Effect.Effect<boolean>;
 }
 
 /** What presence knows of an agent's trigger URL: how its last call went, if it has been called. */
@@ -114,6 +126,7 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
           }),
         liveConnections: registry.liveConnections,
         setReach: registry.setReach,
+        wakeRun: registry.wakeRun,
       };
     }),
   );
@@ -121,25 +134,31 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
 /**
  * Holds a live connection of the stream's caller until the scope closes. A stream sent with no `Authorization`
  * header (so with the web UI's session cookie) is a web tab; any other is a `cookout watch`, with the host its agent
- * session was joined from when it was sent with an agent session token whose joining client sent one. The answer's
- * `ended` succeeds with the refusal the stream must end with.
+ * session was joined from when it was sent with an agent session token whose joining client sent one, and a
+ * `cookout runner`'s when `runner` (the stream asked with `runnerQuery`). The answer's `ended` succeeds with the
+ * refusal the stream must end with.
  */
 export const holdLiveConnection = Effect.fnUntraced(function* holdCallersLiveConnection(stream: {
   readonly caller: Identity;
   readonly authorization: string | undefined;
+  readonly runner: boolean;
 }): Effect.fn.Return<LiveConnection, never, PresenceRegistry | Storage | Scope.Scope> {
   const presence = yield* PresenceRegistry;
   const connection = yield* connectionOf(stream);
   return yield* presence.holdLiveConnection(stream.caller, connection);
 });
 
-/** `GET /v1/presence`, for the server's route list, behind the token gate. The caller reads its own agents' warnings. */
+/**
+ * `GET /v1/presence`, for the server's route list, behind the token gate, and `PUT` and `DELETE
+ * /v1/presence/wake-run`. The caller reads its own agents' warnings.
+ */
 export const presenceRoutes: readonly Route<PresenceRegistry | PresenceRouteNeeds>[] = [
   presenceRouteOn(Effect.flatMap(PresenceRegistry, (presence: PresenceService) => presence.everyone)),
+  ...wakeRunRoutesOn(Effect.map(PresenceRegistry, (presence: PresenceService) => presence.wakeRun)),
 ];
 
 /** The Schemas of one identity's presence and of `GET /v1/presence`'s answer, for the live stream and the SDK's validators. */
-export { PresenceResponseSchema, PresenceSchema } from "./lib/server/wire.ts";
+export { PresenceResponseSchema, PresenceSchema, WakeRunResponseSchema } from "./lib/server/wire.ts";
 
 /** The Schema of how a call to a trigger URL went, which an Unreachable presence and a trigger URL both carry. */
 export { TriggerResultSchema } from "./lib/server/wire.ts";

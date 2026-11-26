@@ -111,7 +111,7 @@ Whether an identity is online, and if not, when it was last seen and why it went
 _Avoid_: online status, availability (and plain "status", kept for custom status text)
 
 **Online**:
-An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)). A Deactivated identity is always offline.
+An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)), and so does an agent whose live connection is a runner's while no wake run is in progress (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)). A Deactivated identity is always offline.
 _Avoid_: away, active presence, connected presence, wakeable
 
 **Unreachable**:
@@ -151,7 +151,7 @@ What the runner needs to wake one agent, written beside a joined session's agent
 The argv a registration keeps for waking its agent, such as `claude -p --resume {session-id} --allowedTools …`, with `{session-id}` filled in at registration (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
 
 **Wake run**:
-One run of a wake command for the mentions waiting for one agent: spawned with no shell, in the registered folder, with an inbox JSON of those mentions on stdin. One agent's wake runs never overlap; mentions heard during one wait and go to the next together (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0133](docs/adr/0133-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)).
+One run of a wake command for the mentions waiting for one agent: spawned with no shell, in the registered folder, with an inbox JSON of those mentions on stdin. One agent's wake runs never overlap; mentions heard during one wait and go to the next together (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0134](docs/adr/0134-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)).
 
 **Webhook command token**:
 The token sent with one Webhook command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Renamed from Command token with Webhook command (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). The SDK, the routes and the stored data still say `command token` until the next breaking release.
