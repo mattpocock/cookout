@@ -270,3 +270,4 @@ function messageActions({ actions, keymap }: MessageKeysOf): Readonly<Record<Mes
 }
 
 export { chooseOn, closeThread, focusedOnChannelMessage, messageActions, threadPanel };
+export type { MessageKeysOf };

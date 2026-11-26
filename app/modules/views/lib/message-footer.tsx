@@ -1,6 +1,5 @@
-import type { ChannelMessagesState, Outgoing, Scheduling } from "../../board/index.ts";
+import type { ChannelMessagesState, Scheduling } from "../../board/index.ts";
 import type { ComponentProps, ReactNode } from "react";
-import { useCallback, useSyncExternalStore } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
 import type { Draft } from "../../composer/index.ts";
 import { MessageBox } from "./message-box.tsx";
@@ -8,7 +7,8 @@ import { ScheduleConfirmation } from "./schedule-confirmation.tsx";
 import { ScheduleDialog } from "./schedule-dialog.tsx";
 import { WebhookCommandPrompt } from "./webhook-command-prompt.tsx";
 import { WebhookCommandsRefusal } from "./webhook-commands-refusal.tsx";
-import { useFooterHandlers } from "./use-footer-handlers.ts";
+import { useScheduleCommand } from "./use-schedule-command.ts";
+import { useSyncExternalStore } from "react";
 
 const MESSAGE_BOX = {
   field: "Message",
@@ -28,22 +28,17 @@ interface MessageFooterProps {
 
 export function MessageFooter(props: MessageFooterProps): ReactNode {
   const { channel, draft, scheduling, state } = props;
-  const handlers = useFooterHandlers({ channel, draft, form: MESSAGE_BOX.form });
   const { webhookCommand: command, returned } = useSyncExternalStore(draft.subscribe, draft.snapshot);
   const handleBack = draft.unpickWebhookCommand;
+  const handlers = useScheduleCommand({
+    channel,
+    draft,
+    form: MESSAGE_BOX.form,
+    scheduling,
+    shown: command === null && state.status === "loaded",
+  });
+  const handlePost = handlers.post;
   const handleSaved = handlers.saved;
-  const { post } = handlers;
-  const handlePost = useCallback(
-    (outgoing: Outgoing, posted: () => void) => {
-      const run = draft.commandRun(outgoing.text);
-      if (run === null) {
-        post(outgoing, posted);
-        return;
-      }
-      scheduling.open(channel, run.text);
-    },
-    [channel, draft, post, scheduling],
-  );
   if (state.status !== "loaded") {
     return null;
   }

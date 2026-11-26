@@ -220,3 +220,18 @@ it("no message box has a Post later button, and a thread's reply box lists no Co
 
   close();
 });
+
+it("ctrl+Shift+Enter on /schedule and a text opens the dialog with the text after /schedule", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await openChannel("web-slash-key");
+  type("/schedule Standup by key");
+  box().focus();
+  fireEvent.keyDown(box(), { ctrlKey: true, key: "Enter", shiftKey: true });
+
+  await expect(dialogText()).resolves.toBe("Standup by key");
+
+  close();
+});
