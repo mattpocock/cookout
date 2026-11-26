@@ -12,6 +12,7 @@ type CallFailureCode =
   | "login_missing"
   | "agent_join_request_expired"
   | "not_joined"
+  | "not_registered"
   | "usage"
   | "login_request_expired"
   | "not_a_cookout"
