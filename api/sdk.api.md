@@ -542,7 +542,7 @@ type LiveConnectionDetail = {
  * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
  * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
  */
-declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed"];
+declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed", "wake run failed"];
 /** One of `offlineReasons`. */
 type OfflineReason = (typeof offlineReasons)[number];
 /**
@@ -560,7 +560,8 @@ type OfflineReason = (typeof offlineReasons)[number];
  * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
  * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
  * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
- * wake run starts and ends at `wakeRunPath`.
+ * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
+ * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
  */
 interface Presence {
   readonly identity: IdentityName;
@@ -576,6 +577,12 @@ interface Presence {
 interface PresenceResponse {
   readonly presence: readonly Presence[];
 }
+/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
+type WakeRunFailure = {
+  readonly exitCode: number;
+} | {
+  readonly timedOutAfterMinutes: number;
+};
 /** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
 interface WakeRunResponse {
   readonly wakeRun: boolean;
@@ -1678,6 +1685,7 @@ interface EventCalls {
   readonly presence: () => Promise<PresenceResponse>;
   readonly startWakeRun: () => Promise<WakeRunResponse>;
   readonly endWakeRun: () => Promise<WakeRunResponse>;
+  readonly failWakeRun: (failure: WakeRunFailure) => Promise<WakeRunResponse>;
 }
 /** The answer to the health check. */
 interface HealthResponse {
@@ -1749,7 +1757,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence" | "startWakeRun" | "endWakeRun">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence" | "startWakeRun" | "endWakeRun" | "failWakeRun">;
 declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {

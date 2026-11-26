@@ -8,8 +8,12 @@ import { runCookout as runCommandLine } from "../../../cli/server.ts";
 
 interface FakeWakeSettings {
   readonly ack?: boolean;
+  readonly childPidFile?: string;
   readonly exitCode?: number;
+  readonly hang?: boolean;
   readonly log: string;
+  readonly print?: string;
+  readonly succeedAfter?: string;
   readonly reply?: string;
   readonly sdkReply?: string;
   readonly tokenFile?: string;
@@ -19,6 +23,7 @@ interface FakeWakeSettings {
 
 interface StartedRunner {
   readonly firstStderr: unknown;
+  readonly stdoutNow: Effect.Effect<readonly unknown[]>;
   readonly stdoutLines: (count: number) => Effect.Effect<readonly unknown[]>;
   readonly stderrLines: (count: number) => Effect.Effect<readonly unknown[]>;
   readonly stop: Effect.Effect<void>;
@@ -77,7 +82,13 @@ function startRunner(
     const running = yield* Effect.forkScoped(exitCodeOf({ console, env, program: runnerStart }));
     const firstStderr = yield* Deferred.await(first);
     const until = waitingOn(Queue.take(printed));
-    return { firstStderr, stderrLines: until(errored), stdoutLines: until(logged), stop: Fiber.interrupt(running) };
+    return {
+      firstStderr,
+      stderrLines: until(errored),
+      stdoutLines: until(logged),
+      stdoutNow: Effect.sync(() => [...logged]),
+      stop: Fiber.interrupt(running),
+    };
   });
 }
 

@@ -7,6 +7,7 @@ import {
   Path,
   Record,
   Schema,
+  Scope,
   Stdio,
   String as Str,
   Stream,
@@ -23,14 +24,19 @@ import { runMain } from "@effect/platform-node/NodeRuntime";
 const FIRST_ARGUMENT = 2;
 const SUCCESS = 0;
 const POLL = "10 millis";
+const CHILD_SECONDS = "600";
 const MAIN = new URL("../../../../main.ts", import.meta.url);
 
 const SettingsSchema = Schema.Struct({
   ack: Schema.optionalKey(Schema.Boolean),
+  childPidFile: Schema.optionalKey(Schema.String),
   exitCode: Schema.optionalKey(Schema.Int),
+  hang: Schema.optionalKey(Schema.Boolean),
   log: Schema.String,
+  print: Schema.optionalKey(Schema.String),
   reply: Schema.optionalKey(Schema.String),
   sdkReply: Schema.optionalKey(Schema.String),
+  succeedAfter: Schema.optionalKey(Schema.String),
   tokenFile: Schema.optionalKey(Schema.String),
   touch: Schema.optionalKey(Schema.String),
   waitFor: Schema.optionalKey(Schema.String),
@@ -199,6 +205,40 @@ function answerAll(inbox: Inbox, settings: Settings): Effect.Effect<void, never,
   }).pipe(Effect.orDie);
 }
 
+function childOf(pidFile: string): Effect.Effect<void, never, Needs> {
+  return Effect.gen(function* startChild() {
+    const fs = yield* FileSystem.FileSystem;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const neverClosed = Scope.makeUnsafe();
+    const child = ChildProcess.make("sleep", [CHILD_SECONDS], { detached: false, stdin: "ignore" });
+    const handle = yield* Scope.provide(neverClosed)(spawner.spawn(child));
+    yield* fs.writeFileString(pidFile, String(handle.pid));
+  }).pipe(Effect.orDie);
+}
+
+function printed(text: string): Effect.Effect<void> {
+  return Effect.sync(() => {
+    process.stdout.write(`${text}\n`);
+    process.stderr.write(`${text}\n`);
+  });
+}
+
+function exitCodeOf(settings: Settings): Effect.Effect<number, never, FileSystem.FileSystem> {
+  const failing = Option.getOrElse(Option.fromNullishOr(settings.exitCode), () => SUCCESS);
+  return Option.match(Option.fromNullishOr(settings.succeedAfter), {
+    onNone: () => Effect.succeed(failing),
+    onSome: (file) =>
+      Effect.flatMap(FileSystem.FileSystem, (fs) =>
+        Effect.map(Effect.orDie(fs.exists(file)), (succeeds) => {
+          if (succeeds) {
+            return SUCCESS;
+          }
+          return failing;
+        }),
+      ),
+  });
+}
+
 function inboxOf(stdin: string): Effect.Effect<Inbox> {
   const inbox = parseLine(stdin);
   if (isInbox(inbox)) {
@@ -213,9 +253,12 @@ function wake(settings: Settings): Effect.Effect<void, never, Needs | Stdio.Stdi
     const stdin = yield* Effect.orDie(stdio.stdin.pipe(Stream.decodeText, Stream.mkString));
     const inbox = yield* inboxOf(stdin);
     yield* started(inbox, settings, stdin);
+    yield* ifSet(settings.print, printed);
+    yield* ifSet(settings.childPidFile, childOf);
     yield* answerAll(inbox, settings);
+    yield* Effect.when(Effect.never, Effect.succeed(settings.hang === true));
     yield* appendLine(settings.log, { event: "end", messages: messagesOf(inbox) });
-    process.exitCode = Option.getOrElse(Option.fromNullishOr(settings.exitCode), () => SUCCESS);
+    process.exitCode = yield* exitCodeOf(settings);
   });
 }
 

@@ -12,6 +12,7 @@ import type { Scope } from "effect";
 import { callClient } from "./adapters/sdk.ts";
 import { notJoined } from "./adapters/call-failure.ts";
 import { printErrorLine } from "./output.ts";
+import { saidFailed } from "./wake-run-failure.ts";
 import { wakeQueue } from "./wake-queue.ts";
 
 interface Listening {
@@ -37,15 +38,15 @@ function isMention(event: Readonly<Heard>): event is Extract<Heard, { readonly t
 }
 
 function presenceDuring(asAgent: ClientWithAgentSessionState, keeper: Keeper): During {
-  const started = Effect.andThen(
-    keeper.set("running"),
-    Effect.ignore(callClient((client) => client.startWakeRun())(asAgent)),
-  );
-  const ended = Effect.andThen(
-    Effect.ignore(callClient((client) => client.endWakeRun())(asAgent)),
-    keeper.set("connected"),
-  );
-  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
+  const connected = keeper.set("connected");
+  return {
+    ended: Effect.andThen(Effect.ignore(callClient((client) => client.endWakeRun())(asAgent)), connected),
+    failed: (failure, given) => Effect.andThen(saidFailed({ asAgent, failure, given }), connected),
+    started: Effect.andThen(
+      keeper.set("running"),
+      Effect.ignore(callClient((client) => client.startWakeRun())(asAgent)),
+    ),
+  };
 }
 
 function listen(

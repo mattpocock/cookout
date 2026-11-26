@@ -1,10 +1,11 @@
-import { Array as Arr, Deferred, Effect, Fiber, Order, Queue, Ref } from "effect";
+import { Array as Arr, Deferred, Effect, Fiber, Option, Order, Queue, Ref } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import type { Registration } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
+import type { WakeRunFailure } from "../../../presence/index.ts";
 import { callClient } from "./adapters/sdk.ts";
 import { printLine } from "./output.ts";
 import { wakeRun } from "./wake-run.ts";
@@ -15,7 +16,11 @@ const ONE = 1;
 
 type Spawner = ChildProcessSpawner.ChildProcessSpawner;
 
-type During = (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner>;
+interface During {
+  readonly started: Effect.Effect<void>;
+  readonly ended: Effect.Effect<void>;
+  readonly failed: (failure: WakeRunFailure, given: readonly InboxItem[]) => Effect.Effect<void>;
+}
 
 interface Waiting {
   readonly queued: readonly InboxItem[];
@@ -129,7 +134,9 @@ function runGiven({ asAgent, change, during, place, registration }: Queued) {
     Effect.gen(function* runAndRetry() {
       yield* change(withRun(given));
       const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
-      yield* during(run);
+      yield* during.started;
+      const failure = yield* Effect.onInterrupt(run, () => during.ended);
+      yield* Option.match(failure, { onNone: () => during.ended, onSome: (failed) => during.failed(failed, given) });
       const unread = yield* stillUnread(asAgent, given);
       yield* change(withRetried(unread));
     });
