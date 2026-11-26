@@ -7,7 +7,6 @@ import { runPlace, wakeRun } from "./wake-run.ts";
 import { source, start } from "./watch-connection.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { ChildProcessSpawner } from "effect/process";
-import type { CommandFailed } from "./output.ts";
 import type { Heard } from "./watch-connection.ts";
 import type { InboxItem } from "../../../sdk/index.ts";
 import type { RegisteredSession } from "./registrations.ts";
@@ -173,10 +172,4 @@ const startCommand = Command.make("start", {}, () =>
   ),
 );
 
-const runnerCommand: Command.Command<"runner", object, object, CommandFailed, AgentSessionStateNeeds | Spawner> =
-  Command.make("runner").pipe(
-    Command.withDescription("Wake registered agents on mentions while their harness sessions are closed."),
-    Command.withSubcommands([registerCommand, startCommand]),
-  );
-
-export { runnerCommand };
+export { registerCommand, startCommand };

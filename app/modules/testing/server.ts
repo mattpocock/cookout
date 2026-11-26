@@ -113,3 +113,4 @@ export type { LastEnd } from "./lib/server/booted.ts";
 export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
 export { triggerToken } from "../webhook-fake/server.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";
+export { type ServiceHost, type ServiceHostOptions, serviceHost } from "./lib/server/service-host.ts";
