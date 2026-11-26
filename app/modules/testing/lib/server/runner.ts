@@ -13,6 +13,7 @@ interface FakeWakeSettings {
   readonly hang?: boolean;
   readonly log: string;
   readonly print?: string;
+  readonly printRepeat?: number;
   readonly succeedAfter?: string;
   readonly reply?: string;
   readonly sdkReply?: string;

@@ -11,7 +11,8 @@ import type {
   TopLevelMessage,
 } from "../../sdk/index.ts";
 import { LOADING } from "./message-states.ts";
-import { threadAs } from "./thread-closing.ts";
+import { closedAs } from "./thread-closing.ts";
+import { titledAs } from "./thread-titling.ts";
 import { viewsMarked } from "./message-deletions.ts";
 import { withNewestReply } from "../../messages/index.ts";
 import { withReceipts } from "./receipts.ts";
@@ -183,7 +184,7 @@ function withClosing(searched: MessagesHeld, parent: TopLevelMessage): MessagesH
   if (message === null) {
     return held;
   }
-  const closed = threadAs({ message, parent });
+  const closed = titledAs({ message: closedAs({ message, parent }), parent });
   if (same(closed, message)) {
     return held;
   }
