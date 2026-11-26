@@ -1,4 +1,6 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { builtOnce, writeSnapshot } from "./directory-snapshot.ts";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import type { Snapshot } from "./directory-snapshot.ts";
 import { execFileSync } from "node:child_process";
 import { onTestFinished } from "vitest";
 import path from "node:path";
@@ -16,6 +18,8 @@ interface Repo {
 
 const INDENT = 2;
 const BRANCH = "ticket-7";
+const ORIGIN = "origin.git";
+const WORK = "work";
 
 const OXLINT_CONFIG = {
   categories: { correctness: "error" },
@@ -54,8 +58,9 @@ function temporaryRoot(): string {
 }
 
 function clone(root: string, origin: string): string {
-  const work = path.join(root, "work");
-  git(root, "init", "-q", "-b", "v1", work);
+  const work = path.join(root, WORK);
+  git(root, "init", "-q", "--template=", "-b", "v1", work);
+  mkdirSync(path.join(work, ".git", "hooks"));
   git(work, "config", "user.name", "Test");
   git(work, "config", "user.email", "test@example.com");
   git(work, "config", "commit.gpgsign", "false");
@@ -63,10 +68,10 @@ function clone(root: string, origin: string): string {
   return work;
 }
 
-function repos(): Repos {
-  const root = temporaryRoot();
-  const origin = path.join(root, "origin.git");
-  git(root, "init", "-q", "--bare", "-b", "v1", origin);
+function build(root: string): void {
+  const origin = path.join(root, ORIGIN);
+  git(root, "init", "-q", "--template=", "--bare", "-b", "v1", origin);
+  mkdirSync(path.join(origin, "hooks"));
   const work = clone(root, origin);
   commit(work, "base", {
     ".dependency-cruiser.cjs": DEPENDENCY_CRUISER,
@@ -76,7 +81,21 @@ function repos(): Repos {
   });
   git(work, "push", "-q", "origin", "v1");
   git(work, "checkout", "-q", "-b", BRANCH);
-  return { origin, root, work };
+}
+
+function pointedAtOrigin(snapshot: Snapshot, root: string): void {
+  const work = path.join(root, WORK);
+  const config = path.join(work, ".git", "config");
+  writeFileSync(config, readFileSync(config, "utf8").replaceAll(snapshot.root, root));
+  git(work, "update-index", "-q", "--refresh");
+}
+
+function repos(): Repos {
+  const root = temporaryRoot();
+  const snapshot = builtOnce({ build, name: "lint-config" });
+  writeSnapshot({ root, snapshot });
+  pointedAtOrigin(snapshot, root);
+  return { origin: path.join(root, ORIGIN), root, work: path.join(root, WORK) };
 }
 
 function repo(dir: string): Repo {
