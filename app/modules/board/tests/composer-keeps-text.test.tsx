@@ -10,7 +10,7 @@ async function noCrop(): Promise<null> {
 
 const START = 0;
 
-it("while nobody is logged in, a box's unsent text is kept on the page only, suggesting no commands until they load", {
+it("while nobody is logged in, a box's unsent text is kept on the page only, suggesting no Webhook commands until they load", {
   timeout: 5000,
 }, () => {
   expect.hasAssertions();
@@ -23,7 +23,7 @@ it("while nobody is logged in, a box's unsent text is kept on the page only, sug
   const again = composer.channelDraft("web-kept-nobody").snapshot().text;
   draft.edit("", START);
 
-  expect([typed.text, typed.commands, again, draft.snapshot().text, storage.kept().size]).toStrictEqual([
+  expect([typed.text, typed.webhookCommands, again, draft.snapshot().text, storage.kept().size]).toStrictEqual([
     "/",
     [],
     "/",

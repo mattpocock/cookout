@@ -4,7 +4,7 @@ import { failure } from "./failure.ts";
 
 interface CallFailure {
   readonly status: "failed";
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly code: string;
   readonly message: string;
   readonly problems: readonly SchemaProblem[];
@@ -12,20 +12,20 @@ interface CallFailure {
 
 type CallState =
   | { readonly status: "idle" }
-  | { readonly status: "calling"; readonly command: string }
-  | { readonly status: "called"; readonly command: string }
+  | { readonly status: "calling"; readonly webhookCommand: string }
+  | { readonly status: "called"; readonly webhookCommand: string }
   | CallFailure;
 
 type ParsedData = { readonly status: "json"; readonly data: JsonValue } | { readonly status: "not-json" };
 
 interface CallRequest {
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly data: string;
   readonly called: () => void;
 }
 
 interface Refused {
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly error: unknown;
 }
 
@@ -64,7 +64,13 @@ function parseData(text: string): ParsedData {
 }
 
 function notJson(command: string): CallFailure {
-  return { code: "invalid_json", command, message: "The data isn't JSON.", problems: [], status: "failed" };
+  return {
+    code: "invalid_json",
+    message: "The data isn't JSON.",
+    problems: [],
+    status: "failed",
+    webhookCommand: command,
+  };
 }
 
 function problemsIn(error: unknown): readonly SchemaProblem[] {
@@ -76,7 +82,13 @@ function problemsIn(error: unknown): readonly SchemaProblem[] {
 
 function callFailure(refused: Refused): CallFailure {
   const { code, message } = failure(refused.error);
-  return { code, command: refused.command, message, problems: problemsIn(refused.error), status: "failed" };
+  return {
+    code,
+    message,
+    problems: problemsIn(refused.error),
+    status: "failed",
+    webhookCommand: refused.webhookCommand,
+  };
 }
 
 export { type CallRequest, type CallState, callFailure, notJson, parseData };

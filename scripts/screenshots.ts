@@ -261,7 +261,7 @@ function clockMover(clockUrl: string): ThemePass["moveClock"] {
 
 function freshBoards(browser: Browser, out: string): (theme: Theme) => Promise<ThemePass> {
   return async (theme) => {
-    const server = await startDevCookout({ COOKOUT_PRESENCE_GRACE_SECONDS: "1" });
+    const server = await startDevCookout({ env: { COOKOUT_PRESENCE_GRACE_SECONDS: "1" } });
     try {
       const newPage = await loggedInBoth(browser, await prepared(server), theme);
       return { moveClock: clockMover(server.clockUrl), shoot: shooter(newPage, out), stop: server.stop };

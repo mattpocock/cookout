@@ -103,3 +103,27 @@ it.effect("cookout thread title sets a title and --clear clears it, each printin
     expect(results).not.toHaveProperty("1.stdoutJson.message.title");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("cookout message post --title prints the titled message; --title with --reply-to is refused", () =>
+  Effect.gen(function* postTitled() {
+    const cookout = yield* TestCookout;
+    const ann = yield* cookout.createIdentity("ann");
+    const folder = yield* freshStateFolder;
+    const { message } = yield* Effect.andThen(
+      answer(() => ann.client.createChannel({ name: "grill" })),
+      answer(() => ann.client.createMessage({ channel: "grill", text: "deploy main?" })),
+    );
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ann.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [
+      ["message", "post", "grill", "smoke test?", "--title", "Smoke test"],
+      ["message", "post", "grill", "done", "--reply-to", String(message.id), "--title", "Done"],
+    ]);
+    const thread = yield* answer(() => ann.client.getThread(message.id));
+
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: { message: { text: "smoke test?", title: "Smoke test", titleSetBy: "ann" } } },
+      { exitCode: 1, stderrJson: { error: { code: "usage" } }, stdout: "" },
+    ]);
+    expect(thread.replies).toStrictEqual([]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

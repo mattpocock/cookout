@@ -171,6 +171,12 @@ export interface PostMessageRequest {
   readonly replyTo?: number;
   readonly close?: true;
   /**
+   * A Thread title for a top-level message, stored with it in one step, its author the setter at its post time. The
+   * title is trimmed, then at most 100 characters on one line; an empty one posts the message untitled. With
+   * `replyTo`, or over 100 characters or with a line break, the post is 400 `invalid_request`, and nothing is stored.
+   */
+  readonly title?: string;
+  /**
    * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
    * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else is refused `thread_moved`.
    * A deleted thread is refused `thread_deleted` first, saying with `seen` later than `replyTo` that it was deleted

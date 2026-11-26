@@ -14,7 +14,6 @@ interface MessageLayoutParts extends Parts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
-  readonly threadHref: string | null;
   readonly replyOnHover: boolean;
   readonly choices: readonly MenuChoice[];
   readonly reactions: readonly ReactionChoice[];
@@ -23,6 +22,7 @@ interface MessageLayoutParts extends Parts {
 
 interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactions" | "thread"> {
   readonly menu: MessageMenuParts;
+  readonly threadHref: string | null;
   readonly threadOnHover: boolean;
   readonly mark: "for-you" | "open" | "linked" | "none";
   readonly day: string | null;
