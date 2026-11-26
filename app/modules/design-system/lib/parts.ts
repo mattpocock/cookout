@@ -206,7 +206,7 @@ interface MentionParts extends Parts {
 }
 
 interface CallChipParts {
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly label: string;
   readonly value: unknown;
 }

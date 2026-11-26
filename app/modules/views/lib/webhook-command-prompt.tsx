@@ -1,19 +1,20 @@
-import type { ChannelName, Command } from "../../sdk/index.ts";
 import { callDataOf, fieldsOf, promptOf, shownCall, typedIn } from "./prompt-fields.ts";
 import { useCallback, useMemo } from "react";
 import { CallRefusal } from "./call-refusal.tsx";
 import type { CallState } from "../../board/index.ts";
-import { CommandFields } from "./command-fields.tsx";
+import type { ChannelName } from "../../sdk/index.ts";
 import { PromptForm } from "../../design-system/controls.tsx";
 import type { PromptKeys } from "./use-prompt-keys.ts";
 import type { ReactNode } from "react";
+import type { WebhookCommand } from "../../webhook-commands/index.ts";
+import { WebhookCommandFields } from "./webhook-command-fields.tsx";
 import { useChannelCalls } from "./use-board.ts";
 import { usePromptKeys } from "./use-prompt-keys.ts";
 
 const TEXT = { button: "Call", calling: "Calling…" } as const;
 
-interface CommandPromptProps {
-  readonly command: Command;
+interface WebhookCommandPromptProps {
+  readonly webhookCommand: WebhookCommand;
   readonly channel: ChannelName;
   readonly call: CallState;
   readonly callData: string;
@@ -22,8 +23,8 @@ interface CommandPromptProps {
   readonly onDone: () => void;
 }
 
-export function CommandPrompt(props: CommandPromptProps): ReactNode {
-  const { callData, channel, command, onDone } = props;
+export function WebhookCommandPrompt(props: WebhookCommandPromptProps): ReactNode {
+  const { callData, channel, webhookCommand: command, onDone } = props;
   const { call, editCallData } = useChannelCalls(channel);
   const { fields, prompt } = useMemo(() => {
     const asked = promptOf(command.schema);
@@ -44,7 +45,7 @@ export function CommandPrompt(props: CommandPromptProps): ReactNode {
     onDone();
   }, [editCallData, onDone]);
   const label = usePromptKeys({ keymap: props.keymap, label: `Call /${command.name}`, onEscape: props.onBack });
-  const shown = shownCall({ call: props.call, command: command.name });
+  const shown = shownCall({ call: props.call, webhookCommand: command.name });
   return (
     <PromptForm
       busy={shown.status === "calling"}
@@ -56,7 +57,7 @@ export function CommandPrompt(props: CommandPromptProps): ReactNode {
       onSubmit={handleSubmit}
       title={`/${command.name}`}
     >
-      <CommandFields
+      <WebhookCommandFields
         call={shown}
         fields={fields}
         kept={callData}
