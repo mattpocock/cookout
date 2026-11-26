@@ -252,12 +252,13 @@ Restart with a higher ceiling (`COOKOUT_MAX_IDLE_EXPIRY=400d pnpm dev > /tmp/coo
 
 ## Join from a box with no Login
 
-On a box with no Login, `join --as <name>` makes an agent join request ([ADR 0047](adr/0047-a-browser-login-issues-its-own-per-machine-credential.md), mattpocock/cookout#120): it prints the approval link (`COOKOUT_URL` plus `/#/approve-join/<code>`) and its code on stderr, and polls. Use the built, seeded server from "Open the web UI" on port 3000, with `ada` logged in to the web UI in the `agent-browser --session cookout` session. Simulate a harness session with an empty `XDG_CONFIG_HOME`:
+On a box with no Login, `join --as <name>` makes an agent join request ([ADR 0047](adr/0047-a-browser-login-issues-its-own-per-machine-credential.md), mattpocock/cookout#120): it prints the approval link (`COOKOUT_URL` plus `/#/approve-join/<code>`) and its code on stderr, and polls. The agent must exist first: a join request never creates one, and an approver must be able to approve for it, such as its owner (mattpocock/cookout#461). Use the built, seeded server from "Open the web UI" on port 3000, with `ada` logged in to the web UI in the `agent-browser --session cookout` session, and join as `release-bot`, which the seed makes owned by `ada`. Simulate a harness session with an empty `XDG_CONFIG_HOME`:
 
 ```sh
 mkdir -p /tmp/cookout-box-config /tmp/cookout-box-state && chmod 700 /tmp/cookout-box-state
 box() { env -u COOKOUT_TOKEN -u COOKOUT_SESSION CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=box1 COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-box-config COOKOUT_STATE_DIR=/tmp/cookout-box-state node app/main.ts "$@"; }
-box join --as triage-agent --idle-expiry 30d > /tmp/cookout-box-join.json 2> /tmp/cookout-box-join.err &
+box join --as scout
+box join --as release-bot --idle-expiry 30d > /tmp/cookout-box-join.json 2> /tmp/cookout-box-join.err &
 sleep 1 && cat /tmp/cookout-box-join.err
 agent-browser --session cookout open "$(grep -o 'http[^ ,]*' /tmp/cookout-box-join.err)" && agent-browser --session cookout wait --text "Approve an agent join" && agent-browser --session cookout screenshot /tmp/cookout-approve-join-dark.png
 agent-browser --session cookout find label "Idle expiry" fill "7d" && agent-browser --session cookout find role button click --name "Approve" && agent-browser --session cookout wait --text "Approved, with an idle expiry of 7d"
@@ -266,7 +267,7 @@ box whoami
 rm -r /tmp/cookout-box-config /tmp/cookout-box-state
 ```
 
-The page shows the code, `triage-agent asks to join from <host>`, the agent it becomes (`Creates triage-agent, owned by you`, or `@ada/triage-agent` when someone else has the name) and the asked `30d`. After approving at `7d`, the background `join` exits 0 with `created: true` and an `expiresAt` 7 days on, and `whoami` on the box prints the agent, owned by `ada`. Collecting answers only the agent session token, never `ada`'s credential. Approving again for an agent with a live session is refused with `agent_session_live` until "Replace its live session" is ticked. Left unapproved, `join` exits 1 after 10 minutes with `agent_join_request_expired`.
+`join --as scout` exits 1 at once with 404 `agent_not_found`, as no agent has that name, and stores nothing. The page shows the code, `release-bot asks to join from <host>`, the agent it joins (`Joins as release-bot, which you own.`) and the asked `30d`. After approving at `7d`, the background `join` exits 0 with `created: false`, `source: "agent-join-request"` and an `expiresAt` 7 days on, and `whoami` on the box prints `release-bot`, owned by `ada`. Only someone who can approve for the agent sees and approves its request: had the box asked for `triage-agent` (owned by `grace`), `ada`'s approval would be refused with 404 `agent_not_found`, and `grace`'s would join the box as `triage-agent`, owned by `grace`. Collecting answers only the agent session token, never `ada`'s credential. Approving again for an agent with a live session is refused with `agent_session_live` until "Replace its live session" is ticked. Left unapproved, `join` exits 1 after 10 minutes with `agent_join_request_expired`.
 
 ## Join with your Login
 
@@ -281,17 +282,19 @@ as() { who=$1 session=$2; shift 2; env COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/coo
 as grace s1 join --as triage-agent | jq '{identity, created}'
 as grace s1 message post general "triaged with grace's Login" | jq .message.author.name
 as ada s2 message post general "as ada?"
-as ada s2 join --as triage-agent | jq '{identity, created}'
+as ada s2 join --as triage-agent --display-name 'Ada triage' | jq '{identity, created}'
 as ada s2 leave
 as ada s2 join --as triage-agent | jq '{identity, created}'
-as ada s3 join --as scout | jq '{identity, created}'
+as ada s3 join --as scout --display-name 'Scout' | jq '{identity, created}'
 as ada s4 join --as grace
 as ada s4 join --as grace/x
 env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=$url COOKOUT_TOKEN=$(token ada) node app/main.ts identity list | jq -c '[.identities[] | select(.kind == "agent") | [.name, .owner]]'
-env COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/cookout-nobody COOKOUT_STATE_DIR=/tmp/cookout-login-state CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s5 node app/main.ts join --as scout
+nobody() { env COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/cookout-nobody COOKOUT_STATE_DIR=/tmp/cookout-login-state CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s5 node app/main.ts "$@"; }
+nobody join --as nobody-agent
+nobody join --as scout 2> /tmp/cookout-nobody.err & sleep 1; cat /tmp/cookout-nobody.err; kill $!
 ```
 
-`grace`'s join prints `{ "identity": "triage-agent", "created": false }`, and her session's post is by `triage-agent`. `ada`'s `message post` before joining is refused with `not_joined`: only `join` sends the Login from inside a harness. Her first join prints `{ "identity": "ada/triage-agent", "created": true }` (mentioned as `@ada/triage-agent`), and after `leave` the second prints the same with `"created": false`. `scout` is free, so it is created: `{ "identity": "scout", "created": true }`. `join --as grace` (a human) is refused with 403 `identity_kind`, and `@grace/x` with 403 `not_owner`. `identity list` shows `["ada/triage-agent","ada"]` and `["scout","ada"]` beside the seeded agents. With no Login at all, `join` is refused with `login_missing`: "log in first: cookout login". Remove the folders when done: `rm -r /tmp/cookout-grace /tmp/cookout-ada /tmp/cookout-login-state`.
+`grace`'s join prints `{ "identity": "triage-agent", "created": false }`, and her session's post is by `triage-agent`. `ada`'s `message post` before joining is refused with `not_joined`: only `join` sends the Login from inside a harness. Her first join, which creates the agent and so needs `--display-name` (without it the join exits 1 with `usage` and creates nothing), prints `{ "identity": "ada/triage-agent", "created": true }` (mentioned as `@ada/triage-agent`), and after `leave` the second, which joins an existing agent and so takes no `--display-name`, prints the same with `"created": false`. `scout` is free, so it is created: `{ "identity": "scout", "created": true }`. `join --as grace` (a human) is refused with 403 `identity_kind`, and `@grace/x` with 403 `not_owner`. `identity list` shows `["ada/triage-agent","ada"]` and `["scout","ada"]` beside the seeded agents. With no Login at all, `join` makes an agent join request instead, as in "Join from a box with no Login": for `nobody-agent`, which no agent has, it exits 1 at once with 404 `agent_not_found`; for `scout`, which now exists, it prints the approval link and code on stderr and waits for an approver (`ada`, its owner), until it is stopped. Remove the folders when done: `rm -r /tmp/cookout-grace /tmp/cookout-ada /tmp/cookout-login-state /tmp/cookout-nobody.err`.
 
 ## Manage an agent as its owner
 
@@ -977,7 +980,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts command call ship --channel shi
 cat /tmp/cookout-handler.log
 ```
 
-The call prints `{ messageId, threadId }` at once. In the background the server POSTs `{ command, data, channel, threadId, token, callId }` to the URL, signed in the `cookout-signature` header with the lowercase hex HMAC-SHA256 of the raw body, keyed with the Webhook command's secret (the scheme in `packages/handler-example/README.md`). The handler logs `call call_… of ship on thread …: 202` only for a signed call, then replies `/ship is done.` in the call's thread with data `{ received: { branch: "main" } }` (`message thread <threadId>`); a bad signature gets 401 and no line. With `"failFirst":true` in the data the first delivery logs `: 503` and the retry `: 202`. With the handler stopped, a call still answers 202 and the dev log gets a `WARN` line `An attempt at the webhook delivery call_… failed.` per attempt. The server retries 5 times with the same `callId`, waiting `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default 10) and then `COOKOUT_WEBHOOK_RETRY_FACTOR` (default 2.3) times longer each time, about 8 minutes in all; start it with `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS=1 COOKOUT_WEBHOOK_RETRY_FACTOR=1` to see it in seconds. After the last failure the `ship` handler identity replies in the call's thread `The delivery of /ship to its handler failed after 5 retries.` (`message thread <threadId>`). `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default 5) bounds each attempt. Pending deliveries are stored: stop the server (Ctrl-C) mid-backoff and start it again on the same `COOKOUT_DB`, and it resumes them on the same backoff with the same `callId` (the body carries a new Webhook command token).
+The call prints `{ messageId, threadId }` at once. In the background the server POSTs `{ command, data, channel, threadId, token, callId }` to the URL, signed in the `cookout-signature` header with the lowercase hex HMAC-SHA256 of the raw body, keyed with the Webhook command's secret (the scheme in `packages/handler-example/README.md`). The handler logs `call call_… of ship on thread …: 202` only for a signed call, then replies `/ship is done.` in the call's thread with data `{ received: { branch: "main" } }` (`thread get <threadId>`); a bad signature gets 401 and no line. With `"failFirst":true` in the data the first delivery logs `: 503` and the retry `: 202`. With the handler stopped, a call still answers 202 and the dev log gets a `WARN` line `An attempt at the webhook delivery call_… failed.` per attempt. The server retries 5 times with the same `callId`, waiting `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default 10) and then `COOKOUT_WEBHOOK_RETRY_FACTOR` (default 2.3) times longer each time, about 8 minutes in all; start it with `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS=1 COOKOUT_WEBHOOK_RETRY_FACTOR=1` to see it in seconds. After the last failure the `ship` handler identity replies in the call's thread `The delivery of /ship to its handler failed after 5 retries.` (`thread get <threadId>`). `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default 5) bounds each attempt. Pending deliveries are stored: stop the server (Ctrl-C) mid-backoff and start it again on the same `COOKOUT_DB`, and it resumes them on the same backoff with the same `callId` (the body carries a new Webhook command token).
 
 ## Version a release with Changesets
 
