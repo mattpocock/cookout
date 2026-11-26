@@ -1,31 +1,20 @@
 import { Argument, Command } from "effect/cli";
-import { Array as Arr, Deferred, Effect, Fiber, Option, Queue, Ref, Stream } from "effect";
+import { Array as Arr, Deferred, Effect, Fiber, Option, Stream } from "effect";
 import { SESSION_ID_PLACEHOLDER, opened, registerHere, registeredSessions } from "./registrations.ts";
-import { answered, printErrorLine, printLine, refused } from "./output.ts";
-import { runPlace, wakeRun } from "./wake-run.ts";
+import { answered, printErrorLine, refused } from "./output.ts";
 import { source, start } from "./watch-connection.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import type { CommandFailed } from "./output.ts";
 import type { Heard } from "./watch-connection.ts";
-import type { InboxItem } from "../../../sdk/index.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
-
-const NONE_PENDING = 0;
-const ONE = 1;
+import { runPlace } from "./wake-run.ts";
+import { wakeQueue } from "./wake-queue.ts";
 
 type Spawner = ChildProcessSpawner.ChildProcessSpawner;
-
-function moreOne(count: number): number {
-  return count + ONE;
-}
-
-function lessOne(count: number): number {
-  return count - ONE;
-}
 
 const noRegistrations: CallFailure = {
   code: "not_registered",
@@ -46,35 +35,13 @@ interface Listening {
   readonly registered: RegisteredSession;
 }
 
-function oneAtATime({
-  place,
-  registered,
-}: Listening): Effect.Effect<(item: InboxItem) => Effect.Effect<void>, never, Scope.Scope | Spawner> {
-  return Effect.gen(function* serialWakeRuns() {
-    const { registration } = registered;
-    const waiting = yield* Queue.unbounded<InboxItem>();
-    const pending = yield* Ref.make(NONE_PENDING);
-    function runThenDone(item: InboxItem): Effect.Effect<void, never, Spawner> {
-      return Effect.andThen(wakeRun({ item, place, registration }), Ref.update(pending, lessOne));
-    }
-    const runNext = Effect.flatMap(Queue.take(waiting), runThenDone);
-    yield* Effect.forkScoped(Effect.forever(runNext));
-    return (item: InboxItem): Effect.Effect<void> =>
-      Effect.gen(function* queueWakeRun() {
-        const before = yield* Ref.getAndUpdate(pending, moreOne);
-        if (before > NONE_PENDING) {
-          yield* printLine({ agent: registration.agent, message: item.message.id, type: "mention-waiting" });
-        }
-        yield* Queue.offer(waiting, item);
-      });
-  });
-}
-
 function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
   return Effect.gen(function* listenAndWake() {
     const asAgent = yield* opened(listening.registered);
     const first = yield* start(asAgent);
-    const hear = yield* oneAtATime(listening);
+    const { place, registered } = listening;
+    const { catchUp, hear } = yield* wakeQueue({ asAgent, place, registration: registered.registration });
+    yield* catchUp;
     yield* source({ first, opened: asAgent }).pipe(
       Stream.tap((event) => Effect.when(listening.connected, Effect.succeed(event.type === "connected"))),
       Stream.filter(isMention),
@@ -155,10 +122,12 @@ const startCommand = Command.make("start", {}, () =>
   Effect.matchEffect(runAll, { onFailure: refused, onSuccess: Effect.succeed }),
 ).pipe(
   Command.withDescription(
-    "Run the runner in the foreground: one live connection per registration, as its agent, and on each mention " +
-      "a wake run of its wake command, in the registered folder with the registered PATH, the inbox item's JSON on " +
-      "stdin. One agent's runs never overlap: a mention heard during a run waits, with a stdout line saying so. It " +
-      "prints one stderr line once every connection is open, and one stdout line as each run exits. It never acks.",
+    "Run the runner in the foreground: one live connection per registration, as its agent, and on a mention a " +
+      "wake run of its wake command, in the registered folder with the registered PATH, an inbox JSON of the " +
+      "waiting mentions on stdin. On start, an agent's unread mentions go to one run. One agent's runs never " +
+      "overlap: mentions heard during a run wait, with a stdout line each, and go to the next run together, less " +
+      "any the agent acked meanwhile; a mention left unacked goes to one more run. It prints one stderr line once " +
+      "every connection is open, and one stdout line as each run exits or is skipped. It never acks.",
   ),
 );
 

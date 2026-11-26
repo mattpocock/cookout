@@ -5,7 +5,6 @@ import type {
   FakeWakeSettings,
   StartedRunner,
   TestCookout,
-  TestIdentity,
   WakeBoard,
   WakeLogLine,
 } from "../../../testing/server.ts";
@@ -15,7 +14,9 @@ import {
   answer,
   boardAgent,
   commandLineServices,
-  fakeWakeCommand,
+  joinWaking,
+  mention,
+  mentions,
   registrationIn,
   runCookout,
   startRunner,
@@ -60,27 +61,8 @@ const encode = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 type Needs = CommandLineNeeds | TestCookout | Scope.Scope;
 
-function joinWaking(name: string, on: WakeBoard, settings: FakeWakeSettings): Effect.Effect<BoardAgent, never, Needs> {
-  return Effect.gen(function* joinAndRegister() {
-    const joined = yield* boardAgent({ board: on, name });
-    const wake = yield* fakeWakeCommand(settings);
-    const result = yield* runCookout({ args: ["join", "--as", name, "--wake", "--", ...wake], env: joined.env });
-
-    expect(result).toMatchObject({ exitCode: 0 });
-
-    return joined;
-  });
-}
-
-function mention(ada: TestIdentity, text: string): Effect.Effect<{ readonly id: MessageId }> {
-  return Effect.map(
-    answer(() => ada.client.createMessage({ channel: WAKE_CHANNEL, text })),
-    ({ message }) => message,
-  );
-}
-
-function mentions(ada: TestIdentity, texts: readonly string[]): Effect.Effect<readonly number[]> {
-  return Effect.forEach(texts, (text) => Effect.map(mention(ada, text), ({ id }): number => id), { concurrency: 1 });
+function isMessage(id: MessageId) {
+  return ({ message }: { readonly message: { readonly id: MessageId } }): boolean => message.id === id;
 }
 
 function wakeBrigidOnce(text: string, settings: WakeSettings): Effect.Effect<WokenOnce, never, Needs> {
@@ -88,9 +70,9 @@ function wakeBrigidOnce(text: string, settings: WakeSettings): Effect.Effect<Wok
     const path = yield* Path.Path;
     const on = yield* wakeBoard;
     const file = path.join(on.folder, "wake.log");
-    const joined = yield* joinWaking("brigid", on, { ...settings, log: file });
+    const joined = yield* joinWaking({ name: "brigid", on, settings: { ...settings, log: file } });
     const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
-    const message = yield* mention(on.ada, text);
+    const message = { id: yield* mention({ ada: on.ada, text }) };
     const lines = yield* runner.stdoutLines(ONE_RUN);
     const log = yield* wakeLog(file);
     return { joined, lines, log, message, on, runner };
@@ -104,8 +86,8 @@ function brigidAndCormac(cormacTouches: boolean): Effect.Effect<TwoAgents, never
     const on = yield* wakeBoard;
     const log = path.join(on.folder, "wake.log");
     const release = path.join(on.folder, "release");
-    yield* joinWaking("brigid", on, { log, waitFor: release });
-    yield* joinWaking("cormac", on, { log, ...(cormacTouches && { touch: release }) });
+    yield* joinWaking({ name: "brigid", on, settings: { ack: true, log, waitFor: release } });
+    yield* joinWaking({ name: "cormac", on, settings: { ack: true, log, ...(cormacTouches && { touch: release }) } });
     const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
     return { log, on, release: Effect.orDie(fs.writeFileString(release, "go")), runner };
   });
@@ -164,20 +146,21 @@ it.effect("a mention wakes the registered agent once, in its folder with its PAT
   Effect.gen(function* wakeOnMention() {
     const path = yield* Path.Path;
     const { joined, lines, log, message, on, runner } = yield* wakeBrigidOnce("@brigid are you there?", {
+      ack: true,
       reply: "awake",
     });
     const thread = yield* answer(() => on.ada.client.getThread(message.id));
 
     expect(runner.firstStderr).toStrictEqual({ waking: ["brigid"] });
-    expect(lines).toStrictEqual([{ agent: "brigid", exitCode: 0, message: message.id, type: "wake-run" }]);
+    expect(lines).toStrictEqual([{ agent: "brigid", exitCode: 0, messages: [message.id], type: "wake-run" }]);
     expect(log).toMatchObject([
       {
         cwd: path.resolve("."),
         env: { PATH: joined.env["PATH"] },
         event: "start",
-        item: { channel: { name: WAKE_CHANNEL }, message: { id: message.id }, reasons: ["mention"] },
+        inbox: { items: [{ channel: { name: WAKE_CHANNEL }, message: { id: message.id }, reasons: ["mention"] }] },
       },
-      { event: "end", message: message.id },
+      { event: "end", messages: [message.id] },
     ]);
     expect(Arr.map(log, ({ argv }) => Arr.take(argv, ONE_RUN))).toStrictEqual([[joined.harnessSession], []]);
     expect(Arr.map(thread.replies, (reply) => [reply.author.name, reply.text])).toStrictEqual([["brigid", "awake"]]);
@@ -188,11 +171,11 @@ it.effect("a mention's text reaches the wake run on stdin only, verbatim, and ru
   Effect.gen(function* hostileMention() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const { log } = yield* wakeBrigidOnce(HOSTILE, {});
+    const { log } = yield* wakeBrigidOnce(HOSTILE, { ack: true });
     const words = Arr.flatMap(log, ({ argv, env }) => [...argv, ...Record.values(env)]);
     const pwned = yield* Effect.orDie(fs.exists(path.resolve("pwned")));
 
-    expect(log).toMatchObject([{ item: { message: { text: HOSTILE } } }, { event: "end" }]);
+    expect(log).toMatchObject([{ inbox: { items: [{ message: { text: HOSTILE } }] } }, { event: "end" }]);
     expect(Arr.filter(words, Str.includes("pwned"))).toStrictEqual([]);
     expect(pwned).toBe(false);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
@@ -200,7 +183,7 @@ it.effect("a mention's text reaches the wake run on stdin only, verbatim, and ru
 
 it.effect("no token reaches the wake run's environment or anything the runner prints", () =>
   Effect.gen(function* noTokens() {
-    const { joined, lines, log, on, runner } = yield* wakeBrigidOnce("@brigid hello", {});
+    const { joined, lines, log, on, runner } = yield* wakeBrigidOnce("@brigid hello", { ack: true });
     const token = yield* agentSessionTokenIn(on.folder);
     const errors = yield* runner.stderrLines(ONE_RUN);
     const everything = yield* Effect.orDie(encode([lines, errors, log]));
@@ -216,11 +199,10 @@ it.effect("no token reaches the wake run's environment or anything the runner pr
 it.effect("a mention heard during an agent's wake run waits until that run has exited", () =>
   Effect.gen(function* oneRunAtATime() {
     const { log, on, release, runner } = yield* brigidAndCormac(false);
-    const [first = NO_MESSAGE, second = NO_MESSAGE, meanwhile = NO_MESSAGE] = yield* mentions(on.ada, [
-      "@brigid one",
-      "@brigid two",
-      "@cormac meanwhile",
-    ]);
+    const [first = NO_MESSAGE, second = NO_MESSAGE, meanwhile = NO_MESSAGE] = yield* mentions({
+      ada: on.ada,
+      texts: ["@brigid one", "@brigid two", "@cormac meanwhile"],
+    });
     const before = yield* runner.stdoutLines(TWO_LINES);
     const whileWaiting = yield* wakeEvents(log);
     const lines = yield* Effect.andThen(release, runner.stdoutLines(FOUR_LINES));
@@ -228,18 +210,18 @@ it.effect("a mention heard during an agent's wake run waits until that run has e
 
     expect(before).toMatchObject([
       { agent: "brigid", message: second, type: "mention-waiting" },
-      { agent: "cormac", message: meanwhile, type: "wake-run" },
+      { agent: "cormac", messages: [meanwhile], type: "wake-run" },
     ]);
-    expect(whileWaiting).not.toContainEqual(["start", second]);
+    expect(whileWaiting).not.toContainEqual(["start", [second]]);
     expect(Arr.drop(lines, TWO_LINES)).toMatchObject([
-      { message: first, type: "wake-run" },
-      { message: second, type: "wake-run" },
+      { messages: [first], type: "wake-run" },
+      { messages: [second], type: "wake-run" },
     ]);
-    expect(Arr.filter(after, ([, message]) => message !== meanwhile)).toStrictEqual([
-      ["start", first],
-      ["end", first],
-      ["start", second],
-      ["end", second],
+    expect(Arr.filter(after, ([, messages]) => !Arr.contains(messages, meanwhile))).toStrictEqual([
+      ["start", [first]],
+      ["end", [first]],
+      ["start", [second]],
+      ["end", [second]],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -247,7 +229,7 @@ it.effect("a mention heard during an agent's wake run waits until that run has e
 it.effect("two agents' wake runs run at once", () =>
   Effect.gen(function* twoAgentsAtOnce() {
     const { on, runner } = yield* brigidAndCormac(true);
-    yield* mentions(on.ada, ["@brigid waits for cormac", "@cormac lets brigid go"]);
+    yield* mentions({ ada: on.ada, texts: ["@brigid waits for cormac", "@cormac lets brigid go"] });
     const lines = yield* runner.stdoutLines(TWO_LINES);
     const agents = Arr.sort(
       Arr.map(Arr.filter(lines, isRun), ({ agent }) => agent),
@@ -264,7 +246,7 @@ it.effect("the runner never acks: the woken agent's unacked mention stays unread
     const { items } = yield* answer(() => joined.agent.client.inbox());
 
     expect(Arr.map(items, ({ message: { id } }) => id)).toContain(message.id);
-    expect(Arr.map(log, ({ item }) => item)).toContainEqual(Arr.head(items).pipe(Option.getOrNull));
+    expect(Arr.map(log, ({ inbox }) => inbox)).toContainEqual({ items: Arr.filter(items, isMessage(message.id)) });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

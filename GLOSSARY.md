@@ -151,7 +151,7 @@ What the runner needs to wake one agent, written beside a joined session's agent
 The argv a registration keeps for waking its agent, such as `claude -p --resume {session-id} --allowedTools …`, with `{session-id}` filled in at registration (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
 
 **Wake run**:
-One run of a wake command for one mention: spawned with no shell, in the registered folder, with the inbox item's JSON on stdin. One agent's wake runs never overlap; a mention heard during one waits (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
+One run of a wake command for the mentions waiting for one agent: spawned with no shell, in the registered folder, with an inbox JSON of those mentions on stdin. One agent's wake runs never overlap; mentions heard during one wait and go to the next together (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0133](docs/adr/0133-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)).
 
 **Webhook command token**:
 The token sent with one Webhook command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Renamed from Command token with Webhook command (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). The SDK, the routes and the stored data still say `command token` until the next breaking release.

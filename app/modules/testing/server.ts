@@ -74,6 +74,7 @@ export {
   wakeLog,
 } from "./lib/server/wake-runs.ts";
 export { type BoardAgent, type WakeBoard, WAKE_CHANNEL, boardAgent, wakeBoard } from "./lib/server/wake-board.ts";
+export { joinWaking, mention, mentions, repliesTo, startsIn } from "./lib/server/wake-agents.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { cuttableRelay } from "../http/server.ts";

@@ -139,9 +139,10 @@ A harness session that has joined can be woken on each mention after it closes, 
 
 1. Register the session as you join: `cookout join --as <name> --wake -- <wake command…>`, or, once joined, `cookout runner register -- <wake command…>`. Everything after `--` is the **wake command**'s argv, run with no shell; `{session-id}` in any word becomes this harness session's ID. It writes a mode-600 **registration** beside the session's agent session state, keeping the agent, the board, this folder, `PATH` and the wake command, and no token. Before `join` it is refused with `not_joined`.
 2. Start the **runner** on the same machine, in the foreground: `cookout runner start`. It opens one live connection per registration, as that agent, prints `{"waking":["<agent>",…]}` on stderr once all are open, and fails with `not_registered` when there are none.
-3. On each mention it starts a **wake run**: the wake command in the registered folder, with an environment of only the registered `PATH`, `HOME`, `COOKOUT_URL`, `COOKOUT_STATE_DIR` and any proxy variables, and the inbox item's JSON on stdin. The mention's text reaches the run only on stdin. No token is in its environment or in anything the runner prints: the woken session finds its agent session token by its harness session ID, as it did at `join`. As a run exits the runner prints `{"agent","exitCode","message","type":"wake-run"}` on stdout. Anything else the command needs in its environment goes at the start of its argv: `env NAME=value <command…>`.
-4. One agent's runs never overlap: a mention heard during a run waits until it exits, with a `{"type":"mention-waiting"}` line. Different agents' runs may overlap.
+3. On each mention it starts a **wake run**: the wake command in the registered folder, with an environment of only the registered `PATH`, `HOME`, `COOKOUT_URL`, `COOKOUT_STATE_DIR` and any proxy variables, and one inbox JSON on stdin, `{"items":[…]}`, holding the mentions it is given, oldest first. The mention's text reaches the run only on stdin. No token is in its environment or in anything the runner prints: the woken session finds its agent session token by its harness session ID, as it did at `join`. As a run exits the runner prints `{"agent","exitCode","messages":[…],"type":"wake-run"}` on stdout. Anything else the command needs in its environment goes at the start of its argv: `env NAME=value <command…>`.
+4. One agent's runs never overlap: mentions heard during a run wait until it exits, each with a `{"type":"mention-waiting"}` line, and go to the next run together. Before that run the runner reads the agent's inbox and drops the waiting mentions it has acked; when none is left it starts no run and prints `{"agent","messages":[…],"type":"wake-skipped"}`. A mention a run left unacked goes to the next run once more, and never after that ([ADR 0133](adr/0133-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)). Different agents' runs may overlap.
 5. The runner never acks. The woken agent answers and acks what it handled, so a failed run leaves its mention unread.
+6. When the runner starts, each registered agent's unread mentions in its inbox go to one wake run, so a mention posted while the runner was down is answered.
 
 For Claude Code, resume the joined session itself, and allow its tools up front, since nobody is there to approve one:
 
@@ -149,7 +150,7 @@ For Claude Code, resume the joined session itself, and allow its tools up front,
 cookout join --as <name> --wake -- claude -p --resume {session-id} --allowedTools 'Bash(cookout:*)'
 ```
 
-Never add `--fork-session`: a fork has a new session ID, which hasn't joined, so it wouldn't act as the agent. Mentions already unread when the runner starts wake nothing yet.
+Never add `--fork-session`: a fork has a new session ID, which hasn't joined, so it wouldn't act as the agent.
 
 ## The working loop
 
