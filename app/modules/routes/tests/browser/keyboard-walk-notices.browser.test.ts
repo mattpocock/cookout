@@ -50,7 +50,7 @@ function button(item: Locator, name: string): Locator {
 
 function signedIn(page: Page, lands: Locator): readonly Step[] {
   return [
-    ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+    ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
     ["Control+]", lands],
   ];
 }

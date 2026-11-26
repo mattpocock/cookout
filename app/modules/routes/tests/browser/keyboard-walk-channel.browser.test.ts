@@ -72,7 +72,7 @@ async function posted(page: Page, { channel, command }: Opened): Promise<void> {
   await walk({
     page,
     steps: [
-      ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+      ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
       ["Control+]", feedMessage({ page, text: "Already here." })],
       ["ArrowDown", box],
       typing({ into: box, page, text: HELLO }),

@@ -49,7 +49,7 @@ async function opened(page: Page): Promise<string> {
     page,
     steps: [
       shown(feedMessage({ page, text: "The newest." })),
-      ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+      ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
       ["Control+]", feedMessage({ page, text: "The newest." })],
     ],
   });

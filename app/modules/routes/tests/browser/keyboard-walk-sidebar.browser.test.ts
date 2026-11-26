@@ -3,6 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { inSidebar, sidebarLink } from "./regions.ts";
 import { said, walk } from "./walk.ts";
+import type { Step } from "./walk.ts";
 import { clockFixtures } from "./clock.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
@@ -52,7 +53,12 @@ async function signedIn({ name, ownCookout, page }: SigningIn): Promise<string> 
 
 async function edgeMoved(page: Page): Promise<void> {
   const edge = edgeOf(page);
-  await walk({ page, steps: [["Tab", edge]] });
+  const steps: readonly Step[] = [
+    ["Tab", sidebarLink({ label: "Inbox", page })],
+    ["Tab", button(page, "New channel")],
+    ["Tab", edge],
+  ];
+  await walk({ page, steps });
   const width = await edge.getAttribute("aria-valuenow");
   await walk({ page, steps: [["ArrowRight", edge]] });
 
@@ -67,7 +73,6 @@ test("every sidebar link, the new channel form and the sidebar's edge work by ke
   const row = sidebarLink({ label: `#${channel}`, page });
   const person = sidebarLink({ label: `${channel}-reader`, page });
   const form = page.getByRole("form", { exact: true, name: "New channel" });
-  await edgeMoved(page);
   await walk({
     page,
     steps: [
@@ -89,6 +94,7 @@ test("every sidebar link, the new channel form and the sidebar's edge work by ke
       ["Enter", button(page, "Collapse sidebar")],
     ],
   });
+  await edgeMoved(page);
 
   await expect(form).toBeHidden();
 });
@@ -104,7 +110,6 @@ test("every channel row action works by keys alone, and its menu and dialog give
   await walk({
     page,
     steps: [
-      ["Tab", edgeOf(page)],
       ["Tab", button(page, "Collapse sidebar")],
       ["Tab", sidebarLink({ label: "Inbox", page })],
       [DOWN, named({ name: "People & agents", page, role: "link" })],

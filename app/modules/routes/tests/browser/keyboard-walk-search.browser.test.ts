@@ -53,7 +53,7 @@ test("search opens, closes and opens a message by keys alone, focus kept named",
     page,
     steps: [
       shown(message),
-      ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+      ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
       ["Control+]", message],
       ["Control+k", box(page)],
       ["Escape", message],

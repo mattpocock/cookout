@@ -53,7 +53,7 @@ function replied(page: Page, channel: string): readonly Step[] {
   const parent = feedMessage({ page, text: PARENT });
   return [
     shown(feedMessage({ page, text: "Later topic." })),
-    ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+    ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
     ["Control+]", feedMessage({ page, text: "Later topic." })],
     ["k", parent],
     ["Enter", replyBox(page)],

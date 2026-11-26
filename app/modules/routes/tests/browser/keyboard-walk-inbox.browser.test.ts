@@ -84,7 +84,7 @@ function onRows(page: Page): readonly Step[] {
     async () => {
       await expect(row(page, REPLIED)).toBeVisible();
     },
-    ["Tab", inSidebar(page).getByRole("separator", { exact: true, name: "Resize the sidebar" })],
+    ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
     ["Control+]", row(page, MENTIONED)],
     ["Shift+Tab", markAll(page)],
     ["Tab", row(page, MENTIONED)],
