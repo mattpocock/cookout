@@ -5,8 +5,14 @@ interface Numbered {
   readonly number: number;
 }
 
+interface Renumbering {
+  readonly added: readonly string[];
+  readonly v1: readonly string[];
+}
+
 const WIDTH = 4;
 const START = 0;
+const NONE = 0;
 const ONE = 1;
 const NUMBERED = new RegExp(String.raw`^\d{${WIDTH}}-.+\.md$`, "u");
 
@@ -37,4 +43,21 @@ function duplicateNumbers(files: readonly string[]): readonly string[] {
   });
 }
 
-export { duplicateNumbers };
+function takenOnV1({ added, v1 }: Renumbering): readonly string[] {
+  const theirs = numbered(v1);
+  const highest = Math.max(NONE, ...theirs.map((adr) => adr.number));
+  const files = new Set(theirs.map((adr) => adr.file));
+  const fresh = numbered(added).filter((adr) => !files.has(adr.file));
+  return fresh.flatMap((adr, index) => {
+    const taken = theirs.filter((their) => their.number === adr.number).map((their) => their.file);
+    if (taken.length === NONE) {
+      return [];
+    }
+    const next = padded(highest + index + ONE);
+    return [
+      `${adr.file} takes ADR number ${padded(adr.number)}, which origin/v1 already gives ${taken.join(" and ")}. Renumber it to ${next}, past origin/v1's highest, and fix every link to it.`,
+    ];
+  });
+}
+
+export { duplicateNumbers, takenOnV1 };

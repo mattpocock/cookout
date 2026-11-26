@@ -1,6 +1,8 @@
 # Check runs 8 jobs, only on v1 and merge-ticket branches
 
-Superseded in part on 2026-11-25 by [ADR 0111](0111-a-worker-lands-its-own-pull-request-with-no-checks-after-merging-v1.md): Check runs on pushes to v1 and on workflow_dispatch only, and no merge-ticket run gates a landing.
+Superseded in part on 2026-11-25 by [ADR 0114](0114-release-is-the-gate-on-the-newest-green-v1-commit.md): Check runs 5 jobs, and the browser tests, pack smoke, the published client and e2e-docker run in the Release gate on the newest green v1 commit.
+
+Superseded in part on 2026-11-26 by [ADR 0127](0127-a-worker-lands-its-own-pull-request-after-its-pull-request-check-is-green.md): Check no longer runs on merge-ticket branches, and no merge-ticket run gates a landing.
 
 2026-11-25 (mattpocock/cookout#605). Matt agreed on the board on 2026-11-25 (msgs 4906, 4909 and 4917): "agree with all this".
 
