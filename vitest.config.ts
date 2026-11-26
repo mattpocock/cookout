@@ -29,6 +29,7 @@ export default defineConfig({
         "app/modules/format/lib/browser-clock.ts",
         "app/modules/page-focus/lib/document.ts",
         "app/modules/unread/lib/browser-reading.ts",
+        "app/modules/composer/lib/canvas-crop.ts",
       ],
       include: ["app/**/*.{ts,tsx}", "packages/handler-example/app/**/*.ts"],
       provider: "v8",

@@ -9,6 +9,7 @@ const ROWS = "a[data-feed-row]";
 const INBOX_ROW = "#/inbox/";
 const CONTROLS = "a, button";
 const REPLY_BOX = "textarea";
+const TEXT_FIELDS = "input, select, textarea, [contenteditable]";
 const TOP_MESSAGE = 'article[aria-label="First message"]';
 const FIRST = 0;
 const STEPS = { next: 1, previous: -1 } as const;
@@ -182,6 +183,13 @@ function press({ conversation, keymap }: Pick<InboxKeys, "conversation" | "keyma
   };
 }
 
+function offTextField(act: Act): Act {
+  return (event) => {
+    const { target } = event;
+    return !(target instanceof HTMLElement && target.matches(TEXT_FIELDS)) && act(event);
+  };
+}
+
 function thenNext(act: Act): Act {
   const next = select("next");
   return (event) => {
@@ -201,7 +209,7 @@ function useInboxKeys(keys: InboxKeys): void {
         backToRows: back({ selected, watch }),
         copyMessageLink: onTopMessage({ conversation, keymap }, "copyMessageLink"),
         markRowRead: thenNext(press({ conversation, keymap }, "markRowRead")),
-        markRowUnread: press({ conversation, keymap }, "markRowUnread"),
+        markRowUnread: offTextField(press({ conversation, keymap }, "markRowUnread")),
         markSelectedRowRead: press({ conversation, keymap }, "markRowRead"),
         nextRow: select("next"),
         openRow: press({ conversation, keymap }, "openRow"),

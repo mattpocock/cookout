@@ -27,6 +27,7 @@ interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactio
   readonly mark: "for-you" | "open" | "linked" | "none";
   readonly day: string | null;
   readonly unreadLine: boolean;
+  readonly spaced: boolean;
 }
 
 interface StandaloneMessageParts extends MessageItemParts {

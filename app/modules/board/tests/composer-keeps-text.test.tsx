@@ -3,6 +3,11 @@ import { createComposer } from "../../composer/index.ts";
 import { memoryStorage } from "../../testing/web.ts";
 import { opened } from "./held-store.ts";
 
+async function noCrop(): Promise<null> {
+  await Promise.resolve();
+  return null;
+}
+
 const START = 0;
 
 it("while nobody is logged in, a box's unsent text is kept on the page only, suggesting no commands until they load", {
@@ -11,7 +16,7 @@ it("while nobody is logged in, a box's unsent text is kept on the page only, sug
   expect.hasAssertions();
 
   const storage = memoryStorage();
-  const composer = createComposer({ boardStore: opened().store, storage });
+  const composer = createComposer({ boardStore: opened().store, crop: noCrop, storage });
   const draft = composer.channelDraft("web-kept-nobody");
   draft.edit("/", "/".length);
   const typed = draft.snapshot();

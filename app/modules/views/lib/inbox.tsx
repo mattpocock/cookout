@@ -37,7 +37,15 @@ export function InboxView(props: InboxProps): ReactNode {
   useInboxKeys({ conversation: CONVERSATION, keymap, selected, watch });
   return (
     <>
-      <InboxList me={me} notices={notices} rows={rows} selected={selected} state={state} unread={unread} />
+      <InboxList
+        keymap={keymap}
+        me={me}
+        notices={notices}
+        rows={rows}
+        selected={selected}
+        state={state}
+        unread={unread}
+      />
       {state.status !== "loading" && (
         <InboxConversation
           composer={composer}
