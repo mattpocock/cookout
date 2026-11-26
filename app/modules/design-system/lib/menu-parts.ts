@@ -37,7 +37,7 @@ interface MenuChoiceLabel {
 }
 
 type MenuChoice =
-  | (MenuChoiceLabel & { readonly href: string; readonly onSelect: null })
+  | (MenuChoiceLabel & { readonly href: string; readonly onSelect: (() => void) | null })
   | (MenuChoiceLabel & {
       readonly href: null;
       readonly onSelect: () => void;
