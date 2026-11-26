@@ -61,3 +61,29 @@ it.effect.each(storageLayers)(
       expect([held, missing]).toStrictEqual([[false, true, true], { status: "not_found" }]);
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): deleting an identity keeps its avatar to remove until its bytes are said to be removed",
+  ({ layer }) =>
+    Effect.gen(function* avatarsToRemove() {
+      const { storage } = yield* openStore(layer);
+      yield* Effect.all(
+        [
+          storage.createIdentity(human("ada"), hashA),
+          storage.createIdentity(human("bo"), hashB),
+          storage.setAvatar(nameOf("ada"), avatarId("ada-avatar")),
+          storage.setAvatar(nameOf("bo"), avatarId("bo-avatar")),
+        ],
+        { concurrency: 1 },
+      );
+      const before = yield* storage.avatarsToRemove();
+      yield* Effect.all([storage.deleteIdentity(nameOf("ada")), storage.deleteIdentity(nameOf("bo"))], {
+        concurrency: 1,
+      });
+      const deleted = yield* storage.avatarsToRemove();
+      yield* storage.avatarsRemoved([avatarId("ada-avatar")]);
+      const after = yield* storage.avatarsToRemove();
+
+      expect([before, deleted, after]).toStrictEqual([[], ["ada-avatar", "bo-avatar"], ["bo-avatar"]]);
+    }),
+);
