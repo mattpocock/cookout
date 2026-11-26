@@ -66,17 +66,27 @@ const envExample = () => {
   ];
 };
 
+const ONCE = 1;
+
 function readmeSettings(): readonly string[] {
   if (!existsSync("README.md")) {
     return ["README.md is missing."];
   }
   const readme = readFileSync("README.md", "utf8");
-  return [...configReads()]
-    .filter((name) => !readme.includes(`\n- \`${name}\` (`))
-    .map(
-      (name) =>
+  return [...configReads()].flatMap((name) => {
+    const lines = readme.split("\n").filter((line) => line.startsWith(`- \`${name}\` (`)).length;
+    if (lines < ONCE) {
+      return [
         `config reads ${name}, but the README's Settings section has no line for it, such as "- \`${name}\` (default …): …".`,
-    );
+      ];
+    }
+    if (lines > ONCE) {
+      return [
+        `the README's Settings section has ${lines} lines for ${name}; keep one, so the list says each setting once.`,
+      ];
+    }
+    return [];
+  });
 }
 
 const wikiCitations = () =>
