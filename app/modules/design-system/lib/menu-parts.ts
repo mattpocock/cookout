@@ -51,8 +51,6 @@ interface ActionMenuParts {
   readonly buttonLabel?: string;
 }
 
-type MoreActionsLook = "box" | "hover";
-
 interface HoverActionsParts extends Omit<MessageActionParts, "threadHref"> {
   readonly choices: readonly MenuChoice[];
   readonly replyOnHover: boolean;
@@ -66,7 +64,6 @@ export type {
   MenuChoice,
   MessageActionParts,
   MessageMenuParts,
-  MoreActionsLook,
   ReactionChoice,
   ThreadChoice,
 };

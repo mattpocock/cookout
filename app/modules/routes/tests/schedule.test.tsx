@@ -1,4 +1,3 @@
-import { chose, pressed } from "./menus.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
@@ -17,9 +16,8 @@ function dialog(): HTMLElement {
 async function openChannel(channel: string, text: string): Promise<() => void> {
   await adminClient().createChannel({ name: channel });
   const close = openAt({ client: adminClient(), hash: `#/channels/${channel}` });
-  fireEvent.change(await screen.findByLabelText("Message"), { target: { value: text } });
-  pressed(() => inPane().getByRole("button", { name: "Post later" }));
-  await chose("Schedule…");
+  fireEvent.change(await screen.findByLabelText("Message"), { target: { value: `/schedule ${text}` } });
+  fireEvent.keyDown(screen.getByLabelText("Message"), { key: "Enter" });
   await screen.findByRole("dialog", { name: TITLE });
   return close;
 }
@@ -83,7 +81,7 @@ function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-it("schedule… opens a dialog with the composer's text, and saving a recurring schedule creates it in the browser's zone", {
+it("/schedule opens a dialog with the rest of the composer's text, and saving a recurring schedule creates it in the browser's zone", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();

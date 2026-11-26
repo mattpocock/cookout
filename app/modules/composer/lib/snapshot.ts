@@ -1,7 +1,9 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
+import type { Command } from "./commands.ts";
 import type { KeptText } from "./kept-text.ts";
 import type { WebhookCommand } from "../../webhook-commands/index.ts";
 import { sameSnapshot } from "../../board/index.ts";
+import { startingTyped } from "./commands.ts";
 
 const NOTHING = 0;
 const AT_SIGN = 1;
@@ -9,7 +11,6 @@ const ONE = 1;
 const STEPS = { down: ONE, up: -ONE } as const;
 
 const typedMention = /(?<![\w.@-])@ ?[a-z0-9-]*$/iu;
-const typedWebhookCommand = /^\/[a-z0-9-]*$/u;
 
 function membersFirst(matches: readonly Identity[], members: readonly IdentityName[]): readonly Identity[] {
   const named = new Map(matches.map((identity) => [identity.name, identity] as const));
@@ -35,18 +36,11 @@ function suggestionsFor(sources: Sources, text: string, caret: number): readonly
   return membersFirst(matches, sources.members());
 }
 
-function webhookCommandsFor(commands: readonly WebhookCommand[], text: string): readonly WebhookCommand[] {
-  if (!typedWebhookCommand.test(text)) {
-    return [];
-  }
-  const prefix = text.slice(ONE);
-  return commands.filter((command) => command.name.startsWith(prefix));
-}
-
 interface DraftSnapshot {
   readonly text: string;
   readonly caret: number;
   readonly suggestions: readonly Identity[];
+  readonly commands: readonly Command[];
   readonly webhookCommands: readonly WebhookCommand[];
   readonly webhookCommand: WebhookCommand | null;
   readonly highlighted: number;
@@ -57,12 +51,14 @@ interface DraftSnapshot {
 
 interface Sources {
   readonly identities: () => readonly Identity[];
+  readonly commands: readonly Command[];
   readonly webhookCommands: () => readonly WebhookCommand[];
   readonly members: () => readonly IdentityName[];
 }
 
 const EMPTY = {
   caret: NOTHING,
+  commands: [],
   dismissed: false,
   focusRequests: NOTHING,
   highlighted: NOTHING,
@@ -77,10 +73,11 @@ type Typed = Pick<DraftSnapshot, "caret" | "text">;
 
 function written(sources: Sources, previous: DraftSnapshot, typed: Typed): DraftSnapshot {
   const { caret, text } = typed;
-  const commands = webhookCommandsFor(sources.webhookCommands(), text);
+  const webhookCommands = startingTyped({ listed: sources.webhookCommands(), text });
   const suggestions = suggestionsFor(sources, text, caret);
   return {
     caret,
+    commands: startingTyped({ listed: sources.commands, text }),
     dismissed: false,
     focusRequests: previous.focusRequests,
     highlighted: NOTHING,
@@ -88,7 +85,7 @@ function written(sources: Sources, previous: DraftSnapshot, typed: Typed): Draft
     suggestions,
     text,
     webhookCommand: previous.webhookCommand,
-    webhookCommands: commands,
+    webhookCommands,
   };
 }
 
@@ -127,9 +124,22 @@ function picked(snapshot: DraftSnapshot, commands: readonly WebhookCommand[]): D
   return result;
 }
 
+function completed(sources: Sources, snapshot: DraftSnapshot, commands: readonly Command[]): DraftSnapshot {
+  let result = snapshot;
+  for (const command of commands) {
+    const text = `/${command.name} `;
+    result = written(sources, snapshot, { caret: text.length, text });
+  }
+  return result;
+}
+
 function chosen(sources: Sources, snapshot: DraftSnapshot): DraftSnapshot {
   const at = snapshot.highlighted;
-  let result = picked(snapshot, snapshot.webhookCommands.slice(at, at + ONE));
+  const listed = snapshot.commands.length;
+  if (at < listed) {
+    return completed(sources, snapshot, snapshot.commands.slice(at, at + ONE));
+  }
+  let result = picked(snapshot, snapshot.webhookCommands.slice(at - listed, at - listed + ONE));
   for (const identity of snapshot.suggestions.slice(at, at + ONE)) {
     result = mentioned(sources, snapshot, identity.name);
   }
@@ -137,16 +147,17 @@ function chosen(sources: Sources, snapshot: DraftSnapshot): DraftSnapshot {
 }
 
 function highlightMoved(snapshot: DraftSnapshot, direction: "down" | "up"): DraftSnapshot {
-  const count = Math.max(ONE, snapshot.suggestions.length + snapshot.webhookCommands.length);
+  const count = Math.max(ONE, snapshot.suggestions.length + snapshot.commands.length + snapshot.webhookCommands.length);
   return { ...snapshot, highlighted: (snapshot.highlighted + STEPS[direction] + count) % count };
 }
 
 function dismissed(snapshot: DraftSnapshot): DraftSnapshot {
-  return { ...snapshot, dismissed: true, highlighted: NOTHING, suggestions: [], webhookCommands: [] };
+  return { ...snapshot, commands: [], dismissed: true, highlighted: NOTHING, suggestions: [], webhookCommands: [] };
 }
 
 function optionNames(snapshot: DraftSnapshot): readonly string[] {
   return [
+    ...snapshot.commands.map((command) => `/${command.name}`),
     ...snapshot.webhookCommands.map((command) => command.name),
     ...snapshot.suggestions.map((identity) => identity.name),
   ];
@@ -168,7 +179,8 @@ function unpicked(snapshot: DraftSnapshot): DraftSnapshot {
 interface Changes {
   readonly written: (previous: DraftSnapshot, typed: Typed) => DraftSnapshot;
   readonly mentioned: (snapshot: DraftSnapshot, name: string) => DraftSnapshot;
-  readonly picked: (snapshot: DraftSnapshot, commands: readonly WebhookCommand[]) => DraftSnapshot;
+  readonly picked: (snapshot: DraftSnapshot, name: string) => DraftSnapshot;
+  readonly completed: (snapshot: DraftSnapshot, name: string) => DraftSnapshot;
   readonly chosen: (snapshot: DraftSnapshot) => DraftSnapshot;
   readonly highlightMoved: (snapshot: DraftSnapshot, direction: "down" | "up") => DraftSnapshot;
   readonly dismissed: (snapshot: DraftSnapshot) => DraftSnapshot;
@@ -180,10 +192,20 @@ interface Changes {
 function changesFor(sources: Sources): Changes {
   return {
     chosen: (snapshot) => chosen(sources, snapshot),
+    completed: (snapshot, name) =>
+      completed(
+        sources,
+        snapshot,
+        snapshot.commands.filter((command) => command.name === name),
+      ),
     dismissed,
     highlightMoved,
     mentioned: (snapshot, name) => mentioned(sources, snapshot, name),
-    picked,
+    picked: (snapshot, name) =>
+      picked(
+        snapshot,
+        snapshot.webhookCommands.filter((command) => command.name === name),
+      ),
     refreshed: (snapshot) => refreshed(sources, snapshot),
     repliedTo: (snapshot, name) => repliedTo(sources, snapshot, name),
     unpicked,
@@ -226,3 +248,4 @@ export { type DraftSnapshot, type Sources, EMPTY, changesFor, draftChanges };
 export { type KeptText, keptTextIn } from "./kept-text.ts";
 export type { BrowserStorage } from "../../browser-storage/index.ts";
 export type { WebhookCommand } from "../../webhook-commands/index.ts";
+export { type Command, type CommandRun, COMMANDS, channelWebhookCommands, commandRunIn } from "./commands.ts";

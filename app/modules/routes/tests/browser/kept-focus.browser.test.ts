@@ -115,15 +115,17 @@ test("the Webhook command form's Cancel lands focus back on the message box", as
   await expect(postForm(page).getByRole("textbox", MESSAGE_BOX)).toBeFocused();
 });
 
-test("the schedule dialog's Cancel lands focus back on Post later", async ({ page }) => {
+test("the schedule dialog's Cancel lands focus back in the message box, its /schedule text kept", async ({ page }) => {
   await openChannel(page, unique("browser-kept-schedule"));
-  await pressedOn(postForm(page).getByRole("button", { exact: true, name: "Post later" }));
-  await page.getByRole("menuitem", { exact: true, name: "Schedule…" }).press("Enter");
+  const box = postForm(page).getByRole("textbox", MESSAGE_BOX);
+  await box.fill("/schedule Standup");
+  await box.press("Enter");
 
   await pressedOn(scheduleDialog(page).getByRole("button", { exact: true, name: "Cancel" }));
 
   await expect(scheduleDialog(page)).toBeHidden();
-  await expect(postForm(page).getByRole("button", { exact: true, name: "Post later" })).toBeFocused();
+  await expect(box).toBeFocused();
+  await expect(box).toHaveValue("/schedule Standup");
 });
 
 async function openThread(page: Page): Promise<string> {

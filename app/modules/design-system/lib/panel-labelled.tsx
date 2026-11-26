@@ -10,7 +10,7 @@ interface PanelLabelledParts {
 }
 
 export function PanelLabelled(parts: PanelLabelledParts): ReactNode {
-  const heading = useOffered<HTMLHeadingElement>({ choices: parts.choices, inForm: false });
+  const heading = useOffered<HTMLHeadingElement>({ choices: parts.choices });
   return (
     <div className="flex flex-1 items-baseline gap-2">
       <h2 className="rounded-sm text-sm font-semibold" ref={heading} tabIndex={parts.tabIndex}>

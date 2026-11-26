@@ -6,7 +6,6 @@ import { MessageKeys } from "../../design-system/messages.tsx";
 import type { Outgoing } from "../../board/index.ts";
 import { PendingFiles } from "./pending-files.tsx";
 import type { ReactNode } from "react";
-import { ScheduleChoice } from "./schedule-choice.tsx";
 
 const SEND = { posting: "Sending…", ready: "Send" } as const;
 const ATTACH = "Attach files";
@@ -21,7 +20,6 @@ interface MessageFormProps {
   readonly draft: Draft;
   readonly posting: boolean;
   readonly onPost: (outgoing: Outgoing, posted: () => void) => void;
-  readonly onSchedule: (() => void) | null;
   readonly text: MessageFormText;
   readonly focused: boolean;
 }
@@ -55,7 +53,6 @@ export function MessageForm(props: MessageFormProps): ReactNode {
         required={pending.attachments.length === NONE}
       />
       <AttachButton keys={attach} label={ATTACH} onFiles={handleFiles} />
-      {props.onSchedule !== null && <ScheduleChoice onSchedule={props.onSchedule} />}
       <SendButton disabled={posting} label={sendLabelOf(posting)} />
     </Form>
   );

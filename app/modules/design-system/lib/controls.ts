@@ -5,7 +5,6 @@ export { ShortcutList } from "./shortcut-list.tsx";
 export { ListDialog } from "./list-dialog.tsx";
 export { FieldNote } from "./field-note.tsx";
 export { RunList } from "./run-list.tsx";
-export { MoreActions } from "./more-actions.tsx";
 export { ButtonRow } from "./button-row.tsx";
 export { TokenText } from "./token-text.tsx";
 export { QuietButton } from "./quiet-button.tsx";
