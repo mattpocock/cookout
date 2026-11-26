@@ -146,16 +146,22 @@ function takenBack(holding: Holding): Effect.Effect<void, CallFailure> {
   });
 }
 
-function standDownWhenReplaced(holding: Holding): (failure: CallFailure) => Effect.Effect<void, CallFailure> {
+function isReplaced(failure: CallFailure): boolean {
+  return failure.code === watchReplaced;
+}
+
+function whenReplaced(
+  holding: Holding,
+): (listen: Effect.Effect<void, CallFailure>) => Effect.Effect<void, CallFailure> {
   const { agent } = holding.listening.registered.registration;
-  return function standDown(failure: CallFailure): Effect.Effect<void, CallFailure> {
-    if (failure.code !== watchReplaced) {
-      return Effect.fail(failure);
-    }
-    const offline = Effect.andThen(printLine({ agent, type: "watch-replaced" }), untilOffline(holding));
-    const back = Effect.matchEffect(takenBack(holding), { onFailure: standDown, onSuccess: () => Effect.void });
-    return Effect.andThen(Effect.andThen(holding.runs.dropWaiting, offline), back);
-  };
+  const standDown = Effect.andThen(
+    holding.runs.dropWaiting,
+    Effect.andThen(printLine({ agent, type: "watch-replaced" }), untilOffline(holding)),
+  );
+  function standingDown(listen: Effect.Effect<void, CallFailure>): Effect.Effect<void, CallFailure> {
+    return Effect.catchIf(listen, isReplaced, () => Effect.andThen(standDown, standingDown(takenBack(holding))));
+  }
+  return standingDown;
 }
 
 function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
@@ -170,9 +176,7 @@ function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, 
       saw: (event) => Ref.update(lastSeen, lastSeenAfter(event)),
       seen: Ref.get(lastSeen),
     };
-    yield* heardUntilReplaced({ from: Option.none(), holding, onConnected: Effect.void }).pipe(
-      Effect.catch(standDownWhenReplaced(holding)),
-    );
+    yield* heardUntilReplaced({ from: Option.none(), holding, onConnected: Effect.void }).pipe(whenReplaced(holding));
   });
 }
 
