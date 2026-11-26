@@ -35,3 +35,5 @@ export { FilterField } from "./filter-field.tsx";
 export { ComboboxField } from "./combobox-field.tsx";
 export { Listbox, type ListboxGroup, type ListboxOption } from "./listbox.tsx";
 export { ResultOption } from "./result-option.tsx";
+export { AvatarField } from "./avatar-field.tsx";
+export { AvatarPreview } from "./avatar-preview.tsx";
