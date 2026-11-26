@@ -147,3 +147,39 @@ it("passes a merge of v1 that keeps v1's migrations first and the branch's after
 
   expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
 });
+
+const CONFIG = "app/modules/config/server.ts";
+function setting(summary: string): string {
+  return `- \`COOKOUT_EXAMPLE\` (default \`false\`): ${summary}\n`;
+}
+
+function readsOneSetting(readme: string): string {
+  const { dir } = deployedTwice();
+  commit(
+    dir,
+    [CONFIG, 'export const example = env["COOKOUT_EXAMPLE"];\n'],
+    [".env.example", "COOKOUT_EXAMPLE=false\n"],
+    ["README.md", `# Test\n\n## Settings\n\n${readme}`],
+  );
+  return dir;
+}
+
+it("passes a README that lists each setting config reads once", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = readsOneSetting(setting("Once."));
+
+  expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
+});
+
+it("refuses a README that lists a setting config reads twice", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = readsOneSetting(`${setting("Once.")}${setting("Again.")}`);
+  const run = hygiene(dir);
+
+  expect(run.status).toBe(FAILED);
+  expect(run.stderr).toContain(
+    "the README's Settings section has 2 lines for COOKOUT_EXAMPLE; keep one, so the list says each setting once.",
+  );
+});

@@ -9,7 +9,7 @@ Spec: #1
 
 ## Run it
 
-The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.18 or later.
+The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.19 or later.
 
 ```
 COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
@@ -95,7 +95,6 @@ The server, `cookout serve`:
 - `COOKOUT_STREAMS_PER_IDENTITY` (default `20`): How many `/v1/events` streams one identity may hold open at once. One more is refused with 429 `too_many_streams`.
 - `COOKOUT_PRESENCE_GRACE_SECONDS` (default `60`): How long an identity stays online after its last live connection (a `cookout watch` or a web tab) closes, so a watch that restarts doesn't flicker offline.
 - `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): Let an agent's trigger URL be plain `http` on `localhost`, `127.0.0.1` or `[::1]`, for a local receiver in development and tests. Otherwise a trigger URL must be `https`.
-- `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): With `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or `[::1]`, as in development. Otherwise only `https` URLs are accepted.
 
 Every other verb of the CLI, and the SDK's defaults:
 
