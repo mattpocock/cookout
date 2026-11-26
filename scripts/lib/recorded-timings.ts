@@ -26,11 +26,21 @@ interface Timings {
 }
 
 const NONE = 0;
+const ATTEMPTS = 3;
+const FIRST = 1;
+const RETRY_MS = 5000;
+const SLEEP_SLOT = 0;
+const TRANSIENT = /HTTP 5\d\d|connection reset|connection refused|unexpected EOF|i\/o timeout|ECONNRESET|ETIMEDOUT/iv;
 
 interface Asking {
   readonly gh: Gh;
   readonly recording: Timings;
   readonly run: string;
+  readonly sleep?: (ms: number) => void;
+}
+
+function sleepFor(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), SLEEP_SLOT, SLEEP_SLOT, ms);
 }
 
 function textIn(json: unknown, key: string): string {
@@ -59,11 +69,36 @@ function timingsIn(dir: string, recording: Timings): readonly FileTiming[] {
     .flatMap((file) => recording.read(path.join(dir, file)));
 }
 
-function downloaded(gh: Gh, artifacts: readonly Artifact[], recording: Timings): Outcome<readonly FileTiming[]> {
+interface Downloading {
+  readonly args: readonly string[];
+  readonly gh: Gh;
+  readonly sleep: (ms: number) => void;
+}
+
+function withRetries({ args, gh, sleep }: Downloading, attempt = FIRST): Outcome<string> {
+  const ran = gh(args);
+  if (ran.ok || !TRANSIENT.test(ran.reason)) {
+    return ran;
+  }
+  if (attempt >= ATTEMPTS) {
+    return { ok: false, reason: `${ran.reason} (gave up after ${String(ATTEMPTS)} attempts)` };
+  }
+  sleep(RETRY_MS);
+  return withRetries({ args, gh, sleep }, attempt + FIRST);
+}
+
+function downloaded(
+  { gh, recording, sleep = sleepFor }: Asking,
+  artifacts: readonly Artifact[],
+): Outcome<readonly FileTiming[]> {
   const dir = mkdtempSync(path.join(tmpdir(), `${recording.name}-timings-`));
   try {
     for (const { name, run } of artifacts) {
-      const ran = gh(["run", "download", run, "--name", name, "--dir", path.join(dir, name)]);
+      const ran = withRetries({
+        args: ["run", "download", run, "--name", name, "--dir", path.join(dir, name)],
+        gh,
+        sleep,
+      });
       if (!ran.ok) {
         return ran;
       }
@@ -130,7 +165,7 @@ function recordedTimings(asking: Asking): Reading<Recorded> {
   if (!artifacts.ok) {
     return unreadable(artifacts);
   }
-  const timings = downloaded(asking.gh, artifacts.value, asking.recording);
+  const timings = downloaded(asking, artifacts.value);
   if (!timings.ok) {
     return unreadable(timings);
   }
