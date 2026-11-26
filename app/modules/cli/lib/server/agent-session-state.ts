@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Order, Path, Random, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, Function, Option, Order, Path, Random, Schema, String as Str } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { checkFolder, failure, stateFolder } from "./state-folder.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
@@ -6,6 +6,7 @@ import type { HarnessSessionId } from "../../../config/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
+import { fileBeside } from "./file-beside.ts";
 
 interface AgentSessionStateFailure {
   readonly code: "cli_error" | "agent_session_state_damaged" | "agent_session_state_unsafe" | "state_folder_missing";
@@ -17,8 +18,18 @@ type Needs = FileSystem.FileSystem | Path.Path | Secrets;
 interface AgentSessionStateFile {
   readonly read: Effect.Effect<Option.Option<AgentSessionState>, AgentSessionStateFailure>;
   readonly write: (state: AgentSessionState) => Effect.Effect<void, AgentSessionStateFailure>;
-  readonly writeBeside: (suffix: string, text: string) => Effect.Effect<void, AgentSessionStateFailure>;
+  readonly beside: (suffix: string) => BesideFile;
   readonly remove: Effect.Effect<void, AgentSessionStateFailure>;
+}
+
+interface BesideFile {
+  readonly exists: Effect.Effect<boolean, AgentSessionStateFailure>;
+  readonly read: <Value>(
+    schema: Schema.ConstraintCodec<Value, unknown>,
+  ) => Effect.Effect<Option.Option<Value>, AgentSessionStateFailure>;
+  readonly remove: Effect.Effect<void, AgentSessionStateFailure>;
+  readonly untilGone: Effect.Effect<void>;
+  readonly write: (text: string) => Effect.Effect<void, AgentSessionStateFailure>;
 }
 
 interface FileBeside<Value> {
@@ -133,11 +144,24 @@ function withoutSuffix(file: string, suffix: string): string {
   return Str.slice(KEY_START, -suffix.length)(file);
 }
 
-function writeBesideAt(
-  location: AgentSessionStateLocation,
-): (suffix: string, text: string) => Effect.Effect<void, AgentSessionStateFailure> {
-  return (suffix, text) =>
-    writePrivately(location, { file: `${withoutSuffix(location.file, STATE_SUFFIX)}${suffix}`, text });
+function besideAt(location: AgentSessionStateLocation): (suffix: string) => BesideFile {
+  return (suffix) => {
+    const file = `${withoutSuffix(location.file, STATE_SUFFIX)}${suffix}`;
+    const plain = fileBeside({ file, folder: location.folder, fs: location.fs });
+    function read<Value>(
+      schema: Schema.ConstraintCodec<Value, unknown>,
+    ): Effect.Effect<Option.Option<Value>, AgentSessionStateFailure> {
+      const decode = Schema.decodeEffect(Schema.fromJsonString(schema));
+      return Effect.flatMap(
+        plain.readText,
+        Option.match({
+          onNone: () => Effect.succeedNone,
+          onSome: (text) => Effect.mapBoth(decode(text), { onFailure: () => damaged(file), onSuccess: Option.some }),
+        }),
+      );
+    }
+    return { ...plain, read, write: (text) => writePrivately(location, { file, text }) };
+  };
 }
 
 function locationOf({
@@ -161,10 +185,10 @@ function locationOf({
 
 function fileAt(location: AgentSessionStateLocation): AgentSessionStateFile {
   return {
+    beside: besideAt(location),
     read: readFrom(location),
     remove: Effect.mapError(location.fs.remove(location.file, { force: true }), failure),
     write: writeTo(location),
-    writeBeside: writeBesideAt(location),
   };
 }
 
@@ -177,11 +201,19 @@ function refuseWrite(): Effect.Effect<never, AgentSessionStateFailure> {
   return noFolderToWriteIn;
 }
 
+const nothingBeside: BesideFile = {
+  exists: Effect.succeed(false),
+  read: () => Effect.succeedNone,
+  remove: Effect.void,
+  untilGone: Effect.void,
+  write: refuseWrite,
+};
+
 const noStateFolder: AgentSessionStateFile = {
+  beside: Function.constant(nothingBeside),
   read: Effect.succeedNone,
   remove: Effect.void,
   write: refuseWrite,
-  writeBeside: refuseWrite,
 };
 
 function agentSessionStateFile(key: JoinedSessionKey): Effect.Effect<AgentSessionStateFile, never, Needs> {

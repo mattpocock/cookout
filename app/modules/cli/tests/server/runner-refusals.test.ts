@@ -95,19 +95,22 @@ it.effect("runner start on a damaged registration fails with agent_session_state
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("a registered agent whose session has left is named, and the runner stops when no agent is left", () =>
-  Effect.gen(function* sessionLeft() {
-    const { brigid, on } = yield* joinedBrigid(["claude"]);
-    const left = yield* runCookout({ args: ["leave"], env: brigid.env });
+it.effect("a registration whose session was revoked before the runner started is dropped, and the runner stops", () =>
+  Effect.gen(function* sessionRevoked() {
+    const { on } = yield* joinedBrigid(["claude"]);
+    yield* answer(() => on.ada.client.revokeAgentSession("brigid"));
     const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
     const errors = yield* runner.stderrLines(THREE_LINES);
+    const status = yield* runCookout({ args: ["runner", "status", "--json"], env: { COOKOUT_STATE_DIR: on.folder } });
 
-    expect(left).toMatchObject({ exitCode: EXIT_SUCCESS });
     expect(errors).toMatchObject([
-      { agent: "brigid", error: { code: "not_joined" } },
+      { agent: "brigid", dropped: true, error: { code: "agent_session_revoked" } },
       { waking: ["brigid"] },
       { error: { code: "cli_error" } },
     ]);
+    expect(status).toMatchObject({
+      stdoutJson: { dropped: [{ agent: "brigid", code: "agent_session_revoked" }], registrations: [] },
+    });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

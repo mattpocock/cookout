@@ -69,6 +69,7 @@ export {
   type RegistrationFile,
   type WakeLogLine,
   agentSessionTokenIn,
+  registeredAgentsIn,
   registrationIn,
   wakeEvents,
   wakeLog,
