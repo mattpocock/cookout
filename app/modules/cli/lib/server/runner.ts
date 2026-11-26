@@ -1,10 +1,8 @@
 import { Array as Arr, Deferred, Effect, Fiber, Option } from "effect";
 import { printErrorLine, refused } from "./output.ts";
-import { registerCommand, statusCommand, unregisterCommand } from "./runner-commands.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import { Command } from "effect/cli";
-import type { CommandFailed } from "./output.ts";
 import type { Listening } from "./runner-agent.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
@@ -74,10 +72,4 @@ const startCommand = Command.make("start", {}, () =>
   ),
 );
 
-const runnerCommand: Command.Command<"runner", object, object, CommandFailed, AgentSessionStateNeeds | Spawner> =
-  Command.make("runner").pipe(
-    Command.withDescription("Wake registered agents on mentions while their harness sessions are closed."),
-    Command.withSubcommands([registerCommand, startCommand, unregisterCommand, statusCommand]),
-  );
-
-export { runnerCommand };
+export { startCommand };

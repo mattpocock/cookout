@@ -125,8 +125,16 @@ function captured({ env, program }: Omit<CommandLine, "console">): Effect.Effect
   });
 }
 
-function runCookout({ args, env }: Invocation): Effect.Effect<CliResult, never, Needs> {
-  return captured({ env, program: exitCodeAfter(runCommandLine(args, verbLayers)) });
+function runCookout({
+  args,
+  env,
+  runnerHost,
+}: Invocation & Pick<ServeLayers, "runnerHost">): Effect.Effect<CliResult, never, Needs> {
+  const layers = Option.match(Option.fromNullishOr(runnerHost), {
+    onNone: () => verbLayers,
+    onSome: (host) => ({ ...verbLayers, runnerHost: host }),
+  });
+  return captured({ env, program: exitCodeAfter(runCommandLine(args, layers)) });
 }
 
 function runDev({ args, env }: Invocation): Effect.Effect<CliResult, never, Needs> {
