@@ -59,8 +59,6 @@ export {
 export { interruptCookout } from "./lib/server/cli-interrupt.ts";
 export { type DevProcess, startDev, startDevServing, startFakeRoutine, startProbedDev } from "./lib/server/dev.ts";
 export {
-  type InterruptedDev,
-  interruptDevBinary,
   runCookoutBinary,
   watchCookoutBinary,
 } from "./lib/server/process.ts";

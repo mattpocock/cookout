@@ -1,7 +1,8 @@
 import { AttachButton, Form, SendButton } from "../../design-system/controls.tsx";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useContext, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import { DraftText } from "./draft-text.tsx";
+import { MessageKeys } from "../../design-system/messages.tsx";
 import type { Outgoing } from "../../board/index.ts";
 import { PendingFiles } from "./pending-files.tsx";
 import type { ReactNode } from "react";
@@ -36,6 +37,7 @@ export function MessageForm(props: MessageFormProps): ReactNode {
   const { draft, onPost, posting } = props;
   const { attachments } = draft;
   const handleFiles = attachments.attach;
+  const { attach } = useContext(MessageKeys);
   const pending = useSyncExternalStore(attachments.subscribe, attachments.snapshot);
   const handleSend = useCallback(
     (sent: string) => {
@@ -52,7 +54,7 @@ export function MessageForm(props: MessageFormProps): ReactNode {
         label={props.text.field}
         required={pending.attachments.length === NONE}
       />
-      <AttachButton label={ATTACH} onFiles={handleFiles} />
+      <AttachButton keys={attach} label={ATTACH} onFiles={handleFiles} />
       {props.onSchedule !== null && <ScheduleChoice onSchedule={props.onSchedule} />}
       <SendButton disabled={posting} label={sendLabelOf(posting)} />
     </Form>

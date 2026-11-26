@@ -67,6 +67,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
               reply={props.reply}
               row={row.row}
               spaced
+              titled
             />
           );
         })}
