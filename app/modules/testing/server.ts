@@ -28,6 +28,8 @@
  * does, and wait until it has answered 502 so many times, or freeze, so it stops answering: open streams send
  * nothing more and every later request waits for ever.
  * `pastOwnPresence` reads an all-channels feed past its own caller coming online, and `watchingAllChannels` opens one so.
+ * `wakingAgents` joins agents with the fake wake command and starts a runner for them, and `runnerEventsIn` and
+ * `untilRunnerEvents` read its event log through `cookout runner logs`.
  * `silentConnection` connects to a server and sends nothing. `cuttableRelay`,
  * from the http module, is a link a test can cut and restore, from another
  * process too, as the browser tests do.
@@ -69,11 +71,25 @@ export {
   type RegistrationFile,
   type WakeLogLine,
   agentSessionTokenIn,
+  agentSessionTokensIn,
   registeredAgentsIn,
   registrationIn,
+  runnerWritten,
   wakeEvents,
   wakeLog,
 } from "./lib/server/wake-runs.ts";
+export {
+  type EventKind,
+  type RunnerEvent,
+  type WakingAgent,
+  type WakingAgents,
+  eventsOfKind,
+  joinedAgent,
+  runnerEventsIn,
+  runnerEventsOf,
+  untilRunnerEvents,
+  wakingAgents,
+} from "./lib/server/runner-events.ts";
 export { type BoardAgent, type WakeBoard, WAKE_CHANNEL, boardAgent, wakeBoard } from "./lib/server/wake-board.ts";
 export { joinWaking, mention, mentions, repliesTo, startsIn } from "./lib/server/wake-agents.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
