@@ -34,4 +34,4 @@ function ChannelRowView(props: ChannelRowProps): ReactNode {
   );
 }
 
-export const ChannelRow = memo(ChannelRowView, sameProps<ChannelRowProps>("counts"));
+export const ChannelRow = memo(ChannelRowView, sameProps("counts"));

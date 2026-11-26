@@ -82,4 +82,4 @@ function MessageEntryView(props: MessageEntryProps): ReactNode {
   );
 }
 
-export const MessageEntry = memo(MessageEntryView, sameProps<MessageEntryProps>("row"));
+export const MessageEntry = memo(MessageEntryView, sameProps("row"));
