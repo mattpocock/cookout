@@ -47,6 +47,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       threadHref={null}
       threadOnHover={false}
       time={useMessageTime({ message, parent: null, receipts: props.receipts })}
+      spaced={false}
       unreadLine={false}
     >
       <MessageContent me={props.me} message={message} opened={false} />

@@ -31,9 +31,16 @@ const startProbedDev: Started<DevProcess> = Effect.map(
   ({ line, stop }) => ({ ...line, stop }),
 );
 
+function startDevServing(webFolder: string): Started<DevProcess> {
+  return Effect.map(
+    startDevCommand({ args: ["start", "--web", webFolder], isReady: Schema.is(DevStartLine) }),
+    ({ line, stop }) => ({ ...line, stop }),
+  );
+}
+
 const startFakeRoutine: Started<typeof FakeRoutineLine.Type> = Effect.map(
   startDevCommand({ args: ["fake-routine"], isReady: Schema.is(FakeRoutineLine) }),
   ({ line }) => line,
 );
 
-export { type DevProcess, startDev, startFakeRoutine, startProbedDev };
+export { type DevProcess, startDev, startDevServing, startFakeRoutine, startProbedDev };

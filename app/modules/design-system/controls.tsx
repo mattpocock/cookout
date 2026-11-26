@@ -26,6 +26,8 @@
  * - `SubmitButton` sends a `Form`.
  * - `SendButton` is its paper-plane icon form, named and tooltipped by `label`.
  * - `AttachButton` is a paperclip icon button, named and tooltipped by `label`, that opens the file picker for several files and hands what is picked to `onFiles`.
+ * - `AvatarField` is a named group for setting an avatar: a `pick` button that opens the file picker for one file of the `accept` types and hands it to `onFile`, and anything under it, such as an `AvatarPreview`, its buttons and an `Alert`.
+ * - `AvatarPreview` is a picked avatar before it is saved, at a profile's size, a circle for a human and a rounded square for an agent.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
  * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
  * - `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`.
@@ -72,6 +74,8 @@ export {
   ResultOption,
   SendButton,
   AttachButton,
+  AvatarField,
+  AvatarPreview,
   PendingItem,
   PendingList,
   SubmitButton,
