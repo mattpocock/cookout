@@ -2,42 +2,36 @@ import type { DeactivationOffer, DeactivationOfferId } from "../../sdk/index.ts"
 
 interface AskedOffer {
   readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => DeactivationOffer | null;
+  readonly snapshot: () => readonly DeactivationOffer[];
   readonly ask: (offer: DeactivationOffer) => void;
   readonly closed: (id: DeactivationOfferId) => void;
 }
 
 interface Shown {
   readonly offers: readonly DeactivationOffer[];
-  readonly asked: DeactivationOffer | null;
+  readonly asked: readonly DeactivationOffer[];
 }
 
 function shownWith({ asked, offers }: Shown): readonly DeactivationOffer[] {
-  if (asked === null || offers.some(({ id }) => id === asked.id)) {
-    return offers;
-  }
-  return [...offers, asked].toSorted((first, second) => second.id - first.id);
+  const left = asked.filter(({ id }) => !offers.some((offer) => offer.id === id));
+  return [...offers, ...left].toSorted((first, second) => second.id - first.id);
 }
 
 function createAskedOffer(): AskedOffer {
   const listeners = new Set<() => void>();
-  let asked: DeactivationOffer | null = null;
-  function set(next: DeactivationOffer | null): void {
+  let asked: readonly DeactivationOffer[] = [];
+  function set(next: readonly DeactivationOffer[]): void {
     asked = next;
     for (const listener of listeners) {
       listener();
     }
   }
   return {
-    ask: set,
+    ask: (offer) => {
+      set([offer]);
+    },
     closed: (id) => {
-      const now = asked;
-      if (now === null) {
-        return;
-      }
-      if (now.id === id) {
-        set(null);
-      }
+      set(asked.filter((offer) => offer.id !== id));
     },
     snapshot: () => asked,
     subscribe: (listener) => {
