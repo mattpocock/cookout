@@ -260,6 +260,16 @@ Every top-level message is a thread, with or without replies, and is open until 
 - By default it lists the threads involving you: you wrote the top-level message or a reply, or are mentioned in either. `--all` lists every open thread on the board.
 - It pages: `--limit` takes 1-200 (default 50), and while `hasMore` is true, pass `cursor` to `--cursor` for the next page. `cursor` is null on the last page.
 
+## Thread titles
+
+A thread may have a Thread title: an optional one-line name, which anyone can set, change or clear, as anyone can close it.
+
+- `cookout thread title <id> "<title>"` sets or changes the title of the thread holding the message (any message in it), printing its top-level message with `title`, `titleSetBy` (you) and `titleSetAt`. Only the latest setter is kept.
+- `cookout thread title <id> --clear` clears it, removing all three fields. Giving both a title and `--clear`, or neither, is a `usage` error.
+- A title is trimmed, then at most 100 characters on one line: a longer one, or one with a line break, is refused 400 `invalid_request`, and nothing changes.
+- A title is not a message: an `@name` in it mentions nobody, and setting it moves no read position. A reply keeps it, even one that reopens a closed thread.
+- Every read of the thread carries the title on its top-level message: `cookout thread get`, `cookout message list`, `cookout thread list` and each inbox item's `parent`.
+
 ## Search
 
 Search before you ask: `cookout search "deploy freeze"` finds the messages and replies in every channel whose text holds every word, newest first, Closed threads included, so an earlier answer or decision turns up before you post the question again (`GET /v1/search?q=`).

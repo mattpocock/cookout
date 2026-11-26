@@ -32,9 +32,16 @@ const probeFlag = Flag.Boolean("probe").pipe(
   Flag.withDescription("Put the browser tests' probe (the probe module) on the web UI's pages."),
 );
 
-const startCommand = Command.make("start", { port: portFlag, probe: probeFlag }, ({ port, probe }) =>
+const webFlag = Flag.Directory("web", { mustExist: true }).pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Serve this built web UI (vite build's output) from the cookout itself, as serve does, instead of the Vite dev server.",
+  ),
+);
+
+const startCommand = Command.make("start", { port: portFlag, probe: probeFlag, web: webFlag }, ({ port, probe, web }) =>
   Effect.gen(function* start() {
-    const dev = yield* devCookout({ port, probe });
+    const dev = yield* devCookout({ port, probe, web });
     yield* printLine({ ...dev, message: "The dev cookout is running. Ctrl-C stops it and deletes its database." });
     return yield* Effect.never;
   }).pipe(Effect.scoped),
