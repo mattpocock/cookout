@@ -27,6 +27,7 @@ function personKeysOf(keymap: Keymap): PersonKeysSource {
 
 function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
   return {
+    attach: keymap.shortcutOf("attachFiles"),
     copyLink: keymap.shortcutOf("copyMessageLink"),
     copyText: keymap.shortcutOf("copyMessageText"),
     delete: keymap.shortcutOf("deleteMessage"),

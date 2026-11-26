@@ -12,11 +12,13 @@ interface MessageShortcuts {
   readonly unfold: Shortcut;
   readonly previousImage: Shortcut;
   readonly nextImage: Shortcut;
+  readonly attach: Shortcut;
 }
 
 const NO_SHORTCUT: Shortcut = { keys: "", label: "" };
 
 const MessageKeys = createContext<MessageShortcuts>({
+  attach: NO_SHORTCUT,
   copyLink: NO_SHORTCUT,
   copyText: NO_SHORTCUT,
   delete: NO_SHORTCUT,
