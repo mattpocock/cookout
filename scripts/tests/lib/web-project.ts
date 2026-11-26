@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { onTestFinished } from "vitest";
 import os from "node:os";
 import path from "node:path";
 
@@ -45,6 +46,9 @@ function writeFile({ file, root, text }: Written): void {
 
 function webProject(): string {
   const root = mkdtempSync(path.join(os.tmpdir(), "cookout-web-project-"));
+  onTestFinished(() => {
+    rmSync(root, { force: true, recursive: true });
+  });
   for (const [file, text] of Object.entries(FILES)) {
     writeFile({ file, root, text });
   }
