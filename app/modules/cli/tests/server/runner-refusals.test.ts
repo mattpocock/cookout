@@ -149,7 +149,9 @@ it.effect("a wake command that can't be started is reported as wake_command_fail
     const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
     yield* answer(() => on.ada.client.createMessage({ channel: WAKE_CHANNEL, text: "@brigid hello" }));
     const errors = yield* runner.stderrLines(TWO_LINES);
+    const status = yield* runCookout({ args: ["runner", "status"], env: { COOKOUT_STATE_DIR: on.folder } });
 
     expect(errors).toMatchObject([{ waking: ["brigid"] }, { agent: "brigid", error: { code: "wake_command_failed" } }]);
+    expect(status.stdout).toMatch(/^brigid .* last wake run \S+: failed: wake_command_failed, output in \S+$/mu);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

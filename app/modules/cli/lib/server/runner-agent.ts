@@ -49,6 +49,7 @@ function listen(listening: Listening, { asAgent, keeper, queue }: Heeding): Effe
     asAgent,
     connected: Effect.andThen(keeper.reconnected, listening.connected),
     queue,
+    record: (event) => listening.place.log.record(listening.registered.registration.agent, event),
     replaced: keeper.set("connecting"),
   });
 }
@@ -71,7 +72,10 @@ function wakeUntilUnregistered(listening: Listening): Effect.Effect<void, CallFa
       yield* queue.stop;
       yield* forgetRunnerState(file);
       yield* ended;
-      yield* printErrorLine({ agent: registration.agent, unregistered: true });
+      yield* Effect.andThen(
+        listening.place.log.record(registration.agent, { type: "unregister" }),
+        printErrorLine({ agent: registration.agent, unregistered: true }),
+      );
     }),
   );
 }
@@ -84,12 +88,13 @@ function dropIfEnded(registered: RegisteredSession, failure: CallFailure): Effec
   return Effect.map(Effect.when(dropWhileRegistered, ended), (dropped) => Option.isSome(Option.flatten(dropped)));
 }
 
-function onStop({ connected, registered }: Listening) {
+function onStop({ connected, place, registered }: Listening) {
   return (failure: CallFailure): Effect.Effect<void> =>
     Effect.gen(function* stopListening() {
       yield* forgetRunnerState(registered.file);
       const dropped = yield* dropIfEnded(registered, failure);
       const error = { code: failure.code, message: failure.message };
+      yield* place.log.record(registered.registration.agent, { dropped, error, type: "refusal" });
       yield* printErrorLine({ agent: registered.registration.agent, dropped, error });
       yield* connected;
     });
