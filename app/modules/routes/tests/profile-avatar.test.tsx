@@ -8,6 +8,7 @@ import { openAt } from "./render.tsx";
 import { withNodeForms } from "./attachment-posts.ts";
 
 const OVER_TWO_MEGABYTES = 2_000_001;
+const ONE = 1;
 
 interface Crew {
   readonly human: CookoutClient;
@@ -34,16 +35,20 @@ interface Picking {
   readonly whose?: "bot" | "human";
 }
 
+function avatarPicker(): HTMLInputElement {
+  const picker = inProfile().getByRole("group", { name: "Avatar" }).querySelector("input[type=file]");
+  if (!(picker instanceof HTMLInputElement)) {
+    throw new TypeError("The avatar has no file picker");
+  }
+  return picker;
+}
+
 async function picked({ file, prefix, whose = "human" }: Picking): Promise<Picked> {
   const { human } = await crewOf(prefix);
   const name = `${prefix}-${whose}`;
   const close = openAt({ client: human, hash: `#/people/${name}` });
   const group = await inProfile().findByRole("group", { name: "Avatar" });
-  const picker = group.querySelector("input[type=file]");
-  if (!(picker instanceof HTMLInputElement)) {
-    throw new TypeError("The avatar has no file picker");
-  }
-  fireEvent.change(picker, { target: { files: [file] } });
+  fireEvent.change(avatarPicker(), { target: { files: [file] } });
   return { close, group, human, name };
 }
 
@@ -185,6 +190,40 @@ it("pressing Cancel drops the picked image and puts focus back on Set avatar", {
 
   expect(within(group).queryByRole("img", { name: "New avatar" })).toBeNull();
   await expect(avatarIdOf(human, name)).resolves.toBeNull();
+
+  close();
+});
+
+interface Watched {
+  readonly close: () => void;
+  readonly opened: () => number;
+}
+
+async function watchPicker(prefix: string): Promise<Watched> {
+  const { human } = await crewOf(prefix);
+  const close = openAt({ client: human, hash: `#/people/${prefix}-human` });
+  const group = await inProfile().findByRole("group", { name: "Avatar" });
+  const picker = avatarPicker();
+  let opened = 0;
+  picker.addEventListener("click", () => {
+    opened += ONE;
+  });
+  fireEvent.click(within(group).getByRole("button", { name: "Set avatar" }));
+  fireEvent.change(picker, { target: { files: null } });
+  return { close, opened: () => opened };
+}
+
+it("pressing Set avatar opens the file picker, and picking nothing changes nothing", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close, opened } = await watchPicker("web-avatar-set-open");
+  const group = inProfile().getByRole("group", { name: "Avatar" });
+
+  expect([opened(), within(group).queryAllByRole("alert"), within(group).queryAllByRole("img")]).toStrictEqual([
+    ONE,
+    [],
+    [],
+  ]);
 
   close();
 });
