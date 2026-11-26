@@ -1,0 +1,20 @@
+# PROTOTYPE user unit, not installed. To try it:
+#   cp prototype-cookout-runner.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now prototype-cookout-runner
+# Needs a running user manager at boot: `loginctl enable-linger $USER` (see README).
+[Unit]
+Description=PROTOTYPE cookout runner (wakes registered agents on mention)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=COOKOUT_URL=http://127.0.0.1:47311
+Environment=COOKOUT_STATE_DIR=%h/.local/state/cookout
+Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v22.23.2/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/repos/matt/cookout/scripts/prototype-cookout-runner/prototype-cookout-runner.sh %h/.config/cookout-runner/registry.json %h/.local/state/cookout-runner/runner.log.jsonl
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
