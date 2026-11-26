@@ -18,7 +18,7 @@ type RunnerHost = NonNullable<ServeLayers["runnerHost"]>;
 
 interface ServiceHost {
   readonly calls: Effect.Effect<readonly string[]>;
-  readonly env: Readonly<Record<string, string>>;
+  readonly env: { readonly COOKOUT_STATE_DIR: string; readonly HOME: string; readonly PATH: string };
   readonly home: string;
   readonly host: RunnerHost;
   readonly stateFolder: string;

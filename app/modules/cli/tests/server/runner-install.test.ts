@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Path, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, Option, Path, Record, String as Str } from "effect";
 import type { CliResult, CommandLineNeeds, ServiceHost, ServiceHostOptions } from "../../../testing/server.ts";
 import {
   agentSessionTokenIn,
@@ -30,6 +30,8 @@ interface Installed {
 
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
+const PRIVATE_FOLDER = 0o700;
+const PERMISSIONS = 0o1000;
 const UNIT = "cookout-runner.service";
 const PLIST_LABEL = "dev.cookout.runner";
 const BUS_ERROR = "Failed to connect to bus: No medium found";
@@ -57,8 +59,12 @@ const macos: Platform = {
   uninstall: [`launchctl bootout gui/501/${PLIST_LABEL}`],
 };
 
-function run(on: ServiceHost, verb: "install" | "uninstall"): Effect.Effect<CliResult, never, CommandLineNeeds> {
-  return runCookout({ args: ["runner", verb], env: on.env, runnerHost: on.host });
+function run(
+  on: ServiceHost,
+  verb: "install" | "uninstall",
+  env: Readonly<Record<string, string>> = on.env,
+): Effect.Effect<CliResult, never, CommandLineNeeds> {
+  return runCookout({ args: ["runner", verb], env, runnerHost: on.host });
 }
 
 function textOf(file: string): Effect.Effect<Option.Option<string>, never, FileSystem.FileSystem> {
@@ -236,4 +242,54 @@ it.effect("the unit holds no token of an agent joined in the state folder", () =
     expect(text).not.toContain(Option.getOrElse(token, () => "no token"));
     expect(text).not.toContain(brigid.agent.token);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("uninstall with nothing installed does nothing on this machine's own platform", () =>
+  Effect.gen(function* thisMachine() {
+    const on = yield* serviceHost(linux.options);
+    const result = yield* runCookout({ args: ["runner", "uninstall"], env: on.env });
+    const calls = yield* on.calls;
+
+    expect(result).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { ran: [], removed: false } });
+    expect(calls).toStrictEqual([]);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect.each([
+  { how: "no HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR", stateFolder: false },
+  { how: "a COOKOUT_STATE_DIR but no HOME", stateFolder: true },
+])("install with $how is refused with state_folder_missing", ({ stateFolder }: { readonly stateFolder: boolean }) =>
+  Effect.gen(function* noHome() {
+    const on = yield* serviceHost(linux.options);
+    const env = { ...Record.filter({ COOKOUT_STATE_DIR: on.stateFolder }, () => stateFolder), PATH: on.env.PATH };
+    const result = yield* run(on, "install", env);
+    const calls = yield* on.calls;
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "state_folder_missing" } } });
+    expect(calls).toStrictEqual([]);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("a service command that isn't there is service_command_failed, naming it", () =>
+  Effect.gen(function* commandMissing() {
+    const on = yield* serviceHost(macos.options);
+    const result = yield* run(on, "install", { ...on.env, PATH: on.home });
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "service_command_failed" } } });
+    expect(result.stderr).toContain("launchctl bootstrap");
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("install makes a state folder that isn't there yet, one only you can open", () =>
+  Effect.gen(function* newStateFolder() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const on = yield* serviceHost(linux.options);
+    const folder = path.join(on.home, "new-state");
+    const result = yield* run(on, "install", { ...on.env, COOKOUT_STATE_DIR: folder });
+    const made = yield* Effect.orDie(fs.stat(folder));
+
+    expect(result).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { log: path.join(folder, "runner.log") } });
+    expect(made.mode % PERMISSIONS).toBe(PRIVATE_FOLDER);
+  }).pipe(Effect.provide(commandLineServices)),
 );

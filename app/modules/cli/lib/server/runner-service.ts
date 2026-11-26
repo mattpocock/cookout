@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Path, String as Str, Stream } from "effect";
+import { Array as Arr, Effect, FileSystem, Function, Option, Path, String as Str, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { RunnerHost as Host, hostKind, wslSystemdOn } from "./runner-host.ts";
 import type { HostKind, RunnerHost } from "./runner-host.ts";
@@ -129,7 +129,7 @@ const placed: Effect.Effect<Placed, CallFailure, FileSystem.FileSystem | Path.Pa
   const kind = yield* hostKind;
   const homeFolder = yield* Effect.orDie(home);
   const stateFolder = yield* stateFolderPath;
-  if (Str.isEmpty(homeFolder) || Option.isNone(stateFolder)) {
+  if (Option.isNone(stateFolder) || Str.isEmpty(homeFolder)) {
     return yield* Effect.fail(noHome);
   }
   const config = yield* configFolder(path, homeFolder);
@@ -161,7 +161,7 @@ function finished(argv: Step["argv"]): Effect.Effect<Finished, CallFailure, Spaw
       const [program, ...args] = argv;
       const run = ChildProcess.make(program, args, { env: { PATH: path }, extendEnv: true, stdout: "ignore" });
       const handle = yield* spawner.spawn(run);
-      const stderrText = Effect.orElseSucceed(Stream.mkString(Stream.decodeText(handle.stderr)), () => "");
+      const stderrText = Effect.orElseSucceed(Stream.mkString(Stream.decodeText(handle.stderr)), Function.constant(""));
       const [stderr, exitCode] = yield* Effect.all([stderrText, handle.exitCode], { concurrency: "unbounded" });
       return { command, exitCode, stderr: Str.trim(stderr) };
     }),
