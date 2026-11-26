@@ -282,10 +282,10 @@ as() { who=$1 session=$2; shift 2; env COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/coo
 as grace s1 join --as triage-agent | jq '{identity, created}'
 as grace s1 message post general "triaged with grace's Login" | jq .message.author.name
 as ada s2 message post general "as ada?"
-as ada s2 join --as triage-agent | jq '{identity, created}'
+as ada s2 join --as triage-agent --display-name 'Ada triage' | jq '{identity, created}'
 as ada s2 leave
 as ada s2 join --as triage-agent | jq '{identity, created}'
-as ada s3 join --as scout | jq '{identity, created}'
+as ada s3 join --as scout --display-name 'Scout' | jq '{identity, created}'
 as ada s4 join --as grace
 as ada s4 join --as grace/x
 env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=$url COOKOUT_TOKEN=$(token ada) node app/main.ts identity list | jq -c '[.identities[] | select(.kind == "agent") | [.name, .owner]]'
@@ -294,7 +294,7 @@ nobody join --as nobody-agent
 nobody join --as scout 2> /tmp/cookout-nobody.err & sleep 1; cat /tmp/cookout-nobody.err; kill $!
 ```
 
-`grace`'s join prints `{ "identity": "triage-agent", "created": false }`, and her session's post is by `triage-agent`. `ada`'s `message post` before joining is refused with `not_joined`: only `join` sends the Login from inside a harness. Her first join prints `{ "identity": "ada/triage-agent", "created": true }` (mentioned as `@ada/triage-agent`), and after `leave` the second prints the same with `"created": false`. `scout` is free, so it is created: `{ "identity": "scout", "created": true }`. `join --as grace` (a human) is refused with 403 `identity_kind`, and `@grace/x` with 403 `not_owner`. `identity list` shows `["ada/triage-agent","ada"]` and `["scout","ada"]` beside the seeded agents. With no Login at all, `join` makes an agent join request instead, as in "Join from a box with no Login": for `nobody-agent`, which no agent has, it exits 1 at once with 404 `agent_not_found`; for `scout`, which now exists, it prints the approval link and code on stderr and waits for an approver (`ada`, its owner), until it is stopped. Remove the folders when done: `rm -r /tmp/cookout-grace /tmp/cookout-ada /tmp/cookout-login-state /tmp/cookout-nobody.err`.
+`grace`'s join prints `{ "identity": "triage-agent", "created": false }`, and her session's post is by `triage-agent`. `ada`'s `message post` before joining is refused with `not_joined`: only `join` sends the Login from inside a harness. Her first join, which creates the agent and so needs `--display-name` (without it the join exits 1 with `usage` and creates nothing), prints `{ "identity": "ada/triage-agent", "created": true }` (mentioned as `@ada/triage-agent`), and after `leave` the second, which joins an existing agent and so takes no `--display-name`, prints the same with `"created": false`. `scout` is free, so it is created: `{ "identity": "scout", "created": true }`. `join --as grace` (a human) is refused with 403 `identity_kind`, and `@grace/x` with 403 `not_owner`. `identity list` shows `["ada/triage-agent","ada"]` and `["scout","ada"]` beside the seeded agents. With no Login at all, `join` makes an agent join request instead, as in "Join from a box with no Login": for `nobody-agent`, which no agent has, it exits 1 at once with 404 `agent_not_found`; for `scout`, which now exists, it prints the approval link and code on stderr and waits for an approver (`ada`, its owner), until it is stopped. Remove the folders when done: `rm -r /tmp/cookout-grace /tmp/cookout-ada /tmp/cookout-login-state /tmp/cookout-nobody.err`.
 
 ## Manage an agent as its owner
 
