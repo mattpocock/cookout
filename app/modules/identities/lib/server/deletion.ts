@@ -57,7 +57,7 @@ function deletedOrRefused(name: IdentityName, result: DeleteIdentityResult): Eff
 const avatarBytesRemoved: Effect.Effect<void, never, Storage | AssetStore> = Effect.gen(function* removeAvatarBytes() {
   const storage = yield* Storage;
   const assets = yield* AssetStore;
-  const ids = yield* storage.avatarsToRemove();
+  const ids = yield* storage.avatarsToRemove;
   if (Arr.isReadonlyArrayEmpty(ids)) {
     return;
   }

@@ -23,7 +23,7 @@ interface IdentityDeletesSection {
 }
 
 interface AvatarRemovalsSection {
-  readonly avatarsToRemove: () => Fails<readonly AvatarId[]>;
+  readonly avatarsToRemove: Fails<readonly AvatarId[]>;
   readonly avatarsRemoved: (ids: readonly AvatarId[]) => Fails<void>;
 }
 
@@ -166,7 +166,7 @@ function memoryAvatarRemovals({ avatarsToRemove, open }: MemoryAvatarRemovalsOpt
           avatarsToRemove.delete(id);
         }
       }),
-    avatarsToRemove: () => open(() => Arr.sort([...avatarsToRemove], Str.Order)),
+    avatarsToRemove: open(() => Arr.sort([...avatarsToRemove], Str.Order)),
   };
 }
 
@@ -211,11 +211,10 @@ function sqlDeleteFound(db: SqlDatabase, identity: Identity): Fails<DeleteIdenti
 function sqlAvatarRemovals(db: SqlDatabase): AvatarRemovalsSection {
   return {
     avatarsRemoved: (ids) => Effect.forEach(ids, (id) => db.run(DROP_AVATAR_TO_REMOVE, id), ONE_AT_A_TIME),
-    avatarsToRemove: () =>
-      db.all(SELECT_AVATARS_TO_REMOVE).pipe(
-        Effect.flatMap((rows) => Effect.forEach(rows, decodeWith(AvatarToRemoveRow), { concurrency: 1 })),
-        Effect.map(Arr.map((row) => row.id)),
-      ),
+    avatarsToRemove: db.all(SELECT_AVATARS_TO_REMOVE).pipe(
+      Effect.flatMap((rows) => Effect.forEach(rows, decodeWith(AvatarToRemoveRow), { concurrency: 1 })),
+      Effect.map(Arr.map((row) => row.id)),
+    ),
   };
 }
 

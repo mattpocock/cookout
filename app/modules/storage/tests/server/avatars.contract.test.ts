@@ -76,13 +76,13 @@ it.effect.each(storageLayers)(
         ],
         { concurrency: 1 },
       );
-      const before = yield* storage.avatarsToRemove();
+      const before = yield* storage.avatarsToRemove;
       yield* Effect.all([storage.deleteIdentity(nameOf("ada")), storage.deleteIdentity(nameOf("bo"))], {
         concurrency: 1,
       });
-      const deleted = yield* storage.avatarsToRemove();
+      const deleted = yield* storage.avatarsToRemove;
       yield* storage.avatarsRemoved([avatarId("ada-avatar")]);
-      const after = yield* storage.avatarsToRemove();
+      const after = yield* storage.avatarsToRemove;
 
       expect([before, deleted, after]).toStrictEqual([[], ["ada-avatar", "bo-avatar"], ["bo-avatar"]]);
     }),
