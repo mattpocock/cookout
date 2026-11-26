@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Outcome } from "../lib/tools.ts";
+import type { Planning } from "../lib/timed-shards.ts";
 import { browserShardPlan } from "../lib/timed-shards.ts";
 import path from "node:path";
 import { unitShardPlan } from "../lib/unit-shards.ts";
@@ -71,11 +72,10 @@ function reportFor(name: string, seconds: Seconds): readonly [string, string] {
 }
 
 function unpacked(into: string, reports: FakeCi["reports"]): Outcome<string> {
-  const dir = path.join(into, ".timings");
   const name = path.basename(into);
   const [report, content] = reportFor(name, reports[name] ?? {});
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(path.join(dir, report), content);
+  mkdirSync(path.join(into, ".timings"), { recursive: true });
+  writeFileSync(path.join(into, ".timings", report), content);
   return { ok: true, value: "" };
 }
 
@@ -104,10 +104,7 @@ function api(target: string, artifacts: FakeCi["artifacts"]): Outcome<string> {
   return { ok: true, value: listing(artifacts.filter((artifact) => listed(target, artifact))) };
 }
 
-interface Ci {
-  readonly download: (artifact: string, dir: string) => Outcome<string>;
-  readonly gh: (args: readonly string[]) => Outcome<string>;
-}
+type Ci = Required<Pick<Planning, "download" | "gh">>;
 
 function fakeCi({ artifacts, reports }: FakeCi): Ci {
   return {
