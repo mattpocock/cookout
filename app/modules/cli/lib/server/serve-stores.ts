@@ -17,7 +17,7 @@ import {
   withoutDatabaseSecret,
 } from "../../../storage/server.ts";
 import type { CommandFailed } from "./output.ts";
-import type { RunnerHost } from "./runner-host.ts";
+import type { RunnerHost } from "./host.ts";
 import { refused } from "./output.ts";
 
 type ServeStorage = (setting: StorageSetting) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
