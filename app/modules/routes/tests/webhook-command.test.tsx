@@ -259,11 +259,11 @@ it("webhook commands that can't be listed say so", { timeout: 5000 }, async () =
     hash: "#/channels/web-command-unlisted",
   });
 
-  const refusal = await screen.findByText(/^Couldn't list the commands/u);
+  const refusal = await screen.findByText(/^Couldn't list the webhook commands/u);
 
   expect([refusal.getAttribute("role"), refusal.textContent]).toStrictEqual([
     "alert",
-    expect.stringMatching(/^Couldn't list the commands \(\w+\): /u),
+    expect.stringMatching(/^Couldn't list the webhook commands \(\w+\): /u),
   ]);
 
   close();

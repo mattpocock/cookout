@@ -7,5 +7,5 @@ export function WebhookCommandsRefusal(): ReactNode {
   if (listed.status !== "failed") {
     return null;
   }
-  return <Alert>{`Couldn't list the commands (${listed.code}): ${listed.message}`}</Alert>;
+  return <Alert>{`Couldn't list the webhook commands (${listed.code}): ${listed.message}`}</Alert>;
 }
