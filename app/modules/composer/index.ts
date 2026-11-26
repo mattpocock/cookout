@@ -38,6 +38,8 @@
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal. `description(name)` is an agent's description as it
  * is edited, and saves the same way.
+ * `avatar(name)` is an avatar picked and not saved yet (#560): `choose` refuses a file over 2 MB or, after `options.crop`, not an image, else keeps the 256 px PNG with a `data:` URL to preview;
+ * `save` sends it and saves as `description` does, and `cancel` forgets it. `canvasAvatarCrop` is the page's crop.
  * `identities.actions(name)` is what an agent's owner or an admin does to
  * that identity: rotate its token, list and revoke its agent session (the board store's agent sessions for it, shown while `subscribeToSessions` has a reader),
  * deactivate it, reactivate it, delete it and transfer it. Each is asked
@@ -66,8 +68,8 @@
  * on the draft empties them with its text. An image among them has an object URL for its thumbnail until it leaves.
  */
 import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
+import type { AvatarChoice, AvatarCrop, DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { BrowserStorage, DraftSnapshot, KeptText, Sources, WebhookCommand } from "./lib/snapshot.ts";
-import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import { EMPTY, changesFor, draftChanges, keptTextIn } from "./lib/snapshot.ts";
 import type { Identity, IdentityName } from "../sdk/index.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
@@ -240,6 +242,8 @@ export interface Composer {
   readonly displayName: (name: IdentityName) => DisplayNameDraft;
   /** The description being edited for this agent: the same store each time for one name. */
   readonly description: (name: IdentityName) => DisplayNameDraft;
+  /** The avatar picked for this identity and not saved yet: the same store each time for one name. */
+  readonly avatar: (name: IdentityName) => AvatarChoice;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
   /** This agent's trigger URL for its owner: read when first shown, set with a write-only token, or cleared (#378). */
@@ -251,6 +255,8 @@ export interface ComposerOptions {
   readonly boardStore: IdentityStore;
   /** Where each box's unsent text is kept: the browser's local storage on the page. */
   readonly storage: BrowserStorage;
+  /** How a picked image becomes an avatar's PNG: `canvasAvatarCrop` on the page. */
+  readonly crop: AvatarCrop;
 }
 
 /**
@@ -264,34 +270,30 @@ export function createComposer(options: ComposerOptions): Composer {
   const list = createIdentityList(options.boardStore);
   const deletion = createIdentityDeletion(options.boardStore);
   const readers = listenersOf(list.show);
-  function registered(): readonly WebhookCommand[] {
-    const commands = webhookCommandList(options.boardStore.snapshot());
-    if (commands.status !== "loaded") {
+  function webhookCommands(): readonly WebhookCommand[] {
+    const listed = webhookCommandList(options.boardStore.snapshot());
+    if (listed.status !== "loaded") {
       return NO_WEBHOOK_COMMANDS;
     }
-    return commands.webhookCommands;
+    return listed.webhookCommands;
   }
-  function keptDraft(box: string, sources: Sources): Draft {
+  function keptDraft(box: string, sources: Omit<Sources, "identities">): Draft {
     const kept = keptText(loggedInName(options.boardStore.snapshot()), box);
-    return storeIn(drafts, kept.key, () => withAttachments(createDraft(list, sources, kept)));
+    const all = { ...sources, identities: list.identities };
+    return storeIn(drafts, kept.key, () => withAttachments(createDraft(list, all, kept)));
   }
   list.onChange(readers.notify);
   return {
-    ...profileStoresOf(list),
-    channelDraft: (channel) =>
-      keptDraft(channel, {
-        identities: list.identities,
-        members: () => list.posters(channel),
-        webhookCommands: registered,
-      }),
+    ...profileStoresOf({ crop: options.crop, list }),
+    channelDraft: (channel) => keptDraft(channel, { members: () => list.posters(channel), webhookCommands }),
     channelPosters: list.posters,
-    draft: (key, members) =>
-      keptDraft(key, { identities: list.identities, members, webhookCommands: () => NO_WEBHOOK_COMMANDS }),
+    draft: (key, members) => keptDraft(key, { members, webhookCommands: () => NO_WEBHOOK_COMMANDS }),
     identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }
 
-export type { DisplayNameDraft } from "./lib/profile-stores.ts";
+export type { AvatarChoice, DisplayNameDraft } from "./lib/profile-stores.ts";
+export { canvasAvatarCrop } from "./lib/canvas-crop.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
 export type { PendingAttachment, PendingAttachments } from "./lib/pending-attachments.ts";
