@@ -83,7 +83,7 @@ function wakeRunsIn(lines: readonly unknown[]): readonly unknown[] {
 
 it.effect("two quick mentions each get exactly one answer from an agent that answers and acks its stdin", () =>
   Effect.gen(function* noDuplicates() {
-    const { first, log, on, release, runner } = yield* brigidMidRun({ ack: true, reply: "answered" });
+    const { first, log, on, release, runner } = yield* brigidMidRun({ ack: true, sdkReply: "answered" });
     const second = yield* mention({ ada: on.ada, text: "@brigid second" });
     const waiting = yield* runner.stdoutLines(ONE_LINE);
     const lines = yield* Effect.andThen(release, runner.stdoutLines(THREE_LINES));

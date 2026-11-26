@@ -1,5 +1,21 @@
-import { Array as Arr, Effect, FileSystem, Option, Path, Record, Schema, Stdio, String as Str, Stream } from "effect";
+import {
+  Array as Arr,
+  Config,
+  Effect,
+  FileSystem,
+  Option,
+  Path,
+  Record,
+  Schema,
+  Stdio,
+  String as Str,
+  Stream,
+} from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import type { CookoutClient } from "../../../sdk/index.ts";
+import type { MessageId } from "../../../messages/index.ts";
+import { createCookoutClient } from "../../../sdk/index.ts";
+import { isMessageId } from "../../../messages/index.ts";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { parseLine } from "./cli.ts";
 import { runMain } from "@effect/platform-node/NodeRuntime";
@@ -14,6 +30,8 @@ const SettingsSchema = Schema.Struct({
   exitCode: Schema.optionalKey(Schema.Int),
   log: Schema.String,
   reply: Schema.optionalKey(Schema.String),
+  sdkReply: Schema.optionalKey(Schema.String),
+  tokenFile: Schema.optionalKey(Schema.String),
   touch: Schema.optionalKey(Schema.String),
   waitFor: Schema.optionalKey(Schema.String),
 });
@@ -132,11 +150,41 @@ function newestPerChannel(inbox: Inbox): readonly Item[] {
   return [...newest.values()];
 }
 
-function acks(inbox: Inbox, settings: Settings): readonly Effect.Effect<void, never, Needs>[] {
-  if (settings.ack !== true) {
-    return [];
-  }
-  return Arr.map(newestPerChannel(inbox), ({ message }) => cookout(["ack", String(message.id)]));
+function clientOf(tokenFile: string): Effect.Effect<CookoutClient, never, Needs> {
+  return Effect.gen(function* clientWithToken() {
+    const fs = yield* FileSystem.FileSystem;
+    const token = yield* Effect.orDie(fs.readFileString(tokenFile));
+    const url = yield* Effect.orDie(Config.String("COOKOUT_URL"));
+    return createCookoutClient({ env: {}, token, url });
+  });
+}
+
+function idsIn(items: readonly Item[]): readonly MessageId[] {
+  return Arr.filter(
+    Arr.map(items, ({ message }) => message.id),
+    isMessageId,
+  );
+}
+
+function throughSdk(inbox: Inbox, settings: Settings) {
+  return (tokenFile: string): Effect.Effect<void, never, Needs> =>
+    Effect.gen(function* answerThroughSdk() {
+      const client = yield* clientOf(tokenFile);
+      const replies = ifSet(settings.sdkReply, (text) =>
+        Effect.forEach(
+          inbox.items,
+          ({ channel, message }) =>
+            Effect.promise(() => client.createMessage({ channel: channel.name, replyTo: message.id, text })),
+          { concurrency: "unbounded", discard: true },
+        ),
+      );
+      yield* replies;
+      const acks = Effect.forEach(idsIn(newestPerChannel(inbox)), (id) => Effect.promise(() => client.ack(id)), {
+        concurrency: "unbounded",
+        discard: true,
+      });
+      yield* Effect.when(acks, Effect.succeed(settings.ack === true));
+    });
 }
 
 function answerAll(inbox: Inbox, settings: Settings): Effect.Effect<void, never, Needs> {
@@ -146,7 +194,8 @@ function answerAll(inbox: Inbox, settings: Settings): Effect.Effect<void, never,
     yield* ifSet(settings.touch, (file) => Effect.orDie(fs.writeFileString(file, messages)));
     yield* ifSet(settings.waitFor, waitUntilExists);
     const replies = Arr.map(inbox.items, (item) => reply({ item, settings }));
-    yield* Effect.all([...replies, ...acks(inbox, settings)], { concurrency: "unbounded", discard: true });
+    const sdk = ifSet(settings.tokenFile, throughSdk(inbox, settings));
+    yield* Effect.all([...replies, sdk], { concurrency: "unbounded", discard: true });
   }).pipe(Effect.orDie);
 }
 

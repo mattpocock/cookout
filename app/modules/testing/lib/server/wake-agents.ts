@@ -1,15 +1,15 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, FileSystem, Path } from "effect";
 import type { BoardAgent, WakeBoard } from "./wake-board.ts";
 import type { TestCookout, TestIdentity } from "./cookout.ts";
 import { WAKE_CHANNEL, boardAgent } from "./wake-board.ts";
-import type { CommandLineNeeds } from "./cli.ts";
+import type { CommandLineNeeds } from "./command-line.ts";
 import type { FakeWakeSettings } from "./runner.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Scope } from "effect";
 import type { WakeLogLine } from "./wake-runs.ts";
 import { answer } from "./calls.ts";
 import { fakeWakeCommand } from "./runner.ts";
-import { runCookout } from "./cli.ts";
+import { runCookout } from "./command-line.ts";
 
 const SUCCESS = 0;
 
@@ -23,8 +23,12 @@ function joinWaking({
   readonly settings: FakeWakeSettings;
 }): Effect.Effect<BoardAgent, never, CommandLineNeeds | TestCookout | Scope.Scope> {
   return Effect.gen(function* joinAndRegister() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
     const joined = yield* boardAgent({ board: on, name });
-    const wake = yield* fakeWakeCommand(settings);
+    const tokenFile = path.join(on.folder, `${name}.token`);
+    yield* Effect.orDie(fs.writeFileString(tokenFile, joined.agent.token));
+    const wake = yield* fakeWakeCommand({ ...settings, tokenFile });
     const { exitCode, stderr } = yield* runCookout({
       args: ["join", "--as", name, "--wake", "--", ...wake],
       env: joined.env,

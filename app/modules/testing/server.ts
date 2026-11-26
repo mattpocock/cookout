@@ -53,7 +53,7 @@ export {
   startServe,
   type Watched,
   watchCookout,
-} from "./lib/server/cli.ts";
+} from "./lib/server/command-line.ts";
 export { interruptCookout } from "./lib/server/cli-interrupt.ts";
 export { type DevProcess, startDev, startFakeRoutine, startProbedDev } from "./lib/server/dev.ts";
 export {
