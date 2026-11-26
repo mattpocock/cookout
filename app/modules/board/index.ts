@@ -124,7 +124,7 @@
  * lower, and whether to replace the agent's live session.
  *
  * `selectedStore({ subscribe, snapshot })` is an external store over one of the board store's subscriptions that reads
- * it through a selector (`snapshot`, such as `() => commandList(store.snapshot())`): it calls its listeners only when the
+ * it through a selector (`snapshot`, such as `() => webhookCommandList(store.snapshot())`): it calls its listeners only when the
  * selector's answer is a different object, so a view reading one part of the board re-renders only when that part
  * changes, not on every change anywhere on the board (#495). `sameSnapshot({ before, after })` is whether a store's new
  * snapshot holds the same value in every field (an array field, the same items), for a store to publish nothing then.
