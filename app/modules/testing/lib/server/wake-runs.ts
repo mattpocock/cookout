@@ -8,8 +8,8 @@ interface WakeLogLine {
   readonly cwd: string;
   readonly env: Readonly<Record<string, string>>;
   readonly event: "start" | "end";
-  readonly item: unknown;
-  readonly message: number;
+  readonly inbox: unknown;
+  readonly messages: readonly number[];
   readonly stdin: string;
 }
 
@@ -31,7 +31,7 @@ const LoggedSchema = Schema.Struct({
   cwd: Schema.optionalKey(Schema.String),
   env: Schema.optionalKey(Environment),
   event: Schema.Literals(["start", "end"]),
-  message: Schema.Int,
+  messages: Schema.Array(Schema.Int),
   stdin: Schema.optionalKey(Schema.String),
 });
 const isLogged = Schema.is(LoggedSchema);
@@ -43,17 +43,17 @@ function wakeLogLine({
   cwd = "",
   env = {},
   event,
-  message,
+  messages,
   stdin = "",
 }: {
   readonly argv?: readonly string[];
   readonly cwd?: string;
   readonly env?: Readonly<Record<string, string>>;
   readonly event: "start" | "end";
-  readonly message: number;
+  readonly messages: readonly number[];
   readonly stdin?: string;
 }): WakeLogLine {
-  return { argv, cwd, env, event, item: parseLine(stdin), message, stdin };
+  return { argv, cwd, env, event, inbox: parseLine(stdin), messages, stdin };
 }
 
 function wakeLog(file: string): Effect.Effect<readonly WakeLogLine[], never, FileSystem.FileSystem> {
@@ -65,10 +65,12 @@ function wakeLog(file: string): Effect.Effect<readonly WakeLogLine[], never, Fil
   }).pipe(Effect.orDie);
 }
 
-function wakeEvents(file: string): Effect.Effect<readonly (readonly [string, number])[], never, FileSystem.FileSystem> {
+function wakeEvents(
+  file: string,
+): Effect.Effect<readonly (readonly [string, readonly number[]])[], never, FileSystem.FileSystem> {
   return Effect.map(
     wakeLog(file),
-    Arr.map(({ event, message }) => [event, message] as const),
+    Arr.map(({ event, messages }) => [event, messages] as const),
   );
 }
 

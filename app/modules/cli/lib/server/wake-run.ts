@@ -12,7 +12,7 @@ interface RunPlace {
 }
 
 interface Woken {
-  readonly item: InboxItem;
+  readonly items: readonly InboxItem[];
   readonly place: RunPlace;
   readonly registration: Registration;
 }
@@ -44,17 +44,17 @@ function runEnvironment({ place, registration }: Woken): Effect.Effect<Readonly<
   }).pipe(Effect.orDie);
 }
 
-function wakeFailed(woke: { readonly agent: string; readonly message: number }) {
+function wakeFailed(woke: { readonly agent: string; readonly messages: readonly number[] }) {
   return (error: { readonly message: string }): Effect.Effect<void> =>
     printErrorLine({ ...woke, error: { code: "wake_command_failed", message: error.message } });
 }
 
 function wakeRun(woken: Woken): Effect.Effect<void, never, ChildProcessSpawner.ChildProcessSpawner> {
-  const { item, registration } = woken;
+  const { items, registration } = woken;
   return Effect.gen(function* runWakeCommand() {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const env = yield* runEnvironment(woken);
-    const line = yield* Effect.orDie(encodeLine(item));
+    const line = yield* Effect.orDie(encodeLine({ items }));
     const [command, ...args] = registration.wakeCommand;
     const run = ChildProcess.make(command, args, {
       cwd: registration.directory,
@@ -64,7 +64,7 @@ function wakeRun(woken: Woken): Effect.Effect<void, never, ChildProcessSpawner.C
       stdin: { stream: Stream.encodeText(Stream.make(`${line}\n`)) },
       stdout: "ignore",
     });
-    const woke = { agent: registration.agent, message: item.message.id };
+    const woke = { agent: registration.agent, messages: Arr.map(items, ({ message }) => message.id) };
     yield* spawner.exitCode(run).pipe(
       Effect.matchEffect({
         onFailure: wakeFailed(woke),
