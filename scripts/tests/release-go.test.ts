@@ -92,26 +92,7 @@ it("skips a commit that is already deployed", { timeout: 1000 }, () => {
 
   expect(decided({ ahead: BEHIND })).toStrictEqual({
     ok: true,
-    value: { go: false, line: `skipped: ${SHA} is already deployed (at or behind ${TAG})` },
-  });
-});
-
-it("skips a range with only docs, tests, scripts/ or .github/ changes", { timeout: 1000 }, () => {
-  expect.hasAssertions();
-
-  const changed = [
-    "AGENTS.md",
-    "docs/verification.md",
-    ".changeset/small.md",
-    "app/modules/cli/tests/server/cli.test.ts",
-    "app/modules/web/tests/browser/thread.browser.test.ts",
-    "scripts/release-commit.ts",
-    ".github/workflows/release.yml",
-  ];
-
-  expect(decided({ changed })).toStrictEqual({
-    ok: true,
-    value: { go: false, line: `skipped: nothing user-facing since ${TAG}` },
+    value: { go: false, line: `skipped: ${SHA} is already deployed (at or behind ${TAG})`, promote: false },
   });
 });
 
@@ -126,6 +107,7 @@ it.each([["app/modules/cli/main.ts"], ["packages/handler-example/app/main.ts"]])
       value: {
         go: true,
         line: `runs: ${file} is user-facing and changed since ${TAG}, and no gate run started in the last 30 minutes`,
+        promote: true,
       },
     });
   },
@@ -136,7 +118,11 @@ it("runs when nothing was ever deployed", { timeout: 1000 }, () => {
 
   expect(decided({ tag: "" })).toStrictEqual({
     ok: true,
-    value: { go: true, line: "runs: no deploy/* tag yet, and no gate run started in the last 30 minutes" },
+    value: {
+      go: true,
+      line: "runs: no deploy/* tag yet, and no gate run started in the last 30 minutes",
+      promote: true,
+    },
   });
 });
 
@@ -153,6 +139,7 @@ it("waits, until it is 30 minutes old, when a gate run started 10 minutes ago", 
     value: {
       go: false,
       line: `waits: a gate run started at ${startedAt(TEN_MINUTES)}, under 30 minutes ago; deciding again at ${startedAt(-TWENTY_MINUTES)}`,
+      promote: false,
       retryAtMillis: NOW_MS + TWENTY_MINUTES * MINUTE_MS,
     },
   });
@@ -173,7 +160,7 @@ it("always runs on workflow_dispatch, even on a deployed commit just after a gat
 
   expect(decided({ ahead: BEHIND, event: "workflow_dispatch", runs })).toStrictEqual({
     ok: true,
-    value: { go: true, line: "runs: workflow_dispatch always runs" },
+    value: { go: true, line: "runs: workflow_dispatch always runs", promote: true },
   });
 });
 

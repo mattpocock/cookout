@@ -21,6 +21,7 @@ interface Deciding {
 interface Go {
   readonly go: boolean;
   readonly line: string;
+  readonly promote: boolean;
   readonly retryAtMillis?: number;
 }
 
@@ -164,11 +165,40 @@ function withoutRecentGateRun(deciding: Deciding, why: string): Outcome<Go> {
     const retryAtMillis = epochMillis(recent.value) + WAIT_MS;
     const retryAt = DateTime.formatIso(DateTime.makeUnsafe(retryAtMillis));
     const line = `waits: a gate run started at ${recent.value}, under ${String(WAIT_MINUTES)} minutes ago; deciding again at ${retryAt}`;
-    return { ok: true, value: { go: false, line, retryAtMillis } };
+    return { ok: true, value: { go: false, line, promote: false, retryAtMillis } };
   }
   return {
     ok: true,
-    value: { go: true, line: `runs: ${why}, and no gate run started in the last ${String(WAIT_MINUTES)} minutes` },
+    value: {
+      go: true,
+      line: `runs: ${why}, and no gate run started in the last ${String(WAIT_MINUTES)} minutes`,
+      promote: true,
+    },
+  };
+}
+
+function onlyMoveMain({ asked: { sha }, git }: Deciding, tag: string): Outcome<Go> {
+  const ahead = git(["rev-list", "--count", `origin/main..${sha}`]);
+  if (!ahead.ok) {
+    return ahead;
+  }
+  if (Number(ahead.value.trim()) === NONE) {
+    return {
+      ok: true,
+      value: {
+        go: false,
+        line: `skipped: nothing user-facing since ${tag}, and main already has ${sha}`,
+        promote: false,
+      },
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      go: false,
+      line: `moves main: nothing user-facing since ${tag}, so main takes ${sha}'s workflows without the gate or a deploy`,
+      promote: true,
+    },
   };
 }
 
@@ -176,12 +206,16 @@ function afterTag(deciding: Deciding, { changed, deployed, tag }: SinceTag): Out
   if (deployed) {
     return {
       ok: true,
-      value: { go: false, line: `skipped: ${deciding.asked.sha} is already deployed (at or behind ${tag})` },
+      value: {
+        go: false,
+        line: `skipped: ${deciding.asked.sha} is already deployed (at or behind ${tag})`,
+        promote: false,
+      },
     };
   }
   const userFacing = changed.find((file) => isUserFacing(file));
   if (typeof userFacing !== "string") {
-    return { ok: true, value: { go: false, line: `skipped: nothing user-facing since ${tag}` } };
+    return onlyMoveMain(deciding, tag);
   }
   return withoutRecentGateRun(deciding, `${userFacing} is user-facing and changed since ${tag}`);
 }
@@ -203,7 +237,7 @@ function automatic(deciding: Deciding): Outcome<Go> {
 
 function releaseGo(deciding: Deciding): Outcome<Go> {
   if (deciding.asked.event === DISPATCH) {
-    return { ok: true, value: { go: true, line: `runs: ${DISPATCH} always runs` } };
+    return { ok: true, value: { go: true, line: `runs: ${DISPATCH} always runs`, promote: true } };
   }
   return automatic(deciding);
 }

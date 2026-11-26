@@ -6,11 +6,12 @@ import { openAt } from "./render.tsx";
 import { profileOpened } from "./view-opened.ts";
 import { screen } from "@testing-library/react";
 
-const DELAY_MS = 1500;
+const FIND_WAIT_MS = 100;
+const DELAY_MS = 300;
 const NO_DELAY = 0;
 
 async function profileHeading(): Promise<string> {
-  const heading = await screen.findByRole("heading", { level: 3 });
+  const heading = await screen.findByRole("heading", { level: 3 }, { timeout: FIND_WAIT_MS });
   return heading.textContent;
 }
 

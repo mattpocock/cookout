@@ -14,7 +14,8 @@ name: Release
 # It runs on its own (#637) when Check completes on v1. The choose job then decides whether to go
 # ahead (scripts/lib/release-go.ts): only when the chosen commit isn't at or behind the newest
 # deploy/* tag, something user-facing changed since that tag, and no Release run started its gate
-# in the last 30 minutes. When a gate run is the only reason, it waits until that run is 30 minutes
+# in the last 30 minutes. When nothing user-facing changed and main lacks the commit, it only moves
+# main to it: no gate, no deploy, no changesets (docs/adr/0123). When a gate run is the only reason, it waits until that run is 30 minutes
 # old, fetches v1 and decides again (#744). There is no schedule: GitHub registers a schedule only
 # from a push that isn't the workflow's token, and only Release's own token moves main, so a cron
 # here never fired. Otherwise it prints one line saying why, every other job is skipped, and the
@@ -51,6 +52,7 @@ jobs:
       actions: read
     outputs:
       go: ${{ steps.choose.outputs.go }}
+      promote: ${{ steps.choose.outputs.promote }}
       sha: ${{ steps.choose.outputs.sha }}
     steps:
       # A workflow_run run starts from the default branch's workflow and still releases from v1: the
@@ -222,11 +224,16 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   # A plain push: GitHub refuses it unless it fast-forwards main, and the choose job already stopped
-  # if main had commits the chosen one lacks.
+  # if main had commits the chosen one lacks. It also runs, with the gate skipped and no deploy or
+  # changesets after it, when the chosen commit changed nothing user-facing since the newest deploy/*
+  # tag: an automatic run starts from main's workflow files, so main keeps up with v1's (#753,
+  # docs/adr/0123-release-moves-main-for-a-commit-with-nothing-user-facing.md).
   promote:
     name: move main
     needs: [choose, gate]
-    if: ${{ !inputs.dry-run }}
+    if: >-
+      ${{ !cancelled() && !inputs.dry-run && needs.choose.result == 'success' && needs.choose.outputs.promote == 'true' &&
+      (needs.gate.result == 'success' || (needs.choose.outputs.go == 'false' && needs.gate.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -246,6 +253,7 @@ jobs:
   # rather than started by the push to main.
   deploy:
     needs: [choose, promote]
+    if: ${{ needs.choose.outputs.go == 'true' }}
     permissions:
       contents: write
     uses: ./.github/workflows/deploy.yml
@@ -256,6 +264,7 @@ jobs:
 
   release:
     needs: [choose, promote]
+    if: ${{ needs.choose.outputs.go == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

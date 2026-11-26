@@ -46,6 +46,7 @@ const seams = { gh: command("gh"), git: command("git") };
 interface Decided {
   readonly go: boolean;
   readonly line: string;
+  readonly promote: boolean;
   readonly retryAtMillis?: number;
   readonly sha: string;
 }
@@ -96,7 +97,10 @@ const decided = await decideAfterWaiting({
 });
 
 if (decided.ok) {
-  appendTo(values.output, `sha=${decided.value.sha}\ngo=${String(decided.value.go)}\n`);
+  appendTo(
+    values.output,
+    `sha=${decided.value.sha}\ngo=${String(decided.value.go)}\npromote=${String(decided.value.promote)}\n`,
+  );
 } else {
   appendTo(values.summary, `Nothing released: ${decided.reason}\n`);
   fail(SCRIPT, decided.reason);
