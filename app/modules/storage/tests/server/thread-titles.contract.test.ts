@@ -123,3 +123,20 @@ it.effect.each(storageLayers)(
       expect(thread.parent).not.toHaveProperty("titleSetAt");
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a top-level message appended with a title is titled by its author at its creation time",
+  ({ layer }) =>
+    Effect.gen(function* appendTitled() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createChannel(channel("grill"));
+      const parent = yield* appendTo(storage)({ ...newMessage("grill", "parent"), title: adasTitle.title });
+      const [thread, page] = yield* Effect.all(
+        [present(storage.getThread(parent.id)), present(storage.listChannelMessages(GRILL, PAGE))],
+        ONE_AT_A_TIME,
+      );
+
+      expect(parent).toMatchObject({ title: adasTitle.title, titleSetAt: parent.createdAt, titleSetBy: "agent" });
+      expect([thread.parent, page.messages]).toStrictEqual([parent, [parent]]);
+    }),
+);
