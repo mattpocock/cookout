@@ -13,8 +13,9 @@ name: Red v1
 #   workflow), and comments on the issue and on the reverted pull request. A revert that conflicts
 #   pushes nothing and says so on the issue. It never reverts the same commit twice.
 #
-# A schedule registers only from a push that starts workflows (#744), so workflow_run is what this
-# relies on; the schedule catches the 30-minute mark when no Check run completes near it.
+# A schedule registers only from a push that starts workflows (#744), and main moves by Release's
+# token, so the schedule may never fire. workflow_run is what this relies on: a run that waits for
+# the 30-minute mark sleeps until then and decides again, as Release waits out its gate spacing.
 on:
   workflow_run:
     workflows: [Check]
@@ -43,7 +44,8 @@ concurrency:
 jobs:
   red-v1:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Up to 30 minutes of waiting for the 30-minute mark, then the decision again.
+    timeout-minutes: 40
     permissions:
       # To push the revert to v1.
       contents: write

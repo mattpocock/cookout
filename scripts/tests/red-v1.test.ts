@@ -133,7 +133,7 @@ it("a cancelled run is no verdict, red or green", { timeout: 1000 }, () => {
   ).toStrictEqual([]);
 });
 
-it("at 29 minutes after the red run nothing is reverted", { timeout: 1000 }, () => {
+it("at 29 minutes after the red run nothing is reverted, and it decides again at 30", { timeout: 1000 }, () => {
   expect.hasAssertions();
 
   const issue = { firstRed: RED_SHA, number: ISSUE };
@@ -142,6 +142,7 @@ it("at 29 minutes after the red run nothing is reverted", { timeout: 1000 }, () 
   expect(decided).toStrictEqual({
     actions: [],
     lines: [`waits: ${RED_SHA} has been red since ${RED_AT}; it is reverted at 2026-11-25T12:30:00.000Z`],
+    retryAtMillis: minutesAfterRed(THIRTY),
   });
 });
 

@@ -38,6 +38,7 @@ type Action =
 interface Decision {
   readonly actions: readonly Action[];
   readonly lines: readonly string[];
+  readonly retryAtMillis?: number;
 }
 
 type VerdictKind = "green" | "red" | "rerun" | "running";
@@ -159,9 +160,8 @@ function issueNumber({ issue }: RedV1State): number | null {
 
 function revert(state: RedV1State, { firstRed, newer, redRun }: Reverting): Decision {
   if (state.nowMillis < revertAtMillisOf(redRun)) {
-    return waiting(
-      `waits: ${firstRed} has been red since ${redRun.updatedAt}; it is reverted at ${revertAtOf(redRun)}`,
-    );
+    const line = `waits: ${firstRed} has been red since ${redRun.updatedAt}; it is reverted at ${revertAtOf(redRun)}`;
+    return { ...waiting(line), retryAtMillis: revertAtMillisOf(redRun) };
   }
   if (state.reverted.includes(firstRed)) {
     return waiting(`skipped: ${firstRed} was reverted already`);
@@ -189,7 +189,7 @@ function whenRed(red: Red): Decision {
   const redRun = oldest.verdict.run;
   const newer = red.sinceGreen.since.slice(START, red.at);
   const reverting = revert(red.state, { firstRed: oldest.sha, newer, redRun });
-  return { actions: [...opened(red, oldest, redRun), ...reverting.actions], lines: reverting.lines };
+  return { ...reverting, actions: [...opened(red, oldest, redRun), ...reverting.actions] };
 }
 
 function closing({ issue }: RedV1State, { green, since }: SinceGreen): readonly Action[] {
@@ -207,7 +207,7 @@ function redV1Decision(state: RedV1State): Decision {
     return { actions: [...rerun, ...closing(state, sinceGreen)], lines: [] };
   }
   const red = whenRed({ at, sinceGreen, state });
-  return { actions: [...rerun, ...red.actions], lines: red.lines };
+  return { ...red, actions: [...rerun, ...red.actions] };
 }
 
 export type { Action, FixForwardIssue, RedV1State, V1Run };
