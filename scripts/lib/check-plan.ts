@@ -105,7 +105,7 @@ function scriptedChecks(planning: Planning): readonly Scripted[] {
     { budget: 16, job: "fixers", name: "fixers", script: ["fixers"] },
     { budget: 8, job: "seams", name: "seams", script: ["seams"] },
     {
-      budget: 26,
+      budget: 90,
       job: "tests",
       name: "tests",
       script: testScript(planning),

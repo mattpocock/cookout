@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 
 const SCRIPT = 3;
 const ONE = 1;
+const SHARD_BUDGET = 90;
 const EVERYTHING = { all: true, reason: "" } as const;
 const EVERY_CHECK = [
   "lint",
@@ -143,5 +144,15 @@ it("a pull request's browser shard runs Playwright on the reached files it was g
   expect([browserCommand(true), browserCommand(false)]).toStrictEqual([
     [["pnpm", "run", "--silent", "browser", login]],
     [["pnpm", "run", "--silent", "browser:coverage", login]],
+  ]);
+});
+
+it("a tests shard on CI has a 90 s budget, and only the tests budget is 90 s (ADR 0126)", { timeout: 1000 }, () => {
+  expect.hasAssertions();
+
+  const shard = checkPlan({ ...ALL, inCi: true, shard: "1/6", shardArgs: ["--shard=1/6"] });
+
+  expect(shard.checks.filter((check) => check.budget === SHARD_BUDGET).map((check) => check.name)).toStrictEqual([
+    "tests",
   ]);
 });
