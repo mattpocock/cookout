@@ -20,6 +20,7 @@ interface Split {
 interface Fetching {
   readonly gh: Gh;
   readonly run: string;
+  readonly sleep?: (ms: number) => void;
 }
 
 interface Shard {
@@ -165,14 +166,14 @@ interface Timed {
   readonly recorded: Recorded;
 }
 
-function recordedFor({ files, gh, run }: Planning, recording: Recording): Reading<Timed> {
+function recordedFor({ files, ...fetching }: Planning, recording: Recording): Reading<Timed> {
   if (!files.ok) {
     return { kind: "unrecorded", reason: files.reason };
   }
-  if (run === "") {
+  if (fetching.run === "") {
     return { kind: "unrecorded", reason: "this isn't a GitHub Actions run" };
   }
-  const recorded = recordedTimings({ gh, recording, run });
+  const recorded = recordedTimings({ ...fetching, recording });
   if (recorded.kind !== "read") {
     return recorded;
   }
