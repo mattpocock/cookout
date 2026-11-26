@@ -1,13 +1,13 @@
-import { Array as Arr, Effect, FileSystem, Path, Schema } from "effect";
+import { Array as Arr, Effect, FileSystem, Path, Schedule, Schema } from "effect";
 import type {
   BoardAgent,
   CommandLineNeeds,
   FakeWakeSettings,
   StartedRunner,
-  TestCookout,
   WakeBoard,
 } from "../../../testing/server.ts";
 import {
+  TestCookout,
   answer,
   commandLineServices,
   joinWaking,
@@ -23,6 +23,7 @@ import {
 import { expect, it } from "@effect/vitest";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Scope } from "effect";
+import { TestClock } from "effect/testing";
 
 interface Woken {
   readonly joined: BoardAgent;
@@ -42,16 +43,23 @@ const ONE_LINE = 1;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
 const FIVE_LINES = 5;
+const POLL = Schedule.spaced("10 millis");
 const isWakeRun = Schema.is(Schema.Struct({ type: Schema.Literal("wake-run") }));
 
-function wakingBrigid(settings: Omit<FakeWakeSettings, "log">): Effect.Effect<Omit<Woken, "runner">, never, Needs> {
-  return Effect.gen(function* joinBrigid() {
+function wakingBrigidOn(
+  on: WakeBoard,
+  settings: Omit<FakeWakeSettings, "log">,
+): Effect.Effect<Omit<Woken, "runner">, never, Needs> {
+  return Effect.gen(function* joinBrigidOn() {
     const path = yield* Path.Path;
-    const on = yield* wakeBoard;
     const log = path.join(on.folder, "wake.log");
     const joined = yield* joinWaking({ name: "brigid", on, settings: { ...settings, log } });
     return { joined, log, on };
   });
+}
+
+function wakingBrigid(settings: Omit<FakeWakeSettings, "log">): Effect.Effect<Omit<Woken, "runner">, never, Needs> {
+  return Effect.flatMap(wakeBoard, (on) => wakingBrigidOn(on, settings));
 }
 
 function brigidRunning(settings: Omit<FakeWakeSettings, "log">): Effect.Effect<Woken, never, Needs> {
@@ -149,6 +157,47 @@ it.effect("a mention the woken agent never acks wakes it once more, then never a
       { messages: [second], type: "wake-run" },
     ]);
     expect(Arr.take(starts, THREE_LINES)).toStrictEqual([[first], [first], [second]]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+function untilExists(file: string): Effect.Effect<void, never, FileSystem.FileSystem> {
+  const exists = Effect.orDie(Effect.flatMap(FileSystem.FileSystem, (fs) => fs.exists(file)));
+  return TestClock.withLive(Effect.asVoid(Effect.repeat(exists, { schedule: POLL, until: (found) => found })));
+}
+
+interface Started extends Woken {
+  readonly first: MessageId;
+  readonly release: Effect.Effect<void>;
+}
+
+function brigidStarted(): Effect.Effect<Started, never, Needs> {
+  return Effect.gen(function* startedRun() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const on = yield* wakeBoard;
+    const [started, release] = [path.join(on.folder, "started"), path.join(on.folder, "release")];
+    const woken = yield* wakingBrigidOn(on, { touch: started, waitFor: release });
+    const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
+    const first = yield* mention({ ada: on.ada, text: "@brigid while the board goes away" });
+    yield* untilExists(started);
+    return { ...woken, first, release: Effect.orDie(fs.writeFileString(release, "go")), runner };
+  });
+}
+
+it.effect("a run that ends while the board can't be reached wakes the agent for its mentions once more", () =>
+  Effect.gen(function* unreachable() {
+    const cookout = yield* TestCookout;
+    const { first, log, release, runner } = yield* brigidStarted();
+    const bothRuns = Effect.andThen(release, runner.stdoutLines(TWO_LINES));
+    yield* cookout.restartServerAfter(Effect.asVoid(bothRuns));
+    const lines = yield* runner.stdoutLines(TWO_LINES);
+    const starts = yield* Effect.map(wakeLog(log), startsIn);
+
+    expect(lines).toMatchObject([
+      { messages: [first], type: "wake-run" },
+      { messages: [first], type: "wake-run" },
+    ]);
+    expect(starts).toStrictEqual([[first], [first]]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
