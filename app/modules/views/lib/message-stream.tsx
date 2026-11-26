@@ -57,6 +57,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
               reply={props.reply}
               row={row}
               spaced={false}
+              titled={false}
             />
           );
         })}

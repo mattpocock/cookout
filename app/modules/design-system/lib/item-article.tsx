@@ -3,6 +3,7 @@ import { ActionContextMenu } from "./action-context-menu.tsx";
 import type { MessageItemParts } from "./message-parts.ts";
 import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
+import { ThreadTitle } from "./thread-title.tsx";
 import { messageClass } from "./message-class.ts";
 import { useScrollWhenLinked } from "./use-scroll-when-linked.ts";
 
@@ -35,6 +36,7 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
         ref={article}
         tabIndex={FOCUSABLE}
       >
+        {message.title !== null && <ThreadTitle title={message.title} />}
         <MessageLayout
           actionHref={message.actionHref}
           actionLabel={message.actionLabel}
