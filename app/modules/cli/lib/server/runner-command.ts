@@ -36,4 +36,4 @@ const runnerCommand: Command.Command<"runner", object, object, CommandFailed, Ag
   );
 
 export { runnerCommand };
-export { onRunnerHost } from "./runner-host.ts";
+export { onRunnerHost } from "./host.ts";
