@@ -1,5 +1,8 @@
+import type { MenuChoice } from "./menu-parts.ts";
 import { PanelTitled } from "./panel-titled.tsx";
 import type { ReactNode } from "react";
+
+const NO_CHOICES: readonly MenuChoice[] = [];
 
 interface PanelHeadingParts {
   readonly label: string;
@@ -9,7 +12,7 @@ interface PanelHeadingParts {
 
 export function PanelHeading(parts: PanelHeadingParts): ReactNode {
   if (parts.title !== null) {
-    return <PanelTitled detail={parts.detail} title={parts.title} />;
+    return <PanelTitled choices={NO_CHOICES} detail={parts.detail} title={parts.title} />;
   }
   return (
     <>

@@ -19,6 +19,7 @@ export function MoreActions(parts: MoreActionsParts): ReactNode {
   return (
     <Root onOpenChange={handleOpenChange} open={menu.open}>
       <MoreActionsButton
+        choices={parts.choices}
         inTabOrder={parts.inTabOrder ?? true}
         label={parts.label}
         look={parts.look ?? "hover"}

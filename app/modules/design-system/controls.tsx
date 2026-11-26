@@ -13,7 +13,7 @@
  * - `FormDialog` is a Radix modal form.
  * - `RunList`.
  * - `FieldNote`.
- * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place.
+ * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place and offers its choices to `MessageActions` against its form, so the keymap runs them from the box.
  * - `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was focused when it opened.
  * - `ListDialog` is a Radix modal of a list, titled and described, with a Close button (`close` its text); Escape or Close calls `onClose`, and focus goes back to what was focused when it opened.
  * - `FilterField` is a labelled box whose text its owner holds.
