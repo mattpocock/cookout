@@ -213,12 +213,11 @@ it("← in a thread shown alone, with no channel beside it, leaves the key alone
 });
 
 function threadUnreachable(client: CookoutClient, id: MessageId): CookoutClient {
-  const unreachable = unreachableClient({ token: "cookout_unused" });
+  const unreachable = new Map([[id, unreachableClient({ token: "cookout_unused" })]]);
   return {
     ...client,
     getThread: async (asked) => {
-      const source = [unreachable, client].find((each) => each === client || asked === id) ?? client;
-      const answer = await source.getThread(asked);
+      const answer = await (unreachable.get(asked) ?? client).getThread(asked);
       return answer;
     },
   };
