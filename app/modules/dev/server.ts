@@ -12,6 +12,7 @@
  * `serve`'s: it prints `clockUrl`, where `moveClockForward` from the testing module moves the clock days forward,
  * waking every job then due. `seed` fills the cookout at `COOKOUT_URL` with a small
  * board through the SDK, as the admin in `COOKOUT_TOKEN`, and prints it as
- * JSON. Only `app/dev.ts` runs them, and tests through `testing`.
+ * JSON. Each command loads only its own code when it runs, and `start` loads Vite only once the cookout
+ * is listening (#846). Only `app/dev.ts` runs them, and tests through `testing`.
  */
 export { devCommandLine } from "./lib/server/commands.ts";
