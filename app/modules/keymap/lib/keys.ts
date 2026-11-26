@@ -72,6 +72,8 @@ const KEYS = [
   },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
+  { action: "firstLink", chord: "Home", does: "First link", scope: "sidebar" },
+  { action: "lastLink", chord: "End", does: "Last link", scope: "sidebar" },
   { action: "closeSidebar", chord: "Escape", does: "Close the sidebar, on a narrow screen", scope: "sidebar" },
   {
     action: "intoMessages",
@@ -118,6 +120,8 @@ const KEYS = [
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
   { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
+  { action: "firstPerson", chord: "Home", does: "First person", scope: "people list" },
+  { action: "lastPerson", chord: "End", does: "Last person", scope: "people list" },
   {
     action: "leaveProfileField",
     chord: "Escape",

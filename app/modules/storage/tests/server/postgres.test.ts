@@ -23,6 +23,7 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "DROP TABLE avatars_to_remove",
   "DROP TABLE admin_setting",
   "ALTER TABLE messages DROP COLUMN deleted_at, DROP COLUMN deleted_by",
   "ALTER TABLE agent_join_requests DROP COLUMN denied_at",
@@ -65,7 +66,10 @@ function opened(url: Redacted.Redacted): ReturnType<typeof openStore<StorageUnav
 }
 
 function openAndClose(url: Redacted.Redacted): Effect.Effect<void, StorageUnavailable> {
-  return Effect.flatMap(opened(url), ({ close }) => close);
+  return Effect.gen(function* openThenClose() {
+    const store = yield* opened(url);
+    yield* store.close;
+  });
 }
 
 it.effect("identities are kept after the database is migrated, closed and reopened", () =>

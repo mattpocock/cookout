@@ -1,5 +1,11 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import type { CreateRefusal, DeleteIdentityResult, IdentityDeletesSection } from "./identity-owners.ts";
+import type {
+  AvatarRemovalsSection,
+  AvatarsToRemove,
+  CreateRefusal,
+  DeleteIdentityResult,
+  IdentityDeletesSection,
+} from "./identity-owners.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
 import {
   IDENTITY_COLUMNS,
@@ -10,9 +16,11 @@ import {
   toIdentity,
 } from "./identity-row.ts";
 import {
+  memoryAvatarRemovals,
   memoryCreateRefusal,
   memoryDeactivations,
   memoryRemoveIdentity,
+  sqlAvatarRemovals,
   sqlCreateRefusal,
   sqlDeactivations,
   sqlIdentityDeletes,
@@ -38,6 +46,7 @@ type ReplaceTokenResult =
 
 export type IdentitiesSection = DisplayNamesSection &
   IdentityDeletesSection &
+  AvatarRemovalsSection &
   ReturnType<typeof sqlTransfers> &
   ReturnType<typeof sqlDeactivations> & {
     readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
@@ -53,6 +62,7 @@ type MemoryIdentities = {
   readonly identities: Map<IdentityName, Identity>;
   readonly activeTokens: Map<TokenHash, IdentityName>;
   readonly revokedTokens: Set<TokenHash>;
+  readonly avatarsToRemove: AvatarsToRemove;
 };
 
 const byName = (a: Identity, b: Identity) => (a.name < b.name ? -1 : 1);
@@ -116,7 +126,12 @@ interface MemoryIdentitiesSection extends Omit<IdentitiesSection, keyof Identity
 }
 
 export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
-  const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
+  const data: MemoryIdentities = {
+    activeTokens: new Map(),
+    avatarsToRemove: new Set(),
+    identities: new Map(),
+    revokedTokens: new Set(),
+  };
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
   const deactivations = memoryDeactivations({
     holdToken: (name, hash) => {
@@ -129,6 +144,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
   });
   const remove = memoryRemoveIdentity(data);
   return {
+    ...memoryAvatarRemovals({ avatarsToRemove: data.avatarsToRemove, open }),
     createIdentity: (identity, hash) => open(() => createIn(data, identity, hash)),
     deactivateIdentity: (name) => open(() => deactivations.deactivate(name)),
     findIdentity: (name) => data.identities.get(name),
@@ -200,6 +216,7 @@ export const sqlIdentities = (db: SqlDatabase): IdentitiesSection => {
       ),
     ...sqlDeactivations(db),
     ...sqlIdentityDeletes(db),
+    ...sqlAvatarRemovals(db),
     findIdentityByName: (name) =>
       Effect.map(find(name), (row) => Option.getOrUndefined(Option.map(Option.fromUndefinedOr(row), toIdentity))),
     findIdentityByTokenHash: (hash) =>
