@@ -1,6 +1,6 @@
 # The admin token is a required setting, applied at every boot
 
-Superseded in part on 2026-11-26 by [ADR 0126](0126-boot-applies-the-admin-token-only-when-the-setting-changes.md): boot applies the token only when the setting changes.
+Superseded in part on 2026-11-26 by [ADR 0130](0130-boot-applies-the-admin-token-only-when-the-setting-changes.md): boot applies the token only when the setting changes.
 
 2026-11-23 (mattpocock/cookout#85). Matt, 2026-11-23: "Yes, I think probably the board should take its admin token from a secret set." Then, the same day: "I think the cookout admin token should be a required token. We shouldn't have our existing behavior."
 

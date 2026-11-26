@@ -127,7 +127,7 @@ export interface AdminSettings {
  * if another admin removed it. `cookout serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` and
  * `COOKOUT_ADMIN_NAME` (Matt, 2026-11-23, mattpocock/cookout#85 and #107), so a token lost or leaked stops working,
  * with the web sessions made with it, once the setting changes and the server restarts. With the setting unchanged, a
- * token rotated since and its web sessions survive any number of restarts (ADR 0126). A new name leaves the identity
+ * token rotated since and its web sessions survive any number of restarts (ADR 0130). A new name leaves the identity
  * the token belonged to in place, still an admin, with no working token.
  *
  * @param settings The token from `COOKOUT_ADMIN_TOKEN` and the name from `COOKOUT_ADMIN_NAME`.
