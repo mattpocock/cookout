@@ -68,6 +68,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message list general
 env $(cat /tmp/cookout-dev.env) node app/main.ts message list general --limit 1 --before $(jq .messages.mentionOfGrace /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "Hello from the admin" --data '{"source":"verification"}'
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "A reply" --reply-to $(jq .thread /tmp/cookout-seed.json)
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "Deploy at 3pm?" --title "Deploy window"
 env $(cat /tmp/cookout-dev.env) node app/main.ts thread title $(jq .thread /tmp/cookout-seed.json) "Flaky login test"
 env $(cat /tmp/cookout-dev.env) node app/main.ts thread title $(jq .thread /tmp/cookout-seed.json) --clear
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel create triage --description "Bugs to look at."
@@ -80,7 +81,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel delete triage
 ```
 
-`thread title` sets the Thread title of the thread holding the message (any message in it) and prints its top-level message, now with `title`, `titleSetBy` (the caller) and `titleSetAt`; `--clear` removes all three. Giving both a title and `--clear`, or neither, is a `usage` error. A title over 100 characters or with a line break is refused 400 `invalid_request`. Every read of the thread (`thread get`, `message list`, `thread list`, an Inbox item's `parent`) carries the title, and each change sends one `thread` event on the all-channels feed.
+`message post --title` posts a titled thread in one step, printing it with `title`, `titleSetBy` (the caller) and `titleSetAt` (its post time), and its `message` event carries them too; `--title` with `--reply-to` is a `usage` error, and the API refuses `title` with `replyTo` 400 `invalid_request`, storing nothing. `thread title` sets the Thread title of the thread holding the message (any message in it) and prints its top-level message, now with `title`, `titleSetBy` (the caller) and `titleSetAt`; `--clear` removes all three. Giving both a title and `--clear`, or neither, is a `usage` error. A title over 100 characters or with a line break is refused 400 `invalid_request`. Every read of the thread (`thread get`, `message list`, `thread list`, an Inbox item's `parent`) carries the title, and each change sends one `thread` event on the all-channels feed.
 
 `channel delete` is admin only (anyone else gets 403 `admin_only`). In one Storage transaction it deletes the channel and everything in it: its messages and threads, their mentions, follows, subscriptions, channel and thread read positions, Webhook command calls and pending webhook deliveries (a pending retry stops: the handler isn't called again). It prints the deleted channel; an unknown name is 404 `channel_not_found`. The name can be created again, as a new, empty channel, and message IDs keep counting up. In the web UI the channel is gone from the channel list on the next load, and `#/channels/<name>` says "Nothing here".
 

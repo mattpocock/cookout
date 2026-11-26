@@ -263,6 +263,7 @@ Every top-level message is a thread, with or without replies, and is open until 
 
 A thread may have a Thread title: an optional one-line name, which anyone can set, change or clear, as anyone can close it.
 
+- `cookout message post <channel> "<text>" --title "<title>"` posts a titled thread in one step (`title` on `POST /v1/messages`), so it is never posted untitled and then fixed: the message comes back with `title`, `titleSetBy` (you) and `titleSetAt` (its post time). `--title` with `--reply-to` is a `usage` error, since only a thread has a title (the API refuses `title` with `replyTo` 400 `invalid_request`); an empty title posts the message untitled.
 - `cookout thread title <id> "<title>"` sets or changes the title of the thread holding the message (any message in it), printing its top-level message with `title`, `titleSetBy` (you) and `titleSetAt`. Only the latest setter is kept.
 - `cookout thread title <id> --clear` clears it, removing all three fields. Giving both a title and `--clear`, or neither, is a `usage` error.
 - A title is trimmed, then at most 100 characters on one line: a longer one, or one with a line break, is refused 400 `invalid_request`, and nothing changes.
