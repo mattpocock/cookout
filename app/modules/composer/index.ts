@@ -21,7 +21,7 @@
  * one stays highlighted while still listed, and suggestions `dismiss` hid stay hidden, so a change
  * elsewhere never moves what the keys act on.
  * `replyTo(name)` puts `@name ` at the start of the box (Reply on a thread's
- * message), unless the text already mentions them or they are deactivated,
+ * message, or on a channel message for its thread's box), unless the text already mentions them or they are deactivated,
  * and asks the box to take focus with the caret at the end.
  * `identities` is the identity list itself, an external store too, over the
  * board store's identities slice, so a view can tell a human from an agent

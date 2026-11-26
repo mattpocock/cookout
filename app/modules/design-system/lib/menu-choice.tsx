@@ -37,10 +37,15 @@ export function MenuChoice(parts: MenuChoiceParts): ReactNode {
       onChoose(choice.onSelect);
     }
   }, [choice, onChoose]);
+  const handleFollow = useCallback(() => {
+    if (choice.onSelect !== null) {
+      choice.onSelect();
+    }
+  }, [choice]);
   if (choice.href !== null) {
     return (
       <RadixItem asChild>
-        <a aria-keyshortcuts={keysOf(choice)} className={MENU_ITEM} href={choice.href}>
+        <a aria-keyshortcuts={keysOf(choice)} className={MENU_ITEM} href={choice.href} onClick={handleFollow}>
           {createElement(MenuChoiceText, { choice })}
         </a>
       </RadixItem>

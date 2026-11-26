@@ -70,7 +70,7 @@ Every setting is an environment variable; [.env.example](.env.example) lists the
 
 The server, `cookout serve`:
 
-- `COOKOUT_ADMIN_TOKEN` (required): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. Every boot makes it the admin's only token. Unset or shorter, `serve` refuses to start.
+- `COOKOUT_ADMIN_TOKEN` (required): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. A boot after the setting changes makes it the admin's only token; a token rotated since survives restarts while the setting stays the same. Unset or shorter, `serve` refuses to start.
 - `COOKOUT_ADMIN_NAME` (default `admin`): The name of the human admin identity `COOKOUT_ADMIN_TOKEN` belongs to, such as `matt`. A boot creates it, or makes an existing human of that name an admin; an agent of that name, or a name that breaks the identity-name rule, makes `serve` refuse to start. Changing it moves the token to the new name and leaves the old identity in place, still an admin, with no working token ([ADR 0039](docs/adr/0039-cookout-admin-name-names-the-admin-token-identity.md)).
 - `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).

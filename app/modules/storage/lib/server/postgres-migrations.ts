@@ -7,6 +7,7 @@ import {
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
 } from "./feature-migrations.ts";
+import { POSTGRES_ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -257,6 +258,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE messages ADD COLUMN deleted_at text COLLATE "C"',
     'ALTER TABLE messages ADD COLUMN deleted_by text COLLATE "C"',
   ],
+  POSTGRES_ADMIN_SETTING_MIGRATION,
 ];
 
 const NEXT_VERSION = 1;
