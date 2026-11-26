@@ -21,6 +21,8 @@ export { PersonKeysArea } from "./person-keys-area.tsx";
 export type { PersonKeysSource } from "./person-keys-parts.ts";
 export { MessageKeys } from "./message-keys-parts.ts";
 export type { MessageShortcuts } from "./message-keys-parts.ts";
+export { MessageActions } from "./message-actions.ts";
+export type { MessageActionRegistry } from "./message-actions.ts";
 export { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
 export type {
   IdentityCardLink,
