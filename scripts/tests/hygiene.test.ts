@@ -1,5 +1,6 @@
 import { FAILED, PASSED, commit, git, hygiene, repo } from "./lib/hygiene-repo.ts";
 import { expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 
 const MIGRATIONS = "app/modules/storage/lib/server/migrations.ts";
 const POSTGRES_MIGRATIONS = "app/modules/storage/lib/server/postgres-migrations.ts";
@@ -105,6 +106,44 @@ it("passes a Postgres list added after a deploy that had none", { timeout: 10_00
 
   const { dir } = deployedTwice();
   commit(dir, [POSTGRES_MIGRATIONS, postgresMigrations(["a"])]);
+
+  expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
+});
+
+function v1MovedOn(): string {
+  const { dir } = deployedTwice();
+  git(dir, "checkout", "-q", "-b", "ticket-1");
+  commit(dir, [MIGRATIONS, migrations(["a", "b", "d"])]);
+  git(dir, "checkout", "-q", "v1");
+  commit(dir, [MIGRATIONS, migrations(["a", "b", "c"])]);
+  git(dir, "update-ref", "refs/remotes/origin/v1", "v1");
+  git(dir, "checkout", "-q", "ticket-1");
+  return dir;
+}
+
+function mergeV1(dir: string, entries: readonly string[]): void {
+  spawnSync("git", ["merge", "-q", "--no-edit", "origin/v1"], { cwd: dir, stdio: "ignore" });
+  commit(dir, [MIGRATIONS, migrations(entries)]);
+}
+
+it("refuses a merge of v1 that puts v1's new migration after the branch's", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = v1MovedOn();
+  mergeV1(dir, ["a", "b", "d", "c"]);
+  const run = hygiene(dir);
+
+  expect(run.status).toBe(FAILED);
+  expect(run.stderr).toContain(
+    `hygiene: ${MIGRATIONS}: the migrations list must begin with v1's, entry for entry, but index 2 (schema version 3) differs`,
+  );
+});
+
+it("passes a merge of v1 that keeps v1's migrations first and the branch's after", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = v1MovedOn();
+  mergeV1(dir, ["a", "b", "c", "d"]);
 
   expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
 });
