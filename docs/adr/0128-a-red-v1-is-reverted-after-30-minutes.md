@@ -20,3 +20,5 @@ Since [ADR 0127](0127-a-worker-lands-its-own-pull-request-after-its-pull-request
 - A fix-forward that lands within 30 minutes of the red run, and goes green, closes the issue and no revert happens.
 - Release reads only Check push runs, so the `workflow_dispatch` Check run on a revert doesn't make Release ship it; the next push to v1 does.
 - The workflow needs `contents: write` (v1 isn't protected), `actions: write`, `issues: write` and `pull-requests: write` on its own token, and no secret.
+
+Superseded in part on 2026-11-26 by [ADR 0129](0129-release-counts-a-dispatched-check-on-v1-s-head.md): a green Check run on v1's head started by `workflow_dispatch` now releases it.
