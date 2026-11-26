@@ -9,7 +9,8 @@
  * actions do there (several views may each bind their own actions of one scope, such as `everywhere`) and, optionally, the element the scope covers (without one it covers
  * the page while bound). On each key not already handled (nor mid-composition, nor
  * without a key, as autofill sends), the listener walks
- * `SCOPES` from the innermost (the image viewer, then the search box) out to `everywhere`, takes the
+ * `SCOPES` from the innermost (the image viewer, then the search box) out to `everywhere` (the thread panel's title
+ * field, whose Escape cancels it, comes before the thread panel: Proposed, #823), takes the
  * bound scopes that cover the focused element, most recently bound first, and
  * runs the first action whose chord matches and that says it acted, which
  * stops the browser's own handling. Off a text field every row fires. In a
