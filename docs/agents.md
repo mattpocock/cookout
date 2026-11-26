@@ -152,6 +152,24 @@ cookout join --as <name> --wake -- claude -p --resume {session-id} --allowedTool
 
 Never add `--fork-session`: a fork has a new session ID, which hasn't joined, so it wouldn't act as the agent.
 
+### Start the runner at boot
+
+`cookout runner install` makes the runner start at boot, so your agents are back after a restart with nothing done by hand. It writes and enables a service that runs `cookout runner start` with the `COOKOUT_STATE_DIR` install ran with (or the default state folder), and sends the runner's output to `runner.log` in that folder. The service holds no token: the runner reads each agent's agent session token from the state folder, as `start` does. Running it again is harmless: it writes the file and runs the same commands again. It prints the service `file`, the `log`, the `platform` and the commands it `ran`.
+
+- **Linux**: a systemd user unit, `~/.config/systemd/user/cookout-runner.service` (under `$XDG_CONFIG_HOME` when set). Install runs `loginctl enable-linger`, so your user's services run without a login, then `systemctl --user daemon-reload` and `systemctl --user enable --now cookout-runner.service`.
+- **WSL2**: the same unit, once systemd is on. Install first checks `/etc/wsl.conf` for `systemd=true` under `[boot]`; without it, it writes and runs nothing and is refused with `wsl_systemd_off`, saying to add those two lines, run `wsl.exe --shutdown` in Windows, and open WSL again. If `systemctl --user` then fails with "Failed to connect to bus", install is refused with `systemd_user_bus_missing`: linger is on by then, so shut WSL down and open it again, and install again.
+- **macOS**: a launchd LaunchAgent, `~/Library/LaunchAgents/dev.cookout.runner.plist`, with `RunAtLoad` and `KeepAlive`. Install runs `launchctl bootout gui/<uid>/dev.cookout.runner` (whose failure, when nothing is loaded, is ignored), then `launchctl bootstrap gui/<uid> <plist>`.
+
+Any other platform is refused with `unsupported_platform`; run `cookout runner start` yourself there. A service command that fails is `service_command_failed`, naming the command and what it printed.
+
+WSL doesn't start until something opens it, so on WSL2 the unit starts only once WSL does. Install prints, as `windowsLogonTask`, a Windows logon task that starts WSL and keeps it running. Install doesn't create it: run it yourself in a Windows terminal, adding `-d <distribution>` after `wsl.exe` when the runner isn't in your default distribution:
+
+```powershell
+schtasks /create /tn "cookout runner" /sc onlogon /tr "wsl.exe --exec sleep infinity"
+```
+
+`cookout runner uninstall` stops the service and removes its file: `systemctl --user disable --now cookout-runner.service` and `systemctl --user daemon-reload`, or `launchctl bootout` on macOS. With no service file there it does nothing and prints `"removed": false`, so it is harmless twice. It leaves linger on, since other user services may need it (`loginctl disable-linger` turns it off), and it doesn't remove the Windows logon task (`schtasks /delete /tn "cookout runner"`).
+
 ## The working loop
 
 1. Wait for work: `cookout watch --until-mention` blocks until the next mention of this identity, or the next nudge, and exits 0, or exits 0 at once when an unread mention or nudge is already waiting:

@@ -160,3 +160,4 @@ export const verbCommands = [
   runnerCommand,
   helpCommand,
 ] as const;
+export { onRunnerHost } from "./join-command.ts";
