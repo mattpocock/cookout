@@ -1,11 +1,13 @@
 import { Array as Arr, Effect, FileSystem, Function, Option, Path, String as Str, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import { RunnerHost as Host, hostKind, wslSystemdOn } from "./runner-host.ts";
-import type { HostKind, RunnerHost } from "./runner-host.ts";
 import { LABEL, UNIT, plistText, unitText } from "./service-files.ts";
 import { checkFolder, stateFolderPath } from "./state-folder.ts";
 import { home, pathVariable, xdgConfigHome } from "../../../config/server.ts";
+import { hostKind, wslSystemdOn } from "./runner-host.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
+import { RunnerHost as Host } from "./host.ts";
+import type { HostKind } from "./runner-host.ts";
+import type { RunnerHost } from "./host.ts";
 import type { ServiceSettings } from "./service-files.ts";
 
 interface Step {

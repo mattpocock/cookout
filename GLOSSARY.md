@@ -14,6 +14,10 @@ A top-level message and its replies, one level deep. Every top-level message is 
 A thread someone has closed, recording who closed it and when. Any identity can close or reopen one, and a new reply reopens it. The web UI folds it away but still lists its unread items in the Inbox, marked Closed (Matt, 2026-11-24, [#300](https://github.com/mattpocock/cookout/issues/300)), while the API, the CLI and `cookout watch` return it as before (Matt, 2026-11-23, close-threads grilling on the board, Q1 to Q3, Q6, Q8; recorded in [#215](https://github.com/mattpocock/cookout/issues/215); [ADR "a thread's closed state lives on its top-level message"](docs/adr/0064-a-thread-is-closed-on-its-top-level-message.md)).
 _Avoid_ (for the thread state, in prose and the UI): resolved, archived, done. Code isn't linted for these, since `done` and `resolved` are also JavaScript's iterator and promise words.
 
+**Thread title**:
+An optional one-line name for a thread, which anyone can set (Matt, 2026-11-26, board thread 6499, messages 6499 to 6539; recorded in [#816](https://github.com/mattpocock/cookout/issues/816); [ADR "a thread's title lives on its top-level message"](docs/adr/0140-a-thread-s-title-lives-on-its-top-level-message.md)).
+_Avoid_ (for the thread's name, in prose and the UI): subject, topic, heading. Code isn't linted for these, since `heading` and `subject` are already ordinary words in the code.
+
 **Reply**:
 A message posted in a thread. A reply to a reply attaches to the same thread.
 _Avoid_: also send to channel, reply broadcast

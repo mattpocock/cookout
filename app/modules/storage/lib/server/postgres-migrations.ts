@@ -260,6 +260,11 @@ const postgresMigrations: readonly (readonly string[])[] = [
   ],
   POSTGRES_ADMIN_SETTING_MIGRATION,
   ['CREATE TABLE avatars_to_remove (id text COLLATE "C" PRIMARY KEY)'],
+  [
+    'ALTER TABLE messages ADD COLUMN title text COLLATE "C"',
+    'ALTER TABLE messages ADD COLUMN title_set_by text COLLATE "C"',
+    'ALTER TABLE messages ADD COLUMN title_set_at text COLLATE "C"',
+  ],
 ];
 
 const NEXT_VERSION = 1;
