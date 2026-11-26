@@ -1,4 +1,4 @@
-import type { ChannelMessagesState, Scheduling } from "../../board/index.ts";
+import type { ChannelMessagesState, Outgoing, Scheduling } from "../../board/index.ts";
 import type { ComponentProps, ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
@@ -16,7 +16,7 @@ const MESSAGE_BOX = {
   posts: "message",
 } as const;
 
-const POST_LATER = `main form[aria-label="${MESSAGE_BOX.form}"] button[aria-label="Post later"]`;
+const MESSAGE_FIELD = `main form[aria-label="${MESSAGE_BOX.form}"] textarea`;
 
 interface MessageFooterProps {
   readonly channel: ChannelName;
@@ -29,27 +29,28 @@ interface MessageFooterProps {
 export function MessageFooter(props: MessageFooterProps): ReactNode {
   const { channel, draft, scheduling, state } = props;
   const handlers = useFooterHandlers({ channel, draft, form: MESSAGE_BOX.form });
-  const handlePost = handlers.post;
   const { webhookCommand: command, returned } = useSyncExternalStore(draft.subscribe, draft.snapshot);
   const handleBack = draft.unpickWebhookCommand;
   const handleSaved = handlers.saved;
-  const handleSchedule = useCallback(() => {
-    scheduling.open(channel, draft.snapshot().text);
-  }, [channel, draft, scheduling]);
+  const { post } = handlers;
+  const handlePost = useCallback(
+    (outgoing: Outgoing, posted: () => void) => {
+      const run = draft.commandRun(outgoing.text);
+      if (run === null) {
+        post(outgoing, posted);
+        return;
+      }
+      scheduling.open(channel, run.text);
+    },
+    [channel, draft, post, scheduling],
+  );
   if (state.status !== "loaded") {
     return null;
   }
   return (
     <>
       {command === null && (
-        <MessageBox
-          draft={draft}
-          focused={returned}
-          onPost={handlePost}
-          onSchedule={handleSchedule}
-          post={state.post}
-          text={MESSAGE_BOX}
-        />
+        <MessageBox draft={draft} focused={returned} onPost={handlePost} post={state.post} text={MESSAGE_BOX} />
       )}
       {command !== null && (
         <WebhookCommandPrompt
@@ -64,7 +65,7 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
       )}
       <WebhookCommandsRefusal />
       <ScheduleConfirmation channel={channel} scheduling={scheduling} />
-      <ScheduleDialog cancelled={POST_LATER} channel={channel} onSaved={handleSaved} scheduling={scheduling} />
+      <ScheduleDialog cancelled={MESSAGE_FIELD} channel={channel} onSaved={handleSaved} scheduling={scheduling} />
     </>
   );
 }
