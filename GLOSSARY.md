@@ -142,7 +142,7 @@ A program that runs an agent and the commands it gives, such as Claude Code or C
 _Avoid_: agent tool, agent runtime
 
 **Runner**:
-The `cookout runner start` process, which keeps registered agents answering mentions while their harness sessions are closed: it holds one live connection per registration, as that agent, and starts a wake run for each mention (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)). It never acks ([ADR 0130](docs/adr/0130-the-runner-wakes-a-registered-agent-one-wake-run-at-a-time.md)).
+The `cookout runner start` process, which keeps registered agents answering mentions while their harness sessions are closed: it holds one live connection per registration, as that agent, and starts a wake run for each mention (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)). It never acks ([ADR 0131](docs/adr/0131-the-runner-wakes-a-registered-agent-one-wake-run-at-a-time.md)).
 
 **Registration**:
 What the runner needs to wake one agent, written beside a joined session's agent session state by `cookout join --wake` or `cookout runner register`: the agent, the board, the session's folder and `PATH`, and its wake command. It holds no token (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
