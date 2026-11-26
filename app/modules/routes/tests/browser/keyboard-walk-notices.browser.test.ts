@@ -4,12 +4,12 @@ import { test as base, expect } from "@playwright/test";
 import { createTestAgent, testAgentDisplayName, testClient } from "../../../testing/index.ts";
 import { inDialog, inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { Step } from "./walk.ts";
+import type { Step } from "./key-walk.ts";
 import { clockFixtures } from "./clock.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
-import { walk } from "./walk.ts";
+import { walk } from "./key-walk.ts";
 
 const test = base.extend(probeFixtures).extend<ClockFixtures & ClockOptions>(clockFixtures);
 
@@ -132,6 +132,7 @@ function answered(page: Page, reader: string): readonly Step[] {
   const left = agentRow(page, `${reader}-left`);
   const reactivated = agentRow(page, `${reader}-reactivated`);
   const deactivated = agentRow(page, `${reader}-deactivated`);
+  const kept = agentRow(page, `${reader}-kept`);
   const confirm = inDialog(page);
   const cancel = button(confirm, "Cancel");
   return [
@@ -148,8 +149,9 @@ function answered(page: Page, reader: string): readonly Step[] {
     ["Escape", button(deactivated, "Deactivate")],
     ["Enter", cancel],
     ["Tab", button(confirm, `Deactivate @${reader}-deactivated`)],
-    ["Enter", button(agentRow(page, `${reader}-kept`), "Deactivate")],
-    ["Tab", button(agentRow(page, `${reader}-kept`), "Keep")],
+    ["Enter", kept.getByRole("link", { exact: true, name: testAgentDisplayName(`${reader}-kept`) })],
+    ["Tab", button(kept, "Deactivate")],
+    ["Tab", button(kept, "Keep")],
   ];
 }
 

@@ -1,107 +1,82 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { inPane } from "./regions.ts";
 
-const ANNOUNCEMENTS = { exact: true, name: "Announcements" } as const;
-const MESSAGES = { exact: true, name: "Messages" } as const;
-const SHOWN = 200;
-const START = 0;
+const NONE = 0;
+const NEXT = 1;
+const NOTHING: readonly Locator[] = [];
 
-type Check = () => Promise<void>;
+interface Step {
+  readonly keys: string;
+  readonly focused: Locator;
+  readonly typed?: true;
+  readonly shows?: readonly Locator[];
+  readonly gone?: readonly Locator[];
+}
 
-type Step = Check | readonly [key: string, focused: Locator];
-
-interface Walk {
+interface Walking {
   readonly page: Page;
   readonly steps: readonly Step[];
 }
 
-interface Typing {
-  readonly page: Page;
-  readonly text: string;
-  readonly into: Locator;
-  readonly after?: Locator;
-}
-
-interface Text {
+interface Copied {
   readonly page: Page;
   readonly text: string;
 }
 
-async function focusNow(page: Page): Promise<string> {
-  const html = await page.evaluate(
-    ([start, end]) => {
-      const { activeElement } = globalThis.document;
-      if (activeElement === null) {
-        return "nothing";
-      }
-      return activeElement.outerHTML.slice(start, end);
-    },
-    [START, SHOWN] as const,
+async function keysOf(page: Page, step: Step): Promise<void> {
+  if (step.typed === true) {
+    await page.keyboard.type(step.keys);
+    return;
+  }
+  await page.keyboard.press(step.keys);
+}
+
+async function taken(page: Page, step: Step): Promise<void> {
+  await keysOf(page, step);
+
+  await expect(step.focused).toBeFocused();
+
+  await Promise.all([
+    ...(step.shows ?? NOTHING).map(async (shown) => {
+      await expect(shown).toBeVisible();
+    }),
+    ...(step.gone ?? NOTHING).map(async (gone) => {
+      await expect(gone).toHaveCount(NONE);
+    }),
+  ]);
+}
+
+async function walk({ page, steps }: Walking): Promise<void> {
+  const [first, rest] = [steps.slice(NONE, NEXT), steps.slice(NEXT)];
+  await Promise.all(
+    first.map(async (step) => {
+      await taken(page, step);
+    }),
   );
-  return html;
-}
-
-async function pressed(page: Page, [key, focused]: readonly [string, Locator]): Promise<void> {
-  await page.keyboard.press(key);
-  try {
-    await expect(focused, `after ${key}`).toBeFocused();
-  } catch (error: unknown) {
-    throw new Error(`after ${key}, focus is on ${await focusNow(page)}`, { cause: error });
+  if (rest.length > NONE) {
+    await walk({ page, steps: rest });
   }
 }
 
-async function stepped(page: Page, step: Step): Promise<void> {
-  if (typeof step === "function") {
-    await step();
-    return;
-  }
-  await pressed(page, step);
+async function copiesRecorded(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "clipboard", {
+      get: (): Pick<Clipboard, "writeText"> => ({
+        writeText: async (text: string): Promise<void> => {
+          globalThis.document.documentElement.dataset["copied"] = text;
+          await Promise.resolve();
+        },
+      }),
+    });
+  });
 }
 
-async function walk({ page, steps }: Walk): Promise<void> {
-  const [step, ...rest] = steps;
-  if (typeof step !== "function" && typeof step !== "object") {
-    return;
-  }
-  await stepped(page, step);
-  await walk({ page, steps: rest });
+function copied({ page, text }: Copied): Locator {
+  return page.locator(`html[data-copied="${text}"]`);
 }
 
-function typing({ after, into, page, text }: Typing): Check {
-  return async () => {
-    await expect(into).toBeFocused();
-
-    await page.keyboard.type(text);
-
-    await expect(after ?? into).toBeFocused();
-  };
+function tokenCopied(page: Page): Locator {
+  return page.locator('html[data-copied^="cookout_"]');
 }
 
-function said({ page, text }: Text): Locator {
-  return page.getByRole("status", ANNOUNCEMENTS).filter({ hasText: text });
-}
-
-function feedMessage({ page, text }: Text): Locator {
-  return inPane(page).getByRole("feed", MESSAGES).getByRole("article").filter({ hasText: text });
-}
-
-function shown(locator: Locator): Check {
-  return async () => {
-    await expect(locator).toBeVisible();
-  };
-}
-
-function hidden(locator: Locator): Check {
-  return async () => {
-    await expect(locator).toBeHidden();
-  };
-}
-
-function announced(text: Text): Check {
-  return async () => {
-    await expect(said(text)).toBeAttached();
-  };
-}
-
-export { type Step, announced, feedMessage, hidden, said, shown, typing, walk };
+export { type Step, copied, copiesRecorded, tokenCopied, walk };

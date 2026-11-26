@@ -1,6 +1,6 @@
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { feedMessage, hidden, shown, walk } from "./walk.ts";
+import { feedMessage, hidden, shown, walk } from "./key-walk.ts";
 import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";

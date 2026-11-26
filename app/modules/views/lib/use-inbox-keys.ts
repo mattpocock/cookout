@@ -1,9 +1,11 @@
 import type { Act, Action, Keymap } from "../../keymap/index.ts";
+import { useContext, useLayoutEffect } from "react";
 import type { InboxSelection } from "../../paths/index.ts";
-import { clickOn } from "./message-keys.ts";
+import type { MessageActions } from "./message-actions.ts";
+import { MessageChoices } from "./message-actions.ts";
+import { chooseOn } from "./message-keys.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { isNarrowWindow } from "./narrow-window.ts";
-import { useLayoutEffect } from "react";
 
 const ROWS = "a[data-feed-row]";
 const INBOX_ROW = "#/inbox/";
@@ -139,13 +141,18 @@ function focusIn(keys: Pick<InboxKeys, "conversation" | "selected">, selector: s
   };
 }
 
-function onTopMessage({ conversation, keymap }: Pick<InboxKeys, "conversation" | "keymap">, action: Action): Act {
-  const click = clickOn({
+interface TopMessage extends Pick<InboxKeys, "conversation" | "keymap"> {
+  readonly actions: MessageActions;
+}
+
+function onTopMessage({ actions, conversation, keymap }: TopMessage, action: Action): Act {
+  const choose = chooseOn({
     action,
+    actions,
     keymap,
     messageOf: () => globalThis.document.querySelector(inConversation(conversation, TOP_MESSAGE)),
   });
-  return (event) => !onAControl(event.target) && click(event);
+  return (event) => !onAControl(event.target) && choose(event);
 }
 
 function leaveTextBox({ target }: KeyboardEvent): boolean {
@@ -203,11 +210,12 @@ function thenNext(act: Act): Act {
 
 function useInboxKeys(keys: InboxKeys): void {
   const { conversation, keymap, selected, watch } = keys;
+  const actions = useContext(MessageChoices);
   useLayoutEffect(() => {
     const unbindRows = keymap.bind({
       actions: {
         backToRows: back({ selected, watch }),
-        copyMessageLink: onTopMessage({ conversation, keymap }, "copyMessageLink"),
+        copyMessageLink: onTopMessage({ actions, conversation, keymap }, "copyMessageLink"),
         markRowRead: thenNext(press({ conversation, keymap }, "markRowRead")),
         markRowUnread: offTextField(press({ conversation, keymap }, "markRowUnread")),
         markSelectedRowRead: press({ conversation, keymap }, "markRowRead"),
@@ -216,9 +224,9 @@ function useInboxKeys(keys: InboxKeys): void {
         openThread: focusIn({ conversation, selected }, TOP_MESSAGE),
         previousRow: select("previous"),
         replyToRow: focusIn({ conversation, selected }, REPLY_BOX),
-        toggleThreadClosed: onTopMessage({ conversation, keymap }, "toggleThreadClosed"),
-        toggleThumbsDown: onTopMessage({ conversation, keymap }, "toggleThumbsDown"),
-        toggleThumbsUp: onTopMessage({ conversation, keymap }, "toggleThumbsUp"),
+        toggleThreadClosed: onTopMessage({ actions, conversation, keymap }, "toggleThreadClosed"),
+        toggleThumbsDown: onTopMessage({ actions, conversation, keymap }, "toggleThumbsDown"),
+        toggleThumbsUp: onTopMessage({ actions, conversation, keymap }, "toggleThumbsUp"),
       },
       scope: "inbox",
     });
@@ -227,7 +235,7 @@ function useInboxKeys(keys: InboxKeys): void {
       unbindRows();
       unbindTextBox();
     };
-  }, [conversation, keymap, selected, watch]);
+  }, [actions, conversation, keymap, selected, watch]);
 }
 
 export { type InboxKeys, useInboxKeys };

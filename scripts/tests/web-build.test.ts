@@ -1,4 +1,4 @@
-import { PANEL, builtScript, webProject, writeFile } from "./lib/web-project.ts";
+import { PANEL, builtScript, builtStylesheet, webProject, writeFile } from "./lib/web-project.ts";
 import { expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { webBuild } from "../lib/web-build.ts";
@@ -41,6 +41,23 @@ it("reuses the build when only a test file changes", { timeout: 20_000 }, async 
   const again = await webBuild({ probe: false, root });
 
   expect(again).toStrictEqual({ built: false, folder: first.folder });
+});
+
+it("builds again when a test file adds a Tailwind class no web source uses, and the stylesheet has it", {
+  timeout: 20_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const root = webProject();
+  const first = await webBuild({ probe: false, root });
+  const before = builtStylesheet(first.folder);
+  const text = 'export const CLASSES = "grid-cols-7 text-fuchsia-600";\n';
+  writeFile({ file: "app/modules/views/tests/panel.test.ts", root, text });
+  const again = await webBuild({ probe: false, root });
+
+  expect(before).not.toContain(".grid-cols-7");
+  expect(again.built).toBe(true);
+  expect(builtStylesheet(again.folder)).toContain(".grid-cols-7");
 });
 
 it("with the probe, the build runs the probe's script ahead of the app's, and without it leaves the probe out", {

@@ -1,10 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { hidden, walk } from "./walk.ts";
+import { hidden, walk } from "./key-walk.ts";
 import { inConversation, inPane, inSidebar, inThread, sidebarLink } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { Step } from "./walk.ts";
+import type { Step } from "./key-walk.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { testAgentDisplayName } from "../../../testing/index.ts";

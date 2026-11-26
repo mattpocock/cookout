@@ -27,6 +27,7 @@ export function ConfirmDialog(parts: ConfirmDialogParts): ReactNode {
           error={parts.error}
           onConfirm={handleConfirm}
           pending={parts.pending}
+          returnTo={parts.returnTo}
           title={parts.title}
         />
       </Portal>

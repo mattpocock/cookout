@@ -1,9 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { feedMessage, hidden, shown, typing, walk } from "./walk.ts";
+import { feedMessage, hidden, shown, typing, walk } from "./key-walk.ts";
 import { inSidebar, inThread } from "./regions.ts";
-import type { Step } from "./walk.ts";
+import type { Step } from "./key-walk.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
