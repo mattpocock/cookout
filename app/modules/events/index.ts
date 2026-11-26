@@ -33,6 +33,7 @@ export type {
   OfflineReason,
   Presence,
   PresenceResponse,
+  WakeRunResponse,
 } from "../presence/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */

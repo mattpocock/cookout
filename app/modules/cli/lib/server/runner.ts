@@ -1,11 +1,11 @@
 import { Argument, Command } from "effect/cli";
 import { Array as Arr, Deferred, Effect, Fiber, Option, Queue, Ref, Stream } from "effect";
+import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import { SESSION_ID_PLACEHOLDER, opened, registerHere, registeredSessions } from "./registrations.ts";
 import { answered, printErrorLine, printLine, refused } from "./output.ts";
 import { runPlace, wakeRun } from "./wake-run.ts";
 import { source, start } from "./watch-connection.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
-import type { CallFailure } from "./adapters/sdk.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import type { CommandFailed } from "./output.ts";
 import type { Heard } from "./watch-connection.ts";
@@ -13,6 +13,7 @@ import type { InboxItem } from "../../../sdk/index.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
+import { callClient } from "./adapters/sdk.ts";
 
 const NONE_PENDING = 0;
 const ONE = 1;
@@ -46,16 +47,25 @@ interface Listening {
   readonly registered: RegisteredSession;
 }
 
-function oneAtATime({
-  place,
-  registered,
-}: Listening): Effect.Effect<(item: InboxItem) => Effect.Effect<void>, never, Scope.Scope | Spawner> {
+function presenceDuring(
+  asAgent: ClientWithAgentSessionState,
+): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
+  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
+  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
+  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
+}
+
+function oneAtATime(
+  { place, registered }: Listening,
+  asAgent: ClientWithAgentSessionState,
+): Effect.Effect<(item: InboxItem) => Effect.Effect<void>, never, Scope.Scope | Spawner> {
   return Effect.gen(function* serialWakeRuns() {
     const { registration } = registered;
+    const during = presenceDuring(asAgent);
     const waiting = yield* Queue.unbounded<InboxItem>();
     const pending = yield* Ref.make(NONE_PENDING);
     function runThenDone(item: InboxItem): Effect.Effect<void, never, Spawner> {
-      return Effect.andThen(wakeRun({ item, place, registration }), Ref.update(pending, lessOne));
+      return Effect.andThen(during(wakeRun({ item, place, registration })), Ref.update(pending, lessOne));
     }
     const runNext = Effect.flatMap(Queue.take(waiting), runThenDone);
     yield* Effect.forkScoped(Effect.forever(runNext));
@@ -73,9 +83,10 @@ function oneAtATime({
 function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
   return Effect.gen(function* listenAndWake() {
     const asAgent = yield* opened(listening.registered);
-    const first = yield* start(asAgent);
-    const hear = yield* oneAtATime(listening);
-    yield* source({ first, opened: asAgent }).pipe(
+    const runnerOf = { opened: asAgent, runner: true };
+    const first = yield* start(runnerOf);
+    const hear = yield* oneAtATime(listening, asAgent);
+    yield* source({ first, listening: runnerOf }).pipe(
       Stream.tap((event) => Effect.when(listening.connected, Effect.succeed(event.type === "connected"))),
       Stream.filter(isMention),
       Stream.runForEach((event) => hear(event.item)),
