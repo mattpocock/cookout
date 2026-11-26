@@ -26,8 +26,8 @@ function printItems({
 }: Watching): (opened: ClientWithAgentSessionState) => Effect.Effect<void, CallFailure> {
   return (opened) =>
     Effect.scoped(
-      Effect.flatMap(start(opened), (first: Stream.Stream<readonly Heard[], CallFailure>) =>
-        source({ first, opened }).pipe(
+      Effect.flatMap(start({ opened, runner: false }), (first: Stream.Stream<readonly Heard[], CallFailure>) =>
+        source({ first, listening: { opened, runner: false } }).pipe(
           startUpLine({ format, opened, stop }),
           untilStopped(stop),
           Stream.runForEach(printEach(format)),

@@ -111,7 +111,7 @@ Whether an identity is online, and if not, when it was last seen and why it went
 _Avoid_: online status, availability (and plain "status", kept for custom status text)
 
 **Online**:
-An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)). A Deactivated identity is always offline.
+An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)), and so does an agent whose live connection is a runner's while no wake run is in progress (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)). A Deactivated identity is always offline.
 _Avoid_: away, active presence, connected presence, wakeable
 
 **Unreachable**:
