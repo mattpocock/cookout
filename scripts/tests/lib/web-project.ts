@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { onTestFinished } from "vitest";
 import os from "node:os";
 import path from "node:path";
@@ -18,11 +18,23 @@ const PANEL_LINES = [
   "}",
   "",
 ];
+const DEPENDENCIES = ["@tailwindcss/vite", "tailwindcss", "vite"];
+const STYLESHEET_TEXT = '@import "tailwindcss";\n';
+const VITE_CONFIG = [
+  'import { defineConfig } from "vite";',
+  'import tailwindcss from "@tailwindcss/vite";',
+  "",
+  "export default defineConfig({ plugins: [tailwindcss()] });",
+  "",
+].join("\n");
 const FILES: Readonly<Record<string, string>> = {
+  ".gitignore": "node_modules\n",
+  "app/modules/design-system/styles.css": STYLESHEET_TEXT,
   "app/modules/probe/web.ts": 'document.body.dataset["probe"] = "probe-ran";\n',
   "app/modules/views/lib/panel.ts": PANEL_LINES.join("\n"),
   "app/modules/views/tests/panel.test.ts": "export const NOT_BUILT = true;\n",
   "app/web.ts": [
+    `import "./modules/design-system/styles.css";`,
     `import { hidden, shown } from "./modules/views/lib/panel.ts";`,
     "",
     'document.title = "app-ran " + shown();',
@@ -31,6 +43,7 @@ const FILES: Readonly<Record<string, string>> = {
   ].join("\n"),
   "index.html":
     '<!doctype html><html><head><title>web</title></head><body><script type="module" src="/app/web.ts"></script></body></html>\n',
+  "vite.config.ts": VITE_CONFIG,
 };
 
 interface Written {
@@ -52,13 +65,25 @@ function webProject(): string {
   for (const [file, text] of Object.entries(FILES)) {
     writeFile({ file, root, text });
   }
+  for (const dependency of DEPENDENCIES) {
+    mkdirSync(path.dirname(path.join(root, "node_modules", dependency)), { recursive: true });
+    symlinkSync(path.resolve("node_modules", dependency), path.join(root, "node_modules", dependency));
+  }
   return root;
 }
 
-function builtScript(folder: string): { readonly name: string; readonly text: string } {
+function builtAsset(folder: string, extension: string): { readonly name: string; readonly text: string } {
   const assets = path.join(folder, "assets");
-  const name = readdirSync(assets).find((file) => file.endsWith(".js")) ?? "";
+  const name = readdirSync(assets).find((file) => file.endsWith(extension)) ?? "";
   return { name, text: readFileSync(path.join(assets, name), "utf8") };
 }
 
-export { PANEL, PANEL_LINES, builtScript, webProject, writeFile };
+function builtScript(folder: string): { readonly name: string; readonly text: string } {
+  return builtAsset(folder, ".js");
+}
+
+function builtStylesheet(folder: string): string {
+  return builtAsset(folder, ".css").text;
+}
+
+export { PANEL, PANEL_LINES, builtScript, builtStylesheet, webProject, writeFile };
