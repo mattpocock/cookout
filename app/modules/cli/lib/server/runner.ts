@@ -1,32 +1,19 @@
 import { Argument, Command } from "effect/cli";
-import { Array as Arr, Deferred, Effect, Fiber, Option, Queue, Ref, Stream } from "effect";
-import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
-import { SESSION_ID_PLACEHOLDER, opened, registerHere, registeredSessions } from "./registrations.ts";
-import { answered, printErrorLine, printLine, refused } from "./output.ts";
-import { runPlace, wakeRun } from "./wake-run.ts";
-import { source, start } from "./watch-connection.ts";
+import { Array as Arr, Deferred, Effect, Fiber, Option } from "effect";
+import { SESSION_ID_PLACEHOLDER, registerHere, registeredSessions } from "./registrations.ts";
+import { answered, printErrorLine, refused } from "./output.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
+import type { CallFailure } from "./adapters/sdk.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import type { CommandFailed } from "./output.ts";
-import type { Heard } from "./watch-connection.ts";
-import type { InboxItem } from "../../../sdk/index.ts";
+import type { Listening } from "./runner-listening.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
-import { callClient } from "./adapters/sdk.ts";
-
-const NONE_PENDING = 0;
-const ONE = 1;
+import { runPlace } from "./wake-run.ts";
+import { wakeOnMentions } from "./runner-listening.ts";
 
 type Spawner = ChildProcessSpawner.ChildProcessSpawner;
-
-function moreOne(count: number): number {
-  return count + ONE;
-}
-
-function lessOne(count: number): number {
-  return count - ONE;
-}
 
 const noRegistrations: CallFailure = {
   code: "not_registered",
@@ -36,63 +23,6 @@ const noRegistrations: CallFailure = {
 };
 
 const runnerStopped: CallFailure = { code: "cli_error", message: "Every registered agent's live connection ended." };
-
-function isMention(event: Readonly<Heard>): event is Extract<Heard, { readonly type: "inbox-item" }> {
-  return event.type === "inbox-item" && Arr.contains(event.item.reasons, "mention");
-}
-
-interface Listening {
-  readonly connected: Effect.Effect<boolean>;
-  readonly place: RunPlace;
-  readonly registered: RegisteredSession;
-}
-
-function presenceDuring(
-  asAgent: ClientWithAgentSessionState,
-): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
-  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
-  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
-  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
-}
-
-function oneAtATime(
-  { place, registered }: Listening,
-  asAgent: ClientWithAgentSessionState,
-): Effect.Effect<(item: InboxItem) => Effect.Effect<void>, never, Scope.Scope | Spawner> {
-  return Effect.gen(function* serialWakeRuns() {
-    const { registration } = registered;
-    const during = presenceDuring(asAgent);
-    const waiting = yield* Queue.unbounded<InboxItem>();
-    const pending = yield* Ref.make(NONE_PENDING);
-    function runThenDone(item: InboxItem): Effect.Effect<void, never, Spawner> {
-      return Effect.andThen(during(wakeRun({ item, place, registration })), Ref.update(pending, lessOne));
-    }
-    const runNext = Effect.flatMap(Queue.take(waiting), runThenDone);
-    yield* Effect.forkScoped(Effect.forever(runNext));
-    return (item: InboxItem): Effect.Effect<void> =>
-      Effect.gen(function* queueWakeRun() {
-        const before = yield* Ref.getAndUpdate(pending, moreOne);
-        if (before > NONE_PENDING) {
-          yield* printLine({ agent: registration.agent, message: item.message.id, type: "mention-waiting" });
-        }
-        yield* Queue.offer(waiting, item);
-      });
-  });
-}
-
-function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
-  return Effect.gen(function* listenAndWake() {
-    const asAgent = yield* opened(listening.registered);
-    const runnerOf = { opened: asAgent, runner: true };
-    const first = yield* start(runnerOf);
-    const hear = yield* oneAtATime(listening, asAgent);
-    yield* source({ first, listening: runnerOf }).pipe(
-      Stream.tap((event) => Effect.when(listening.connected, Effect.succeed(event.type === "connected"))),
-      Stream.filter(isMention),
-      Stream.runForEach((event) => hear(event.item)),
-    );
-  });
-}
 
 function stopped({ connected, registered }: Listening) {
   return (failure: { readonly code: string; readonly message: string }): Effect.Effect<void> =>
@@ -169,7 +99,9 @@ const startCommand = Command.make("start", {}, () =>
     "Run the runner in the foreground: one live connection per registration, as its agent, and on each mention " +
       "a wake run of its wake command, in the registered folder with the registered PATH, the inbox item's JSON on " +
       "stdin. One agent's runs never overlap: a mention heard during a run waits, with a stdout line saying so. It " +
-      "prints one stderr line once every connection is open, and one stdout line as each run exits. It never acks.",
+      "prints one stderr line once every connection is open, and one stdout line as each run exits. It never acks. " +
+      "When a cookout watch for an agent replaces its connection, it stands down for that agent, dropping its " +
+      "waiting mentions, until the agent is offline; then it reconnects and wakes it once for its oldest unread mention.",
   ),
 );
 
