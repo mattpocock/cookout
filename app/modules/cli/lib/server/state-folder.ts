@@ -70,4 +70,4 @@ function checkFolder({
 
 const stateFolderPath: Effect.Effect<Option.Option<string>, never, Path.Path> = Effect.flatMap(Path.Path, stateFolder);
 
-export { checkFolder, stateFolder, stateFolderPath };
+export { checkFolder, failure, stateFolder, stateFolderPath };

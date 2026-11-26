@@ -23,7 +23,6 @@ type Files = FileSystem.FileSystem | Path.Path;
 
 const REGISTRATION_SUFFIX = ".registration.json";
 const PERMISSIONS = 0o1000;
-const NO_MODE = 0;
 
 const Words = Schema.Array(Schema.String);
 const Environment = Schema.Record(Schema.String, Schema.String);
@@ -60,10 +59,6 @@ function wakeLogLine({
 function wakeLog(file: string): Effect.Effect<readonly WakeLogLine[], never, FileSystem.FileSystem> {
   return Effect.gen(function* readWakeLog() {
     const fs = yield* FileSystem.FileSystem;
-    const exists = yield* fs.exists(file);
-    if (!exists) {
-      return [];
-    }
     const text = yield* fs.readFileString(file);
     const parsed = Arr.map(Arr.filter(Str.split(text, "\n"), Str.isNonEmpty), parseLine);
     return Arr.map(Arr.filter(parsed, isLogged), wakeLogLine);
@@ -90,21 +85,17 @@ function registrationIn(stateFolder: string): Effect.Effect<RegistrationFile, ne
     const info = yield* fs.stat(file);
     const stateFileExists = yield* fs.exists(Str.replace(REGISTRATION_SUFFIX, ".json")(file));
     const text = yield* fs.readFileString(file);
-    const mode = Option.getOrElse(Option.fromNullishOr(info.mode), () => NO_MODE);
-    return { content: parseLine(text), mode: mode % PERMISSIONS, stateFileExists };
+    return { content: parseLine(text), mode: info.mode % PERMISSIONS, stateFileExists };
   }).pipe(Effect.orDie);
 }
 
-function agentSessionTokenIn(stateFolder: string): Effect.Effect<string, never, Files> {
+function agentSessionTokenIn(stateFolder: string): Effect.Effect<Option.Option<string>, never, Files> {
   return Effect.gen(function* readAgentSessionToken() {
     const fs = yield* FileSystem.FileSystem;
     const [file = ""] = yield* filesIn(stateFolder, false);
     const text = yield* fs.readFileString(file);
-    const state = parseLine(text);
-    if (!hasAgentSessionToken(state)) {
-      return yield* Effect.die(`no agent session token in ${file}`);
-    }
-    return state.agentSessionToken;
+    const state = Option.liftPredicate(parseLine(text), hasAgentSessionToken);
+    return Option.map(state, ({ agentSessionToken }) => agentSessionToken);
   }).pipe(Effect.orDie);
 }
 

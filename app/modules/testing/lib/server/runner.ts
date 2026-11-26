@@ -17,7 +17,7 @@ interface FakeWakeSettings {
 interface StartedRunner {
   readonly firstStderr: unknown;
   readonly stdoutLines: (count: number) => Effect.Effect<readonly unknown[]>;
-  readonly stderrLines: Effect.Effect<readonly unknown[]>;
+  readonly stderrLines: (count: number) => Effect.Effect<readonly unknown[]>;
   readonly stop: Effect.Effect<void>;
 }
 
@@ -40,37 +40,41 @@ function lineOf(line: readonly unknown[]): unknown {
   return parseLine(Arr.join(Arr.map(line, String), " "));
 }
 
+function waitingOn(printed: Effect.Effect<unknown>) {
+  return (lines: readonly unknown[]) =>
+    function linesUntil(count: number): Effect.Effect<readonly unknown[]> {
+      if (lines.length >= count) {
+        return Effect.sync(() => [...lines]);
+      }
+      return Effect.andThen(printed, () => linesUntil(count));
+    };
+}
+
 function startRunner(
   env: Readonly<Record<string, string>>,
 ): Effect.Effect<StartedRunner, never, CommandLineNeeds | Scope.Scope> {
   return Effect.gen(function* startRunnerInProcess() {
     const output = yield* TestConsole.make;
     const first = yield* Deferred.make<unknown>();
-    const printed = yield* Queue.unbounded<unknown>();
+    const printed = yield* Queue.unbounded<number>();
     const logged: unknown[] = [];
     const errored: unknown[] = [];
     const console: Console.Console = {
       ...output,
       error: (...line: readonly unknown[]): void => {
         output.error(...line);
-        errored.push(lineOf(line));
+        Queue.offerUnsafe(printed, errored.push(lineOf(line)));
         Deferred.doneUnsafe(first, Effect.succeed(errored[FIRST]));
       },
       log: (...line: readonly unknown[]): void => {
         output.log(...line);
-        logged.push(lineOf(line));
-        Queue.offerUnsafe(printed, logged.length);
+        Queue.offerUnsafe(printed, logged.push(lineOf(line)));
       },
     };
     const running = yield* Effect.forkScoped(exitCodeOf({ console, env, program: runnerStart }));
     const firstStderr = yield* Deferred.await(first);
-    function stdoutLines(count: number): Effect.Effect<readonly unknown[]> {
-      if (logged.length >= count) {
-        return Effect.sync(() => [...logged]);
-      }
-      return Effect.andThen(Queue.take(printed), () => stdoutLines(count));
-    }
-    return { firstStderr, stderrLines: Effect.sync(() => [...errored]), stdoutLines, stop: Fiber.interrupt(running) };
+    const until = waitingOn(Queue.take(printed));
+    return { firstStderr, stderrLines: until(errored), stdoutLines: until(logged), stop: Fiber.interrupt(running) };
   });
 }
 

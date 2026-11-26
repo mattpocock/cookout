@@ -122,7 +122,7 @@ function listenAll(
   });
 }
 
-const runAll: Effect.Effect<void, CallFailure, AgentSessionStateNeeds | Spawner> = Effect.scoped(
+const runAll: Effect.Effect<never, CallFailure, AgentSessionStateNeeds | Spawner> = Effect.scoped(
   Effect.gen(function* runRegistrations() {
     const registered = yield* registeredSessions;
     const place = yield* runPlace;
@@ -135,7 +135,7 @@ const runAll: Effect.Effect<void, CallFailure, AgentSessionStateNeeds | Spawner>
 );
 
 const wakeCommandArgument = Argument.String("wake-command").pipe(
-  Argument.atLeast(ONE),
+  Argument.variadic(),
   Argument.withDescription(
     `The wake command's argv, after --, run with no shell. ${SESSION_ID_PLACEHOLDER} becomes this harness session's ID.`,
   ),
@@ -152,7 +152,7 @@ const registerCommand = Command.make("register", { wake: wakeCommandArgument }, 
 );
 
 const startCommand = Command.make("start", {}, () =>
-  Effect.matchEffect(runAll, { onFailure: refused, onSuccess: () => Effect.void }),
+  Effect.matchEffect(runAll, { onFailure: refused, onSuccess: Effect.succeed }),
 ).pipe(
   Command.withDescription(
     "Run the runner in the foreground: one live connection per registration, as its agent, and on each mention " +

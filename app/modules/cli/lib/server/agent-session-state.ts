@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, FileSystem, Option, Order, Path, Random, Schema, String as Str } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
-import { checkFolder, stateFolder } from "./state-folder.ts";
+import { checkFolder, failure, stateFolder } from "./state-folder.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import type { HarnessSessionId } from "../../../config/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -67,10 +67,6 @@ interface AgentSessionState {
 
 const decodeAgentSessionState = Schema.decodeEffect(Schema.fromJsonString(AgentSessionStateSchema));
 const encodeAgentSessionState = Schema.encodeEffect(Schema.fromJsonString(AgentSessionStateSchema, { space: PRETTY }));
-
-function failure(error: { readonly message: string }): AgentSessionStateFailure {
-  return { code: "cli_error", message: error.message };
-}
 
 function damaged(file: string): AgentSessionStateFailure {
   return {
@@ -177,11 +173,15 @@ const noFolderToWriteIn: Effect.Effect<never, AgentSessionStateFailure> = Effect
   message: "Set HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR so join has a folder to keep its agent session token in.",
 });
 
+function refuseWrite(): Effect.Effect<never, AgentSessionStateFailure> {
+  return noFolderToWriteIn;
+}
+
 const noStateFolder: AgentSessionStateFile = {
   read: Effect.succeedNone,
   remove: Effect.void,
-  write: () => noFolderToWriteIn,
-  writeBeside: () => noFolderToWriteIn,
+  write: refuseWrite,
+  writeBeside: refuseWrite,
 };
 
 function agentSessionStateFile(key: JoinedSessionKey): Effect.Effect<AgentSessionStateFile, never, Needs> {

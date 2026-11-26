@@ -202,12 +202,13 @@ it.effect("no token reaches the wake run's environment or anything the runner pr
   Effect.gen(function* noTokens() {
     const { joined, lines, log, on, runner } = yield* wakeBrigidOnce("@brigid hello", {});
     const token = yield* agentSessionTokenIn(on.folder);
-    const errors = yield* runner.stderrLines;
+    const errors = yield* runner.stderrLines(ONE_RUN);
     const everything = yield* Effect.orDie(encode([lines, errors, log]));
     const names = Arr.map(log, ({ env }) => Arr.sort(Record.keys(env), Order.String));
 
     expect(names).toStrictEqual([["COOKOUT_STATE_DIR", "COOKOUT_URL", "PATH"], []]);
-    expect(everything).not.toContain(token);
+    expect(Option.isSome(token)).toBe(true);
+    expect(everything).not.toContain(Option.getOrElse(token, () => joined.agent.token));
     expect(everything).not.toContain(joined.agent.token);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
