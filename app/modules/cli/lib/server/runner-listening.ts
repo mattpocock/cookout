@@ -2,6 +2,7 @@ import { Array as Arr, Effect, Option, Order, Ref, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import { lastSeenAfter, source, start, whileUnavailable } from "./watch-connection.ts";
+import type { EventToLog } from "./runner-log.ts";
 import type { Heard } from "./watch-connection.ts";
 import type { PresenceResponse } from "../../../presence/index.ts";
 import type { WakeQueue } from "./wake-queue.ts";
@@ -20,6 +21,7 @@ interface Heeding {
   readonly asAgent: ClientWithAgentSessionState;
   readonly connected: Effect.Effect<unknown>;
   readonly queue: WakeQueue;
+  readonly record: (event: EventToLog) => Effect.Effect<void>;
   readonly replaced: Effect.Effect<void>;
 }
 
@@ -40,6 +42,7 @@ function heardUntilReplaced({ from, holding, onConnected }: Hearing): Effect.Eff
   return Effect.scoped(
     Effect.gen(function* listenAsRunner() {
       const first = yield* start({ from, listening: runnerOf });
+      yield* holding.record({ type: "connect" });
       yield* onConnected;
       yield* source({ first, from, listening: runnerOf }).pipe(
         Stream.tap(saw),
@@ -82,7 +85,10 @@ function isReplaced(failure: CallFailure): boolean {
 function whenReplaced(
   holding: Holding,
 ): (listen: Effect.Effect<void, CallFailure>) => Effect.Effect<void, CallFailure> {
-  const said = Effect.andThen(holding.replaced, printLine({ agent: holding.agent, type: "watch-replaced" }));
+  const said = Effect.andThen(
+    Effect.andThen(holding.replaced, holding.record({ type: "stand-down" })),
+    printLine({ agent: holding.agent, type: "watch-replaced" }),
+  );
   const standDown = Effect.andThen(holding.queue.standDown, Effect.andThen(said, untilOffline(holding)));
   function standingDown(listen: Effect.Effect<void, CallFailure>): Effect.Effect<void, CallFailure> {
     return Effect.catchIf(listen, isReplaced, () => Effect.andThen(standDown, standingDown(takenBack(holding))));

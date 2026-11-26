@@ -171,6 +171,7 @@ export const PostMessageRequestSchema = Schema.Struct({
   replyTo: Schema.optionalKey(MessageIdSchema),
   seen: Schema.optionalKey(MessageIdSchema),
   text: TextSchema,
+  title: Schema.optionalKey(SentThreadTitleSchema),
 });
 
 export const PostWithAttachmentsRequestSchema = Schema.Struct({

@@ -272,9 +272,23 @@ function filesBeside<Value>({
   });
 }
 
+function stateJsonLines<Value>(
+  schema: Schema.ConstraintCodec<Value, unknown>,
+): (text: string) => Effect.Effect<readonly Value[]> {
+  const decode = Schema.decodeEffect(Schema.fromJsonString(schema));
+  return (text) => {
+    const lines = Arr.filter(Str.split("\n")(text), Str.isNonEmpty);
+    return Effect.map(
+      Effect.forEach(lines, (line) => Effect.option(decode(line)), { concurrency: 1 }),
+      Arr.getSomes,
+    );
+  };
+}
+
 export {
   type AgentSessionState,
   filesBeside,
+  stateJsonLines,
   type AgentSessionStateFailure,
   type AgentSessionStateFile,
   type Needs as AgentSessionStateNeeds,
