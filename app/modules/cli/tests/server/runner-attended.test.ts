@@ -152,7 +152,8 @@ function brigidPresence(on: WakeBoard): Effect.Effect<Option.Option<Presence>> {
 
 function untilTakenBack(attended: Attended): Effect.Effect<TakenBack> {
   return Effect.gen(function* linesThenWakingAgain() {
-    const lines = yield* whilePassingTime(linesOf(attended.runner, THREE_LINES));
+    yield* whilePassingTime(linesOf(attended.runner, TWO_LINES));
+    const lines = yield* linesOf(attended.runner, THREE_LINES);
     const back = yield* whilePassingTime(
       Effect.repeat(brigidPresence(attended.on), {
         until: (presence) => Option.exists(presence, (shown) => "wakesOnMention" in shown),
