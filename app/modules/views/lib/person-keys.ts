@@ -35,7 +35,10 @@ function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
     openThread: keymap.shortcutOf("openThread"),
     previousImage: keymap.shortcutOf("previousImage"),
     reply: keymap.shortcutOf("replyToMessage"),
+    schedule: keymap.shortcutOf("scheduleMessage"),
     thread: keymap.shortcutOf("toggleThreadClosed"),
+    thumbsDown: keymap.shortcutOf("toggleThumbsDown"),
+    thumbsUp: keymap.shortcutOf("toggleThumbsUp"),
     unfold: keymap.shortcutOf("unfoldMessage"),
   };
 }

@@ -1,5 +1,6 @@
 import { ActionMenu } from "./action-menu.tsx";
 import type { ActionMenuParts } from "./menu-parts.ts";
+import { ChoiceKeys } from "./choice-keys.tsx";
 import { PanelTitleText } from "./panel-title-text.tsx";
 import type { ReactNode } from "react";
 
@@ -15,8 +16,11 @@ export function PanelTitle(parts: PanelTitleParts): ReactNode {
     return <PanelTitleText detail={parts.detail} focusable={false} label={parts.label} />;
   }
   return (
-    <ActionMenu choices={menu.choices} label={menu.label}>
-      <PanelTitleText detail={parts.detail} focusable label={parts.label} />
-    </ActionMenu>
+    <>
+      <ActionMenu choices={menu.choices} label={menu.label}>
+        <PanelTitleText detail={parts.detail} focusable label={parts.label} />
+      </ActionMenu>
+      <ChoiceKeys choices={menu.choices} />
+    </>
   );
 }

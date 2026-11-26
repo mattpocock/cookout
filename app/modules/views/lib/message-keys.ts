@@ -6,6 +6,7 @@ const PANEL = `aside[aria-label="${THREAD_PANEL.thread}"]`;
 const PANEL_PARENT = `${PANEL} article[aria-label="${THREAD_PANEL.parent}"]`;
 const PANEL_REPLY_BOX = `${PANEL} textarea`;
 const PANEL_CLOSE = `${PANEL} > header a[href]`;
+const PANEL_TITLE = `${PANEL} > header h2`;
 const CHANNEL_FEED = 'main [role="feed"]';
 const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
 const FOLD = "[data-closed-fold]";
@@ -235,4 +236,40 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   };
 }
 
-export { clickOn, closeThread, focusedOnChannelMessage, messageActions, threadPanel };
+type ThreadTitleAction = "copyMessageLink" | "markUnread" | "toggleThreadClosed";
+
+function titleHeader(target: EventTarget | null): Element | null {
+  if (!(target instanceof HTMLElement) || !target.matches(PANEL_TITLE)) {
+    return null;
+  }
+  return target.closest("header");
+}
+
+function boxForm(target: EventTarget | null): Element | null {
+  if (!(target instanceof HTMLTextAreaElement)) {
+    return null;
+  }
+  return target.closest("form");
+}
+
+function scheduleMessage(keymap: Keymap): Act {
+  return clickOn({ action: "scheduleMessage", keymap, messageOf: boxForm });
+}
+
+function threadTitleActions(keymap: Keymap): Readonly<Record<ThreadTitleAction, Act>> {
+  return {
+    copyMessageLink: clickOn({ action: "copyMessageLink", keymap, messageOf: titleHeader }),
+    markUnread: clickOn({ action: "markUnread", keymap, messageOf: titleHeader }),
+    toggleThreadClosed: clickOn({ action: "toggleThreadClosed", keymap, messageOf: titleHeader }),
+  };
+}
+
+export {
+  clickOn,
+  closeThread,
+  focusedOnChannelMessage,
+  messageActions,
+  scheduleMessage,
+  threadPanel,
+  threadTitleActions,
+};

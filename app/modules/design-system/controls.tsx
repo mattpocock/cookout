@@ -14,6 +14,7 @@
  * - `RunList`.
  * - `FieldNote`.
  * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place.
+ * - `ChoiceKeys` is a `hidden` button for each of a menu's choices that has keys and an action (not a link, nor disabled), naming the keys in `aria-keyshortcuts`, so the keymap can press a choice while its menu is closed.
  * - `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was focused when it opened.
  * - `ListDialog` is a Radix modal of a list, titled and described, with a Close button (`close` its text); Escape or Close calls `onClose`, and focus goes back to what was focused when it opened.
  * - `FilterField` is a labelled box whose text its owner holds.
@@ -46,6 +47,7 @@ export {
   FieldNote,
   RunList,
   MoreActions,
+  ChoiceKeys,
   ButtonRow,
   TokenText,
   QuietButton,

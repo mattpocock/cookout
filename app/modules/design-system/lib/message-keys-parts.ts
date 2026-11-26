@@ -9,6 +9,9 @@ interface MessageShortcuts {
   readonly copyText: Shortcut;
   readonly delete: Shortcut;
   readonly thread: Shortcut;
+  readonly thumbsUp: Shortcut;
+  readonly thumbsDown: Shortcut;
+  readonly schedule: Shortcut;
   readonly unfold: Shortcut;
   readonly previousImage: Shortcut;
   readonly nextImage: Shortcut;
@@ -25,7 +28,10 @@ const MessageKeys = createContext<MessageShortcuts>({
   openThread: NO_SHORTCUT,
   previousImage: NO_SHORTCUT,
   reply: NO_SHORTCUT,
+  schedule: NO_SHORTCUT,
   thread: NO_SHORTCUT,
+  thumbsDown: NO_SHORTCUT,
+  thumbsUp: NO_SHORTCUT,
   unfold: NO_SHORTCUT,
 });
 

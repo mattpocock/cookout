@@ -193,3 +193,31 @@ it("a refusal on saving shows in the dialog, and Escape closes it without schedu
 
   close();
 });
+
+interface Written {
+  readonly box: HTMLElement;
+  readonly close: () => void;
+}
+
+async function written(channel: string, text: string): Promise<Written> {
+  await adminClient().createChannel({ name: channel });
+  const close = openAt({ client: adminClient(), hash: `#/channels/${channel}` });
+  const box = await screen.findByLabelText("Message");
+  fireEvent.change(box, { target: { value: text } });
+  box.focus();
+  return { box, close };
+}
+
+it("ctrl+Shift+Enter in a channel's message box opens the Schedule dialog with its text", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { box, close } = await written("web-schedule-key", "Standup by key");
+  fireEvent.keyDown(box, { ctrlKey: true, key: "Enter", shiftKey: true });
+  await screen.findByRole("dialog", { name: TITLE });
+
+  expect(within(dialog()).getByLabelText<HTMLInputElement>("Text").value).toBe("Standup by key");
+
+  close();
+});

@@ -51,6 +51,14 @@ A view holds no state that outlives it. State lives in a store, a plain `.ts` mo
 
 Tests in `app/modules/routes/tests/` draw `CookoutApp` on real stores against a real server and check what a person sees.
 
+## A menu choice has a key
+
+Every menu choice (`MenuChoice` in [menu-parts.ts](../app/modules/design-system/lib/menu-parts.ts)) requires `keys`, a `Shortcut`, so a choice written without one is a type error and fails `pnpm check` ([ADR 0141](adr/0141-every-menu-choice-has-a-key.md)). To add one:
+
+1. Add the action's row to `KEYS` in [keys.ts](../app/modules/keymap/lib/keys.ts): its chord, what it does and the scope it works in. A new key is Proposed until Matt approves it.
+2. Give the choice `keys: keymap.shortcutOf("<action>")`, or the matching `MessageKeys` shortcut inside a message, never a string written by hand.
+3. Bind the action in the view that owns the scope, so the key does what the choice does. A choice whose menu is closed is pressed through its hidden `ChoiceKeys` button, which names the keys in `aria-keyshortcuts`.
+
 ## Check it
 
 Commit after each component: the pre-commit hook prints what is left to fix while the component is small. Then `pnpm screenshots` takes the standard screens in both themes ([verification.md](verification.md#see-the-web-ui-in-both-themes)).
