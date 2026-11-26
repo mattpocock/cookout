@@ -1,4 +1,4 @@
-import type { ClockFixtures, OwnCookout } from "./clock.ts";
+import type { ClockFixtures, ClockOptions, OwnCookout } from "./clock.ts";
 import type { Locator, Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { createTestAgent, testAgentDisplayName, testClient } from "../../../testing/index.ts";
@@ -11,7 +11,7 @@ import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 import { walk } from "./walk.ts";
 
-const test = base.extend(probeFixtures).extend<ClockFixtures>(clockFixtures);
+const test = base.extend(probeFixtures).extend<ClockFixtures & ClockOptions>(clockFixtures);
 
 const NUDGED_AFTER = 3;
 const OFFERED_AFTER = 30;
