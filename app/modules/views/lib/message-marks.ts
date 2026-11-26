@@ -103,6 +103,13 @@ function threadSummaryOf(message: Message): ThreadSummaryOf | null {
   return { latestReplyAt: message.latestReplyAt, repliers: message.repliers, replyCount: message.replyCount };
 }
 
+function titleOf(message: Message): string | null {
+  if (message.kind !== "top-level") {
+    return null;
+  }
+  return message.title ?? null;
+}
+
 export {
   type NewsText,
   type ThreadSummaryOf,
@@ -111,5 +118,6 @@ export {
   replies,
   threadHref,
   threadSummaryOf,
+  titleOf,
   useMarkOf,
 };

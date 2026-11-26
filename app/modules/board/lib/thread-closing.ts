@@ -30,9 +30,29 @@ interface Closed {
   readonly parent: TopLevelMessage;
 }
 
-function closedAs({ message, parent }: Closed): TopLevelMessage {
-  const { closedAt, closedBy } = parent;
-  return { ...reopened(message), ...(closedAt && closedBy && { closedAt, closedBy }) };
+type ThreadState = Pick<TopLevelMessage, "closedAt" | "closedBy" | "title" | "titleSetAt" | "titleSetBy">;
+
+function closedOf({ closedAt, closedBy }: TopLevelMessage): ThreadState {
+  if (typeof closedAt !== "string" || typeof closedBy !== "string") {
+    return {};
+  }
+  return { closedAt, closedBy };
+}
+
+function titledOf({ title, titleSetAt, titleSetBy }: TopLevelMessage): ThreadState {
+  if (typeof title !== "string" || typeof titleSetAt !== "string" || typeof titleSetBy !== "string") {
+    return {};
+  }
+  return { title, titleSetAt, titleSetBy };
+}
+
+function untitled(message: TopLevelMessage): TopLevelMessage {
+  const { title: _title, titleSetAt: _titleSetAt, titleSetBy: _titleSetBy, ...rest } = message;
+  return rest;
+}
+
+function threadAs({ message, parent }: Closed): TopLevelMessage {
+  return { ...untitled(reopened(message)), ...closedOf(parent), ...titledOf(parent) };
 }
 
 async function after(previous: Promise<void> | null, step: () => Promise<void>): Promise<void> {
@@ -79,4 +99,4 @@ function createThreadClosing({ changed, client, refused: notify }: ClosingOption
   };
 }
 
-export { type ClosingClient, type ClosingRefusal, closedAs, createThreadClosing };
+export { type ClosingClient, type ClosingRefusal, createThreadClosing, threadAs };

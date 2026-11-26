@@ -28,6 +28,7 @@ interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactio
   readonly day: string | null;
   readonly unreadLine: boolean;
   readonly spaced: boolean;
+  readonly title: string | null;
 }
 
 interface StandaloneMessageParts extends MessageItemParts {
