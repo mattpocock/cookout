@@ -77,3 +77,20 @@ it("with a focused button disabled and enabled again, focus goes back to it", { 
 
   close();
 });
+
+it("with a focused button disabled and then gone, focus goes to its neighbour", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const { close, first, second } = await opened("web-kept-focus-disabled-gone");
+  first.focus();
+  first.disabled = true;
+  await waitFor(() => {
+    expect(globalThis.document.activeElement).not.toBe(first);
+  });
+  first.remove();
+  await waitFor(() => {
+    expect(globalThis.document.activeElement).toBe(second);
+  });
+
+  close();
+});

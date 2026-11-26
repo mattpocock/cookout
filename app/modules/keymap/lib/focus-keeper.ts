@@ -45,7 +45,6 @@ interface Disabled {
   readonly blurred: (lost: Held) => void;
   readonly changed: (keeper: Keeper) => void;
   readonly focused: () => void;
-  readonly keeps: (lost: Held) => boolean;
 }
 
 interface Keeper {
@@ -194,9 +193,7 @@ function goneFrom(keeper: Keeper, lost: Held): void {
 function disabledWatch(): Disabled {
   const disabled = cellOf<Held | null>(null);
   function enabledAgain(keeper: Keeper, lost: Held): void {
-    if (!isLost()) {
-      disabled.set(null);
-    } else if (!isOnPage(lost.element)) {
+    if (!isOnPage(lost.element)) {
       disabled.set(null);
       keeper.held.set(lost);
       goneFrom(keeper, lost);
@@ -219,13 +216,6 @@ function disabledWatch(): Disabled {
     },
     focused: () => {
       disabled.set(null);
-    },
-    keeps: (lost) => {
-      const kept = isOnPage(lost.element) && isDisabled(lost.element);
-      if (kept) {
-        disabled.set(lost);
-      }
-      return kept;
     },
   };
 }
@@ -255,8 +245,6 @@ function changedOf(keeper: Keeper): Handlers["changed"] {
     }
     if (held.element === globalThis.document.activeElement) {
       keeper.held.set(heldOf(held.element));
-    } else if (keeper.disabled.keeps(held)) {
-      keeper.held.set(null);
     } else {
       goneFrom(keeper, held);
     }
@@ -265,8 +253,8 @@ function changedOf(keeper: Keeper): Handlers["changed"] {
 
 function focusedOf(keeper: Keeper, last: Cell<unknown>): Handlers["focused"] {
   return (event) => {
+    keeper.disabled.focused();
     if (event instanceof FocusEvent && event.target instanceof HTMLElement) {
-      keeper.disabled.focused();
       last.set(event.target);
       const now = heldOf(event.target);
       keeper.beneath.set(beneathAfter(keeper.beneath.get(), keeper.held.get(), now));

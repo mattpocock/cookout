@@ -107,19 +107,16 @@ function focusWhenShown(selector: string, old: unknown): void {
       now.focus();
     }
   });
-  const timer = globalThis.setTimeout(() => {
-    control.abort();
-  }, WAIT_MS);
-  control.signal.addEventListener("abort", () => {
+  const signal = AbortSignal.any([control.signal, AbortSignal.timeout(WAIT_MS)]);
+  signal.addEventListener("abort", () => {
     observer.disconnect();
-    globalThis.clearTimeout(timer);
   });
   globalThis.document.addEventListener(
     "focusin",
     () => {
       control.abort();
     },
-    { capture: true, signal: control.signal },
+    { capture: true, signal },
   );
   observer.observe(globalThis.document.body, WATCHED);
 }
@@ -128,11 +125,14 @@ function focusIn(keys: Pick<InboxKeys, "conversation" | "selected">, selector: s
   const inIt = inConversation(keys.conversation, selector);
   const shown = hrefOf({ name: "inbox", selected: keys.selected });
   return ({ target }) => {
-    if (keys.selected === null || onAControl(target)) {
+    if (onAControl(target)) {
       return false;
     }
     if (shown === addressNow() && focused(inIt)) {
       return true;
+    }
+    if (keys.selected === null) {
+      return false;
     }
     focusWhenShown(inIt, globalThis.document.querySelector(inIt));
     return true;
