@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import type { Outcome } from "../lib/tools.ts";
 import { browserShardPlan } from "../lib/timed-shards.ts";
 import path from "node:path";
+import { unitShardPlan } from "../lib/unit-shards.ts";
 
 const DIR = "app/modules/routes/tests/browser";
 const RUN = "900";
@@ -10,10 +11,11 @@ const RECORDED_RUN = 800;
 const ASKED_AT = "2026-11-25T10:00:00Z";
 const EARLIER = "2026-11-25T09:00:00Z";
 const ARTIFACT = "test-timings-browser-1";
+const ARTIFACT_ID = "7001";
 const MS = 1000;
-const LAST = -1;
-const BUSY = "gh run download failed: HTTP 503: No server is currently available";
-const MISSING = "gh run download failed: HTTP 404: Not Found";
+const NONE = 0;
+const BUSY = `gh api repos/{owner}/{repo}/actions/artifacts/${ARTIFACT_ID}/zip failed: HTTP 503: No server is currently available`;
+const MISSING = `gh api repos/{owner}/{repo}/actions/artifacts/${ARTIFACT_ID}/zip failed: HTTP 404: Not Found`;
 const UNSPLIT = "can't read the recorded timings, and a split of its own would differ from the other shards'";
 const ALWAYS = Number.POSITIVE_INFINITY;
 const TWICE = 2;
@@ -39,40 +41,43 @@ function report(): string {
   return JSON.stringify({ suites });
 }
 
-function api(target: string): Outcome<string> {
+function gh(args: readonly string[]): Outcome<string> {
+  const [, target = ""] = args;
   if (target.endsWith(`/runs/${RUN}`)) {
     return { ok: true, value: JSON.stringify({ created_at: ASKED_AT, id: Number(RUN) }) };
   }
-  const artifact = { created_at: EARLIER, expired: false, name: ARTIFACT, workflow_run: { id: RECORDED_RUN } };
+  const artifact = {
+    created_at: EARLIER,
+    expired: false,
+    id: Number(ARTIFACT_ID),
+    name: ARTIFACT,
+    workflow_run: { id: RECORDED_RUN },
+  };
   return { ok: true, value: JSON.stringify({ artifacts: [artifact] }) };
 }
 
-function download(args: readonly string[]): Outcome<string> {
-  const dir = path.join(args.at(LAST) ?? "", ".timings");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(path.join(dir, "browser.json"), report());
+function unpacked(dir: string, name: string, content: string): Outcome<string> {
+  const timings = path.join(dir, ".timings");
+  mkdirSync(timings, { recursive: true });
+  writeFileSync(path.join(timings, name), content);
   return { ok: true, value: "" };
 }
 
 interface Flaky {
   readonly attempts: () => number;
-  readonly gh: (args: readonly string[]) => Outcome<string>;
+  readonly download: (artifact: string, dir: string) => Outcome<string>;
 }
 
 function failingDownload(reason: string, failures: number): Flaky {
   let attempts = 0;
   return {
     attempts: () => attempts,
-    gh: (args) => {
-      const [verb, target = ""] = args;
-      if (verb !== "run") {
-        return api(target);
-      }
+    download: (_artifact, dir) => {
       attempts += ONE;
       if (attempts <= failures) {
         return { ok: false, reason };
       }
-      return download(args);
+      return unpacked(dir, "browser.json", report());
     },
   };
 }
@@ -97,10 +102,14 @@ it("a CI shard retries the timings download after a 5xx, 5 s apart, and runs wit
 }, () => {
   expect.hasAssertions();
 
-  const { attempts, gh } = failingDownload(BUSY, TWICE);
+  const { attempts, download } = failingDownload(BUSY, TWICE);
   const { sleep, waits } = recordedWaits();
 
-  expect([browserShardPlan({ files: FILES, gh, run: RUN, shard: "1/2", sleep }), attempts(), waits]).toStrictEqual([
+  expect([
+    browserShardPlan({ download, files: FILES, gh, run: RUN, shard: "1/2", sleep }),
+    attempts(),
+    waits,
+  ]).toStrictEqual([
     {
       args: ["--record-shard=1/2", file("alpha")],
       failure: "",
@@ -116,25 +125,96 @@ it("a CI shard whose timings download answers 5xx every time fails after 3 attem
 }, () => {
   expect.hasAssertions();
 
-  const { attempts, gh } = failingDownload(BUSY, ALWAYS);
+  const { attempts, download } = failingDownload(BUSY, ALWAYS);
   const { sleep, waits } = recordedWaits();
 
-  expect([browserShardPlan({ files: FILES, gh, run: RUN, shard: "2/2", sleep }), attempts(), waits]).toStrictEqual([
+  expect([
+    browserShardPlan({ download, files: FILES, gh, run: RUN, shard: "2/2", sleep }),
+    attempts(),
+    waits,
+  ]).toStrictEqual([
     { args: [], failure: `browser shard 2/2 ${UNSPLIT}: ${BUSY} (gave up after 3 attempts)`, line: "" },
     THREE,
     [FIVE_SECONDS, FIVE_SECONDS],
   ]);
 });
 
-it("a CI shard whose timings download answers 4xx fails at once", { timeout: 10_000 }, () => {
+it("a CI shard whose timings artifact is missing (404) fails at once", { timeout: 10_000 }, () => {
   expect.hasAssertions();
 
-  const { attempts, gh } = failingDownload(MISSING, ALWAYS);
+  const { attempts, download } = failingDownload(MISSING, ALWAYS);
   const { sleep, waits } = recordedWaits();
 
-  expect([browserShardPlan({ files: FILES, gh, run: RUN, shard: "2/2", sleep }), attempts(), waits]).toStrictEqual([
-    { args: [], failure: `browser shard 2/2 ${UNSPLIT}: ${MISSING}`, line: "" },
-    ONE,
-    [],
+  expect([
+    browserShardPlan({ download, files: FILES, gh, run: RUN, shard: "2/2", sleep }),
+    attempts(),
+    waits,
+  ]).toStrictEqual([{ args: [], failure: `browser shard 2/2 ${UNSPLIT}: ${MISSING}`, line: "" }, ONE, []]);
+});
+
+const CWD = "/home/runner/work/cookout/cookout";
+const OLDER_ATTEMPT = "6003";
+const NEWER_ATTEMPT = "6103";
+interface Attempt {
+  readonly createdAt: string;
+  readonly seconds: number;
+}
+
+const ATTEMPTS: ReadonlyMap<string, Attempt> = new Map([
+  [OLDER_ATTEMPT, { createdAt: "2026-11-25T08:00:00Z", seconds: 99 }],
+  [NEWER_ATTEMPT, { createdAt: "2026-11-25T08:30:00Z", seconds: 30 }],
+]);
+
+function rerunCheck(args: readonly string[]): Outcome<string> {
+  const [, target = ""] = args;
+  if (target.endsWith(`/runs/${RUN}`)) {
+    return { ok: true, value: JSON.stringify({ created_at: ASKED_AT, id: Number(RUN) }) };
+  }
+  const artifacts = [...ATTEMPTS].map(([artifact, { createdAt }]: readonly [string, Attempt]) => ({
+    created_at: createdAt,
+    expired: false,
+    id: Number(artifact),
+    name: "test-timings-tests-3",
+    workflow_run: { id: RECORDED_RUN },
+  }));
+  return { ok: true, value: JSON.stringify({ artifacts }) };
+}
+
+interface Downloads {
+  readonly download: (artifact: string, dir: string) => Outcome<string>;
+  readonly downloaded: readonly string[];
+}
+
+function attemptDownloads(): Downloads {
+  const downloaded: string[] = [];
+  return {
+    download: (artifact, dir) => {
+      downloaded.push(artifact);
+      const { seconds } = ATTEMPTS.get(artifact) ?? { seconds: NONE };
+      const testResults = [{ endTime: seconds * MS, name: `${CWD}/a.test.ts`, startTime: 0 }];
+      return unpacked(dir, "tests.json", JSON.stringify({ testResults }));
+    },
+    downloaded,
+  };
+}
+
+it("a CI shard whose recorded run was re-run reads the newest of each artifact name, from the latest attempt, and runs", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { download, downloaded } = attemptDownloads();
+  const files = { ok: true, value: ["a.test.ts"] } as const;
+
+  expect([
+    unitShardPlan({ cwd: CWD, download, files, gh: rerunCheck, run: RUN, shard: "1/1" }),
+    downloaded,
+  ]).toStrictEqual([
+    {
+      args: ["--outputFile.blob=.vitest/blob/blob-1-1.json", `${CWD}/a.test.ts`],
+      failure: "",
+      line: "unit shard 1/1: 1 of 1 files, 30.0s of test time as run 800 recorded it",
+    },
+    [NEWER_ATTEMPT],
   ]);
 });

@@ -353,19 +353,17 @@ interface MessageFields extends WithAttachments {
 interface TopLevelMessage extends MessageFields {
   readonly kind: "top-level";
   readonly replyCount: number;
-  /** The newest reply in its thread, or `null` if it has none. */
+  /** The newest reply in its thread and when it was posted, both `null` if it has none. */
   readonly latestReplyId: MessageId | null;
-  /** When the newest reply in its thread was posted, or `null` if it has none. */
   readonly latestReplyAt: IsoTime | null;
-  /**
-   * The authors of its thread's replies, once each by name, the latest replier first: at most `shownRepliers`.
-   * Each is the author as stored on their latest reply, so a deleted replier still shows.
-   */
+  /** Its repliers once each, latest first, at most `shownRepliers`: each as on their latest reply, so deleted ones show. */
   readonly repliers: readonly Author[];
-  /** When its thread was closed. Present only while the thread is closed; `closedBy` is present with it. */
+  /** Only while closed: when and by whom. Only while titled: its Thread title (one line, 1–100), who last set it, when. */
   readonly closedAt?: IsoTime;
-  /** Who closed its thread. Present only while the thread is closed; `closedAt` is present with it. */
   readonly closedBy?: IdentityName;
+  readonly title?: string;
+  readonly titleSetBy?: IdentityName;
+  readonly titleSetAt?: IsoTime;
 }
 /** A reply in a thread. `replyTo` is always the top-level message, even when the reply was posted to another reply. */
 interface Reply extends MessageFields {
@@ -1372,7 +1370,7 @@ interface MessageDeleteCalls {
    */
   readonly deleteMessage: (messageId: MessageId) => Promise<DeletedMessageResponse>;
 }
-/** Closing and reopening the thread holding a message. */
+/** Closing, reopening and titling the thread holding a message. */
 interface ClosedThreadCalls {
   /**
    * `PUT /v1/messages/:id/closed`: closes the thread holding the message (any message in it) and answers its top-level
@@ -1387,6 +1385,15 @@ interface ClosedThreadCalls {
    * too. A missing message is 404 `message_not_found`.
    */
   readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+  /**
+   * `PUT /v1/messages/:id/title`: sets or changes the Thread title of the thread holding the message (any message in
+   * it) and answers its top-level message, now with `title`, `titleSetBy` (the caller) and `titleSetAt`. Any
+   * identity may title any thread; only the latest setter is kept. The title is trimmed; an empty one, or one of only
+   * whitespace, clears all three fields. Over 100 characters or with a line break is 400 `invalid_request`, and
+   * nothing changes. Setting the same title again changes nothing. A title is not a message: it mentions nobody and
+   * moves no Read position, and a reply keeps it. A missing message is 404 `message_not_found`.
+   */
+  readonly setThreadTitle: (messageId: MessageId, title: string) => Promise<TopLevelMessageResponse>;
 }
 /** The query of an Open threads page. With no `cursor`, the page starts at the stalest open thread. */
 interface ListOpenThreadsQuery {
@@ -1445,6 +1452,12 @@ interface PostMessageRequest {
    */
   readonly replyTo?: number;
   readonly close?: true;
+  /**
+   * A Thread title for a top-level message, stored with it in one step, its author the setter at its post time. The
+   * title is trimmed, then at most 100 characters on one line; an empty one posts the message untitled. With
+   * `replyTo`, or over 100 characters or with a line break, the post is 400 `invalid_request`, and nothing is stored.
+   */
+  readonly title?: string;
   /**
    * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
    * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else is refused `thread_moved`.
@@ -1525,9 +1538,9 @@ interface MessageEvent {
   readonly message: Message;
 }
 /**
- * A thread just closed or reopened, by Close, Reopen, a reply in a closed thread or a reply sent with `close`: its
- * top-level message as it now
- * stands, with `closedAt` and `closedBy` while closed. Sent only on the all-channels feed. It has no SSE `id`.
+ * A thread just closed, reopened or retitled (Close, Reopen, a reply in a closed thread or sent with `close`, a title
+ * change): its top-level message as it now stands, with its closed and title fields. Only on the all-channels feed.
+ * It has no SSE `id`.
  */
 interface ThreadEvent {
   readonly type: "thread";
@@ -1938,7 +1951,7 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`), and every stream of the caller each Nudge for it as it is raised (`nudge`), the IDs of its Nudges as they are marked read (`nudge-read`), each Deactivation offer and deactivated quiet agent as it changes.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed, reopened or retitled (`thread`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`), and every stream of the caller each Nudge for it as it is raised (`nudge`), the IDs of its Nudges as they are marked read (`nudge-read`), each Deactivation offer and deactivated quiet agent as it changes.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection, which the server counts as a drop ("connection lost" after the grace); `closeCleanly` first sends `DELETE /v1/events/:connection` with the `connected` event's connection ID, so the end is expected, as `cookout watch` exiting on purpose does.
    * Opened with an agent session token, the stream moves its expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

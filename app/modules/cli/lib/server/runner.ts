@@ -56,6 +56,14 @@ const runAll: Effect.Effect<never, CallFailure, AgentSessionStateNeeds | Spawner
     if (!Arr.isReadonlyArrayNonEmpty(registered) || Option.isNone(place)) {
       return yield* Effect.fail(noRegistrations);
     }
+    yield* Effect.forEach(
+      registered,
+      ({ registration }) => place.value.log.record(registration.agent, { type: "runner-start" }),
+      {
+        concurrency: 1,
+        discard: true,
+      },
+    );
     yield* listenAll(registered, place.value);
     return yield* Effect.fail(runnerStopped);
   }),
@@ -70,7 +78,9 @@ const startCommand = Command.make("start", {}, () =>
       "waiting mentions on stdin. On start, an agent's unread mentions go to one run. One agent's runs never " +
       "overlap: mentions heard during a run wait, with a stdout line each, and go to the next run together, less " +
       "any the agent acked meanwhile; a mention left unacked goes to one more run. It prints one stderr line once " +
-      "every connection is open, and one stdout line as each run exits or is skipped. It never acks.",
+      "every connection is open, and one stdout line as each run exits or is skipped. It never acks. When a " +
+      "cookout watch for an agent replaces its connection, it stands down for that agent, dropping its waiting " +
+      "mentions, until the agent is offline; then it reconnects and its unread mentions go to one run.",
   ),
 );
 

@@ -1,5 +1,5 @@
 import { install, uninstall } from "./runner-service.ts";
-import { registerCommand, statusCommand, unregisterCommand } from "./runner-commands.ts";
+import { logsCommand, registerCommand, statusCommand, unregisterCommand } from "./runner-commands.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import { Command } from "effect/cli";
@@ -29,10 +29,11 @@ const runnerCommand: Command.Command<"runner", object, object, CommandFailed, Ag
       startCommand,
       unregisterCommand,
       statusCommand,
+      logsCommand,
       installCommand,
       uninstallCommand,
     ]),
   );
 
 export { runnerCommand };
-export { onRunnerHost } from "./runner-host.ts";
+export { onRunnerHost } from "./host.ts";

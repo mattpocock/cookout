@@ -23,6 +23,7 @@ interface During {
 }
 
 interface Waiting {
+  readonly held: boolean;
   readonly queued: readonly InboxItem[];
   readonly runs: ReadonlyMap<MessageId, number>;
   readonly running: boolean;
@@ -43,6 +44,7 @@ interface Waking {
 interface WakeQueue {
   readonly catchUp: Effect.Effect<void, CallFailure>;
   readonly hear: (item: InboxItem) => Effect.Effect<void>;
+  readonly standDown: Effect.Effect<void>;
   readonly stop: Effect.Effect<void>;
 }
 
@@ -83,11 +85,27 @@ function withRun(given: readonly InboxItem[]) {
   };
 }
 
+function forgetting(waiting: Waiting, items: readonly InboxItem[]): ReadonlyMap<MessageId, number> {
+  const ids = new Set(idsOf(items));
+  return new Map(Arr.filter([...waiting.runs], ([id]: readonly [MessageId, number]) => !ids.has(id)));
+}
+
 function withRetried(unread: readonly InboxItem[]) {
   return (waiting: Waiting): Waiting => {
     const again = Arr.filter(unread, ({ message }) => runsOf(waiting, message.id) < RUNS_PER_MENTION);
+    if (waiting.held) {
+      return { ...waiting, runs: forgetting(waiting, again) };
+    }
     return { ...waiting, queued: [...again, ...waiting.queued] };
   };
+}
+
+function withHeld(waiting: Waiting): Waiting {
+  return { ...waiting, held: true, queued: [], runs: forgetting(waiting, waiting.queued) };
+}
+
+function withReleased(waiting: Waiting): Waiting {
+  return { ...waiting, held: false };
 }
 
 function takeQueued(waiting: Waiting): readonly [readonly InboxItem[], Waiting] {
@@ -120,8 +138,8 @@ function stillUnread(
   );
 }
 
-function mentionsIn(items: readonly InboxItem[]): readonly InboxItem[] {
-  return Arr.filter(items, isMention);
+function mentionsOf(asAgent: ClientWithAgentSessionState): Effect.Effect<readonly InboxItem[], CallFailure> {
+  return Effect.map(inboxOf(asAgent), (items) => Arr.filter(items, isMention));
 }
 
 interface Queued extends Waking {
@@ -148,7 +166,11 @@ function runOrSkip(queued: Queued) {
       if (Arr.isReadonlyArrayNonEmpty(unread)) {
         return runGiven(queued)(unread);
       }
-      return printLine({ agent: queued.registration.agent, messages: idsOf(items), type: "wake-skipped" });
+      const { agent } = queued.registration;
+      return Effect.andThen(
+        queued.place.log.record(agent, { messages: idsOf(items), type: "skip" }),
+        printLine({ agent, messages: idsOf(items), type: "wake-skipped" }),
+      );
     });
 }
 
@@ -199,7 +221,7 @@ function sayWaiting(agent: string) {
 
 function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope | Spawner> {
   return Effect.gen(function* serialWakeRuns() {
-    const state = yield* Ref.make<Waiting>({ queued: [], running: false, runs: new Map() });
+    const state = yield* Ref.make<Waiting>({ held: false, queued: [], running: false, runs: new Map() });
     const signal = yield* Queue.unbounded<true>();
     const stopping = yield* Deferred.make<boolean>();
     function hearAll(items: readonly InboxItem[]): Effect.Effect<void> {
@@ -211,6 +233,11 @@ function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope 
         });
         yield* Effect.when(waiting, Effect.succeed(running));
         yield* Queue.offer(signal, true);
+        const { agent } = waking.registration;
+        yield* Effect.forEach(idsOf(fresh), (message) => waking.place.log.record(agent, { message, type: "mention" }), {
+          concurrency: 1,
+          discard: true,
+        });
       });
     }
     function change(next: (waiting: Waiting) => Waiting): Effect.Effect<Waiting> {
@@ -225,8 +252,9 @@ function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope 
       serveUntilStopped({ drain, signalled: Queue.take(signal), stopped: Deferred.await(stopping) }),
     );
     return {
-      catchUp: Effect.flatMap(Effect.map(inboxOf(waking.asAgent), mentionsIn), hearAll),
+      catchUp: Effect.andThen(change(withReleased), Effect.flatMap(mentionsOf(waking.asAgent), hearAll)),
       hear: (item: InboxItem) => hearAll([item]),
+      standDown: Effect.asVoid(change(withHeld)),
       stop: Effect.andThen(Deferred.succeed(stopping, true), Fiber.join(running)),
     };
   });
