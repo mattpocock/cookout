@@ -55,6 +55,7 @@ async function agentProfileOpen(page: Page): Promise<Cast> {
 function textSteps({ page }: Walking): readonly Step[] {
   const saves = inProfile(page).getByRole("button", { exact: true, name: "Save" });
   return [
+    { focused: button(page, "Set avatar"), keys: "Tab" },
     { focused: textbox(page, "Display name"), keys: "Tab" },
     { focused: textbox(page, "Display name"), keys: "ControlOrMeta+a" },
     { focused: textbox(page, "Display name"), keys: "Walked Bot", typed: true },
