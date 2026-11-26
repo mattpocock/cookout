@@ -1,4 +1,4 @@
-import type { Gh, Reading, Recorded, Timings } from "./recorded-timings.ts";
+import type { Download, Gh, Reading, Recorded, Timings } from "./recorded-timings.ts";
 import type { FileTiming } from "./slowest-files.ts";
 import type { Outcome } from "./tools.ts";
 import { readTimings } from "./slowest-files.ts";
@@ -18,6 +18,7 @@ interface Split {
 }
 
 interface Fetching {
+  readonly download?: Download;
   readonly gh: Gh;
   readonly run: string;
   readonly sleep?: (ms: number) => void;
