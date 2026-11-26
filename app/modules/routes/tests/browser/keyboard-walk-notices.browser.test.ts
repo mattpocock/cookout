@@ -17,7 +17,6 @@ const NUDGED_AFTER = 3;
 const OFFERED_AFTER = 30;
 const DEACTIVATED_AFTER = 60;
 const NUDGE = "Quiet for 3 days";
-const ONE = 1;
 
 interface Asking {
   readonly client: CookoutClient;
@@ -130,26 +129,6 @@ function agentRow(page: Page, name: string): Locator {
   return notice({ page, says: testAgentDisplayName(name) });
 }
 
-function confirmedInto(page: Page, next: Locator): Step {
-  return async (): Promise<void> => {
-    await page.keyboard.press("Enter");
-
-    await expect(next.locator(":focus")).toHaveCount(ONE);
-  };
-}
-
-function tabbedTo(page: Page, target: Locator): Step {
-  return async (): Promise<void> => {
-    await page.keyboard.press("Tab");
-    const there = await target.and(page.locator(":focus")).count();
-    if (there !== ONE) {
-      await page.keyboard.press("Tab");
-    }
-
-    await expect(target).toBeFocused();
-  };
-}
-
 function answered(page: Page, reader: string): readonly Step[] {
   const left = agentRow(page, `${reader}-left`);
   const reactivated = agentRow(page, `${reader}-reactivated`);
@@ -171,8 +150,8 @@ function answered(page: Page, reader: string): readonly Step[] {
     ["Escape", button(deactivated, "Deactivate")],
     ["Enter", cancel],
     ["Tab", button(confirm, `Deactivate @${reader}-deactivated`)],
-    confirmedInto(page, kept),
-    tabbedTo(page, button(kept, "Keep")),
+    ["Enter", button(kept, "Deactivate")],
+    ["Tab", button(kept, "Keep")],
   ];
 }
 
@@ -182,4 +161,47 @@ test("deactivation offers and deactivated agents are answered by keys alone", as
   await walk({ page, steps: [...signedIn(page, markAll(page)), ...answered(page, reader), ["Enter", markAll(page)]] });
 
   await expect(forYou(page)).toBeHidden();
+});
+
+function inboxLink(page: Page): Locator {
+  return page
+    .getByRole("navigation", { exact: true, includeHidden: true, name: "Sidebar" })
+    .getByRole("link", { includeHidden: true })
+    .filter({ hasText: "for you" });
+}
+
+async function deactivateHeld(page: Page): Promise<() => void> {
+  const answer = Promise.withResolvers<null>();
+  await page.route("**/v1/identities/*/deactivate", async (route) => {
+    const response = await route.fetch();
+    await answer.promise;
+    await route.fulfill({ response });
+  });
+  return () => {
+    answer.resolve(null);
+  };
+}
+
+async function confirmedBeforeTheAnswer(page: Page, reader: string): Promise<void> {
+  const counted = await inboxLink(page).textContent();
+  const release = await deactivateHeld(page);
+  await button(agentRow(page, `${reader}-deactivated`), "Deactivate").focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+
+  await expect(inboxLink(page)).not.toHaveText(counted ?? "");
+
+  release();
+}
+
+test("confirming Deactivate on an offer whose row goes before the answer puts focus on the next offer's Deactivate", async ({
+  ownCookout,
+  page,
+}) => {
+  const reader = unique("kbwalk-offer-first");
+  await logInWithStream({ page, token: await offered(ownCookout, reader), url: "/#/inbox" });
+  await confirmedBeforeTheAnswer(page, reader);
+
+  await expect(button(agentRow(page, `${reader}-kept`), "Deactivate")).toBeFocused();
 });
