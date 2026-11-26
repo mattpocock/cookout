@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { subscribedReader } from "./inbox-reader.ts";
+import { unreachableClient } from "../../testing/index.ts";
 
 const TITLE_LENGTH = 100;
 const LONGEST_TITLE = "x".repeat(TITLE_LENGTH);
@@ -20,16 +21,21 @@ interface Opened {
 interface Opening {
   readonly channel: string;
   readonly title: string | null;
+  readonly through?: (reader: CookoutClient) => CookoutClient;
 }
 
-async function threadOpened({ channel, title }: Opening): Promise<Opened> {
+function asItIs(reader: CookoutClient): CookoutClient {
+  return reader;
+}
+
+async function threadOpened({ channel, through = asItIs, title }: Opening): Promise<Opened> {
   const { poster, reader } = await subscribedReader(channel);
   const { message } = await poster.createMessage({ channel, text: "Deploy at noon?" });
   await poster.createMessage({ channel, replyTo: message.id, text: "Noon works." });
   if (title !== null) {
     await poster.setThreadTitle(message.id, title);
   }
-  const close = openAt({ client: reader, hash: `#/channels/${channel}/threads/${String(message.id)}` });
+  const close = openAt({ client: through(reader), hash: `#/channels/${channel}/threads/${String(message.id)}` });
   await inThread().findByText("Noon works.");
   return { channel, close, parent: message.id, poster, reader };
 }
@@ -214,6 +220,27 @@ it("a title over 100 characters is refused, keeping the field, its text and the 
 
   saved(LONGEST_TITLE);
   await headingShows(LONGEST_TITLE);
+
+  thread.close();
+});
+
+function titlingUnreachable(reader: CookoutClient): CookoutClient {
+  const { setThreadTitle } = unreachableClient({ token: "cookout_unused" });
+  return { ...reader, setThreadTitle };
+}
+
+it("a title the server can't be reached to save keeps the field and its text, and says so", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadOpened({ channel: "web-title-unreachable", through: titlingUnreachable, title: null });
+  await opened("Add title");
+  saved("Never saved");
+  const { invalid, text } = await refused();
+
+  expect({ invalid, text }).toStrictEqual({ invalid: "true", text: "Never saved" });
+  await expect(storedTitle(thread)).resolves.toBeNull();
 
   thread.close();
 });
