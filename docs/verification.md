@@ -146,7 +146,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts i
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin admin --remove
 ```
 
-`identity admin grace` prints her with `"admin": true`, and her `identity create` then succeeds. `identity admin release-bot` is refused with 403 `human_only` (`Only a human can be an admin.`). After `--remove` prints her with `"admin": false`, her next create is 403 `admin_only`, and so is any admin change she tries. Removing admin from the only admin is 409 `last_admin`. With two admins, either can remove the other's admin or its own. Making an admin of an admin, or removing admin from a non-admin, prints the identity unchanged. If another admin removes the `admin` identity's admin, the next boot gives it back, because the boot applies `COOKOUT_ADMIN_TOKEN` to it.
+`identity admin grace` prints her with `"admin": true`, and her `identity create` then succeeds. `identity admin release-bot` is refused with 403 `human_only` (`Only a human can be an admin.`). After `--remove` prints her with `"admin": false`, her next create is 403 `admin_only`, and so is any admin change she tries. Removing admin from the only admin is 409 `last_admin`. With two admins, either can remove the other's admin or its own. Making an admin of an admin, or removing admin from a non-admin, prints the identity unchanged. If another admin removes the `admin` identity's admin, the next boot gives it back, because every boot makes the identity `COOKOUT_ADMIN_NAME` names (`admin` by default) an admin, whether or not it applies `COOKOUT_ADMIN_TOKEN`.
 
 In the web UI, an admin sees `Make admin` on a human's profile and `Remove admin` on an admin's; a non-admin sees neither, and nobody sees either on an agent's. With the built server from "Open the web UI" seeded, make `grace` an admin (`env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 node app/main.ts identity admin grace`), log in as her (the "Log in to the web UI" recipe), then:
 
@@ -639,13 +639,21 @@ fly machine restart -a cookout $(fly machines list -a cookout --json | jq -r '.[
 node app/main.ts identity list
 ```
 
-The admin's token is the Fly secret `COOKOUT_ADMIN_TOKEN` (`fly secrets list -a cookout`); the app refuses to start without it. The same value is the GitHub Actions secret `COOKOUT_E2E_ADMIN_TOKEN` (`gh secret list -R mattpocock/cookout`), and it is never in the repo. Make one and set both without printing it (bash, for the process substitution):
+The admin's token is the Fly secret `COOKOUT_ADMIN_TOKEN` (`fly secrets list -a cookout`); the app refuses to start without it, and it is never in the repo. Make one and set it without printing it:
 
 ```sh
-openssl rand -hex 32 | tr -d '\n' | tee >(gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout) | sed 's/^/COOKOUT_ADMIN_TOKEN=/' | fly secrets import -a cookout
+openssl rand -hex 32 | tr -d '\n' | sed 's/^/COOKOUT_ADMIN_TOKEN=/' | fly secrets import -a cookout
 ```
 
-`fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin, and `gh secret set` reads the value from stdin when there is no `--body`. Setting the secret restarts the machine, and the boot makes it the admin's only token. To replace a lost or leaked token, run the same command again: the old token gets 401 once the machine has restarted. A token made by `cookout identity rotate admin` lasts only until the next boot. To have the token belong to a human named other than `admin`, also import `COOKOUT_ADMIN_NAME=<name>` the same way; the old `admin` stays, still an admin, with no working token.
+`fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin. Setting the secret restarts the machine, and because the setting changed, that boot makes the new value the admin's only token: every other token of the admin is revoked, and the web sessions made with them end. A boot whose setting is unchanged leaves the admin's tokens alone ([ADR 0130](adr/0130-boot-applies-the-admin-token-only-when-the-setting-changes.md)). So after `cookout identity rotate admin`, the rotated token is the one that works, across any number of deploys and restarts, and the secret's value, which the rotate revoked, stays revoked. To make the secret's token apply again, set a new value with the command above; a value the setting held before counts as a change too, but one equal to the current setting doesn't. To replace a lost or leaked token, rotate it or set a new value: the old token gets 401 at once after a rotate, and once the machine has restarted after a new value. To have the token belong to a human named other than `admin`, also import `COOKOUT_ADMIN_NAME=<name>` the same way, which changes the setting too; the old `admin` stays, still an admin, with no working token.
+
+CI doesn't hold the admin's token. The GitHub Actions secret `COOKOUT_E2E_ADMIN_TOKEN` (`gh secret list -R mattpocock/cookout`), which every job in deploy.yml that calls the deployed cookout uses, is the token of a human admin identity of its own, `ci` (Matt, 2026-11-26, board msg 6180), so neither a rotate of the admin's token nor a new `COOKOUT_ADMIN_TOKEN` breaks Release's deploy. An admin made it, and set the secret without printing the token:
+
+```sh
+cookout identity create ci --kind human | jq -r .token | tr -d '\n' | gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout && cookout identity admin ci
+```
+
+`gh secret set` reads the value from stdin when there is no `--body`. To replace a lost or leaked CI token, an admin runs `cookout identity rotate ci | jq -r .token | tr -d '\n' | gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout`: the old token gets 401 at once, and no restart is needed.
 
 The deployed `/v1/events` stream stays open through Fly's proxy: the server's 15 s heartbeat keeps the connection from going idle, and auto-stop is off. `scripts/stream-check.sh` holds the stream open with `curl -N --max-time` and prints each line with the second it arrived; it passes only if curl gave up with the stream still open (exit 28) and it heard a heartbeat every 15 s. With the admin's token in `COOKOUT_TOKEN`:
 
