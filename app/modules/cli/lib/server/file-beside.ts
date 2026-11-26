@@ -1,4 +1,4 @@
-import { Deferred, Effect, Fiber, Function, Option, Stream } from "effect";
+import { Deferred, Effect, Function, Option, Stream } from "effect";
 import type { FileSystem } from "effect";
 import type { StateFolderFailure } from "./state-folder.ts";
 import { failure } from "./state-folder.ts";
@@ -34,19 +34,13 @@ function untilGoneAt({ file, folder, fs }: BesideLocation): Effect.Effect<void> 
     function onReady(): void {
       Deferred.doneUnsafe(ready, Effect.succeed(true));
     }
-    const changes = fs.watch(folder, { onReady });
-    const goneAfterChange = changes.pipe(
+    const checks = Stream.merge(fs.watch(folder, { onReady }), Stream.fromEffect(Deferred.await(ready)));
+    yield* checks.pipe(
       Stream.mapEffect(() => gone),
       Stream.takeUntil(Function.identity),
       Stream.runDrain,
     );
-    const watching = yield* Effect.forkScoped(goneAfterChange);
-    yield* Deferred.await(ready);
-    const goneAlready = yield* gone;
-    if (!goneAlready) {
-      yield* Fiber.join(watching);
-    }
-  }).pipe(Effect.scoped, Effect.orDie);
+  }).pipe(Effect.orDie);
 }
 
 function fileBeside(location: BesideLocation): PlainFileBeside {

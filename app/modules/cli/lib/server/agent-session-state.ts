@@ -156,7 +156,8 @@ function besideAt(location: AgentSessionStateLocation): (suffix: string) => Besi
         plain.readText,
         Option.match({
           onNone: () => Effect.succeedNone,
-          onSome: (text) => Effect.mapBoth(decode(text), { onFailure: () => damaged(file), onSuccess: Option.some }),
+          onSome: (text) =>
+            Effect.mapBoth(decode(text), { onFailure: Function.constant(damaged(file)), onSuccess: Option.some }),
         }),
       );
     }
@@ -203,7 +204,7 @@ function refuseWrite(): Effect.Effect<never, AgentSessionStateFailure> {
 
 const nothingBeside: BesideFile = {
   exists: Effect.succeed(false),
-  read: () => Effect.succeedNone,
+  read: Function.constant(Effect.succeedNone),
   remove: Effect.void,
   untilGone: Effect.void,
   write: refuseWrite,

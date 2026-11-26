@@ -1,3 +1,4 @@
+import { Array as Arr, Effect, FileSystem, Option, Path, Record, Schema, String as Str } from "effect";
 import type {
   BoardAgent,
   CommandLineNeeds,
@@ -7,7 +8,6 @@ import type {
   WakeBoard,
 } from "../../../testing/server.ts";
 import type { CookoutEvent, Presence } from "../../../sdk/index.ts";
-import { Effect, FileSystem, Option, Path, Record, Schema, String as Str } from "effect";
 import {
   TestCookout,
   WAKE_CHANNEL,
@@ -41,6 +41,8 @@ interface Waking {
 
 const EXIT_SUCCESS = 0;
 const TWO_LINES = 2;
+const REGISTRATION = ".registration.json";
+const EXITED_PID = 4_194_305;
 const SOME_TEXT: unknown = expect.any(String);
 const encode = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
@@ -171,6 +173,39 @@ it.effect("runner status as text shows one line per agent, and neither form prin
     );
     expect(Option.map(tokens, (token) => Str.includes(token)(everything))).toStrictEqual(Option.some(false));
     expect(everything).not.toContain(tokenOf(waking, "brigid"));
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+function besideRegistration(on: WakeBoard, suffix: string): Effect.Effect<string, never, Needs> {
+  return Effect.gen(function* findBesideRegistration() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const folder = path.join(on.folder, "agent-sessions");
+    const names = yield* Effect.orDie(fs.readDirectory(folder));
+    const registration = Option.getOrElse(Arr.findFirst(names, Str.endsWith(REGISTRATION)), () => "");
+    return path.join(folder, Str.replace(REGISTRATION, suffix)(registration));
+  });
+}
+
+it.effect("runner status as text with nothing registered says so", () =>
+  Effect.gen(function* nothingRegistered() {
+    const on = yield* wakeBoard;
+    const result = yield* runCookout({ args: ["runner", "status"], env: stateFolderOnly(on) });
+
+    expect(result).toMatchObject({ exitCode: EXIT_SUCCESS, stdout: "No agent is registered with the runner." });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("runner status shows not-running for a runner file whose process has exited", () =>
+  Effect.gen(function* runnerExited() {
+    const fs = yield* FileSystem.FileSystem;
+    const on = yield* wakeBoard;
+    yield* joinWaking("brigid", on, { log: "unused.log" });
+    const runnerFile = yield* besideRegistration(on, ".runner.json");
+    yield* Effect.orDie(fs.writeFileString(runnerFile, `{"pid":${EXITED_PID},"state":"connected"}`));
+    const result = yield* statusAsJson(on);
+
+    expect(result).toMatchObject({ stdoutJson: { registrations: [{ agent: "brigid", state: "not-running" }] } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

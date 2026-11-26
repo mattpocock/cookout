@@ -42,16 +42,10 @@ function wakeQueue({ during, place, registration }: Queueing): Effect.Effect<Wak
     const waiting = yield* Queue.unbounded<InboxItem>();
     const pending = yield* Ref.make(NONE_PENDING);
     const stopping = yield* Deferred.make<boolean>();
-    const taken = Effect.raceFirst(
-      Effect.asSome(Queue.take(waiting)),
-      Effect.as(Deferred.await(stopping), Option.none<InboxItem>()),
+    const takenUnlessStopped = Effect.zipWith(Queue.take(waiting), Deferred.isDone(stopping), (item, stopped) =>
+      Option.filter(Option.some(item), () => !stopped),
     );
-    const next = Effect.flatMap(Deferred.isDone(stopping), (stopped): Effect.Effect<Option.Option<InboxItem>> => {
-      if (stopped) {
-        return Effect.succeedNone;
-      }
-      return taken;
-    });
+    const next = Effect.raceFirst(takenUnlessStopped, Effect.as(Deferred.await(stopping), Option.none<InboxItem>()));
     function runOne(item: InboxItem): Effect.Effect<boolean, never, Spawner> {
       const run = during(wakeRun({ item, place, registration }));
       return Effect.as(Effect.andThen(run, Ref.update(pending, lessOne)), true);

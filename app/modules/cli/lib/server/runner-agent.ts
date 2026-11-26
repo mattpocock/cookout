@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Stream } from "effect";
+import { Array as Arr, Effect, Function, Option, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { During, Spawner, WakeQueue } from "./wake-queue.ts";
 import { REGISTRATION_SUFFIX, opened } from "./registrations.ts";
@@ -82,32 +82,21 @@ function wakeUntilUnregistered(listening: Listening): Effect.Effect<void, CallFa
   );
 }
 
-function reportStop(
-  registered: RegisteredSession,
-  failure: CallFailure,
-  stillRegistered: boolean,
-): Effect.Effect<void> {
-  const { agent } = registered.registration;
-  const error = { code: failure.code, message: failure.message };
-  if (!stillRegistered) {
-    return printErrorLine({ agent, unregistered: true });
-  }
-  if (endedSessionCodes.has(failure.code)) {
-    return Effect.andThen(
-      Effect.ignore(dropRegistration({ failure, registered })),
-      printErrorLine({ agent, dropped: true, error }),
-    );
-  }
-  return printErrorLine({ agent, error });
+function dropIfEnded(registered: RegisteredSession, failure: CallFailure): Effect.Effect<boolean> {
+  const { exists } = registered.file.beside(REGISTRATION_SUFFIX);
+  const drop = Effect.ignore(dropRegistration({ failure, registered }));
+  const dropWhileRegistered = Effect.when(drop, Effect.orElseSucceed(exists, Function.constFalse));
+  const ended = Effect.succeed(endedSessionCodes.has(failure.code));
+  return Effect.map(Effect.when(dropWhileRegistered, ended), (dropped) => Option.isSome(Option.flatten(dropped)));
 }
 
 function onStop({ connected, registered }: Listening) {
   return (failure: CallFailure): Effect.Effect<void> =>
     Effect.gen(function* stopListening() {
       yield* forgetRunnerState(registered.file);
-      const { exists } = registered.file.beside(REGISTRATION_SUFFIX);
-      const stillRegistered = yield* Effect.orElseSucceed(exists, () => false);
-      yield* reportStop(registered, failure, stillRegistered);
+      const dropped = yield* dropIfEnded(registered, failure);
+      const error = { code: failure.code, message: failure.message };
+      yield* printErrorLine({ agent: registered.registration.agent, dropped, error });
       yield* connected;
     });
 }

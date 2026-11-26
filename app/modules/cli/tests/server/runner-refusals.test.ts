@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, FileSystem, Option, Path, Record, String as Str } from "effect";
 import type { BoardAgent, CommandLineNeeds, TestCookout, WakeBoard } from "../../../testing/server.ts";
-import { Effect, FileSystem, Path, Record } from "effect";
 import {
   WAKE_CHANNEL,
   answer,
@@ -21,6 +21,7 @@ const PRIVATE_FOLDER = 0o700;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
 const MISSING_COMMAND = "/nonexistent/wake-command";
+const REGISTRATION = ".registration.json";
 
 interface JoinedBrigid {
   readonly brigid: BoardAgent;
@@ -111,6 +112,34 @@ it.effect("a registration whose session was revoked before the runner started is
     expect(status).toMatchObject({
       stdoutJson: { dropped: [{ agent: "brigid", code: "agent_session_revoked" }], registrations: [] },
     });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+function besideRegistration(on: WakeBoard, suffix: string): Effect.Effect<string, never, Needs> {
+  return Effect.gen(function* findBesideRegistration() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const folder = path.join(on.folder, "agent-sessions");
+    const names = yield* Effect.orDie(fs.readDirectory(folder));
+    const registration = Option.getOrElse(Arr.findFirst(names, Str.endsWith(REGISTRATION)), () => "");
+    return path.join(folder, Str.replace(REGISTRATION, suffix)(registration));
+  });
+}
+
+it.effect("a registration whose agent session state is gone is dropped with not_joined, and the runner stops", () =>
+  Effect.gen(function* stateGone() {
+    const fs = yield* FileSystem.FileSystem;
+    const { on } = yield* joinedBrigid(["claude"]);
+    const state = yield* besideRegistration(on, ".json");
+    yield* Effect.orDie(fs.remove(state));
+    const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
+    const errors = yield* runner.stderrLines(THREE_LINES);
+
+    expect(errors).toMatchObject([
+      { agent: "brigid", dropped: true, error: { code: "not_joined" } },
+      { waking: ["brigid"] },
+      { error: { code: "cli_error" } },
+    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
