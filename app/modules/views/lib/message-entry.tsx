@@ -35,6 +35,7 @@ interface MessageEntryProps {
   readonly threadParent: TopLevelMessage | null;
   readonly reply: Reply | null;
   readonly opened: boolean;
+  readonly spaced: boolean;
 }
 
 function MessageEntryView(props: MessageEntryProps): ReactNode {
@@ -64,6 +65,7 @@ function MessageEntryView(props: MessageEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
+      spaced={props.spaced}
       replyOnHover={message.kind === "top-level" || props.reply !== null}
       threadHref={openThreadHref({ channel: props.channel, message })}
       threadOnHover={message.kind === "top-level"}
