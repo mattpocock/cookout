@@ -63,7 +63,6 @@
     "validators": "node scripts/generate-validators.ts",
     "validators:check": "node scripts/generate-validators.ts --check",
     "hygiene": "node scripts/hygiene.ts",
-    "merge-ticket": "node scripts/merge-ticket.ts",
     "ci:wait": "node scripts/ci-wait.ts",
     "budgets": "node scripts/budgets.ts",
     "test": "vitest run --coverage",
