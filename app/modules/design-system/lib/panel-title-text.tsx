@@ -1,6 +1,7 @@
 import type { MenuChoice } from "./menu-parts.ts";
+import { PanelLabelled } from "./panel-labelled.tsx";
+import { PanelTitled } from "./panel-titled.tsx";
 import type { ReactNode } from "react";
-import { useOffered } from "./use-offered.ts";
 
 const FOCUSABLE = 0;
 const NOT_TABBABLE = -1;
@@ -8,6 +9,7 @@ const NOT_TABBABLE = -1;
 interface PanelTitleTextParts {
   readonly label: string;
   readonly detail: string;
+  readonly title: string | null;
   readonly focusable: boolean;
   readonly choices: readonly MenuChoice[];
 }
@@ -20,13 +22,9 @@ function tabIndexOf(focusable: boolean): number {
 }
 
 export function PanelTitleText(parts: PanelTitleTextParts): ReactNode {
-  const title = useOffered<HTMLHeadingElement>({ choices: parts.choices, inForm: false });
-  return (
-    <div className="flex flex-1 items-baseline gap-2">
-      <h2 className="rounded-sm text-sm font-semibold" ref={title} tabIndex={tabIndexOf(parts.focusable)}>
-        {parts.label}
-      </h2>
-      <span className="flex-1 font-mono text-xs text-muted-foreground">{parts.detail}</span>
-    </div>
-  );
+  const tabIndex = tabIndexOf(parts.focusable);
+  if (parts.title !== null) {
+    return <PanelTitled choices={parts.choices} detail={parts.detail} tabIndex={tabIndex} title={parts.title} />;
+  }
+  return <PanelLabelled choices={parts.choices} detail={parts.detail} label={parts.label} tabIndex={tabIndex} />;
 }
