@@ -1,15 +1,13 @@
-import { Array as Arr, Effect, Function, Option, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { During, Spawner, WakeQueue } from "./wake-queue.ts";
+import { Effect, Function, Option } from "effect";
 import { REGISTRATION_SUFFIX, opened } from "./registrations.ts";
 import { dropRegistration, forgetRunnerState, keeperOf } from "./runner-state.ts";
-import { source, start } from "./watch-connection.ts";
-import type { Heard } from "./watch-connection.ts";
 import type { Keeper } from "./runner-state.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
-import type { Scope } from "effect";
 import { callClient } from "./adapters/sdk.ts";
+import { heedMentions } from "./runner-listening.ts";
 import { notJoined } from "./adapters/call-failure.ts";
 import { printErrorLine } from "./output.ts";
 import { saidFailed } from "./wake-run-failure.ts";
@@ -33,10 +31,6 @@ const endedSessionCodes: ReadonlySet<string> = new Set([
   notJoined.code,
 ]);
 
-function isMention(event: Readonly<Heard>): event is Extract<Heard, { readonly type: "inbox-item" }> {
-  return event.type === "inbox-item" && Arr.contains(event.item.reasons, "mention");
-}
-
 function presenceDuring(asAgent: ClientWithAgentSessionState, keeper: Keeper): During {
   const connected = keeper.set("connected");
   return {
@@ -49,20 +43,13 @@ function presenceDuring(asAgent: ClientWithAgentSessionState, keeper: Keeper): D
   };
 }
 
-function listen(
-  listening: Listening,
-  { asAgent, keeper, queue }: Heeding,
-): Effect.Effect<void, CallFailure, Scope.Scope> {
-  return Effect.gen(function* listenAndHear() {
-    const runnerOf = { opened: asAgent, runner: true };
-    const first = yield* start(runnerOf);
-    yield* queue.catchUp;
-    const onConnected = Effect.andThen(keeper.reconnected, listening.connected);
-    yield* source({ first, listening: runnerOf }).pipe(
-      Stream.tap((event) => Effect.when(onConnected, Effect.succeed(event.type === "connected"))),
-      Stream.filter(isMention),
-      Stream.runForEach((event) => queue.hear(event.item)),
-    );
+function listen(listening: Listening, { asAgent, keeper, queue }: Heeding): Effect.Effect<void, CallFailure> {
+  return heedMentions({
+    agent: listening.registered.registration.agent,
+    asAgent,
+    connected: Effect.andThen(keeper.reconnected, listening.connected),
+    queue,
+    replaced: keeper.set("connecting"),
   });
 }
 
@@ -79,7 +66,7 @@ function wakeUntilUnregistered(listening: Listening): Effect.Effect<void, CallFa
         place: listening.place,
         registration,
       });
-      const heard = Effect.scoped(listen(listening, { asAgent, keeper, queue }));
+      const heard = listen(listening, { asAgent, keeper, queue });
       const ended = yield* Effect.exit(Effect.raceFirst(heard, file.beside(REGISTRATION_SUFFIX).untilGone));
       yield* queue.stop;
       yield* forgetRunnerState(file);

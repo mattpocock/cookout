@@ -240,6 +240,7 @@ const migrations: readonly string[] = [
   `ALTER TABLE messages ADD COLUMN deleted_at TEXT;
    ALTER TABLE messages ADD COLUMN deleted_by TEXT;`,
   ADMIN_SETTING_MIGRATION,
+  "CREATE TABLE avatars_to_remove (id TEXT PRIMARY KEY) STRICT;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
