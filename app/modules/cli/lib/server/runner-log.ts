@@ -3,6 +3,7 @@ import {
   DateTime,
   Effect,
   FileSystem,
+  Function,
   Option,
   Order,
   Path,
@@ -99,7 +100,7 @@ function sizesIn({ fs, path }: Files, folder: string): Effect.Effect<readonly Si
         const file = path.join(folder, name);
         const size = Effect.orElseSucceed(
           Effect.map(fs.stat(file), (info) => Number(info.size)),
-          () => NOTHING,
+          Function.constant(NOTHING),
         );
         return Effect.map(size, (bytes) => ({ file, size: bytes }));
       },
@@ -175,16 +176,20 @@ function runnerLog(stateFolder: string): Effect.Effect<RunnerLog, never, FileSys
   });
 }
 
+function eventsInFolder({ fs, path }: Files) {
+  return (folder: string): Effect.Effect<readonly RunnerEvent[]> => {
+    const text = Effect.orElseSucceed(fs.readFileString(path.join(folder, EVENT_LOG)), Function.constant(""));
+    return Effect.flatMap(text, eventsIn);
+  };
+}
+
 const runnerEvents: Effect.Effect<readonly RunnerEvent[], never, FileSystem.FileSystem | Path.Path> = Effect.gen(
   function* readRunnerEvents() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const folder = yield* stateFolderPath;
-    if (Option.isNone(folder)) {
-      return [];
-    }
-    const text = yield* Effect.orElseSucceed(fs.readFileString(path.join(folder.value, EVENT_LOG)), () => "");
-    return yield* eventsIn(text);
+    const events = yield* Effect.transposeOption(Option.map(folder, eventsInFolder({ fs, path })));
+    return Option.getOrElse(events, Arr.empty);
   },
 );
 

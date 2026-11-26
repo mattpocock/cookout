@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Order, Path, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, Function, Option, Order, Path, Schema, String as Str } from "effect";
 import { agentSessionStateFiles } from "./agent-sessions.ts";
 import { parseLine } from "./cli.ts";
 
@@ -155,7 +155,7 @@ function runnerWritten(stateFolder: string): Effect.Effect<string, never, Files>
     const path = yield* Path.Path;
     const events = yield* Effect.orElseSucceed(
       fs.readFileString(path.join(stateFolder, "runner-events.jsonl")),
-      () => "",
+      Function.constant(""),
     );
     const runs = yield* textsIn(path.join(stateFolder, "runs"));
     const sessions = yield* agentSessionStateFiles(stateFolder);

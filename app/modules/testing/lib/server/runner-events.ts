@@ -124,10 +124,7 @@ function wakingAgents(agents: readonly WakingAgent[]): Effect.Effect<WakingAgent
 }
 
 function joinedAgent({ name, waking }: Joined): Effect.Effect<BoardAgent> {
-  return Option.match(Record.get(waking.joined, name), {
-    onNone: () => Effect.die(`${name} never joined`),
-    onSome: Effect.succeed,
-  });
+  return Effect.orDie(Effect.fromOption(Record.get(waking.joined, name)));
 }
 
 export {

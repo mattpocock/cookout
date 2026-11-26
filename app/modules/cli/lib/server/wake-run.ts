@@ -122,8 +122,8 @@ function captured(
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const run = yield* commandOf(woken);
       const output = yield* woken.place.log.runOutput(woken.registration.agent);
-      const handle = yield* spawner.spawn(run);
       yield* startedRun(woken.place.log, woke)(output);
+      const handle = yield* spawner.spawn(run);
       const draining = yield* Effect.forkScoped(Effect.ignore(Stream.runForEach(handle.all, output.write)));
       const exitCode = yield* handle.exitCode;
       yield* Effect.timeoutOption(Fiber.join(draining), DRAIN_AFTER_EXIT);
