@@ -47,9 +47,11 @@ const FIRST_TICK = 1;
 const ONE_LINE = 1;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
+const FOUR_LINES = 4;
 const TICKS_WHILE_WATCHED = 30;
 const EXIT_SUCCESS = 0;
 const isLine = Schema.is(Schema.Struct({ agent: Schema.String, type: Schema.String }));
+const isWakeRun = Schema.is(Schema.Struct({ messages: Schema.Array(Schema.Finite), type: Schema.String }));
 
 const tick = Effect.andThen(TestClock.adjust(TICK), TestClock.withLive(Effect.sleep(PAUSE)));
 const passTime = Effect.forever(tick);
@@ -102,15 +104,17 @@ function wakeEventsIn(
   });
 }
 
-function hasEnded(id: MessageId): (events: readonly (readonly [string, readonly number[]])[]) => boolean {
-  return (events) => Arr.some(events, ([event, messages]) => event === "end" && Arr.contains(messages, id));
+function wokeFor(id: MessageId): (line: unknown) => boolean {
+  return (line) => isWakeRun(line) && line.type === "wake-run" && Arr.contains(line.messages, id);
 }
 
-function untilEnded(
-  log: string,
-  id: MessageId,
-): Effect.Effect<readonly (readonly [string, readonly number[]])[], never, FileSystem.FileSystem> {
-  return Effect.repeat(Effect.andThen(tick, wakeEventsIn(log)), { until: hasEnded(id) });
+function untilWokenFor(runner: StartedRunner, id: MessageId, count: number): Effect.Effect<void> {
+  return Effect.flatMap(linesOf(runner, count), (lines) => {
+    if (Arr.some(lines, wokeFor(id))) {
+      return Effect.void;
+    }
+    return untilWokenFor(runner, id, lines.length + ONE_LINE);
+  });
 }
 
 function anotherMention(
@@ -122,7 +126,8 @@ function anotherMention(
 > {
   return Effect.gen(function* mentionAndWaitForItsRun() {
     const next = yield* mention(attended.on, "@brigid and this one");
-    const events = yield* untilEnded(attended.log, next);
+    yield* untilWokenFor(attended.runner, next, FOUR_LINES);
+    const events = yield* wakeEventsIn(attended.log);
     return { events, next };
   });
 }
