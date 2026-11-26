@@ -130,7 +130,7 @@ function afterUnregistering(waking: Waking): Effect.Effect<Unregistered, never, 
     yield* waking.release;
     const lines = yield* waking.runner.stdoutLines(ONE_RUN);
     const events = yield* wakeEvents(waking.log);
-    return { heard, ignored, left, lines, woken: Arr.map(events, ([, message]) => message) };
+    return { heard, ignored, left, lines, woken: Arr.flatMap(events, ([, messages]) => messages) };
   });
 }
 
@@ -164,7 +164,7 @@ it.effect.each([
 
       expect(result).toMatchObject({ exitCode: EXIT_SUCCESS });
       expect(left).toStrictEqual(["cormac"]);
-      expect(lines).toStrictEqual([{ agent: "cormac", exitCode: 0, message: heard, type: "wake-run" }]);
+      expect(lines).toStrictEqual([{ agent: "cormac", exitCode: 0, messages: [heard], type: "wake-run" }]);
       expect(woken).not.toContain(ignored);
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -180,10 +180,10 @@ it.effect("a wake run in progress finishes when its agent is unregistered", () =
     const events = yield* wakeEvents(waking.log);
 
     expect(result).toMatchObject({ exitCode: EXIT_SUCCESS });
-    expect(lines).toStrictEqual([{ agent: "brigid", exitCode: 0, message, type: "wake-run" }]);
+    expect(lines).toStrictEqual([{ agent: "brigid", exitCode: 0, messages: [message], type: "wake-run" }]);
     expect(events).toStrictEqual([
-      ["start", message],
-      ["end", message],
+      ["start", [message]],
+      ["end", [message]],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

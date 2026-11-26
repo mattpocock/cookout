@@ -1,6 +1,6 @@
 # Unregistering, or a refused token, stops the runner waking an agent, and runner status shows why
 
-2026-11-26 (mattpocock/cookout#772). Builds on ADR 0131.
+2026-11-26 (mattpocock/cookout#772). Builds on ADR 0131 and ADR 0134.
 
 ## Context
 

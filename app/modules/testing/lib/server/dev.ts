@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
-import type { CommandLineNeeds } from "./cli.ts";
+import type { CommandLineNeeds } from "./command-line.ts";
 import type { Scope } from "effect";
-import { startDevCommand } from "./cli.ts";
+import { startDevCommand } from "./command-line.ts";
 
 const DevStartLine = Schema.Struct({
   adminToken: Schema.String,

@@ -55,6 +55,7 @@ function listen(
   return Effect.gen(function* listenAndHear() {
     const runnerOf = { opened: asAgent, runner: true };
     const first = yield* start(runnerOf);
+    yield* queue.catchUp;
     const onConnected = Effect.andThen(keeper.reconnected, listening.connected);
     yield* source({ first, listening: runnerOf }).pipe(
       Stream.tap((event) => Effect.when(onConnected, Effect.succeed(event.type === "connected"))),
@@ -71,7 +72,12 @@ function wakeUntilUnregistered(listening: Listening): Effect.Effect<void, CallFa
       const keeper = yield* keeperOf(file);
       yield* keeper.set("connecting");
       const asAgent = yield* opened(listening.registered);
-      const queue = yield* wakeQueue({ during: presenceDuring(asAgent, keeper), place: listening.place, registration });
+      const queue = yield* wakeQueue({
+        asAgent,
+        during: presenceDuring(asAgent, keeper),
+        place: listening.place,
+        registration,
+      });
       const heard = Effect.scoped(listen(listening, { asAgent, keeper, queue }));
       const ended = yield* Effect.exit(Effect.raceFirst(heard, file.beside(REGISTRATION_SUFFIX).untilGone));
       yield* queue.stop;
