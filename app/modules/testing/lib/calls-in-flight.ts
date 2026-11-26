@@ -23,11 +23,11 @@ interface Registry {
 
 interface Call {
   readonly name: string;
-  readonly test: string | null;
+  readonly test: unknown;
 }
 
 interface Held {
-  readonly test: string | null;
+  readonly test: unknown;
   readonly names: ReadonlySet<string>;
   readonly every: boolean;
 }
@@ -54,12 +54,8 @@ function stalled({ names, stallMs }: Stalling & { readonly names: readonly strin
   );
 }
 
-function runningTest(): string | null {
-  const test = TestRunner.getCurrentTest();
-  if (typeof test !== "object") {
-    return null;
-  }
-  return test.id;
+function runningTest(): unknown {
+  return TestRunner.getCurrentTest();
 }
 
 function createHolds(): Pick<Registry, "hold" | "holds" | "holdsAll"> {
