@@ -24,7 +24,7 @@
  * - `TextArea` is a labelled box to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts a new line, and, while its owner is `choosing` from suggestions, is a combobox naming the highlighted option as its active descendant, where the arrows move it, Enter or Tab picks it and Escape closes the list. It takes focus when it first appears if `focused`, and puts the caret at the end of any text it appears with. Files pasted into it, whether the clipboard holds them as files or only as items of kind `file`, go to `onPasteFiles` instead of the text; it needs text to send only while `required`.
  * - `SubmitButton` sends a `Form`.
  * - `SendButton` is its paper-plane icon form, named and tooltipped by `label`.
- * - `AttachButton` is a paperclip icon button, named and tooltipped by `label`, that opens the file picker for several files and hands what is picked to `onFiles`.
+ * - `AttachButton` is a paperclip icon button, named by `label` and tooltipped by it with its `keys` (a `Shortcut`, also in `aria-keyshortcuts`), that opens the file picker for several files and hands what is picked to `onFiles`.
  * - `AvatarField` is a named group for setting an avatar: a `pick` button that opens the file picker for one file of the `accept` types and hands it to `onFile`, and anything under it, such as an `AvatarPreview`, its buttons and an `Alert`.
  * - `AvatarPreview` is a picked avatar before it is saved, at a profile's size, a circle for a human and a rounded square for an agent.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
