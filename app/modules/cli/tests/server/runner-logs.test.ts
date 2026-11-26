@@ -170,12 +170,10 @@ it.effect("a wake run that times out logs the timeout", () =>
     const { on } = yield* wakingAgents([{ name: "brigid", settings: { hang: true }, timeoutMinutes: 1 }]);
     const id = yield* timeoutOf(on, "brigid");
     const events = yield* runnerEventsIn(on);
-    const status = yield* runCookout({ args: ["runner", "status"], env: { COOKOUT_STATE_DIR: on.folder } });
 
     expect(eventsOfKind({ agent: "brigid", type: "timeout" })(events)).toMatchObject([
       { at: SOME_TIME, messages: [id], timedOutAfterMinutes: 1 },
     ]);
-    expect(status.stdout).toMatch(/^brigid .* last wake run \S+: timed out after 1 min, output in \S+$/mu);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

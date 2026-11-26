@@ -3,12 +3,14 @@ import type { CommandLineNeeds, RunnerEvent, TestCookout, WakeBoard } from "../.
 import {
   commandLineServices,
   eventsOfKind,
+  joinWaking,
   mention,
   runCookout,
   runnerEventsIn,
   runnerEventsOf,
   testCookout,
   untilRunnerEvents,
+  wakeBoard,
   wakingAgents,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -17,6 +19,7 @@ import type { Scope } from "effect";
 type Needs = CommandLineNeeds | TestCookout | Scope.Scope;
 
 const SOME_TIME: unknown = expect.stringMatching(/^\d{4}-\d\d-\d\dT/u);
+const STARTED_AT = "2026-11-26T10:00:00.000Z";
 const ANYTHING: unknown = expect.anything();
 const PRINTED = "printed-by-the-wake-run";
 const BIG_PRINT_REPEAT = 200_000;
@@ -137,5 +140,25 @@ it.effect("runner status shows each agent's last wake run: when it started, its 
     });
     expect(json.stdoutJson).not.toMatchObject({ registrations: [{}, { lastRun: ANYTHING }] });
     expect(text.stdout).toMatch(/^brigid .* last wake run \S+: exited 3, output in \S+$/mu);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("runner status says when the last wake run timed out", () =>
+  Effect.gen(function* timedOutRun() {
+    const fs = yield* FileSystem.FileSystem;
+    const on = yield* wakeBoard;
+    yield* joinWaking({ name: "brigid", on, settings: { log: `${on.folder}/wake.log` } });
+    const log = Arr.join(
+      [
+        `{"agent":"brigid","at":"${STARTED_AT}","output":"run.log","type":"wake-run-start"}`,
+        `{"agent":"brigid","at":"2026-11-26T10:01:00.000Z","timedOutAfterMinutes":1,"type":"timeout"}`,
+        "",
+      ],
+      "\n",
+    );
+    yield* Effect.orDie(fs.writeFileString(`${on.folder}/runner-events.jsonl`, log));
+    const text = yield* runCookout({ args: ["runner", "status"], env: { COOKOUT_STATE_DIR: on.folder } });
+
+    expect(text.stdout).toMatch(/^brigid .* last wake run \S+: timed out after 1 min, output in run\.log$/mu);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
