@@ -9,7 +9,7 @@ Spec: #1
 
 ## Run it
 
-The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.18 or later.
+The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.19 or later.
 
 ```
 COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
