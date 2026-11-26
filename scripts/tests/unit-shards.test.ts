@@ -90,3 +90,25 @@ it("a CI unit-test shard weighs each file by its whole recorded cost, setup and 
     ],
   ]);
 });
+
+it("a CI unit-test shard takes its share of each Vitest project's files, since Vitest runs a shard's projects one after another", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const projects = new Map([
+    ["server/one.test.ts", "server"],
+    ["server/two.test.ts", "server"],
+    ["web/big.test.ts", "web"],
+    ["web/small.test.ts", "web"],
+  ]);
+  const files = { ok: true, value: [...projects.keys()] } as const;
+  const gh = recordedBy({ costs: { "server/one": 30, "server/two": 30, "web/big": 40, "web/small": 20 }, spans: {} });
+
+  expect(
+    ["1/2", "2/2"].map((shard) => unitShardPlan({ cwd: CWD, files, gh, projects, run: RUN, shard }).args),
+  ).toStrictEqual([
+    ["--outputFile.blob=.vitest/blob/blob-1-2.json", `${CWD}/server/one.test.ts`, `${CWD}/web/big.test.ts`],
+    ["--outputFile.blob=.vitest/blob/blob-2-2.json", `${CWD}/server/two.test.ts`, `${CWD}/web/small.test.ts`],
+  ]);
+});

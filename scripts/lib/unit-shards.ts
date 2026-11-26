@@ -13,25 +13,31 @@ const VITEST = "node_modules/vitest/vitest.mjs";
 const EXIT_SUCCESS = 0;
 const NONE = 0;
 
-interface UnitPlanning extends Planning {
-  readonly cwd: string;
+interface UnitTestFiles {
+  readonly files: Outcome<readonly string[]>;
+  readonly projects: ReadonlyMap<string, string>;
 }
 
-function listedFile(entry: unknown, cwd: string): readonly string[] {
+interface UnitPlanning extends Planning {
+  readonly cwd: string;
+  readonly projects?: ReadonlyMap<string, string>;
+}
+
+function listedFile(entry: unknown, cwd: string): readonly (readonly [string, string])[] {
   const file = text(field(entry, "file")) ?? "";
   if (file === "") {
     return [];
   }
-  return [path.relative(cwd, file)];
+  return [[path.relative(cwd, file), text(field(entry, "projectName")) ?? ""]];
 }
 
-function unitTestFiles(cwd: string): Outcome<readonly string[]> {
+function unitTestFiles(cwd: string): UnitTestFiles {
   const listed = spawnSync(process.execPath, [VITEST, "list", "--filesOnly", "--json"], { cwd, encoding: "utf8" });
   if (listed.status !== EXIT_SUCCESS) {
-    return { ok: false, reason: `vitest list failed: ${listed.stderr.trim()}` };
+    return { files: { ok: false, reason: `vitest list failed: ${listed.stderr.trim()}` }, projects: new Map() };
   }
-  const files = (list(parseJson(listed.stdout)) ?? []).flatMap((entry) => listedFile(entry, cwd));
-  return { ok: true, value: [...new Set(files)].toSorted() };
+  const projects = new Map((list(parseJson(listed.stdout)) ?? []).flatMap((entry) => listedFile(entry, cwd)));
+  return { files: { ok: true, value: [...projects.keys()].toSorted() }, projects };
 }
 
 function recordedCosts(report: string, cwd: string): readonly FileTiming[] {
@@ -42,9 +48,10 @@ function recordedCosts(report: string, cwd: string): readonly FileTiming[] {
   return readTimings({ base: cwd, file: report, runner: "vitest" });
 }
 
-function unitShardPlan({ cwd, ...planning }: UnitPlanning): Plan {
+function unitShardPlan({ cwd, projects = new Map(), ...planning }: UnitPlanning): Plan {
   return shardPlan({
     ...planning,
+    groupOf: (file) => projects.get(file) ?? "",
     recording: {
       fallback: "file count",
       name: "unit",
