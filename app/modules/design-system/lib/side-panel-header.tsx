@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 interface SidePanelHeaderParts {
   readonly label: string;
   readonly detail: string;
+  readonly title?: string | null | undefined;
   readonly closeHref: string;
   readonly closeLabel: string;
   readonly menu?: ActionMenuParts | null | undefined;
@@ -36,7 +37,7 @@ export function SidePanelHeader(parts: SidePanelHeaderParts): ReactNode {
   const { after, before } = aloneLinks(parts.alone ?? null);
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
-      <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
+      <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} title={parts.title ?? null} />
       <PanelAloneLink link={before} />
       <CloseLink href={parts.closeHref} label={parts.closeLabel} onFollow={parts.onClose ?? null} />
       <PanelAloneLink link={after} />
