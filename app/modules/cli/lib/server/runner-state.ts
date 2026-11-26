@@ -1,8 +1,10 @@
 import type { AgentSessionStateFailure, AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
-import { Array as Arr, DateTime, Effect, Function, Option, Order, Ref, Schema } from "effect";
+import { Array as Arr, DateTime, Effect, Function, Option, Order, Predicate, Ref, Schema } from "effect";
 import { DROPPED_SUFFIX, RUNNER_SUFFIX, forgetRegistration, registeredSessions } from "./registrations.ts";
 import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
+import { lastRuns, runnerEvents } from "./runner-log.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
+import type { LastRun } from "./runner-log.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import { filesBeside } from "./agent-session-state.ts";
 
@@ -30,6 +32,7 @@ type Dropped = typeof DroppedSchema.Type;
 interface RegistrationStatus {
   readonly agent: string;
   readonly directory: string;
+  readonly lastRun?: LastRun;
   readonly state: State;
 }
 
@@ -107,15 +110,15 @@ function stateOf(file: AgentSessionStateFile): Effect.Effect<State, AgentSession
   });
 }
 
-function statusOf({
-  file,
-  registration,
-}: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure> {
-  return Effect.map(stateOf(file), (state) => ({
-    agent: registration.agent,
-    directory: registration.directory,
-    state,
-  }));
+function statusOf(runs: ReadonlyMap<string, LastRun>) {
+  return ({ file, registration }: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure> =>
+    Effect.map(stateOf(file), (state) => {
+      const status = { agent: registration.agent, directory: registration.directory, state };
+      return Option.match(Option.fromNullishOr(runs.get(registration.agent)), {
+        onNone: () => status,
+        onSome: (lastRun) => ({ ...status, lastRun }),
+      });
+    });
 }
 
 const byAgent = Order.mapInput(Order.String, ({ agent }: { readonly agent: string }) => agent);
@@ -123,7 +126,9 @@ const byAgent = Order.mapInput(Order.String, ({ agent }: { readonly agent: strin
 const runnerStatus: Effect.Effect<RunnerStatus, AgentSessionStateFailure, AgentSessionStateNeeds> = Effect.gen(
   function* readRunnerStatus() {
     const registered = yield* registeredSessions;
-    const registrations = yield* Effect.forEach(registered, statusOf, { concurrency: 1 });
+    const events = yield* runnerEvents;
+    const runs = lastRuns(events);
+    const registrations = yield* Effect.forEach(registered, statusOf(runs), { concurrency: 1 });
     const dropped = yield* filesBeside({ schema: DroppedSchema, suffix: DROPPED_SUFFIX });
     return {
       dropped: Arr.sort(
@@ -142,8 +147,38 @@ const stateText: Readonly<Record<State, string>> = {
   running: "running a wake run",
 };
 
+type Ending = NonNullable<LastRun["ended"]>;
+
+function failedCode({ error, type }: Ending): string {
+  return Option.match(Option.fromNullishOr(error), { onNone: () => type, onSome: ({ code }) => code });
+}
+
+function endingText(ended: Ending): string {
+  if (Predicate.isNumber(ended.exitCode)) {
+    return `exited ${String(ended.exitCode)}`;
+  }
+  if (Predicate.isNumber(ended.timedOutAfterMinutes)) {
+    return `timed out after ${String(ended.timedOutAfterMinutes)} min`;
+  }
+  return `failed: ${failedCode(ended)}`;
+}
+
+function howItEnded({ ended }: LastRun): string {
+  return Option.match(Option.fromNullishOr(ended), { onNone: () => "still running", onSome: endingText });
+}
+
+function lastRunText(lastRun: LastRun | undefined): string {
+  return Option.match(Option.fromNullishOr(lastRun), {
+    onNone: () => "",
+    onSome: (run) => `  last wake run ${run.startedAt}: ${howItEnded(run)}, output in ${run.output}`,
+  });
+}
+
 function statusLines({ dropped, registrations }: RunnerStatus): readonly string[] {
-  const held = Arr.map(registrations, ({ agent, directory, state }) => `${agent}  ${stateText[state]}  ${directory}`);
+  const held = Arr.map(
+    registrations,
+    ({ agent, directory, lastRun, state }) => `${agent}  ${stateText[state]}  ${directory}${lastRunText(lastRun)}`,
+  );
   const gone = Arr.map(
     dropped,
     ({ agent, code, directory, droppedAt }) => `${agent}  dropped: ${code} at ${droppedAt}  ${directory}`,
