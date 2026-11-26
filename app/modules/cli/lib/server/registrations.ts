@@ -12,6 +12,8 @@ import { pathVariable } from "../../../config/server.ts";
 
 const SESSION_ID_PLACEHOLDER = "{session-id}";
 const REGISTRATION_SUFFIX = ".registration.json";
+const RUNNER_SUFFIX = ".runner.json";
+const DROPPED_SUFFIX = ".dropped.json";
 const PRETTY = 2;
 const NOTHING = {};
 const AT_LEAST_ONE_MINUTE = 1;
@@ -104,7 +106,8 @@ function register({
     const { identity, url } = stored.value;
     const registration = yield* registrationFor({ agent: identity, harness, sessionId, url, wake });
     const text = yield* Effect.orDie(encodeRegistration(registration));
-    yield* file.writeBeside(REGISTRATION_SUFFIX, text);
+    yield* file.beside(REGISTRATION_SUFFIX).write(text);
+    yield* file.beside(DROPPED_SUFFIX).remove;
     return registration;
   });
 }
@@ -133,6 +136,17 @@ function registerHere(asked: Asked): Effect.Effect<Registration, CallFailure, Ag
       }),
     ),
   );
+}
+
+function forgetRegistration(file: AgentSessionStateFile): Effect.Effect<void, AgentSessionStateFailure> {
+  return Effect.andThen(file.beside(REGISTRATION_SUFFIX).remove, file.beside(RUNNER_SUFFIX).remove);
+}
+
+function notRegistered(agent: string): CallFailure {
+  return {
+    code: "not_registered",
+    message: `No session is registered to wake ${agent}. \`cookout runner status\` lists the registered agents.`,
+  };
 }
 
 function opened({ file, registration }: RegisteredSession): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
@@ -166,5 +180,32 @@ const registeredSessions: Effect.Effect<
   Arr.map(found, ({ file, value }) => ({ file, registration: value })),
 );
 
-export { SESSION_ID_PLACEHOLDER, TIMEOUT_DESCRIPTION, opened, register, registerHere, registeredSessions, wakeOf };
+function unregister(
+  agent: string,
+): Effect.Effect<{ readonly unregistered: string }, CallFailure, AgentSessionStateNeeds> {
+  return Effect.gen(function* unregisterAgent() {
+    const registered = yield* registeredSessions;
+    const found = Arr.filter(registered, ({ registration }) => registration.agent === agent);
+    if (!Arr.isReadonlyArrayNonEmpty(found)) {
+      return yield* Effect.fail(notRegistered(agent));
+    }
+    yield* Effect.forEach(found, ({ file }) => forgetRegistration(file), { concurrency: 1, discard: true });
+    return { unregistered: agent };
+  });
+}
+
+export {
+  DROPPED_SUFFIX,
+  REGISTRATION_SUFFIX,
+  RUNNER_SUFFIX,
+  SESSION_ID_PLACEHOLDER,
+  TIMEOUT_DESCRIPTION,
+  forgetRegistration,
+  opened,
+  register,
+  registerHere,
+  registeredSessions,
+  unregister,
+  wakeOf,
+};
 export type { RegisteredSession, Registration, Wake };

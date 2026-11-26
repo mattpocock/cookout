@@ -5,8 +5,8 @@ import type { CallFailure, ClientWithAgentSessionState, CredentialSource, JoinPl
 import type { Registration, Wake } from "./registrations.ts";
 import { answered, refused } from "./output.ts";
 import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
+import { forgetRegistration, register, wakeOf } from "./registrations.ts";
 import { joinByBrowser, joinByCode } from "./agent-join.ts";
-import { register, wakeOf } from "./registrations.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { cookoutUrl } from "../../../config/server.ts";
@@ -247,6 +247,9 @@ function joiningOf({ as, code, ...flags }: JoinOptions): Effect.Effect<Joining, 
 
 function leaveAndForget(opened: ClientWithAgentSessionState): Effect.Effect<LeaveResponse, CallFailure> {
   return Effect.gen(function* leaveAgentSession() {
+    if (Option.isSome(opened.joined)) {
+      yield* forgetRegistration(opened.joined.value.file);
+    }
     const left = yield* callClient((client) => client.leave())(opened);
     if (Option.isSome(opened.joined)) {
       yield* opened.joined.value.file.remove;

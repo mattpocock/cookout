@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, Option, Order, Schema, String as Str } from "effect";
 import type { Path } from "effect";
 import { agentSessionStateFiles } from "./agent-sessions.ts";
 import { parseLine } from "./cli.ts";
@@ -22,6 +22,7 @@ interface RegistrationFile {
 type Files = FileSystem.FileSystem | Path.Path;
 
 const REGISTRATION_SUFFIX = ".registration.json";
+const BESIDE_SUFFIXES = [REGISTRATION_SUFFIX, ".runner.json", ".dropped.json"];
 const PERMISSIONS = 0o1000;
 
 const Words = Schema.Array(Schema.String);
@@ -37,6 +38,7 @@ const LoggedSchema = Schema.Struct({
 const isLogged = Schema.is(LoggedSchema);
 
 const hasAgentSessionToken = Schema.is(Schema.Struct({ agentSessionToken: Schema.String }));
+const hasAgent = Schema.is(Schema.Struct({ agent: Schema.String }));
 
 function wakeLogLine({
   argv = [],
@@ -74,10 +76,32 @@ function wakeEvents(
   );
 }
 
+function isStateFile(file: string): boolean {
+  return !Arr.some(BESIDE_SUFFIXES, (suffix) => Str.endsWith(suffix)(file));
+}
+
+function fileKind(registrations: boolean): (file: string) => boolean {
+  if (registrations) {
+    return Str.endsWith(REGISTRATION_SUFFIX);
+  }
+  return isStateFile;
+}
+
 function filesIn(stateFolder: string, registrations: boolean): Effect.Effect<readonly string[], never, Files> {
-  return Effect.map(agentSessionStateFiles(stateFolder), (files) =>
-    Arr.filter(files, (file) => Str.endsWith(REGISTRATION_SUFFIX)(file) === registrations),
-  );
+  return Effect.map(agentSessionStateFiles(stateFolder), (files) => Arr.filter(files, fileKind(registrations)));
+}
+
+function registeredAgentsIn(stateFolder: string): Effect.Effect<readonly string[], never, Files> {
+  return Effect.gen(function* readRegisteredAgents() {
+    const fs = yield* FileSystem.FileSystem;
+    const files = yield* filesIn(stateFolder, true);
+    const texts = yield* Effect.forEach(files, (file) => fs.readFileString(file), { concurrency: 1 });
+    const agents = Arr.filter(Arr.map(texts, parseLine), hasAgent);
+    return Arr.sort(
+      Arr.map(agents, ({ agent }) => agent),
+      Order.String,
+    );
+  }).pipe(Effect.orDie);
 }
 
 function registrationIn(stateFolder: string): Effect.Effect<RegistrationFile, never, Files> {
@@ -101,4 +125,12 @@ function agentSessionTokenIn(stateFolder: string): Effect.Effect<Option.Option<s
   }).pipe(Effect.orDie);
 }
 
-export { type RegistrationFile, type WakeLogLine, agentSessionTokenIn, registrationIn, wakeEvents, wakeLog };
+export {
+  type RegistrationFile,
+  type WakeLogLine,
+  agentSessionTokenIn,
+  registeredAgentsIn,
+  registrationIn,
+  wakeEvents,
+  wakeLog,
+};
