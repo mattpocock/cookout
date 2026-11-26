@@ -14,6 +14,8 @@ name: Check
 #
 # A pull request into v1 runs the same jobs on its merge with v1, plus `browser` ×6: Release's
 # browser job, each shard running only its share of the browser tests the change reaches (#737).
+# Last, once the others have ended, `adr-numbers` checks its new ADRs' numbers against the latest
+# v1 (#827).
 # A merged pull request ran no Check before it, so a broken browser test, a coverage gap or an
 # unformatted file showed only when Release ran. Every reader of Check runs asks for push runs,
 # so a pull_request run never stands in for one.
@@ -186,3 +188,27 @@ jobs:
     uses: ./.github/workflows/browser.yml
     with:
       reached: true
+
+  # Only on a pull request, and last: its ADR numbers against v1 as it is now. Hygiene, in
+  # `static`, checks them against v1 as it was when the run began, so two pull requests whose
+  # Checks ran side by side could each add the same number and turn v1 red once both landed
+  # (#824). This job starts once every other job has ended, red or green, and fetches v1 then, so
+  # the second one's Check fails naming the free number. A worker merges as soon as its Check is
+  # green, so what's left is the few seconds between this job and the merge (#827,
+  # docs/adr/0139-a-pull-request-s-check-ends-by-checking-its-adr-numbers-against-the-latest-v1.md).
+  adr-numbers:
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [static, tests, coverage, e2e-docker, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The whole history, for the merge base with v1, but no file contents beyond scripts/.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/adr-numbers.ts
