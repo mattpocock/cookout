@@ -175,6 +175,7 @@ const KEYS = [
   { action: "toggleThreadClosed", chord: "x", does: "Close its thread, or reopen it", scope: "inbox" },
   { action: "markRowRead", chord: "e", does: "Mark read, and move down to the one below", scope: "inbox" },
   { action: "markRowUnread", chord: "u", does: "Mark unread", scope: "inbox" },
+  { action: "markRowUnread", chord: "Alt+Enter", does: "Mark unread", scope: "inbox" },
   { action: "openRow", chord: "o", does: "Open in its channel", scope: "inbox" },
   { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the Inbox's link", scope: "inbox" },
   { action: "backToRows", chord: "Escape", does: "Back to the rows", scope: "inbox" },
