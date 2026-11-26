@@ -1,4 +1,5 @@
 const SCOPES = [
+  "image viewer",
   "search box",
   "prompt form",
   "text box",
@@ -21,6 +22,7 @@ const TEXT_SCOPES: ReadonlySet<Scope> = new Set(["search box", "text box"]);
 const GROUPS: Readonly<Record<Scope, string>> = {
   "channel row": "Channel in the sidebar",
   everywhere: "Everywhere",
+  "image viewer": "Image viewer",
   inbox: "Inbox row",
   message: "Message",
   "message list": "Message list",
@@ -70,6 +72,8 @@ const KEYS = [
     does: "Mark the channel read, with nothing left to close",
     scope: "everywhere",
   },
+  { action: "previousImage", chord: "ArrowLeft", does: "The message's previous image", scope: "image viewer" },
+  { action: "nextImage", chord: "ArrowRight", does: "The message's next image", scope: "image viewer" },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
   { action: "firstLink", chord: "Home", does: "First link", scope: "sidebar" },
@@ -122,6 +126,12 @@ const KEYS = [
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
   { action: "firstPerson", chord: "Home", does: "First person", scope: "people list" },
   { action: "lastPerson", chord: "End", does: "Last person", scope: "people list" },
+  {
+    action: "leaveProfileField",
+    chord: "Escape",
+    does: "Leave the field, keeping what you typed",
+    scope: "profile panel",
+  },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },

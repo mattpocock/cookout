@@ -13,7 +13,8 @@
  * - `MessageBody` holds a message's rendered Markdown text, `Mention` an `@name` in it. While `foldable`, a body taller than about 12 lines folds: it shows its first 8 lines fading out, and its faded end is an Unfold button (no Tab stop, naming `MessageKeys`' unfold shortcut in `aria-keyshortcuts`) that puts focus on its message and calls `onUnfold`.
  * - `CallChip` is a command call and its data.
  * - `AttachmentList` is a message's named list of attachments, under its text, each in an `AttachmentItem`.
- * - `ImageThumbnail` is an image attachment: a button holding its `AttachmentImage`, scaled to fit 300 by 200 pixels and sized from the image's `size` so it keeps its space while loading (a 300 by 200 box when the size is unknown). Clicking it, or Enter or Space on it, opens the image at full size in a modal dialog named by the image's name, with its `detail` (such as its size) beside the name; Escape or a click outside closes it, and focus returns to the thumbnail.
+ * - `ImageCarousel` holds a message's `images`, in the order the message lists them (its other files left out), for the `ImageThumbnail`s inside it to open: one modal dialog, named by the image it shows, with its `detail` (such as its size) beside the name. With more than one image it shows an "n / total" counter (a `status`) and, on the image's sides, a Previous image and a Next image button, each naming its `MessageKeys` shortcut (Left and Right) in `aria-keyshortcuts`; it stops at the first and last image, with no button on that side there, and never wraps. Escape or a click outside closes it, and focus returns to the thumbnail of the image it showed last.
+ * - `ImageThumbnail` is an image attachment, the image `at` its position in its `ImageCarousel`: a button holding its `AttachmentImage`, scaled to fit 300 by 200 pixels and sized from the image's `size` so it keeps its space while loading (a 300 by 200 box when the size is unknown). Clicking it, or Enter or Space on it, opens its carousel on it.
  * - `AttachmentImage` is an image attachment's picture alone, named by its name: the thumbnail's, or a `small` one (72 by 48 pixels at most) where a button can't go, such as a search result. While it loads, or when it can't be shown, its name stays unseen inside its box.
  * - `FileChip` is any other attachment: its name and `detail` (such as its size) after a file icon, a download link to `href`, or plain text where `href` is `null`. Nothing but an image is ever drawn as one.
  * - `DataToggle` is a message's data folded away.
@@ -34,6 +35,7 @@ export {
   ChannelStart,
   DataToggle,
   FileChip,
+  ImageCarousel,
   ImageThumbnail,
   MessageBody,
   MessageItem,
@@ -57,6 +59,7 @@ export {
 } from "./lib/messages.ts";
 export type {
   ImageBox,
+  ImageThumbnailParts,
   PersonKeysSource,
   MessageShortcuts,
   MessageActionRegistry,
