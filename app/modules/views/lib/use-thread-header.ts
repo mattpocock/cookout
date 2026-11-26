@@ -80,7 +80,7 @@ function useThreadHeader({ alone, channel, closing, menu, state, thread }: Threa
   const keys = useContext(MessageKeys);
   const { watch } = useContext(LandingContext);
   const onClose = useCallback(() => {
-    const opener = hrefOf({ channel, message: thread, name: "thread", thread });
+    const opener = hrefOf({ channel, name: "thread", thread });
     watch(`main article:has(a[href="${CSS.escape(opener)}"])`);
   }, [channel, thread, watch]);
   return useMemo(() => {

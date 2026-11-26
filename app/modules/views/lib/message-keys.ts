@@ -1,4 +1,6 @@
 import type { Act, Action, Keymap } from "../../keymap/index.ts";
+import type { MenuChoice } from "../../design-system/messages.tsx";
+import type { MessageActions } from "./message-actions.ts";
 import { THREAD_PANEL } from "./thread-panel.ts";
 
 const MESSAGE = "article";
@@ -6,7 +8,6 @@ const PANEL = `aside[aria-label="${THREAD_PANEL.thread}"]`;
 const PANEL_PARENT = `${PANEL} article[aria-label="${THREAD_PANEL.parent}"]`;
 const PANEL_REPLY_BOX = `${PANEL} textarea`;
 const PANEL_CLOSE = `${PANEL} > header a[href]`;
-const PANEL_TITLE = `${PANEL} > header h2`;
 const CHANNEL_FEED = 'main [role="feed"]';
 const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
 const FOLD = "[data-closed-fold]";
@@ -14,12 +15,6 @@ const NOT_A_FOLD = `${MESSAGE}:not(${FOLD})`;
 const OPEN_FOLD = `${MESSAGE}${FOLD}[aria-current="true"]`;
 const NEXT = 1;
 const LAST = -1;
-
-interface Pressing {
-  readonly keymap: Keymap;
-  readonly action: Action;
-  readonly whenOpen: string;
-}
 
 function focused(selector: string): boolean {
   const element = globalThis.document.querySelector<HTMLElement>(selector);
@@ -35,13 +30,15 @@ type MessageOf = (target: EventTarget | null) => Element | null;
 interface Clicking {
   readonly keymap: Keymap;
   readonly action: Action;
+}
+
+interface Choosing extends Clicking {
+  readonly actions: MessageActions;
   readonly messageOf: MessageOf;
 }
 
-interface ControlOf {
-  readonly target: EventTarget | null;
-  readonly keys: string;
-  readonly message: MessageOf;
+interface Pressing extends Choosing {
+  readonly whenOpen: string;
 }
 
 function focusedMessage(target: EventTarget | null): Element | null {
@@ -51,18 +48,13 @@ function focusedMessage(target: EventTarget | null): Element | null {
   return target;
 }
 
-function controlFor({ keys, message, target }: ControlOf): HTMLElement | null {
-  const found = message(target);
-  if (found === null) {
-    return null;
-  }
-  return found.querySelector<HTMLElement>(`[aria-keyshortcuts="${keys}"]`);
-}
-
-function clickOn({ action, keymap, messageOf }: Clicking): Act {
+function click({ action, keymap }: Clicking): Act {
   return ({ target }) => {
-    const { keys } = keymap.shortcutOf(action);
-    const control = controlFor({ keys, message: messageOf, target });
+    const found = focusedMessage(target);
+    if (found === null) {
+      return false;
+    }
+    const control = found.querySelector<HTMLElement>(`[aria-keyshortcuts="${keymap.shortcutOf(action).keys}"]`);
     if (control === null) {
       return false;
     }
@@ -71,22 +63,49 @@ function clickOn({ action, keymap, messageOf }: Clicking): Act {
   };
 }
 
-function click(keymap: Keymap, action: Action): Act {
-  return clickOn({ action, keymap, messageOf: focusedMessage });
+function choiceFor({ action, actions, keymap, messageOf }: Choosing, target: EventTarget | null): MenuChoice | null {
+  const message = messageOf(target);
+  if (message === null) {
+    return null;
+  }
+  return actions.choiceOf(message, keymap.shortcutOf(action).keys);
 }
 
-function press({ action, keymap, whenOpen }: Pressing): Act {
+function hashOf(href: string): string {
+  return new URL(href, globalThis.location.href).hash;
+}
+
+function made(choice: MenuChoice): void {
+  if (choice.href === null) {
+    choice.onSelect();
+    return;
+  }
+  if (choice.onSelect !== null) {
+    choice.onSelect();
+  }
+  globalThis.location.hash = hashOf(choice.href);
+}
+
+function chooseOn(choosing: Choosing): Act {
   return ({ target }) => {
-    const control = controlFor({ keys: keymap.shortcutOf(action).keys, message: focusedMessage, target });
-    if (control === null) {
+    const choice = choiceFor(choosing, target);
+    if (choice === null) {
       return false;
     }
-    if (control instanceof HTMLAnchorElement && control.hash === globalThis.location.hash) {
-      control.click();
-      return focused(whenOpen);
-    }
-    control.click();
+    made(choice);
     return true;
+  };
+}
+
+function press(pressing: Pressing): Act {
+  return ({ target }) => {
+    const choice = choiceFor(pressing, target);
+    if (choice === null) {
+      return false;
+    }
+    const again = choice.href !== null && hashOf(choice.href) === globalThis.location.hash;
+    made(choice);
+    return !again || focused(pressing.whenOpen);
   };
 }
 
@@ -220,56 +239,35 @@ type MessageAction =
   | "toggleThumbsUp"
   | "unfoldMessage";
 
-function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
+interface MessageKeysOf {
+  readonly keymap: Keymap;
+  readonly actions: MessageActions;
+}
+
+function messageActions({ actions, keymap }: MessageKeysOf): Readonly<Record<MessageAction, Act>> {
+  function choose(action: Action): Act {
+    return chooseOn({ action, actions, keymap, messageOf: focusedMessage });
+  }
   return {
     backToChannel,
-    copyMessageLink: click(keymap, "copyMessageLink"),
-    copyMessageText: click(keymap, "copyMessageText"),
-    deleteMessage: click(keymap, "deleteMessage"),
-    markUnread: click(keymap, "markUnread"),
-    openThread: press({ action: "openThread", keymap, whenOpen: PANEL_PARENT }),
-    replyToMessage: press({ action: "replyToMessage", keymap, whenOpen: PANEL_REPLY_BOX }),
-    toggleThreadClosed: click(keymap, "toggleThreadClosed"),
-    toggleThumbsDown: click(keymap, "toggleThumbsDown"),
-    toggleThumbsUp: click(keymap, "toggleThumbsUp"),
-    unfoldMessage: click(keymap, "unfoldMessage"),
+    copyMessageLink: choose("copyMessageLink"),
+    copyMessageText: choose("copyMessageText"),
+    deleteMessage: choose("deleteMessage"),
+    markUnread: choose("markUnread"),
+    openThread: press({ action: "openThread", actions, keymap, messageOf: focusedMessage, whenOpen: PANEL_PARENT }),
+    replyToMessage: press({
+      action: "replyToMessage",
+      actions,
+      keymap,
+      messageOf: focusedMessage,
+      whenOpen: PANEL_REPLY_BOX,
+    }),
+    toggleThreadClosed: choose("toggleThreadClosed"),
+    toggleThumbsDown: choose("toggleThumbsDown"),
+    toggleThumbsUp: choose("toggleThumbsUp"),
+    unfoldMessage: click({ action: "unfoldMessage", keymap }),
   };
 }
 
-type ThreadTitleAction = "copyMessageLink" | "markUnread" | "toggleThreadClosed";
-
-function titleHeader(target: EventTarget | null): Element | null {
-  if (!(target instanceof HTMLElement) || !target.matches(PANEL_TITLE)) {
-    return null;
-  }
-  return target.closest("header");
-}
-
-function boxForm(target: EventTarget | null): Element | null {
-  if (!(target instanceof HTMLTextAreaElement)) {
-    return null;
-  }
-  return target.closest("form");
-}
-
-function scheduleMessage(keymap: Keymap): Act {
-  return clickOn({ action: "scheduleMessage", keymap, messageOf: boxForm });
-}
-
-function threadTitleActions(keymap: Keymap): Readonly<Record<ThreadTitleAction, Act>> {
-  return {
-    copyMessageLink: clickOn({ action: "copyMessageLink", keymap, messageOf: titleHeader }),
-    markUnread: clickOn({ action: "markUnread", keymap, messageOf: titleHeader }),
-    toggleThreadClosed: clickOn({ action: "toggleThreadClosed", keymap, messageOf: titleHeader }),
-  };
-}
-
-export {
-  clickOn,
-  closeThread,
-  focusedOnChannelMessage,
-  messageActions,
-  scheduleMessage,
-  threadPanel,
-  threadTitleActions,
-};
+export { chooseOn, closeThread, focusedOnChannelMessage, messageActions, threadPanel };
+export type { MessageKeysOf };

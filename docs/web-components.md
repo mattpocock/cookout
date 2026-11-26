@@ -57,7 +57,7 @@ Every menu choice (`MenuChoice` in [menu-parts.ts](../app/modules/design-system/
 
 1. Add the action's row to `KEYS` in [keys.ts](../app/modules/keymap/lib/keys.ts): its chord, what it does and the scope it works in. A new key is Proposed until Matt approves it.
 2. Give the choice `keys: keymap.shortcutOf("<action>")`, or the matching `MessageKeys` shortcut inside a message, never a string written by hand.
-3. Bind the action in the view that owns the scope, so the key does what the choice does. A choice whose menu is closed is pressed through its hidden `ChoiceKeys` button, which names the keys in `aria-keyshortcuts`.
+3. Bind the action in the view that owns the scope, so the key does what the choice does. The design system offers a menu's choices to `MessageActions` against the element they act on (a message's `article`, a panel's title, a message box's form), and the bound action runs the choice the registry holds for its keys there, so no hidden control is needed.
 
 ## Check it
 

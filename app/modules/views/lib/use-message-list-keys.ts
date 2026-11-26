@@ -1,10 +1,13 @@
-import { closeThread, messageActions, scheduleMessage, threadPanel, threadTitleActions } from "./message-keys.ts";
+import { closeThread, messageActions, threadPanel } from "./message-keys.ts";
+import { scheduleMessage, threadTitleActions } from "./title-keys.ts";
+import { useContext, useEffect } from "react";
 import type { Keymap } from "../../keymap/index.ts";
 import { MESSAGE_LIST_ACTIONS } from "./message-list-keys.ts";
+import { MessageChoices } from "./message-actions.ts";
 import { createMessageBoxKeys } from "./message-box-keys.ts";
-import { useEffect } from "react";
 
 export function useMessageListKeys(keymap: Keymap): void {
+  const actions = useContext(MessageChoices);
   useEffect(() => {
     const box = createMessageBoxKeys();
     const { document } = globalThis;
@@ -14,11 +17,11 @@ export function useMessageListKeys(keymap: Keymap): void {
     document.addEventListener("focusin", remember);
     const unbind = [
       keymap.bind({ actions: MESSAGE_LIST_ACTIONS, scope: "message list" }),
-      keymap.bind({ actions: messageActions(keymap), scope: "message" }),
+      keymap.bind({ actions: messageActions({ actions, keymap }), scope: "message" }),
       keymap.bind({ actions: box.actions, scope: "text box" }),
-      keymap.bind({ actions: { scheduleMessage: scheduleMessage(keymap) }, scope: "text box" }),
+      keymap.bind({ actions: { scheduleMessage: scheduleMessage({ actions, keymap }) }, scope: "text box" }),
       keymap.bind({
-        actions: { ...threadTitleActions(keymap), closeThread },
+        actions: { ...threadTitleActions({ actions, keymap }), closeThread },
         scope: "thread panel",
         within: threadPanel,
       }),
@@ -29,5 +32,5 @@ export function useMessageListKeys(keymap: Keymap): void {
         each();
       }
     };
-  }, [keymap]);
+  }, [actions, keymap]);
 }

@@ -13,8 +13,7 @@
  * - `FormDialog` is a Radix modal form.
  * - `RunList`.
  * - `FieldNote`.
- * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place.
- * - `ChoiceKeys` is a `hidden` button for each of a menu's choices that has keys and an action (not a link, nor disabled), naming the keys in `aria-keyshortcuts`, so the keymap can press a choice while its menu is closed.
+ * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place and offers its choices to `MessageActions` against its form, so the keymap runs them from the box.
  * - `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was focused when it opened.
  * - `ListDialog` is a Radix modal of a list, titled and described, with a Close button (`close` its text); Escape or Close calls `onClose`, and focus goes back to what was focused when it opened.
  * - `FilterField` is a labelled box whose text its owner holds.
@@ -29,13 +28,13 @@
  * - `AvatarField` is a named group for setting an avatar: a `pick` button that opens the file picker for one file of the `accept` types and hands it to `onFile`, and anything under it, such as an `AvatarPreview`, its buttons and an `Alert`.
  * - `AvatarPreview` is a picked avatar before it is saved, at a profile's size, a circle for a human and a rounded square for an agent.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
- * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
+ * - `Suggestions` is a named listbox of options under a box, such as mentions or Webhook commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
  * - `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`.
  * - `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named groups, drawn by its children, the one at `highlighted` selected and scrolled into view; pressing one calls `onChoose` with its `value`, leaving the box focused.
  * - `ResultOption` is a result's label, detail and children.
  * - `DataArea` is a labelled box to write JSON in, whose text its owner holds.
  * - `LinesArea` is an optional labelled box for lines (`name: value` headers), whose text its owner holds.
- * - `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused. Its Escape is the keymap's: the view that draws it binds `cancelPrompt` to the form, named by its `label`.
+ * - `PromptForm` is a named card in place of a message box that asks for a Webhook command's data, titled, with a Cancel and a submit button, its first field focused. Its Escape is the keymap's: the view that draws it binds `cancelPrompt` to the form, named by its `label`.
  * - `InputField` is a labelled field in a `PromptForm` (text, a number, an integer, a date or a time) whose value its owner holds, marked when required, with its help text and any error under it, both read out as its description.
  * - `PickField` is an `InputField` for one of a list, or none.
  * - `CheckField` is an `InputField` for a checkbox.
@@ -49,7 +48,6 @@ export {
   FieldNote,
   RunList,
   MoreActions,
-  ChoiceKeys,
   ButtonRow,
   TokenText,
   QuietButton,

@@ -17,7 +17,7 @@ interface Registered {
 
 interface InChannel {
   readonly channel: string;
-  readonly command: Registered;
+  readonly webhookCommand: Registered;
 }
 
 interface Opened {
@@ -26,13 +26,13 @@ interface Opened {
 }
 
 interface Filled {
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly field: string;
   readonly value: string;
 }
 
 interface Typed {
-  readonly command: string;
+  readonly webhookCommand: string;
   readonly texts: Readonly<Record<string, string>>;
   readonly checks: readonly string[];
 }
@@ -41,16 +41,16 @@ function pretty(value: unknown): string {
   return JSON.stringify(value, null, INDENT);
 }
 
-async function addCommand(command: Registered): Promise<CookoutClient> {
+async function addWebhookCommand(command: Registered): Promise<CookoutClient> {
   const { name } = command;
   const handler = await newIdentity({ kind: "agent", name, owner: "admin" });
   await adminClient().addCommand({ ...command, schema: command.schema ?? branchSchema, url: nowhere });
   return handler.client;
 }
 
-async function channelWithCommand({ channel, command }: InChannel): Promise<CookoutClient> {
+async function channelWithWebhookCommand({ channel, webhookCommand: command }: InChannel): Promise<CookoutClient> {
   await adminClient().createChannel({ name: channel });
-  return addCommand(command);
+  return addWebhookCommand(command);
 }
 
 async function openChannel({ channel, client = adminClient() }: Opened): Promise<() => void> {
@@ -77,14 +77,14 @@ function promptFor(command: string): HTMLElement {
   return screen.getByRole("form", { name: `Call /${command}` });
 }
 
-async function pick(command: string): Promise<HTMLElement> {
+async function pickWebhookCommand(command: string): Promise<HTMLElement> {
   type(`/${command}`);
   const list = await screen.findByRole("listbox", { name: "Command suggestions" });
   fireEvent.mouseDown(within(list).getByRole("option", { name: new RegExp(`^/${command}`, "u") }));
   return promptFor(command);
 }
 
-function fill({ command, field, value }: Filled): void {
+function fill({ webhookCommand: command, field, value }: Filled): void {
   fireEvent.change(within(promptFor(command)).getByLabelText(field), { target: { value } });
 }
 
@@ -93,16 +93,16 @@ function send(command: string): void {
 }
 
 async function callWith(filled: Filled): Promise<HTMLElement> {
-  const prompt = await pick(filled.command);
+  const prompt = await pickWebhookCommand(filled.webhookCommand);
   fill(filled);
-  send(filled.command);
+  send(filled.webhookCommand);
   return prompt;
 }
 
-async function callWithFields({ checks, command, texts }: Typed): Promise<void> {
-  const prompt = await pick(command);
+async function callWithFields({ checks, webhookCommand: command, texts }: Typed): Promise<void> {
+  const prompt = await pickWebhookCommand(command);
   for (const [field, value] of Object.entries(texts)) {
-    fill({ command, field, value });
+    fill({ field, value, webhookCommand: command });
   }
   for (const field of checks) {
     fireEvent.click(within(prompt).getByLabelText(field));
@@ -111,13 +111,13 @@ async function callWithFields({ checks, command, texts }: Typed): Promise<void> 
 }
 
 export {
-  addCommand,
+  addWebhookCommand,
   callWith,
   callWithFields,
-  channelWithCommand,
+  channelWithWebhookCommand,
   noProperties,
   openChannel,
-  pick,
+  pickWebhookCommand,
   pretty,
   suggestedFor,
   type,
