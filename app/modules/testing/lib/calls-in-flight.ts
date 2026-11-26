@@ -1,5 +1,5 @@
 import { configure, getConfig } from "@testing-library/react";
-import { onTestFinished } from "vitest";
+import { TestRunner } from "vitest";
 
 interface CallsInFlight {
   readonly track: <Client extends object>(client: Client) => Client;
@@ -23,6 +23,13 @@ interface Registry {
 
 interface Call {
   readonly name: string;
+  readonly test: string | null;
+}
+
+interface Held {
+  readonly test: string | null;
+  readonly names: ReadonlySet<string>;
+  readonly every: boolean;
 }
 
 const QUIET_TURNS = 3;
@@ -47,22 +54,29 @@ function stalled({ names, stallMs }: Stalling & { readonly names: readonly strin
   );
 }
 
+function runningTest(): string | null {
+  const test = TestRunner.getCurrentTest();
+  if (typeof test !== "object") {
+    return null;
+  }
+  return test.id;
+}
+
 function createHolds(): Pick<Registry, "hold" | "holds" | "holdsAll"> {
-  const held = new Set<string>();
-  const every = { held: false };
+  let held: Held = { every: false, names: new Set(), test: runningTest() };
+  function current(): Held {
+    if (held.test !== runningTest()) {
+      held = { every: false, names: new Set(), test: runningTest() };
+    }
+    return held;
+  }
   return {
     hold: (names) => {
-      every.held ||= names.length === NONE;
-      for (const name of names) {
-        held.add(name);
-      }
-      onTestFinished(() => {
-        every.held = false;
-        held.clear();
-      });
+      const { every, names: before, test } = current();
+      held = { every: every || names.length === NONE, names: new Set([...before, ...names]), test };
     },
-    holds: (name) => every.held || held.has(name),
-    holdsAll: () => every.held,
+    holds: (name) => current().every || current().names.has(name),
+    holdsAll: () => current().every,
   };
 }
 
@@ -79,14 +93,15 @@ function createRegistry(): Registry {
     inFlight.delete(call);
     wakeAll();
   }
+  function waitedFor(): readonly Call[] {
+    const test = runningTest();
+    return [...inFlight].filter((call) => call.test === test && !holds.holds(call.name));
+  }
   return {
     ...holds,
     add: (name) => {
-      const call: Call = { name };
+      const call: Call = { name, test: runningTest() };
       inFlight.add(call);
-      onTestFinished(() => {
-        inFlight.delete(call);
-      });
       return () => {
         forget(call);
       };
@@ -97,12 +112,12 @@ function createRegistry(): Registry {
         waiting.delete(wake);
       };
     },
-    count: () => [...inFlight].filter((call) => !holds.holds(call.name)).length,
+    count: () => waitedFor().length,
     hold: (names) => {
       holds.hold(names);
       wakeAll();
     },
-    names: () => [...inFlight].filter((call) => !holds.holds(call.name)).map((call) => call.name),
+    names: () => waitedFor().map((call) => call.name),
   };
 }
 
