@@ -118,6 +118,12 @@ const KEYS = [
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
   { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
+  {
+    action: "leaveProfileField",
+    chord: "Escape",
+    does: "Leave the field, keeping what you typed",
+    scope: "profile panel",
+  },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
