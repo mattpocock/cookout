@@ -42,6 +42,7 @@ it.live("two agents, each in its own cookout processes, post, reply and mention 
     const thread = yield* second.cookout("thread", "get", String(top));
 
     expect(thread).toMatchObject(succeeded);
+    expect("throwaway #786: break e2e-docker").toBe("on purpose");
     expect(thread.stdoutJson).toMatchObject({
       parent: { author: { name: first.name }, id: top, kind: "top-level", mentions: [second.name], replyCount: 2 },
       replies: [
