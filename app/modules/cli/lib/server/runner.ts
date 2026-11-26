@@ -56,6 +56,14 @@ const runAll: Effect.Effect<never, CallFailure, AgentSessionStateNeeds | Spawner
     if (!Arr.isReadonlyArrayNonEmpty(registered) || Option.isNone(place)) {
       return yield* Effect.fail(noRegistrations);
     }
+    yield* Effect.forEach(
+      registered,
+      ({ registration }) => place.value.log.record(registration.agent, { type: "runner-start" }),
+      {
+        concurrency: 1,
+        discard: true,
+      },
+    );
     yield* listenAll(registered, place.value);
     return yield* Effect.fail(runnerStopped);
   }),

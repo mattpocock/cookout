@@ -42,6 +42,7 @@ type Titling = Required<Pick<TopLevelMessage, "title" | "titleSetAt" | "titleSet
 type NewMessage = MessageContent & {
   readonly replyTo?: MessageId;
   readonly close?: true;
+  readonly title?: string;
 };
 
 type AppendMessageResult =
@@ -166,12 +167,19 @@ function unreplied<Content extends MessageContent>(content: Content): Content & 
   };
 }
 
+function titlingOf({ author, createdAt, title }: NewMessage): Partial<Titling> {
+  if (Predicate.isUndefined(title)) {
+    return {};
+  }
+  return { title, titleSetAt: createdAt, titleSetBy: author.name };
+}
+
 function placed({ id, message, placement }: Placing): Message {
-  const content = Struct.omit(message, ["close"]);
+  const content = Struct.omit(message, ["close", "title"]);
   if (placement.status === "reply") {
     return { ...content, id, kind: "reply", replyTo: placement.parent };
   }
-  return { ...unreplied(content), id };
+  return { ...unreplied(content), ...titlingOf(message), id };
 }
 
 function closingBy(reply: Reply): Closing {

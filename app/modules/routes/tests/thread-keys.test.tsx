@@ -134,6 +134,30 @@ it("the message keys leave a key alone off a message and with no control to pres
   close();
 });
 
+function hiddenKeysIn(find: () => HTMLElement): readonly (string | null)[] {
+  const keys: (string | null)[] = [];
+  for (const control of find().querySelectorAll("[hidden][aria-keyshortcuts]")) {
+    keys.push(control.getAttribute("aria-keyshortcuts"));
+  }
+  return keys;
+}
+
+it("no message holds a hidden control for its keys, in the channel or the thread panel", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close } = await opened("web-message-keys-no-hidden");
+  const message = await channelMessage();
+  message.focus();
+  await pressedThenOn("t", threadParent);
+  await within(thread()).findByText("An answer.");
+
+  expect([hiddenKeysIn(() => message), hiddenKeysIn(thread)]).toStrictEqual([[], []]);
+
+  close();
+});
+
 function shownChannelMessage(): HTMLElement {
   const feed = screen.getByRole("feed", { name: "Messages" });
   const article = within(feed).queryByText("The parent.");

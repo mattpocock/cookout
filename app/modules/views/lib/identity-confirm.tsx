@@ -5,6 +5,15 @@ import type { IdentityActions } from "../../composer/index.ts";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
+const AFTER_DELETE = "main h1";
+
+function returnToOf(confirming: string | null): string | null {
+  if (confirming === "delete") {
+    return AFTER_DELETE;
+  }
+  return null;
+}
+
 interface IdentityConfirmProps {
   readonly actions: IdentityActions;
   readonly identity: Identity;
@@ -26,6 +35,7 @@ export function IdentityConfirm(props: IdentityConfirmProps): ReactNode {
       onConfirm={handleConfirm}
       open={state.confirming !== null}
       pending={state.action.status === "sending"}
+      returnTo={returnToOf(state.confirming)}
       title={question.title}
     />
   );
