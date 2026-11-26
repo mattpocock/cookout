@@ -1,4 +1,16 @@
-import { Array as Arr, Duration, Effect, FileSystem, Option, Path, Predicate, Schedule, Schema } from "effect";
+import {
+  Array as Arr,
+  Deferred,
+  Duration,
+  Effect,
+  FileSystem,
+  Option,
+  Path,
+  Predicate,
+  Schedule,
+  Schema,
+  Stream,
+} from "effect";
 import type {
   BoardAgent,
   CommandLineNeeds,
@@ -17,6 +29,7 @@ import {
   startRunner,
   testCookout,
   wakeBoard,
+  wakeEvents,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { MessageId } from "../../../messages/index.ts";
@@ -39,7 +52,7 @@ const POLL = Schedule.spaced("20 millis");
 const ONE_LINE = 1;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
-const DEATH_POLLS = 250;
+const NO_PID = 0;
 const JUST_BEFORE_DEFAULT = 9;
 const SEQUENTIAL = { concurrency: 1 } as const;
 const encode = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
@@ -65,19 +78,54 @@ function live<Value, Needed>(effect: Effect.Effect<Value, never, Needed>): Effec
   return TestClock.withLive(effect);
 }
 
-function untilExists(file: string): Effect.Effect<void, never, FileSystem.FileSystem> {
-  const exists = Effect.orDie(Effect.flatMap(FileSystem.FileSystem, (fs) => fs.exists(file)));
-  return live(Effect.asVoid(Effect.repeat(exists, { schedule: POLL, until: (found) => found })));
+function onceFound<Found>(
+  folder: string,
+  look: Effect.Effect<Option.Option<Found>, never, FileSystem.FileSystem>,
+): Effect.Effect<Found, never, FileSystem.FileSystem> {
+  return Effect.gen(function* untilFound() {
+    const fs = yield* FileSystem.FileSystem;
+    const ready = yield* Deferred.make<boolean>();
+    function onReady(): void {
+      Deferred.doneUnsafe(ready, Effect.succeed(true));
+    }
+    const changes = Stream.merge(fs.watch(folder, { onReady }), Stream.fromEffect(Deferred.await(ready)));
+    const found = yield* changes.pipe(
+      Stream.mapEffect(() => look),
+      Stream.filter(Option.isSome),
+      Stream.runHead,
+    );
+    return Option.getOrThrow(Option.flatten(found));
+  }).pipe(Effect.orDie);
+}
+
+function pidIn(file: string): Effect.Effect<Option.Option<number>, never, FileSystem.FileSystem> {
+  return Effect.gen(function* readPid() {
+    const fs = yield* FileSystem.FileSystem;
+    const text = yield* Effect.option(fs.readFileString(file));
+    return Option.filter(Option.map(text, Number), (pid) => Number.isInteger(pid) && pid > NO_PID);
+  });
 }
 
 function childPid(folder: string): Effect.Effect<number, never, FileSystem.FileSystem> {
-  return Effect.gen(function* readChildPid() {
+  return onceFound(folder, pidIn(`${folder}/child.pid`));
+}
+
+function runStarted(folder: string): Effect.Effect<void, never, FileSystem.FileSystem> {
+  const log = `${folder}/wake.log`;
+  const look = Effect.gen(function* startLogged() {
     const fs = yield* FileSystem.FileSystem;
-    const file = `${folder}/child.pid`;
-    yield* untilExists(file);
-    const text = yield* Effect.orDie(fs.readFileString(file));
-    return Number(text);
+    const exists = yield* Effect.orDie(fs.exists(log));
+    if (!exists) {
+      return Option.none();
+    }
+    const events = yield* wakeEvents(log);
+    return Arr.findFirst(events, ([event]) => event === "start");
   });
+  return Effect.asVoid(onceFound(folder, look));
+}
+
+function oncePastMinutes(folder: string, minutes: number): Effect.Effect<void, never, FileSystem.FileSystem> {
+  return Effect.andThen(runStarted(folder), TestClock.adjust(Duration.minutes(minutes)));
 }
 
 function fixed(folder: string): Effect.Effect<void, never, FileSystem.FileSystem> {
@@ -123,18 +171,6 @@ function isAlive(pid: number): Effect.Effect<boolean, never, FileSystem.FileSyst
   });
 }
 
-function untilDead(pid: number): Effect.Effect<boolean, never, FileSystem.FileSystem> {
-  return live(Effect.repeat(isAlive(pid), { schedule: POLL, times: DEATH_POLLS, until: (alive) => !alive }));
-}
-
-function stdoutAfter(stdoutNow: Effect.Effect<readonly unknown[]>, minutes: number): Effect.Effect<readonly unknown[]> {
-  return Effect.gen(function* advanceAndRead() {
-    yield* TestClock.adjust(Duration.minutes(minutes));
-    yield* live(Effect.sleep("200 millis"));
-    return yield* stdoutNow;
-  });
-}
-
 it.effect("a run that outlives its timeout is killed with its children, and its thread hears that it timed out", () =>
   Effect.gen(function* timesOut() {
     const { folder, on, runner } = yield* brigidWaking({
@@ -146,7 +182,7 @@ it.effect("a run that outlives its timeout is killed with its children, and its 
     const before = yield* isAlive(pid);
     yield* TestClock.adjust("2 minutes");
     const [lines, after, replies] = yield* Effect.all(
-      [runner.stdoutLines(ONE_LINE), untilDead(pid), repliesUntil(on, first, ONE_LINE)],
+      [runner.stdoutLines(ONE_LINE), isAlive(pid), repliesUntil(on, first, ONE_LINE)],
       SEQUENTIAL,
     );
 
@@ -223,13 +259,8 @@ it.effect("a wake run's timeout is 10 minutes unless the registration gives its 
   Effect.gen(function* defaultTimeout() {
     const { folder, on, runner } = yield* brigidWaking({ settings: () => ({ ack: true, hang: true }) });
     const first = yield* mention({ ada: on.ada, text: "@brigid hang a while" });
-    yield* live(
-      Effect.repeat(
-        answer(() => on.ada.client.getThread(first)),
-        { schedule: POLL, times: 5 },
-      ),
-    );
-    const early = yield* stdoutAfter(runner.stdoutNow, JUST_BEFORE_DEFAULT);
+    yield* oncePastMinutes(folder, JUST_BEFORE_DEFAULT);
+    const early = yield* runner.stdoutNow;
     yield* TestClock.adjust("1 minute");
     const lines = yield* runner.stdoutLines(ONE_LINE);
     const registered = yield* registrationIn(folder);
