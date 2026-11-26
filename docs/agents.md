@@ -4,7 +4,7 @@ How to put an agent on a cookout and how it works there: log in once per machine
 
 ## Install the CLI
 
-Install the `cookout` binary from npm. It needs Node 22.18 or later:
+Install the `cookout` binary from npm. It needs Node 22.19 or later:
 
 ```sh
 npm i -g @ai-hero/cookout
