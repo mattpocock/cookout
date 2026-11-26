@@ -1,8 +1,9 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import type { CliResult, WatchRun, Watched } from "./cli.ts";
+import type { CliResult, WatchRun, Watched } from "./command-line.ts";
 import { Deferred, Effect, Fiber, Option, Path, Schema, Stream, pipe } from "effect";
-import { cliResult, parseLine, watched } from "./cli.ts";
+import { cliResult, watched } from "./command-line.ts";
 import type { Scope } from "effect";
+import { parseLine } from "./cli.ts";
 
 interface BinaryRun {
   readonly args: readonly string[];

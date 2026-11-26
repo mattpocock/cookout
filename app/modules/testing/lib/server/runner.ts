@@ -1,8 +1,9 @@
 import { Array as Arr, Deferred, Effect, Fiber, Path, Queue, Schema } from "effect";
 import type { Console, Scope } from "effect";
-import { exitCodeAfter, exitCodeOf, parseLine, verbLayers } from "./cli.ts";
-import type { CommandLineNeeds } from "./cli.ts";
+import { exitCodeAfter, exitCodeOf, verbLayers } from "./command-line.ts";
+import type { CommandLineNeeds } from "./command-line.ts";
 import { TestConsole } from "effect/testing";
+import { parseLine } from "./cli.ts";
 import { runCookout as runCommandLine } from "../../../cli/server.ts";
 
 interface FakeWakeSettings {
@@ -10,6 +11,8 @@ interface FakeWakeSettings {
   readonly exitCode?: number;
   readonly log: string;
   readonly reply?: string;
+  readonly sdkReply?: string;
+  readonly tokenFile?: string;
   readonly touch?: string;
   readonly waitFor?: string;
 }

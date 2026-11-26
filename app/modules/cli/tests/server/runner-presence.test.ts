@@ -7,7 +7,7 @@ import {
   answer,
   boardAgent,
   commandLineServices,
-  fakeWakeCommand,
+  joinWaking,
   runCookout,
   startRunner,
   testCookout,
@@ -49,15 +49,6 @@ function nextPresence({ feed }: Pick<Waking, "feed">): Effect.Effect<Presence> {
   );
 }
 
-function joinWaking(on: WakeBoard, release: string): Effect.Effect<void, never, Needs> {
-  return Effect.gen(function* joinBrigidWaking() {
-    const path = yield* Path.Path;
-    const joined = yield* boardAgent({ board: on, name: AGENT });
-    const wake = yield* fakeWakeCommand({ log: path.join(on.folder, "wake.log"), waitFor: release });
-    yield* runCookout({ args: ["join", "--as", AGENT, "--wake", "--", ...wake], env: joined.env });
-  });
-}
-
 const runnerWaking: Effect.Effect<Waking, never, Needs> = Effect.gen(function* startRunnerForBrigid() {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -65,7 +56,11 @@ const runnerWaking: Effect.Effect<Waking, never, Needs> = Effect.gen(function* s
   const on = yield* wakeBoard;
   const feed = yield* watchingAllChannels(on.ada);
   const release = path.join(on.folder, "release");
-  yield* joinWaking(on, release);
+  yield* joinWaking({
+    name: AGENT,
+    on,
+    settings: { ack: true, log: path.join(on.folder, "wake.log"), waitFor: release },
+  });
   const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
   return { cookout, feed, on, release: Effect.orDie(fs.writeFileString(release, "go")), runner };
 });
