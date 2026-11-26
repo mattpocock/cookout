@@ -1,0 +1,216 @@
+import { Array as Arr, Effect, Order, Queue, Ref } from "effect";
+import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
+import type { InboxItem, MessageId } from "../../../sdk/index.ts";
+import type { ChildProcessSpawner } from "effect/process";
+import type { Registration } from "./registrations.ts";
+import type { RunPlace } from "./wake-run.ts";
+import type { Scope } from "effect";
+import { callClient } from "./adapters/sdk.ts";
+import { printLine } from "./output.ts";
+import { wakeRun } from "./wake-run.ts";
+
+const RUNS_PER_MENTION = 2;
+const NONE = 0;
+const ONE = 1;
+
+type Spawner = ChildProcessSpawner.ChildProcessSpawner;
+
+interface Waiting {
+  readonly held: boolean;
+  readonly queued: readonly InboxItem[];
+  readonly runs: ReadonlyMap<MessageId, number>;
+  readonly running: boolean;
+}
+
+interface Heard {
+  readonly fresh: readonly InboxItem[];
+  readonly running: boolean;
+}
+
+interface Waking {
+  readonly asAgent: ClientWithAgentSessionState;
+  readonly place: RunPlace;
+  readonly registration: Registration;
+}
+
+interface WakeQueue {
+  readonly catchUp: Effect.Effect<void, CallFailure>;
+  readonly hear: (item: InboxItem) => Effect.Effect<void>;
+  readonly standDown: Effect.Effect<void>;
+}
+
+const byMessage = Order.mapInput(Order.Number, (item: InboxItem): number => item.message.id);
+
+function sameMessage(one: InboxItem, other: InboxItem): boolean {
+  return one.message.id === other.message.id;
+}
+
+function idsOf(items: readonly InboxItem[]): readonly MessageId[] {
+  return Arr.map(items, ({ message }) => message.id);
+}
+
+function isMention(item: InboxItem): boolean {
+  return Arr.contains(item.reasons, "mention");
+}
+
+function runsOf(waiting: Waiting, id: MessageId): number {
+  return waiting.runs.get(id) ?? NONE;
+}
+
+function withHeard(items: readonly InboxItem[]) {
+  return (waiting: Waiting): readonly [Heard, Waiting] => {
+    const known = new Set([...waiting.runs.keys(), ...idsOf(waiting.queued)]);
+    const unknown = Arr.filter(items, ({ message }) => !known.has(message.id));
+    const fresh = Arr.dedupeWith(unknown, sameMessage);
+    return [
+      { fresh, running: waiting.running },
+      { ...waiting, queued: [...waiting.queued, ...fresh] },
+    ];
+  };
+}
+
+function withRun(given: readonly InboxItem[]) {
+  return (waiting: Waiting): Waiting => {
+    const counted = Arr.map(idsOf(given), (id) => [id, runsOf(waiting, id) + ONE] as const);
+    return { ...waiting, runs: new Map([...waiting.runs, ...counted]) };
+  };
+}
+
+function forgetting(waiting: Waiting, items: readonly InboxItem[]): ReadonlyMap<MessageId, number> {
+  const ids = new Set(idsOf(items));
+  return new Map(Arr.filter([...waiting.runs], ([id]: readonly [MessageId, number]) => !ids.has(id)));
+}
+
+function withRetried(unread: readonly InboxItem[]) {
+  return (waiting: Waiting): Waiting => {
+    const again = Arr.filter(unread, ({ message }) => runsOf(waiting, message.id) < RUNS_PER_MENTION);
+    if (waiting.held) {
+      return { ...waiting, runs: forgetting(waiting, again) };
+    }
+    return { ...waiting, queued: [...again, ...waiting.queued] };
+  };
+}
+
+function withHeld(waiting: Waiting): Waiting {
+  return { ...waiting, held: true, queued: [], runs: forgetting(waiting, waiting.queued) };
+}
+
+function withReleased(waiting: Waiting): Waiting {
+  return { ...waiting, held: false };
+}
+
+function takeQueued(waiting: Waiting): readonly [readonly InboxItem[], Waiting] {
+  return [waiting.queued, { ...waiting, queued: [], running: true }];
+}
+
+function doneRunning(waiting: Waiting): Waiting {
+  return { ...waiting, running: false };
+}
+
+function inboxOf(asAgent: ClientWithAgentSessionState): Effect.Effect<readonly InboxItem[], CallFailure> {
+  return Effect.map(callClient((client) => client.inbox())(asAgent), ({ items }) => items);
+}
+
+function unreadAmong(items: readonly InboxItem[]) {
+  const ids = new Set(idsOf(items));
+  return (inbox: readonly InboxItem[]): readonly InboxItem[] => {
+    const unread = Arr.filter(inbox, ({ message }) => ids.has(message.id));
+    return Arr.sort(Arr.dedupeWith(unread, sameMessage), byMessage);
+  };
+}
+
+function stillUnread(
+  asAgent: ClientWithAgentSessionState,
+  items: readonly InboxItem[],
+): Effect.Effect<readonly InboxItem[]> {
+  return inboxOf(asAgent).pipe(
+    Effect.map(unreadAmong(items)),
+    Effect.orElseSucceed(() => items),
+  );
+}
+
+function mentionsOf(asAgent: ClientWithAgentSessionState): Effect.Effect<readonly InboxItem[], CallFailure> {
+  return Effect.map(inboxOf(asAgent), (items) => Arr.filter(items, isMention));
+}
+
+interface Queued extends Waking {
+  readonly change: (next: (waiting: Waiting) => Waiting) => Effect.Effect<Waiting>;
+  readonly take: Effect.Effect<readonly InboxItem[]>;
+}
+
+function presenceDuring(
+  asAgent: ClientWithAgentSessionState,
+): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
+  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
+  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
+  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
+}
+
+function runGiven({ asAgent, change, place, registration }: Queued) {
+  return (given: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
+    Effect.gen(function* runAndRetry() {
+      yield* change(withRun(given));
+      const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
+      yield* presenceDuring(asAgent)(run);
+      const unread = yield* stillUnread(asAgent, given);
+      yield* change(withRetried(unread));
+    });
+}
+
+function runOrSkip(queued: Queued) {
+  return (items: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
+    Effect.flatMap(stillUnread(queued.asAgent, items), (unread) => {
+      if (Arr.isReadonlyArrayNonEmpty(unread)) {
+        return runGiven(queued)(unread);
+      }
+      return printLine({ agent: queued.registration.agent, messages: idsOf(items), type: "wake-skipped" });
+    });
+}
+
+function nextRun(queued: Queued): Effect.Effect<boolean, never, Spawner> {
+  return Effect.gen(function* runWhatIsQueued() {
+    const items = yield* queued.take;
+    yield* Effect.when(runOrSkip(queued)(items), Effect.succeed(Arr.isReadonlyArrayNonEmpty(items)));
+    const { queued: left } = yield* queued.change(doneRunning);
+    return Arr.isReadonlyArrayNonEmpty(left);
+  });
+}
+
+function runUntilEmpty(queued: Queued): Effect.Effect<void, never, Spawner> {
+  return Effect.flatMap(nextRun(queued), (more) => {
+    if (more) {
+      return runUntilEmpty(queued);
+    }
+    return Effect.void;
+  });
+}
+
+function sayWaiting(agent: string) {
+  return (message: MessageId): Effect.Effect<void> => printLine({ agent, message, type: "mention-waiting" });
+}
+
+function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope | Spawner> {
+  return Effect.gen(function* serialWakeRuns() {
+    const { agent } = waking.registration;
+    const state = yield* Ref.make<Waiting>({ held: false, queued: [], running: false, runs: new Map() });
+    const signal = yield* Queue.unbounded<true>();
+    function hearAll(items: readonly InboxItem[]): Effect.Effect<void> {
+      return Effect.gen(function* queueMentions() {
+        const { fresh, running } = yield* Ref.modify(state, withHeard(items));
+        const waiting = Effect.forEach(idsOf(fresh), sayWaiting(agent), { concurrency: 1, discard: true });
+        yield* Effect.when(waiting, Effect.succeed(running));
+        yield* Queue.offer(signal, true);
+      });
+    }
+    function change(next: (waiting: Waiting) => Waiting): Effect.Effect<Waiting> {
+      return Ref.updateAndGet(state, next);
+    }
+    const drain = runUntilEmpty({ ...waking, change, take: Ref.modify(state, takeQueued) });
+    const nextSignal = Effect.andThen(Queue.take(signal), drain);
+    yield* Effect.forkScoped(Effect.forever(nextSignal));
+    const catchUp = Effect.andThen(change(withReleased), Effect.flatMap(mentionsOf(waking.asAgent), hearAll));
+    return { catchUp, hear: (item: InboxItem) => hearAll([item]), standDown: Effect.asVoid(change(withHeld)) };
+  });
+}
+
+export { type WakeQueue, wakeQueue };

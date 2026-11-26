@@ -39,7 +39,7 @@ interface TakenBack {
 }
 
 interface HeldThroughRelease {
-  readonly events: readonly (readonly [string, number])[];
+  readonly events: readonly (readonly [string, readonly number[]])[];
   readonly lines: readonly unknown[];
   readonly stillWatching: boolean;
 }
@@ -108,7 +108,7 @@ function typesIn(lines: readonly unknown[]): readonly (readonly [string, string]
 
 function wakeEventsIn(
   log: string,
-): Effect.Effect<readonly (readonly [string, number])[], never, FileSystem.FileSystem> {
+): Effect.Effect<readonly (readonly [string, readonly number[]])[], never, FileSystem.FileSystem> {
   return Effect.gen(function* eventsSoFar() {
     const fs = yield* FileSystem.FileSystem;
     const exists = yield* Effect.orDie(fs.exists(log));
@@ -212,8 +212,8 @@ it.effect("once the terminal watch closes and the agent is offline, a mention le
     ]);
     expect(Option.isSome(back)).toBe(true);
     expect(events).toStrictEqual([
-      ["start", id],
-      ["end", id],
+      ["start", [id]],
+      ["end", [id]],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -238,10 +238,10 @@ it.effect("a mention waiting behind a wake run doesn't start while the terminal 
     ]);
     expect(stillWatching).toBe(true);
     expect(events).toStrictEqual([
-      ["start", first],
-      ["end", first],
+      ["start", [first]],
+      ["end", [first]],
     ]);
-    expect(events).not.toContainEqual(["start", second]);
+    expect(events).not.toContainEqual(["start", [second]]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
@@ -257,9 +257,9 @@ it.effect("another registered agent is woken as normal while the first is held b
       [BRIGID, "watch-replaced"],
       [CORMAC, "wake-run"],
     ]);
-    expect(Arr.filter(events, ([, message]) => message === id)).toStrictEqual([
-      ["start", id],
-      ["end", id],
+    expect(Arr.filter(events, ([, messages]) => Arr.contains(messages, id))).toStrictEqual([
+      ["start", [id]],
+      ["end", [id]],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

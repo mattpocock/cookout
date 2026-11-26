@@ -127,7 +127,7 @@ function recordedBy(reports: FakeCi["reports"]): (args: readonly string[]) => Ou
 function downloadFails(args: readonly string[]): Outcome<string> {
   const [verb] = args;
   if (verb === "run") {
-    return { ok: false, reason: "gh run download failed: HTTP 503" };
+    return { ok: false, reason: "gh run download failed: HTTP 404" };
   }
   return recordedBy({ "test-timings-browser-1": { alpha: 50, bravo: 40 } })(args);
 }
@@ -244,7 +244,7 @@ it("a CI shard that can't read the recorded times fails rather than split on its
     browserShardPlan({ files, gh: downloadFails, run: RUN, shard: "2/3" }),
   ]).toStrictEqual([
     { args: [], failure: `browser shard 1/3 ${unsplit}: gh api failed: offline`, line: "" },
-    { args: [], failure: `browser shard 2/3 ${unsplit}: gh run download failed: HTTP 503`, line: "" },
+    { args: [], failure: `browser shard 2/3 ${unsplit}: gh run download failed: HTTP 404`, line: "" },
   ]);
 });
 
