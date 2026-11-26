@@ -9,7 +9,6 @@ import type { Token } from "../../../identities/index.ts";
 import { adjustableClock } from "./adjustable-clock.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { triggerCallerLive } from "../../../triggers/server.ts";
-import { viteDevServer } from "./web.ts";
 
 interface DevCookout {
   readonly adminToken: string;
@@ -45,7 +44,11 @@ function webUrlFor(
   { probe, web }: DevCookoutOptions,
 ): Effect.Effect<string, never, FileSystem.FileSystem | Scope.Scope> {
   return Option.match(web, {
-    onNone: () => viteDevServer({ cookoutUrl: url, probe }),
+    onNone: () =>
+      Effect.gen(function* startVite() {
+        const { viteDevServer } = yield* Effect.promise(() => import("./web.ts"));
+        return yield* viteDevServer({ cookoutUrl: url, probe });
+      }),
     onSome: () => Effect.succeed(url),
   });
 }

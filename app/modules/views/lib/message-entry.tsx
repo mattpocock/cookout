@@ -1,7 +1,7 @@
 import type { ChannelName, Message, MessageId, ReadReceipt, TopLevelMessage } from "../../sdk/index.ts";
 import type { MenuClosing, Reply } from "./use-message-menu.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
-import { openThreadHref, threadHref, useMarkOf } from "./message-marks.ts";
+import { openThreadHref, threadHref, titleOf, useMarkOf } from "./message-marks.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
 import { MessageEntryBody } from "./message-entry-body.tsx";
 import { MessageItem } from "../../design-system/messages.tsx";
@@ -36,6 +36,14 @@ interface MessageEntryProps {
   readonly reply: Reply | null;
   readonly opened: boolean;
   readonly spaced: boolean;
+  readonly titled: boolean;
+}
+
+function shownTitle(props: MessageEntryProps): string | null {
+  if (!props.titled) {
+    return null;
+  }
+  return titleOf(props.row.message);
 }
 
 function MessageEntryView(props: MessageEntryProps): ReactNode {
@@ -66,6 +74,7 @@ function MessageEntryView(props: MessageEntryProps): ReactNode {
       presence={presence}
       onAction={handleReply}
       spaced={props.spaced}
+      title={shownTitle(props)}
       replyOnHover={message.kind === "top-level" || props.reply !== null}
       threadHref={openThreadHref({ channel: props.channel, message })}
       threadOnHover={message.kind === "top-level"}
