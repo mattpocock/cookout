@@ -130,3 +130,41 @@ it("the message keys leave a key alone off a message and with no control to pres
 
   close();
 });
+
+function shownChannelMessage(): HTMLElement {
+  const feed = screen.getByRole("feed", { name: "Messages" });
+  const article = within(feed).queryByText("The parent.");
+  if (article === null) {
+    throw new TypeError("The parent isn't shown in the channel");
+  }
+  return article.closest("article") ?? article;
+}
+
+async function oldThreadOpened(channel: string): Promise<() => void> {
+  const admin = adminClient();
+  await admin.createChannel({ name: channel });
+  const { message } = await admin.createMessage({ channel, text: "The parent." });
+  await admin.createMessage({ channel, replyTo: message.id, text: "An answer." });
+  await Promise.all(
+    ["One.", "Two.", "Three.", "Four.", "Five."].map(async (text) => {
+      await admin.createMessage({ channel, text });
+    }),
+  );
+  const close = openAt({ client: admin, hash: `#/channels/${channel}/threads/${String(message.id)}`, pageSize: 2 });
+  await screen.findByText("An answer.");
+  return close;
+}
+
+it("← in a thread whose message isn't loaded in the channel loads older messages until it is, and goes to it", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await oldThreadOpened("web-message-keys-old-thread");
+  threadParent().focus();
+  const pressed = pressedOn("ArrowLeft");
+
+  expect([pressed, await focusedOn(shownChannelMessage)]).toStrictEqual([true, true]);
+
+  close();
+});

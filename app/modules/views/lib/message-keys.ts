@@ -130,8 +130,55 @@ function openInChannel(): HTMLElement | null {
   return besideOpenFold();
 }
 
+function olderButtonOf(feed: unknown): HTMLButtonElement | null {
+  if (!(feed instanceof HTMLElement) || feed.id === "" || !feed.isConnected) {
+    return null;
+  }
+  return globalThis.document.querySelector<HTMLButtonElement>(`button[aria-controls="${CSS.escape(feed.id)}"]`);
+}
+
+interface Paging {
+  readonly feed: unknown;
+  readonly from: unknown;
+}
+
+function pagedBack({ feed, from }: Paging): boolean {
+  if (globalThis.document.activeElement !== from || focusedOn(openInChannel())) {
+    return true;
+  }
+  const older = olderButtonOf(feed);
+  if (older === null) {
+    return true;
+  }
+  if (!older.disabled) {
+    older.click();
+  }
+  return false;
+}
+
+function pageBackTo(feed: unknown): void {
+  const paging = { feed, from: globalThis.document.activeElement };
+  if (pagedBack(paging)) {
+    return;
+  }
+  const watch = new MutationObserver(() => {
+    if (pagedBack(paging)) {
+      watch.disconnect();
+    }
+  });
+  watch.observe(globalThis.document.body, { attributes: true, childList: true, subtree: true });
+}
+
 function focusedOnChannelMessage(): boolean {
-  return focusedOn(openInChannel());
+  if (focusedOn(openInChannel())) {
+    return true;
+  }
+  const feed = channelFeed();
+  if (olderButtonOf(feed) === null) {
+    return false;
+  }
+  pageBackTo(feed);
+  return true;
 }
 
 function inPanel(target: EventTarget | null): boolean {
