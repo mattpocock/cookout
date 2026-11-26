@@ -6,10 +6,9 @@ interface MessageActions extends MessageActionRegistry {
 }
 
 const NO_CHOICES: readonly MenuChoice[] = [];
-const UNKEYED = { keys: "", label: "" } as const;
 
 function keyed(keys: string): (choice: MenuChoice) => boolean {
-  return ({ keys: shortcut = UNKEYED }) => shortcut.keys === keys;
+  return ({ keys: shortcut }) => shortcut.keys === keys;
 }
 
 function createMessageActions(): MessageActions {

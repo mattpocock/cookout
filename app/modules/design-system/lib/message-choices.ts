@@ -71,7 +71,7 @@ export function useMessageChoices({
         (choice): MenuChoice => ({
           href: null,
           icon: "react",
-          keys: { keys: choice.key, label: choice.key },
+          keys: choice.keys,
           label: `React with ${choice.symbol}`,
           onSelect: choice.onReact,
         }),
