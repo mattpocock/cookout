@@ -1,11 +1,14 @@
+import { closeSync, mkdirSync, mkdtempSync, openSync, readdirSync, rmSync } from "node:fs";
 import { field, list, parseJson, text } from "./json.ts";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import type { FileTiming } from "./slowest-files.ts";
 import type { Outcome } from "./tools.ts";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 
 type Gh = (args: readonly string[]) => Outcome<string>;
+
+type Download = (artifact: string, dir: string) => Outcome<string>;
 
 interface Recorded {
   readonly run: string;
@@ -13,6 +16,7 @@ interface Recorded {
 }
 
 interface Artifact {
+  readonly artifact: string;
   readonly createdAt: string;
   readonly name: string;
   readonly run: string;
@@ -26,6 +30,8 @@ interface Timings {
 }
 
 const NONE = 0;
+const EXIT_SUCCESS = 0;
+const DOWNLOAD_TIMEOUT_MS = 60_000;
 const ATTEMPTS = 3;
 const FIRST = 1;
 const RETRY_MS = 5000;
@@ -33,6 +39,7 @@ const SLEEP_SLOT = 0;
 const TRANSIENT = /HTTP 5\d\d|connection reset|connection refused|unexpected EOF|i\/o timeout|ECONNRESET|ETIMEDOUT/iv;
 
 interface Asking {
+  readonly download?: Download;
   readonly gh: Gh;
   readonly recording: Timings;
   readonly run: string;
@@ -48,12 +55,12 @@ function textIn(json: unknown, key: string): string {
 }
 
 function artifactOf(artifact: unknown): readonly Artifact[] {
-  const run = field(field(artifact, "workflow_run"), "id");
+  const [id, run] = [field(artifact, "id"), field(field(artifact, "workflow_run"), "id")];
   const [createdAt, name] = [textIn(artifact, "created_at"), textIn(artifact, "name")];
-  if (field(artifact, "expired") !== false || typeof run !== "number" || createdAt === "") {
+  if (field(artifact, "expired") !== false || typeof id !== "number" || typeof run !== "number" || createdAt === "") {
     return [];
   }
-  return [{ createdAt, name, run: String(run) }];
+  return [{ artifact: String(id), createdAt, name, run: String(run) }];
 }
 
 function artifactsBefore(listing: string, createdAt: string): readonly Artifact[] {
@@ -69,14 +76,53 @@ function timingsIn(dir: string, recording: Timings): readonly FileTiming[] {
     .flatMap((file) => recording.read(path.join(dir, file)));
 }
 
+function unzipped(zip: string, dir: string): Outcome<string> {
+  const ran = spawnSync("unzip", ["-q", "-o", zip, "-d", dir], { encoding: "utf8" });
+  rmSync(zip, { force: true });
+  if (ran.status !== EXIT_SUCCESS) {
+    return { ok: false, reason: `unzip ${zip} failed: ${`${ran.stderr}${String(ran.error ?? "")}`.trim()}` };
+  }
+  return { ok: true, value: "" };
+}
+
+function zipFetched(cwd: string, args: readonly string[], zip: string): Outcome<string> {
+  const out = openSync(zip, "w");
+  try {
+    const ran = spawnSync("gh", args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", out, "pipe"],
+      timeout: DOWNLOAD_TIMEOUT_MS,
+    });
+    if (ran.status !== EXIT_SUCCESS) {
+      return { ok: false, reason: `gh ${args.join(" ")} failed: ${`${ran.stderr}${String(ran.error ?? "")}`.trim()}` };
+    }
+    return { ok: true, value: "" };
+  } finally {
+    closeSync(out);
+  }
+}
+
+function artifactDownload(cwd: string): Download {
+  return (artifact, dir) => {
+    mkdirSync(dir, { recursive: true });
+    const zip = path.join(dir, `${artifact}.zip`);
+    const fetched = zipFetched(cwd, ["api", `repos/{owner}/{repo}/actions/artifacts/${artifact}/zip`], zip);
+    if (!fetched.ok) {
+      rmSync(zip, { force: true });
+      return fetched;
+    }
+    return unzipped(zip, dir);
+  };
+}
+
 interface Downloading {
-  readonly args: readonly string[];
-  readonly gh: Gh;
+  readonly fetch: () => Outcome<string>;
   readonly sleep: (ms: number) => void;
 }
 
-function withRetries({ args, gh, sleep }: Downloading, attempt = FIRST): Outcome<string> {
-  const ran = gh(args);
+function withRetries({ fetch, sleep }: Downloading, attempt = FIRST): Outcome<string> {
+  const ran = fetch();
   if (ran.ok || !TRANSIENT.test(ran.reason)) {
     return ran;
   }
@@ -84,21 +130,17 @@ function withRetries({ args, gh, sleep }: Downloading, attempt = FIRST): Outcome
     return { ok: false, reason: `${ran.reason} (gave up after ${String(ATTEMPTS)} attempts)` };
   }
   sleep(RETRY_MS);
-  return withRetries({ args, gh, sleep }, attempt + FIRST);
+  return withRetries({ fetch, sleep }, attempt + FIRST);
 }
 
 function downloaded(
-  { gh, recording, sleep = sleepFor }: Asking,
+  { download = artifactDownload(process.cwd()), recording, sleep = sleepFor }: Asking,
   artifacts: readonly Artifact[],
 ): Outcome<readonly FileTiming[]> {
   const dir = mkdtempSync(path.join(tmpdir(), `${recording.name}-timings-`));
   try {
-    for (const { name, run } of artifacts) {
-      const ran = withRetries({
-        args: ["run", "download", run, "--name", name, "--dir", path.join(dir, name)],
-        gh,
-        sleep,
-      });
+    for (const { artifact, name } of artifacts) {
+      const ran = withRetries({ fetch: () => download(artifact, path.join(dir, name)), sleep });
       if (!ran.ok) {
         return ran;
       }
@@ -147,13 +189,24 @@ function newestBefore({ gh, recording, run }: Asking): Reading<Newest> {
   );
 }
 
+function newestOfEachName(newestFirst: readonly Artifact[]): readonly Artifact[] {
+  const names = new Set<string>();
+  return newestFirst.filter((artifact) => {
+    const seen = names.has(artifact.name);
+    names.add(artifact.name);
+    return !seen;
+  });
+}
+
 function runArtifacts({ gh, recording, run }: Asking, createdAt: string): Outcome<readonly Artifact[]> {
   const listing = gh(["api", `repos/{owner}/{repo}/actions/runs/${run}/artifacts?per_page=100`]);
   if (!listing.ok) {
     return listing;
   }
-  const artifacts = artifactsBefore(listing.value, createdAt);
-  return { ok: true, value: artifacts.filter((artifact) => artifact.name.startsWith(recording.prefix)) };
+  const artifacts = artifactsBefore(listing.value, createdAt).filter((artifact) =>
+    artifact.name.startsWith(recording.prefix),
+  );
+  return { ok: true, value: newestOfEachName(artifacts) };
 }
 
 function recordedTimings(asking: Asking): Reading<Recorded> {
@@ -172,5 +225,5 @@ function recordedTimings(asking: Asking): Reading<Recorded> {
   return { kind: "read", value: { run: newest.value.run, timings: timings.value } };
 }
 
-export type { Gh, Reading, Recorded, Timings };
+export type { Download, Gh, Reading, Recorded, Timings };
 export { recordedTimings };
