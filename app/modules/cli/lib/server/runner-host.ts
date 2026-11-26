@@ -1,4 +1,4 @@
-import { Array as Arr, Context, Effect, FileSystem, Option, String as Str } from "effect";
+import { Array as Arr, Context, Effect, FileSystem, Function, Option, String as Str } from "effect";
 import type { CallFailure } from "./adapters/sdk.ts";
 
 interface RunnerHost {
@@ -20,7 +20,7 @@ const SYSTEMD_ON = /^systemd\s*=\s*true$/iu;
 function userId(): number {
   return Option.getOrElse(
     Option.map(Option.fromNullishOr(process.getuid), (getuid) => getuid()),
-    () => NO_UID,
+    Function.constant(NO_UID),
   );
 }
 
