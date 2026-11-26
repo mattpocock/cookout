@@ -18,7 +18,7 @@ const schema = {
 const nowhere = "http://127.0.0.1:9/command";
 interface InChannel {
   readonly channel: string;
-  readonly command: string;
+  readonly webhookCommand: string;
 }
 
 interface Opened {
@@ -26,7 +26,7 @@ interface Opened {
   readonly channel: string;
 }
 
-async function channelWithCommand({ channel, command }: InChannel): Promise<CookoutClient> {
+async function channelWithWebhookCommand({ channel, webhookCommand: command }: InChannel): Promise<CookoutClient> {
   const admin = adminClient();
   await admin.createChannel({ name: channel });
   const { token } = await createTestAgent({ by: admin, name: command, owner: "admin" });
@@ -62,10 +62,10 @@ async function openAsCaller({ channel, page }: Opened): Promise<void> {
   await page.getByRole("textbox", { exact: true, name: "Message" }).pressSequentially(`/${unique("browser-call-box")}`);
 }
 
-test("a command call and its result reply show their data", async ({ page }) => {
+test("a Webhook command call and its result reply show their data", async ({ page }) => {
   const channel = unique("browser-command-shows");
   const command = unique("browser-show-call");
-  const handler = await channelWithCommand({ channel, command });
+  const handler = await channelWithWebhookCommand({ channel, webhookCommand: command });
   const { threadId } = await adminClient().callCommand(command, {
     channel,
     data: { branch: "main" },
@@ -91,10 +91,13 @@ test("a command call and its result reply show their data", async ({ page }) => 
   ]);
 });
 
-test("a person calls a command from the message box by keyboard, and a refusal shows by its field", async ({
+test("a person calls a Webhook command from the message box by keyboard, and a refusal shows by its field", async ({
   page,
 }) => {
-  await channelWithCommand({ channel: unique("browser-command-call"), command: unique("browser-call-box") });
+  await channelWithWebhookCommand({
+    channel: unique("browser-command-call"),
+    webhookCommand: unique("browser-call-box"),
+  });
   await openAsCaller({ channel: unique("browser-command-call"), page });
 
   const branch = await pickByKeyboard(page);

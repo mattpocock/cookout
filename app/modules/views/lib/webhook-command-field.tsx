@@ -4,14 +4,14 @@ import type { ReactNode } from "react";
 import { textIn } from "./prompt-fields.ts";
 import { useCallback } from "react";
 
-interface CommandFieldProps {
+interface WebhookCommandFieldProps {
   readonly field: PromptField;
   readonly typed: Typed;
   readonly error: string | null;
   readonly onEdit: (name: string, value: string | boolean) => void;
 }
 
-export function CommandField(props: CommandFieldProps): ReactNode {
+export function WebhookCommandField(props: WebhookCommandFieldProps): ReactNode {
   const { error, field, onEdit } = props;
   const { help, name, required } = field;
   const handleEdit = useCallback(

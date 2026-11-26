@@ -1,5 +1,12 @@
 import { adminClient, agentShown, clientWith, newIdentity, revocableView } from "./identities.ts";
-import { callWith, callWithFields, channelWithCommand, noProperties, openChannel, pretty } from "./commands.ts";
+import {
+  callWith,
+  callWithFields,
+  channelWithWebhookCommand,
+  noProperties,
+  openChannel,
+  pretty,
+} from "./webhook-commands.ts";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { alertSaying } from "./alerts.ts";
@@ -23,10 +30,13 @@ const everyKind = {
   type: "object",
 } as const;
 
-it("a command call and its result reply show their data in the thread", { timeout: 5000 }, async () => {
+it("a Webhook command call and its result reply show their data in the thread", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const handler = await channelWithCommand({ channel: "web-command-shows", command: { name: "web-show-call" } });
+  const handler = await channelWithWebhookCommand({
+    channel: "web-command-shows",
+    webhookCommand: { name: "web-show-call" },
+  });
   const { threadId } = await adminClient().callCommand("web-show-call", {
     channel: "web-command-shows",
     data: { branch: "main" },
@@ -60,15 +70,18 @@ it("a good call posts the call message in the channel and brings back an empty m
 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-call", command: { name: "web-call-fields", schema: everyKind } });
+  await channelWithWebhookCommand({
+    channel: "web-command-call",
+    webhookCommand: { name: "web-call-fields", schema: everyKind },
+  });
   await adminClient().createMessage({ channel: "web-command-call", text: "Ready to ship" });
   const caller = await newIdentity({ kind: "human", name: "web-command-caller" });
   const close = await openChannel({ channel: "web-command-call", client: caller.client });
 
   await callWithFields({
     checks: ["dry"],
-    command: "web-call-fields",
     texts: { branch: "main", count: "3", level: String(HIGH) },
+    webhookCommand: "web-call-fields",
   });
   await screen.findByLabelText("Call to /web-call-fields");
   const { messages } = await adminClient().listMessages("web-command-call");
@@ -96,16 +109,16 @@ it("a good call posts the call message in the channel and brings back an empty m
 it("a refused call shows the schema error next to its field and keeps what was typed", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({
+  await channelWithWebhookCommand({
     channel: "web-command-short",
-    command: {
+    webhookCommand: {
       name: "web-call-short",
       schema: { properties: { branch: { minLength: 3, type: "string" } }, required: ["branch"], type: "object" },
     },
   });
   const close = await openChannel({ channel: "web-command-short" });
 
-  const prompt = await callWith({ command: "web-call-short", field: "branch", value: "x" });
+  const prompt = await callWith({ field: "branch", value: "x", webhookCommand: "web-call-short" });
   const alert = await within(prompt).findByRole("alert");
   const { messages } = await adminClient().listMessages("web-command-short");
 
@@ -127,13 +140,16 @@ it("a refused call shows the schema error next to its field and keeps what was t
 it("a schema with no properties falls back to a JSON data box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-json", command: { name: "web-call-json", schema: noProperties } });
+  await channelWithWebhookCommand({
+    channel: "web-command-json",
+    webhookCommand: { name: "web-call-json", schema: noProperties },
+  });
   const close = await openChannel({ channel: "web-command-json" });
 
   await callWith({
-    command: "web-call-json",
     field: "Data",
     value: '{"branch":"main","extra":["one",{"urgent":true},null]}',
+    webhookCommand: "web-call-json",
   });
   const shown = await screen.findByLabelText("Call to /web-call-json");
 
@@ -145,10 +161,13 @@ it("a schema with no properties falls back to a JSON data box", { timeout: 5000 
 it("schema errors no field names are listed, and the data box keeps what was typed", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-bad", command: { name: "web-call-bad", schema: noProperties } });
+  await channelWithWebhookCommand({
+    channel: "web-command-bad",
+    webhookCommand: { name: "web-call-bad", schema: noProperties },
+  });
   const close = await openChannel({ channel: "web-command-bad" });
 
-  const prompt = await callWith({ command: "web-call-bad", field: "Data", value: '{"other":1}' });
+  const prompt = await callWith({ field: "Data", value: '{"other":1}', webhookCommand: "web-call-bad" });
   const alert = await within(prompt).findByRole("alert");
   const { messages } = await adminClient().listMessages("web-command-bad");
 
@@ -166,13 +185,13 @@ it("schema errors no field names are listed, and the data box keeps what was typ
 it("data that isn't JSON is refused before it is sent", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({
+  await channelWithWebhookCommand({
     channel: "web-command-not-json",
-    command: { name: "web-call-not-json", schema: noProperties },
+    webhookCommand: { name: "web-call-not-json", schema: noProperties },
   });
   const close = await openChannel({ channel: "web-command-not-json" });
 
-  const prompt = await callWith({ command: "web-call-not-json", field: "Data", value: "{branch" });
+  const prompt = await callWith({ field: "Data", value: "{branch", webhookCommand: "web-call-not-json" });
   const alert = await within(prompt).findByRole("alert");
 
   expect(alert.textContent).toBe("Couldn't call /web-call-not-json (invalid_json): The data isn't JSON.");
@@ -183,7 +202,7 @@ it("data that isn't JSON is refused before it is sent", { timeout: 5000 }, async
 it("a refused call says so and keeps the channel shown", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-refused", command: { name: "web-call-refused" } });
+  await channelWithWebhookCommand({ channel: "web-command-refused", webhookCommand: { name: "web-call-refused" } });
   const caller = await revocableView({
     methods: ["callCommand"],
     revoked: "web-command-rotated",
@@ -192,7 +211,7 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
   const close = await openChannel({ channel: "web-command-refused", client: caller.client });
   await caller.rotateToken();
 
-  await callWith({ command: "web-call-refused", field: "branch", value: "main" });
+  await callWith({ field: "branch", value: "main", webhookCommand: "web-call-refused" });
   const alert = await alertSaying("Couldn't call");
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
@@ -206,7 +225,10 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
 it("a call to a server that can't be reached says so, with no schema errors", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-unreachable", command: { name: "web-call-unreachable" } });
+  await channelWithWebhookCommand({
+    channel: "web-command-unreachable",
+    webhookCommand: { name: "web-call-unreachable" },
+  });
   const nowhereClient = unreachableClient({ token: "cookout_any" });
   const close = await openChannel({
     channel: "web-command-unreachable",
@@ -216,7 +238,7 @@ it("a call to a server that can't be reached says so, with no schema errors", { 
     },
   });
 
-  const prompt = await callWith({ command: "web-call-unreachable", field: "branch", value: "main" });
+  const prompt = await callWith({ field: "branch", value: "main", webhookCommand: "web-call-unreachable" });
   const alert = await within(prompt).findByRole("alert");
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
@@ -227,7 +249,7 @@ it("a call to a server that can't be reached says so, with no schema errors", { 
   close();
 });
 
-it("commands that can't be listed say so", { timeout: 5000 }, async () => {
+it("webhook commands that can't be listed say so", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await adminClient().createChannel({ name: "web-command-unlisted" });
@@ -237,11 +259,11 @@ it("commands that can't be listed say so", { timeout: 5000 }, async () => {
     hash: "#/channels/web-command-unlisted",
   });
 
-  const refusal = await screen.findByText(/^Couldn't list the commands/u);
+  const refusal = await screen.findByText(/^Couldn't list the webhook commands/u);
 
   expect([refusal.getAttribute("role"), refusal.textContent]).toStrictEqual([
     "alert",
-    expect.stringMatching(/^Couldn't list the commands \(\w+\): /u),
+    expect.stringMatching(/^Couldn't list the webhook commands \(\w+\): /u),
   ]);
 
   close();
