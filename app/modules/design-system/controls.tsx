@@ -9,11 +9,10 @@
  * - `ActionGroup` is a named group of what can be done to one thing.
  * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears; while `unavailable` it does nothing and says it is disabled, yet keeps focus, unlike a `disabled` one. A `Button`, a `SubmitButton` and the Save of a `LineForm` or `AreaForm` that had focus when it was disabled (while saving) takes it back when enabled again, if nothing else took it meanwhile.
  * - `TokenText` shows a secret, such as a fresh token, to copy.
- * - `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it when it closes, or, if that is gone (a deleted identity's Delete), to the element the CSS selector `returnTo` names, or with `returnTo` null to the first control left in the nearest part of the page that held it. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
+ * - `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it when it closes, or, if that is gone (a deleted identity's Delete), to the element the CSS selector `returnTo` names, or with `returnTo` null to the first control left in the nearest part of the page that held it; then it calls `onCloseFocused`, if given, so its owner can keep what opened it on the page until focus is back. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
  * - `FormDialog` is a Radix modal form.
  * - `RunList`.
  * - `FieldNote`.
- * - `MoreActions` is a three-dots menu button: the `hover` look (the default) for a message's hover bar, the `box` look for a message box's row, where it matches Send's size and place and offers its choices to `MessageActions` against its form, so the keymap runs them from the box.
  * - `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was focused when it opened.
  * - `ListDialog` is a Radix modal of a list, titled and described, with a Close button (`close` its text); Escape or Close calls `onClose`, and focus goes back to what was focused when it opened.
  * - `FilterField` is a labelled box whose text its owner holds.
@@ -47,7 +46,6 @@ export {
   ListDialog,
   FieldNote,
   RunList,
-  MoreActions,
   ButtonRow,
   TokenText,
   QuietButton,

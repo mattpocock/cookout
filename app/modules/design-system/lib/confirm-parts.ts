@@ -10,6 +10,7 @@ interface ConfirmContentParts extends ConfirmButtonsParts {
   readonly body: string;
   readonly error: string | null;
   readonly returnTo: string | null;
+  readonly onCloseFocused?: (() => void) | undefined;
 }
 
 interface ConfirmDialogParts extends ConfirmContentParts {

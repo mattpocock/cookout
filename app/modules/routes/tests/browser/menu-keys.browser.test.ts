@@ -100,11 +100,3 @@ test("every choice in a person's menu shows its key", async ({ page }) => {
 
   await everyChoiceKeyed(page.getByRole("menu", { exact: true, name: `@${shown.author} actions` }));
 });
-
-test("every choice in a message box's Post later menu shows its key", async ({ page }) => {
-  const shown = await board(unique("browser-menu-keys-box"));
-  await opened(page, shown, `/#/channels/${shown.channel}`);
-  await inPane(page).getByRole("button", { exact: true, name: "Post later" }).click();
-
-  await everyChoiceKeyed(page.getByRole("menu", { exact: true, name: "Post later" }));
-});
