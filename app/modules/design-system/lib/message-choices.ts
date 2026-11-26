@@ -4,7 +4,13 @@ import type { MessageItemParts } from "./message-parts.ts";
 import { MessageKeys } from "./message-keys-parts.ts";
 import type { MessageShortcuts } from "./message-keys-parts.ts";
 
-const TEXT = { copyLink: "Copy link", delete: "Delete", markUnread: "Mark unread", openThread: "Open thread" } as const;
+const TEXT = {
+  copyLink: "Copy link",
+  copyText: "Copy text",
+  delete: "Delete",
+  markUnread: "Mark unread",
+  openThread: "Open thread",
+} as const;
 
 interface ChoicesOf extends MessageActionParts {
   readonly menu: MessageMenuParts;
@@ -72,6 +78,7 @@ export function useMessageChoices({
       ),
       { href: null, icon: "mark-unread", keys: keys.markUnread, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
       { href: null, icon: "copy-link", keys: keys.copyLink, label: TEXT.copyLink, onSelect: menu.onCopyLink },
+      { href: null, icon: "copy-text", keys: keys.copyText, label: TEXT.copyText, onSelect: menu.onCopyText },
       ...[menu.thread]
         .filter((choice) => choice !== null)
         .map(
