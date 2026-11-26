@@ -9,10 +9,7 @@ interface Offering {
 }
 
 function targetOf(element: unknown, inForm: boolean): unknown {
-  if (!(element instanceof HTMLElement)) {
-    return null;
-  }
-  if (inForm) {
+  if (inForm && element instanceof HTMLElement) {
     return element.closest("form");
   }
   return element;
@@ -23,13 +20,9 @@ function useOffered<Shown extends HTMLElement>({ choices, inForm }: Offering): R
   const { offer, withdraw } = useContext(MessageActions);
   useEffect(() => {
     const target = targetOf(element.current, inForm);
-    if (target !== null) {
-      offer(target, choices);
-    }
+    offer(target, choices);
     return (): void => {
-      if (target !== null) {
-        withdraw(target);
-      }
+      withdraw(target);
     };
   }, [choices, inForm, offer, withdraw]);
   return element;

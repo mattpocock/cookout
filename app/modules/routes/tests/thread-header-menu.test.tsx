@@ -280,3 +280,16 @@ it("x in the thread's reply box types, closing nothing", { timeout: 5000 }, asyn
 
   close();
 });
+
+it("x on the thread header's More actions button closes nothing", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close } = await openThread("web-thread-title-more");
+  const button = headerMoreActions();
+  button.focus();
+  fireEvent.keyDown(button, { key: "x" });
+
+  await expect(inThread().findEnabledButton("Close thread")).resolves.toBeDefined();
+
+  close();
+});

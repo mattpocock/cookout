@@ -7,6 +7,7 @@ import { adminClient } from "./identities.ts";
 import { openAt } from "./render.tsx";
 
 const SHOWN_RUNS = 3;
+const ONE = 1;
 const TITLE = "Schedule a message";
 
 function dialog(): HTMLElement {
@@ -218,6 +219,20 @@ it("ctrl+Shift+Enter in a channel's message box opens the Schedule dialog with i
   await screen.findByRole("dialog", { name: TITLE });
 
   expect(within(dialog()).getByLabelText<HTMLInputElement>("Text").value).toBe("Standup by key");
+
+  close();
+});
+
+it("ctrl+Shift+Enter in the Schedule dialog's Text field opens no second dialog", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const { box, close } = await written("web-schedule-key-field", "Standup twice");
+  fireEvent.keyDown(box, { ctrlKey: true, key: "Enter", shiftKey: true });
+  const field = within(await screen.findByRole("dialog", { name: TITLE })).getByLabelText("Text");
+  field.focus();
+  fireEvent.keyDown(field, { ctrlKey: true, key: "Enter", shiftKey: true });
+
+  expect(screen.getAllByRole("dialog", { name: TITLE })).toHaveLength(ONE);
 
   close();
 });
