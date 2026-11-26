@@ -89,3 +89,38 @@ test("a 100-character thread title stays on one line in the panel's header, trun
   expect(await headingFitOf(page)).toStrictEqual({ lines: ONE_LINE, size: "15px", truncated: true, weight: "600" });
   expect(await metaLookOf(page)).toStrictEqual({ font: expect.stringContaining("Mono"), size: "11px" });
 });
+
+async function untitledThreadOpen(page: Page): Promise<void> {
+  const name = unique("browser-thread-add-title");
+  const { token } = await newIdentity({ kind: "human", name });
+  await adminClient().createChannel({ name });
+  const { message } = await adminClient().createMessage({ channel: name, text: "An untitled thread" });
+  await page.setViewportSize(WIDE);
+  await logInToChannels({ page, token });
+  await page.goto(`/#/channels/${name}/threads/${String(message.id)}`);
+}
+
+async function typedAndPressed(page: Page, text: string, key: string): Promise<void> {
+  const box = inThread(page).getByRole("textbox", { exact: true, name: "Title" });
+
+  await expect(box).toBeFocused();
+
+  await box.fill(text);
+  await box.press(key);
+}
+
+test("Add title, typing and Enter save a thread title, and Escape leaves an edit unsaved", async ({ page }) => {
+  await untitledThreadOpen(page);
+  const heading = inThread(page).getByRole("heading", { exact: true, level: 2, name: "Saved by Enter" });
+  await inThread(page).getByRole("button", { exact: true, name: "Add title" }).click();
+  await typedAndPressed(page, "Saved by Enter", "Enter");
+
+  await expect(heading).toBeVisible();
+  await expect(inThread(page).getByRole("button", { exact: true, name: "Edit title" })).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await typedAndPressed(page, "Not saved", "Escape");
+
+  await expect(heading).toBeVisible();
+  await expect(inThread(page)).toBeVisible();
+});
