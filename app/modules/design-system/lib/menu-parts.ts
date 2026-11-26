@@ -18,6 +18,7 @@ interface ThreadChoice {
 interface MessageMenuParts {
   readonly onMarkUnread: () => void;
   readonly onCopyLink: () => void;
+  readonly onCopyText: () => void;
   readonly reactions: readonly ReactionChoice[];
   readonly thread: ThreadChoice | null;
   readonly onDelete: (() => void) | null;
