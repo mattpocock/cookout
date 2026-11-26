@@ -1,5 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Option, Order, Schema, String as Str } from "effect";
-import type { Path } from "effect";
+import { Array as Arr, Effect, FileSystem, Function, Option, Order, Path, Schema, String as Str } from "effect";
 import { agentSessionStateFiles } from "./agent-sessions.ts";
 import { parseLine } from "./cli.ts";
 
@@ -125,12 +124,58 @@ function agentSessionTokenIn(stateFolder: string): Effect.Effect<Option.Option<s
   }).pipe(Effect.orDie);
 }
 
+function agentSessionTokensIn(stateFolder: string): Effect.Effect<readonly string[], never, Files> {
+  return Effect.gen(function* readAgentSessionTokens() {
+    const fs = yield* FileSystem.FileSystem;
+    const files = yield* filesIn(stateFolder, false);
+    const texts = yield* Effect.forEach(files, (file) => fs.readFileString(file), { concurrency: 1 });
+    const states = Arr.filter(Arr.map(texts, parseLine), hasAgentSessionToken);
+    return Arr.map(states, ({ agentSessionToken }) => agentSessionToken);
+  }).pipe(Effect.orDie);
+}
+
+function textsIn(folder: string): Effect.Effect<readonly string[], never, Files> {
+  return Effect.gen(function* readFolder() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const names = yield* Effect.orElseSucceed(fs.readDirectory(folder, { recursive: true }), Arr.empty);
+    const files = Arr.map(names, (name) => path.join(folder, name));
+    const texts = yield* Effect.forEach(
+      files,
+      (file) => Effect.orElseSucceed(Effect.asSome(fs.readFileString(file)), Option.none),
+      { concurrency: 1 },
+    );
+    return Arr.getSomes(texts);
+  });
+}
+
+function runnerWritten(stateFolder: string): Effect.Effect<string, never, Files> {
+  return Effect.gen(function* readRunnerFiles() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const events = yield* Effect.orElseSucceed(
+      fs.readFileString(path.join(stateFolder, "runner-events.jsonl")),
+      Function.constant(""),
+    );
+    const runs = yield* textsIn(path.join(stateFolder, "runs"));
+    const sessions = yield* agentSessionStateFiles(stateFolder);
+    const beside = Arr.filter(
+      sessions,
+      (file) => Str.endsWith(".runner.json")(file) || Str.endsWith(".dropped.json")(file),
+    );
+    const besideTexts = yield* Effect.forEach(beside, (file) => fs.readFileString(file), { concurrency: 1 });
+    return Arr.join([events, ...runs, ...besideTexts], "\n");
+  }).pipe(Effect.orDie);
+}
+
 export {
   type RegistrationFile,
   type WakeLogLine,
   agentSessionTokenIn,
+  agentSessionTokensIn,
   registeredAgentsIn,
   registrationIn,
+  runnerWritten,
   wakeEvents,
   wakeLog,
 };

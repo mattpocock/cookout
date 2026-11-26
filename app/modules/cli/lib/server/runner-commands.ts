@@ -1,8 +1,9 @@
 import { Argument, Command, Flag } from "effect/cli";
-import { Console, Effect } from "effect";
+import { Array as Arr, Console, Effect, Option } from "effect";
 import { SESSION_ID_PLACEHOLDER, TIMEOUT_DESCRIPTION, registerHere, unregister } from "./registrations.ts";
-import { answered, printAnswer, refused } from "./output.ts";
+import { answered, printAnswer, printLine, refused } from "./output.ts";
 import { runnerStatus, statusLines } from "./runner-state.ts";
+import { runnerEvents } from "./runner-log.ts";
 
 const wakeCommandArgument = Argument.String("wake-command").pipe(
   Argument.variadic(),
@@ -56,9 +57,33 @@ const statusCommand = Command.make("status", { json: jsonFlag }, ({ json }) =>
 ).pipe(
   Command.withDescription(
     "List each registration: its agent, its folder, and whether the runner is connecting, connected or running a " +
-      "wake run for it, or no runner is running; then each dropped registration, with the refusal that dropped it " +
+      "wake run for it, or no runner is running, and its last wake run: when it started, how it ended and its " +
+      "output file; then each dropped registration, with the refusal that dropped it " +
       "and when. --json prints the same as JSON. It prints no token.",
   ),
 );
 
-export { registerCommand, statusCommand, unregisterCommand };
+const logsAgentArgument = Argument.String("agent").pipe(
+  Argument.optional,
+  Argument.withDescription("Only this agent's events."),
+);
+
+const logsCommand = Command.make("logs", { agent: logsAgentArgument }, ({ agent }) =>
+  Effect.gen(function* printRunnerEvents() {
+    const events = yield* runnerEvents;
+    const shown = Arr.filter(events, (event) =>
+      Option.match(agent, { onNone: () => true, onSome: (name) => event.agent === name }),
+    );
+    yield* Effect.forEach(shown, printLine, { concurrency: 1, discard: true });
+  }),
+).pipe(
+  Command.withDescription(
+    "Print the runner's event log, one JSON line per event, oldest first: runner-start, connect, mention, " +
+      "wake-run-start (naming the run's output file), exit, timeout, wake-failed, skip, stand-down, unregister " +
+      "and refusal, each with the agent and the time. Give an agent to print only its events. It holds message " +
+      "IDs, never a mention's text or a token. Each wake run's stdout and stderr are in its own file under runs/ " +
+      "in the state folder; an agent's oldest files are deleted once its files pass 1 MiB.",
+  ),
+);
+
+export { logsCommand, registerCommand, statusCommand, unregisterCommand };

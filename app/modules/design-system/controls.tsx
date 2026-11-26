@@ -7,9 +7,9 @@
  * - `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an `Alert`; with `submitLast` the button comes after what is under it, so Tab reaches a field there first.
  * - `AreaForm` is `LineForm`'s form of a few growing lines of text, up to `limit` characters shown as a counter, where Enter starts a new line and Ctrl/Cmd+Enter saves.
  * - `ActionGroup` is a named group of what can be done to one thing.
- * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears.
+ * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears. A `Button`, a `SubmitButton` and the Save of a `LineForm` or `AreaForm` that had focus when it was disabled (while saving) takes it back when enabled again, if nothing else took it meanwhile.
  * - `TokenText` shows a secret, such as a fresh token, to copy.
- * - `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it when it closes. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
+ * - `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it when it closes, or, if that is gone (a deleted identity's Delete), to the element the CSS selector `returnTo` names, or with `returnTo` null to the first control left in the nearest part of the page that held it. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
  * - `FormDialog` is a Radix modal form.
  * - `RunList`.
  * - `FieldNote`.
@@ -28,13 +28,13 @@
  * - `AvatarField` is a named group for setting an avatar: a `pick` button that opens the file picker for one file of the `accept` types and hands it to `onFile`, and anything under it, such as an `AvatarPreview`, its buttons and an `Alert`.
  * - `AvatarPreview` is a picked avatar before it is saved, at a profile's size, a circle for a human and a rounded square for an agent.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
- * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
+ * - `Suggestions` is a named listbox of options under a box, such as mentions or Webhook commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
  * - `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`.
  * - `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named groups, drawn by its children, the one at `highlighted` selected and scrolled into view; pressing one calls `onChoose` with its `value`, leaving the box focused.
  * - `ResultOption` is a result's label, detail and children.
  * - `DataArea` is a labelled box to write JSON in, whose text its owner holds.
  * - `LinesArea` is an optional labelled box for lines (`name: value` headers), whose text its owner holds.
- * - `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused. Its Escape is the keymap's: the view that draws it binds `cancelPrompt` to the form, named by its `label`.
+ * - `PromptForm` is a named card in place of a message box that asks for a Webhook command's data, titled, with a Cancel and a submit button, its first field focused. Its Escape is the keymap's: the view that draws it binds `cancelPrompt` to the form, named by its `label`.
  * - `InputField` is a labelled field in a `PromptForm` (text, a number, an integer, a date or a time) whose value its owner holds, marked when required, with its help text and any error under it, both read out as its description.
  * - `PickField` is an `InputField` for one of a list, or none.
  * - `CheckField` is an `InputField` for a checkbox.
