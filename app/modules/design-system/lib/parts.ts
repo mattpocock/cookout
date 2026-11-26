@@ -24,6 +24,7 @@ interface FeedParts extends ListParts {
 interface ButtonParts extends Parts {
   readonly disabled?: boolean;
   readonly focused?: boolean;
+  readonly unavailable?: boolean;
   readonly onClick: () => void;
 }
 

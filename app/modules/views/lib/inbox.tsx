@@ -34,7 +34,7 @@ export function InboxView(props: InboxProps): ReactNode {
     [agentJoinRequests, deactivatedQuietAgents, deactivationOffers, nudges, identities],
   );
   const { watch } = useContext(LandingContext);
-  useInboxKeys({ conversation: CONVERSATION, keymap, selected: selected !== null, watch });
+  useInboxKeys({ conversation: CONVERSATION, keymap, selected, watch });
   return (
     <>
       <InboxList me={me} notices={notices} rows={rows} selected={selected} state={state} unread={unread} />

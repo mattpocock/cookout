@@ -38,9 +38,11 @@
  * focus, if still on the page; the open thread panel's selected message, else its newest; the main list's selected
  * message or Inbox row, else its newest; the sidebar's link for the current page. When the focused element goes
  * (removed or hidden, not blurred on purpose), focus moves to its neighbour of the same kind in its list (the next,
- * else the previous), else to each landing place: a message or row as it was just before the element went, if still
- * on the page, else as it is now, and the sidebar's link for the page now. It waits for the app's own focus moves first, and stands aside while
- * `listen`'s `landing` (the landing store) is landing.
+ * else the previous), else, when it was in a dialog, to what had focus before the dialog opened or that one's
+ * neighbour, else to each landing place: a message or row as it was just before the element went, if still on the
+ * page, else as it is now, and the sidebar's link for the page now. A focused button that turns disabled keeps its
+ * place: focus goes back to it once it is enabled again, or to its neighbour if it goes meanwhile. It waits for the
+ * app's own focus moves first, and stands aside while `listen`'s `landing` (the landing store) is landing.
  */
 import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
 import type { FocusKeeper, Landing } from "./lib/focus-keeper.ts";
