@@ -158,9 +158,6 @@ function pagedBack({ feed, from }: Paging): boolean {
 
 function pageBackTo(feed: unknown): void {
   const paging = { feed, from: globalThis.document.activeElement };
-  if (pagedBack(paging)) {
-    return;
-  }
   const watch = new MutationObserver(() => {
     if (pagedBack(paging)) {
       watch.disconnect();
@@ -174,10 +171,12 @@ function focusedOnChannelMessage(): boolean {
     return true;
   }
   const feed = channelFeed();
-  if (olderButtonOf(feed) === null) {
+  const older = olderButtonOf(feed);
+  if (older === null) {
     return false;
   }
   pageBackTo(feed);
+  older.click();
   return true;
 }
 
