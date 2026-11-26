@@ -1,10 +1,11 @@
 import { install, uninstall } from "./runner-service.ts";
-import { registerCommand, startCommand } from "./runner.ts";
+import { registerCommand, statusCommand, unregisterCommand } from "./runner-commands.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { ChildProcessSpawner } from "effect/process";
 import { Command } from "effect/cli";
 import type { CommandFailed } from "./output.ts";
 import { answered } from "./output.ts";
+import { startCommand } from "./runner.ts";
 
 type Spawner = ChildProcessSpawner.ChildProcessSpawner;
 
@@ -23,7 +24,14 @@ const uninstallCommand = Command.make("uninstall", {}, () => answered(uninstall)
 const runnerCommand: Command.Command<"runner", object, object, CommandFailed, AgentSessionStateNeeds | Spawner> =
   Command.make("runner").pipe(
     Command.withDescription("Wake registered agents on mentions while their harness sessions are closed."),
-    Command.withSubcommands([registerCommand, startCommand, installCommand, uninstallCommand]),
+    Command.withSubcommands([
+      registerCommand,
+      startCommand,
+      unregisterCommand,
+      statusCommand,
+      installCommand,
+      uninstallCommand,
+    ]),
   );
 
 export { runnerCommand };

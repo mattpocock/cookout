@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Order, Queue, Ref } from "effect";
+import { Array as Arr, Deferred, Effect, Fiber, Order, Queue, Ref } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import type { ChildProcessSpawner } from "effect/process";
@@ -15,6 +15,8 @@ const ONE = 1;
 
 type Spawner = ChildProcessSpawner.ChildProcessSpawner;
 
+type During = (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner>;
+
 interface Waiting {
   readonly queued: readonly InboxItem[];
   readonly runs: ReadonlyMap<MessageId, number>;
@@ -28,6 +30,7 @@ interface Heard {
 
 interface Waking {
   readonly asAgent: ClientWithAgentSessionState;
+  readonly during: During;
   readonly place: RunPlace;
   readonly registration: Registration;
 }
@@ -35,6 +38,7 @@ interface Waking {
 interface WakeQueue {
   readonly catchUp: Effect.Effect<void, CallFailure>;
   readonly hear: (item: InboxItem) => Effect.Effect<void>;
+  readonly stop: Effect.Effect<void>;
 }
 
 const byMessage = Order.mapInput(Order.Number, (item: InboxItem): number => item.message.id);
@@ -120,20 +124,12 @@ interface Queued extends Waking {
   readonly take: Effect.Effect<readonly InboxItem[]>;
 }
 
-function presenceDuring(
-  asAgent: ClientWithAgentSessionState,
-): (run: Effect.Effect<void, never, Spawner>) => Effect.Effect<void, never, Spawner> {
-  const started = Effect.ignore(callClient((client) => client.startWakeRun())(asAgent));
-  const ended = Effect.ignore(callClient((client) => client.endWakeRun())(asAgent));
-  return (run) => Effect.andThen(started, Effect.ensuring(run, ended));
-}
-
-function runGiven({ asAgent, change, place, registration }: Queued) {
+function runGiven({ asAgent, change, during, place, registration }: Queued) {
   return (given: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
     Effect.gen(function* runAndRetry() {
       yield* change(withRun(given));
       const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
-      yield* presenceDuring(asAgent)(run);
+      yield* during(run);
       const unread = yield* stillUnread(asAgent, given);
       yield* change(withRetried(unread));
     });
@@ -167,19 +163,45 @@ function runUntilEmpty(queued: Queued): Effect.Effect<void, never, Spawner> {
   });
 }
 
+interface Serving {
+  readonly drain: Effect.Effect<void, never, Spawner>;
+  readonly signalled: Effect.Effect<true>;
+  readonly stopped: Effect.Effect<boolean>;
+}
+
+function isTrue(more: boolean): boolean {
+  return more;
+}
+
+function serveUntilStopped({ drain, signalled, stopped }: Serving): Effect.Effect<void, never, Spawner> {
+  const next = Effect.raceFirst(Effect.as(signalled, true), Effect.as(stopped, false));
+  const once = Effect.tap(next, (go) => Effect.when(drain, Effect.succeed(go)));
+  return Effect.asVoid(Effect.repeat(once, { while: isTrue }));
+}
+
+function unlessStopped(
+  take: Effect.Effect<readonly InboxItem[]>,
+  isStopped: Effect.Effect<boolean>,
+): Effect.Effect<readonly InboxItem[]> {
+  return Effect.zipWith(take, isStopped, (items, stopped) => Arr.filter(items, () => !stopped));
+}
+
 function sayWaiting(agent: string) {
   return (message: MessageId): Effect.Effect<void> => printLine({ agent, message, type: "mention-waiting" });
 }
 
 function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope | Spawner> {
   return Effect.gen(function* serialWakeRuns() {
-    const { agent } = waking.registration;
     const state = yield* Ref.make<Waiting>({ queued: [], running: false, runs: new Map() });
     const signal = yield* Queue.unbounded<true>();
+    const stopping = yield* Deferred.make<boolean>();
     function hearAll(items: readonly InboxItem[]): Effect.Effect<void> {
       return Effect.gen(function* queueMentions() {
         const { fresh, running } = yield* Ref.modify(state, withHeard(items));
-        const waiting = Effect.forEach(idsOf(fresh), sayWaiting(agent), { concurrency: 1, discard: true });
+        const waiting = Effect.forEach(idsOf(fresh), sayWaiting(waking.registration.agent), {
+          concurrency: 1,
+          discard: true,
+        });
         yield* Effect.when(waiting, Effect.succeed(running));
         yield* Queue.offer(signal, true);
       });
@@ -187,12 +209,20 @@ function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope 
     function change(next: (waiting: Waiting) => Waiting): Effect.Effect<Waiting> {
       return Ref.updateAndGet(state, next);
     }
-    const drain = runUntilEmpty({ ...waking, change, take: Ref.modify(state, takeQueued) });
-    const nextSignal = Effect.andThen(Queue.take(signal), drain);
-    yield* Effect.forkScoped(Effect.forever(nextSignal));
-    const catchUp = Effect.flatMap(Effect.map(inboxOf(waking.asAgent), mentionsIn), hearAll);
-    return { catchUp, hear: (item: InboxItem) => hearAll([item]) };
+    const drain = runUntilEmpty({
+      ...waking,
+      change,
+      take: unlessStopped(Ref.modify(state, takeQueued), Deferred.isDone(stopping)),
+    });
+    const running = yield* Effect.forkScoped(
+      serveUntilStopped({ drain, signalled: Queue.take(signal), stopped: Deferred.await(stopping) }),
+    );
+    return {
+      catchUp: Effect.flatMap(Effect.map(inboxOf(waking.asAgent), mentionsIn), hearAll),
+      hear: (item: InboxItem) => hearAll([item]),
+      stop: Effect.andThen(Deferred.succeed(stopping, true), Fiber.join(running)),
+    };
   });
 }
 
-export { wakeQueue };
+export { type During, type Spawner, type WakeQueue, wakeQueue };
