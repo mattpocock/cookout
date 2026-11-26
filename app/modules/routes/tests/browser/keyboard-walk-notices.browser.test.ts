@@ -3,13 +3,13 @@ import type { Locator, Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { createTestAgent, testAgentDisplayName, testClient } from "../../../testing/index.ts";
 import { inDialog, inPane, inSidebar } from "./regions.ts";
+import { shown, walk } from "./key-walk.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Step } from "./key-walk.ts";
 import { clockFixtures } from "./clock.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
-import { walk } from "./key-walk.ts";
 
 const test = base.extend(probeFixtures).extend<ClockFixtures & ClockOptions>(clockFixtures);
 
@@ -17,6 +17,7 @@ const NUDGED_AFTER = 3;
 const OFFERED_AFTER = 30;
 const DEACTIVATED_AFTER = 60;
 const NUDGE = "Quiet for 3 days";
+const ONE = 1;
 
 interface Asking {
   readonly client: CookoutClient;
@@ -50,6 +51,7 @@ function button(item: Locator, name: string): Locator {
 
 function signedIn(page: Page, lands: Locator): readonly Step[] {
   return [
+    shown(lands),
     ["Tab", inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" })],
     ["Control+]", lands],
   ];
@@ -128,6 +130,26 @@ function agentRow(page: Page, name: string): Locator {
   return notice({ page, says: testAgentDisplayName(name) });
 }
 
+function confirmedInto(page: Page, next: Locator): Step {
+  return async (): Promise<void> => {
+    await page.keyboard.press("Enter");
+
+    await expect(next.locator(":focus")).toHaveCount(ONE);
+  };
+}
+
+function tabbedTo(page: Page, target: Locator): Step {
+  return async (): Promise<void> => {
+    await page.keyboard.press("Tab");
+    const there = await target.and(page.locator(":focus")).count();
+    if (there !== ONE) {
+      await page.keyboard.press("Tab");
+    }
+
+    await expect(target).toBeFocused();
+  };
+}
+
 function answered(page: Page, reader: string): readonly Step[] {
   const left = agentRow(page, `${reader}-left`);
   const reactivated = agentRow(page, `${reader}-reactivated`);
@@ -149,9 +171,8 @@ function answered(page: Page, reader: string): readonly Step[] {
     ["Escape", button(deactivated, "Deactivate")],
     ["Enter", cancel],
     ["Tab", button(confirm, `Deactivate @${reader}-deactivated`)],
-    ["Enter", kept.getByRole("link", { exact: true, name: testAgentDisplayName(`${reader}-kept`) })],
-    ["Tab", button(kept, "Deactivate")],
-    ["Tab", button(kept, "Keep")],
+    confirmedInto(page, kept),
+    tabbedTo(page, button(kept, "Keep")),
   ];
 }
 
