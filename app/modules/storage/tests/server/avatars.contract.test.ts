@@ -9,6 +9,7 @@ import { tokenHash } from "../../../identities/index.ts";
 const HASH_LENGTH = 64;
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
+const TEN = 10;
 
 function avatarId(raw: string): AvatarId {
   return Option.getOrThrow(Option.liftPredicate(raw, isAvatarId));
@@ -76,13 +77,13 @@ it.effect.each(storageLayers)(
         ],
         { concurrency: 1 },
       );
-      const before = yield* storage.avatarsToRemove;
+      const before = yield* storage.avatarsToRemove(TEN);
       yield* Effect.all([storage.deleteIdentity(nameOf("ada")), storage.deleteIdentity(nameOf("bo"))], {
         concurrency: 1,
       });
-      const deleted = yield* storage.avatarsToRemove;
+      const deleted = yield* storage.avatarsToRemove(TEN);
       yield* storage.avatarsRemoved([avatarId("ada-avatar")]);
-      const after = yield* storage.avatarsToRemove;
+      const after = yield* storage.avatarsToRemove(TEN);
 
       expect([before, deleted, after]).toStrictEqual([[], ["ada-avatar", "bo-avatar"], ["bo-avatar"]]);
     }),

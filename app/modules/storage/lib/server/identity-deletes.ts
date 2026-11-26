@@ -23,7 +23,7 @@ interface IdentityDeletesSection {
 }
 
 interface AvatarRemovalsSection {
-  readonly avatarsToRemove: Fails<readonly AvatarId[]>;
+  readonly avatarsToRemove: (limit: number) => Fails<readonly AvatarId[]>;
   readonly avatarsRemoved: (ids: readonly AvatarId[]) => Fails<void>;
 }
 
@@ -57,7 +57,7 @@ const COUNT_MESSAGES = "SELECT count(*) AS count FROM messages WHERE author_name
 const KEEP_AVATAR_TO_REMOVE =
   "INSERT INTO avatars_to_remove (id) SELECT avatar FROM identities WHERE name = ? AND avatar IS NOT NULL";
 
-const SELECT_AVATARS_TO_REMOVE = "SELECT id FROM avatars_to_remove ORDER BY id";
+const SELECT_AVATARS_TO_REMOVE = "SELECT id FROM avatars_to_remove ORDER BY id LIMIT ?";
 
 const DROP_AVATAR_TO_REMOVE = "DELETE FROM avatars_to_remove WHERE id = ?";
 
@@ -166,7 +166,7 @@ function memoryAvatarRemovals({ avatarsToRemove, open }: MemoryAvatarRemovalsOpt
           avatarsToRemove.delete(id);
         }
       }),
-    avatarsToRemove: open(() => Arr.sort([...avatarsToRemove], Str.Order)),
+    avatarsToRemove: (limit) => open(() => Arr.take(Arr.sort([...avatarsToRemove], Str.Order), limit)),
   };
 }
 
@@ -211,10 +211,11 @@ function sqlDeleteFound(db: SqlDatabase, identity: Identity): Fails<DeleteIdenti
 function sqlAvatarRemovals(db: SqlDatabase): AvatarRemovalsSection {
   return {
     avatarsRemoved: (ids) => Effect.forEach(ids, (id) => db.run(DROP_AVATAR_TO_REMOVE, id), ONE_AT_A_TIME),
-    avatarsToRemove: db.all(SELECT_AVATARS_TO_REMOVE).pipe(
-      Effect.flatMap((rows) => Effect.forEach(rows, decodeWith(AvatarToRemoveRow), { concurrency: 1 })),
-      Effect.map(Arr.map((row) => row.id)),
-    ),
+    avatarsToRemove: (limit) =>
+      db.all(SELECT_AVATARS_TO_REMOVE, limit).pipe(
+        Effect.flatMap((rows) => Effect.forEach(rows, decodeWith(AvatarToRemoveRow), { concurrency: 1 })),
+        Effect.map(Arr.map((row) => row.id)),
+      ),
   };
 }
 

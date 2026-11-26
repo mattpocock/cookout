@@ -12,6 +12,7 @@ import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 
 const CONFLICT = 409;
+const AVATARS_REMOVED_AT_ONCE = 100;
 
 function hasMessages(name: IdentityName): Refusal {
   return {
@@ -57,7 +58,7 @@ function deletedOrRefused(name: IdentityName, result: DeleteIdentityResult): Eff
 const avatarBytesRemoved: Effect.Effect<void, never, Storage | AssetStore> = Effect.gen(function* removeAvatarBytes() {
   const storage = yield* Storage;
   const assets = yield* AssetStore;
-  const ids = yield* storage.avatarsToRemove;
+  const ids = yield* storage.avatarsToRemove(AVATARS_REMOVED_AT_ONCE);
   if (Arr.isReadonlyArrayEmpty(ids)) {
     return;
   }
