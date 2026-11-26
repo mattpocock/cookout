@@ -19,6 +19,7 @@ interface End {
 interface Connection {
   readonly detail: LiveConnectionDetail;
   readonly sentWith: SentWith;
+  readonly runner: "not a runner" | "asleep" | "waking";
 }
 
 interface Grace {

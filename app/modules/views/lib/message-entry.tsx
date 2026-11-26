@@ -6,6 +6,8 @@ import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
 import { MessageEntryBody } from "./message-entry-body.tsx";
 import { MessageItem } from "../../design-system/messages.tsx";
 import type { ReactNode } from "react";
+import { memo } from "react";
+import { sameProps } from "./same-props.ts";
 import { useAuthor } from "./use-author.ts";
 import { useMessageTime } from "./use-time-ago.ts";
 
@@ -35,7 +37,7 @@ interface MessageEntryProps {
   readonly opened: boolean;
 }
 
-export function MessageEntry(props: MessageEntryProps): ReactNode {
+function MessageEntryView(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
   const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
@@ -79,3 +81,5 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
     </MessageItem>
   );
 }
+
+export const MessageEntry = memo(MessageEntryView, sameProps("row"));
