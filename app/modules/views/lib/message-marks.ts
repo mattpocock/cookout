@@ -104,10 +104,10 @@ function threadSummaryOf(message: Message): ThreadSummaryOf | null {
 }
 
 function titleOf(message: Message): string | null {
-  if (message.kind !== "top-level") {
-    return null;
+  if ("title" in message && typeof message.title === "string") {
+    return message.title;
   }
-  return message.title ?? null;
+  return null;
 }
 
 export {
