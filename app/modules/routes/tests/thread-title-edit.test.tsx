@@ -1,7 +1,7 @@
 import type { CookoutClient, MessageId } from "../../sdk/index.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
-import { inThread } from "./regions.ts";
+import { inPane, inThread } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { subscribedReader } from "./inbox-reader.ts";
 
@@ -65,6 +65,13 @@ async function headingShows(heading: string): Promise<void> {
   });
 }
 
+async function headerAndListShow(title: string): Promise<void> {
+  await headingShows(title);
+  await vi.waitFor(() => {
+    expect(inPane().getByRole("heading", { level: 3, name: title })).toBeDefined();
+  });
+}
+
 async function storedTitle(thread: Opened): Promise<string | null> {
   const { parent } = await thread.poster.getThread(thread.parent);
   return parent.title ?? null;
@@ -115,7 +122,7 @@ it("add title on an untitled thread opens an empty field, and Enter saves the ti
   expect(box.value).toBe("");
 
   saved("Deploy window");
-  await headingShows("Deploy window");
+  await headerAndListShow("Deploy window");
   await editClosedOn("Edit title");
 
   await expect(storedSetter(thread)).resolves.toStrictEqual(["Deploy window", "web-title-add-reader"]);
