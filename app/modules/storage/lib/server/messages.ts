@@ -24,8 +24,20 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 type MessageContent = Omit<
   TopLevelMessage,
-  "id" | "kind" | "latestReplyAt" | "latestReplyId" | "replyCount" | "repliers" | "closedAt" | "closedBy"
+  | "id"
+  | "kind"
+  | "latestReplyAt"
+  | "latestReplyId"
+  | "replyCount"
+  | "repliers"
+  | "closedAt"
+  | "closedBy"
+  | "title"
+  | "titleSetAt"
+  | "titleSetBy"
 >;
+
+type Titling = Required<Pick<TopLevelMessage, "title" | "titleSetAt" | "titleSetBy">>;
 
 type NewMessage = MessageContent & {
   readonly replyTo?: MessageId;
@@ -107,6 +119,8 @@ interface MessagesSection extends OpenThreadsSection, SearchSection, Attachments
   readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
   readonly closeThread: (id: MessageId, closing: Closing) => Fails<ThreadStateChange | undefined>;
   readonly reopenThread: (id: MessageId, reopenedAt: IsoTime) => Fails<ThreadStateChange | undefined>;
+  readonly setThreadTitle: (id: MessageId, titling: Titling) => Fails<ThreadStateChange | undefined>;
+  readonly clearThreadTitle: (id: MessageId) => Fails<ThreadStateChange | undefined>;
   readonly deleteMessage: (id: MessageId, deleting: Deleting) => Fails<Message | undefined>;
   readonly findReplyTarget: (id: MessageId) => Fails<ReplyTarget | undefined>;
 }
@@ -215,6 +229,7 @@ export {
   type StoredPage,
   type StoredThread,
   type ThreadStateChange,
+  type Titling,
   asMessageId,
   closingBy,
   counted,
