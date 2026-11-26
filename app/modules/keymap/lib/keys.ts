@@ -122,6 +122,12 @@ const KEYS = [
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
   { action: "firstPerson", chord: "Home", does: "First person", scope: "people list" },
   { action: "lastPerson", chord: "End", does: "Last person", scope: "people list" },
+  {
+    action: "leaveProfileField",
+    chord: "Escape",
+    does: "Leave the field, keeping what you typed",
+    scope: "profile panel",
+  },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
