@@ -1,18 +1,10 @@
 import { Array as Arr, Duration, Effect, Fiber, FileSystem, Option, Path, Predicate, Schema } from "effect";
-import type {
-  BoardAgent,
-  CommandLineNeeds,
-  FakeWakeSettings,
-  StartedRunner,
-  TestCookout,
-  WakeBoard,
-} from "../../../testing/server.ts";
+import type { BoardAgent, CommandLineNeeds, StartedRunner, TestCookout, WakeBoard } from "../../../testing/server.ts";
 import {
   WAKE_CHANNEL,
   answer,
-  boardAgent,
   commandLineServices,
-  fakeWakeCommand,
+  joinWaking,
   runCookout,
   startRunner,
   testCookout,
@@ -55,9 +47,11 @@ const FIRST_TICK = 1;
 const ONE_LINE = 1;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
+const FOUR_LINES = 4;
 const TICKS_WHILE_WATCHED = 30;
 const EXIT_SUCCESS = 0;
 const isLine = Schema.is(Schema.Struct({ agent: Schema.String, type: Schema.String }));
+const isWakeRun = Schema.is(Schema.Struct({ messages: Schema.Array(Schema.Finite), type: Schema.String }));
 
 const tick = Effect.andThen(TestClock.adjust(TICK), TestClock.withLive(Effect.sleep(PAUSE)));
 const passTime = Effect.forever(tick);
@@ -70,23 +64,14 @@ function whilePassingTime<Value>(effect: Effect.Effect<Value>): Effect.Effect<Va
   return Effect.raceFirst(effect, Effect.andThen(passTime, Effect.never));
 }
 
-function joinWaking(name: string, on: WakeBoard, settings: FakeWakeSettings): Effect.Effect<BoardAgent, never, Needs> {
-  return Effect.gen(function* joinAndRegister() {
-    const joined = yield* boardAgent({ board: on, name });
-    const wake = yield* fakeWakeCommand(settings);
-    yield* runCookout({ args: ["join", "--as", name, "--wake", "--", ...wake], env: joined.env });
-    return joined;
-  });
-}
-
 const brigidAndCormac: Effect.Effect<Attended, never, Needs> = Effect.gen(function* runnerForTwo() {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const on = yield* wakeBoard;
   const log = path.join(on.folder, "wake.log");
   const release = path.join(on.folder, "release");
-  const brigid = yield* joinWaking(BRIGID, on, { log, waitFor: release });
-  yield* joinWaking(CORMAC, on, { log });
+  const brigid = yield* joinWaking({ name: BRIGID, on, settings: { ack: true, log, waitFor: release } });
+  yield* joinWaking({ name: CORMAC, on, settings: { log } });
   const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
   return { brigid, log, on, release: Effect.orDie(fs.writeFileString(release, "go")), runner };
 });
@@ -116,6 +101,34 @@ function wakeEventsIn(
       return [];
     }
     return yield* wakeEvents(log);
+  });
+}
+
+function wokeFor(id: MessageId): (line: unknown) => boolean {
+  return (line) => isWakeRun(line) && line.type === "wake-run" && Arr.contains(line.messages, id);
+}
+
+function untilWokenFor(runner: StartedRunner, id: MessageId, count: number): Effect.Effect<void> {
+  return Effect.flatMap(linesOf(runner, count), (lines) => {
+    if (Arr.some(lines, wokeFor(id))) {
+      return Effect.void;
+    }
+    return untilWokenFor(runner, id, lines.length + ONE_LINE);
+  });
+}
+
+function anotherMention(
+  attended: Attended,
+): Effect.Effect<
+  { readonly events: readonly (readonly [string, readonly number[]])[]; readonly next: MessageId },
+  never,
+  FileSystem.FileSystem
+> {
+  return Effect.gen(function* mentionAndWaitForItsRun() {
+    const next = yield* mention(attended.on, "@brigid and this one");
+    yield* untilWokenFor(attended.runner, next, FOUR_LINES);
+    const events = yield* wakeEventsIn(attended.log);
+    return { events, next };
   });
 }
 
@@ -203,7 +216,7 @@ it.effect("once the terminal watch closes and the agent is offline, a mention le
     yield* Fiber.join(watching);
     yield* attended.release;
     const { back, lines } = yield* untilTakenBack(attended);
-    const events = yield* wakeEventsIn(attended.log);
+    const { events, next } = yield* anotherMention(attended);
 
     expect(typesIn(lines)).toStrictEqual([
       [BRIGID, "watch-replaced"],
@@ -214,6 +227,8 @@ it.effect("once the terminal watch closes and the agent is offline, a mention le
     expect(events).toStrictEqual([
       ["start", [id]],
       ["end", [id]],
+      ["start", [next]],
+      ["end", [next]],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

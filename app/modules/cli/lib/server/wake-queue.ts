@@ -166,7 +166,11 @@ function runOrSkip(queued: Queued) {
       if (Arr.isReadonlyArrayNonEmpty(unread)) {
         return runGiven(queued)(unread);
       }
-      return printLine({ agent: queued.registration.agent, messages: idsOf(items), type: "wake-skipped" });
+      const { agent } = queued.registration;
+      return Effect.andThen(
+        queued.place.log.record(agent, { messages: idsOf(items), type: "skip" }),
+        printLine({ agent, messages: idsOf(items), type: "wake-skipped" }),
+      );
     });
 }
 
@@ -229,6 +233,11 @@ function wakeQueue(waking: Waking): Effect.Effect<WakeQueue, never, Scope.Scope 
         });
         yield* Effect.when(waiting, Effect.succeed(running));
         yield* Queue.offer(signal, true);
+        const { agent } = waking.registration;
+        yield* Effect.forEach(idsOf(fresh), (message) => waking.place.log.record(agent, { message, type: "mention" }), {
+          concurrency: 1,
+          discard: true,
+        });
       });
     }
     function change(next: (waiting: Waiting) => Waiting): Effect.Effect<Waiting> {

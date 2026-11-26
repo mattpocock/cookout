@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Screen, Shot, Theme, ThemePass } from "./lib/screenshots.ts";
-import { attachScreenFiles, setScreenPresences } from "./lib/screen-triggers.ts";
+import { attachScreenFiles, setScreenPresences, titleScreenThread } from "./lib/screen-triggers.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
 import { hillsPng, moveClockForward } from "../app/modules/testing/index.ts";
 import { mkdirSync, mkdtempSync } from "node:fs";
@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 
 interface Board {
   readonly closed: readonly number[];
+  readonly titled: unknown;
   readonly dropped: string;
   readonly owner: string;
   readonly token: string;
@@ -69,7 +70,7 @@ function seed(server: DevCookout): Board {
     owner: tokenOf(identities, TRIGGER_OWNER),
     token: tokenOf(identities, LOGGED_IN_AS),
   };
-  return { closed: closed.filter((id) => typeof id === "number"), ...tokens, server };
+  return { closed: closed.filter((id) => typeof id === "number"), titled: field(seeded, "thread"), ...tokens, server };
 }
 
 function closeThreads({ closed, server, token }: Board): void {
@@ -242,6 +243,7 @@ async function prepared(server: DevCookout): Promise<Board> {
   const board = seed(server);
   closeThreads(board);
   const { adminToken, url } = server;
+  await titleScreenThread({ thread: board.titled, token: board.token, url });
   await setScreenPresences({
     adminToken,
     dropped: DROPPED_AGENT,
