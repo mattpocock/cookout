@@ -93,6 +93,16 @@ test("← on a reply in the thread panel goes to the thread's message in the cha
   await wentBackToChannel(page);
 });
 
+test("← on the author link of a reply in the thread panel goes to the thread's message in the channel", async ({
+  page,
+}) => {
+  await channelOpened(page, "browser-thread-left-author");
+  await openedByT(page);
+  await threadReply(page).getByRole("link", { exact: true, name: "admin" }).focus();
+
+  await wentBackToChannel(page);
+});
+
 test("← in the thread's empty reply box goes to the thread's message in the channel", async ({ page }) => {
   await channelOpened(page, "browser-thread-left-empty-box");
   await openedByT(page);

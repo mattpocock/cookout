@@ -181,8 +181,10 @@ function focusedOnChannelMessage(): boolean {
   return true;
 }
 
+const MESSAGE_OR_ITS_LINK = `${MESSAGE}, ${MESSAGE} a[href]`;
+
 function inPanel(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.matches(MESSAGE) && target.closest(PANEL) !== null;
+  return target instanceof HTMLElement && target.matches(MESSAGE_OR_ITS_LINK) && target.closest(PANEL) !== null;
 }
 
 function backToChannel({ target }: KeyboardEvent): boolean {

@@ -5,11 +5,11 @@ import type { CallFailure, ClientWithAgentSessionState, CredentialSource, JoinPl
 import type { Registration, Wake } from "./registrations.ts";
 import { answered, refused } from "./output.ts";
 import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
+import { forgetRegistration, register, wakeOf } from "./registrations.ts";
 import { joinByBrowser, joinByCode } from "./agent-join.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { cookoutUrl } from "../../../config/server.ts";
-import { register } from "./registrations.ts";
 
 interface JoinFlags {
   readonly as: IdentityName;
@@ -22,6 +22,7 @@ interface JoinFlags {
 interface WakeAsk {
   readonly asked: boolean;
   readonly command: readonly string[];
+  readonly timeoutMinutes: Option.Option<number>;
 }
 
 interface JoinOptions extends Omit<JoinFlags, "as"> {
@@ -174,16 +175,21 @@ function issueAndKeep(
 const wakeUsage: CallFailure = {
   code: "usage",
   message:
-    "Give a wake command only with --wake, after --: cookout join --as <name> --wake -- <wake command…>. " +
-    "--print-env keeps nothing to register.",
+    "Give a wake command (and --timeout) only with --wake, after --: cookout join --as <name> --wake -- " +
+    "<wake command…>. --print-env keeps nothing to register.",
 };
 
-function wakeCommandOf({ asked, command }: WakeAsk): Effect.Effect<Option.Option<Wake>, CallFailure> {
-  if (!asked && Arr.isReadonlyArrayEmpty(command)) {
+function nothingAsked({ asked, command, timeoutMinutes }: WakeAsk): boolean {
+  return !asked && Arr.isReadonlyArrayEmpty(command) && Option.isNone(timeoutMinutes);
+}
+
+function wakeCommandOf(ask: WakeAsk): Effect.Effect<Option.Option<Wake>, CallFailure> {
+  const { asked, command, timeoutMinutes } = ask;
+  if (nothingAsked(ask)) {
     return Effect.succeedNone;
   }
   if (asked && Arr.isReadonlyArrayNonEmpty(command)) {
-    return Effect.succeedSome(command);
+    return Effect.asSome(wakeOf({ timeoutMinutes, words: command }));
   }
   return Effect.fail(wakeUsage);
 }
@@ -241,6 +247,9 @@ function joiningOf({ as, code, ...flags }: JoinOptions): Effect.Effect<Joining, 
 
 function leaveAndForget(opened: ClientWithAgentSessionState): Effect.Effect<LeaveResponse, CallFailure> {
   return Effect.gen(function* leaveAgentSession() {
+    if (Option.isSome(opened.joined)) {
+      yield* forgetRegistration(opened.joined.value.file);
+    }
     const left = yield* callClient((client) => client.leave())(opened);
     if (Option.isSome(opened.joined)) {
       yield* opened.joined.value.file.remove;

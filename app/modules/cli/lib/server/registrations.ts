@@ -12,19 +12,35 @@ import { pathVariable } from "../../../config/server.ts";
 
 const SESSION_ID_PLACEHOLDER = "{session-id}";
 const REGISTRATION_SUFFIX = ".registration.json";
+const RUNNER_SUFFIX = ".runner.json";
+const DROPPED_SUFFIX = ".dropped.json";
 const PRETTY = 2;
 const NOTHING = {};
+const AT_LEAST_ONE_MINUTE = 1;
 
 const noWakeCommand: CallFailure = {
   code: "usage",
   message: `Give the wake command after --, such as: cookout runner register -- claude -p --resume ${SESSION_ID_PLACEHOLDER}`,
 };
 
+const TIMEOUT_DESCRIPTION =
+  "With a wake command: the whole minutes each wake run may take, 10 by default. When it passes, the runner kills " +
+  "the run's process group, children included, and replies in each given mention's thread that it timed out.";
+
+const badTimeout: CallFailure = {
+  code: "usage",
+  message:
+    "--timeout is the whole minutes a wake run may take before the runner kills it, 1 or more, such as --timeout 30.",
+};
+
+const Minutes = Schema.Int.check(Schema.isGreaterThanOrEqualTo(AT_LEAST_ONE_MINUTE));
+
 const RegistrationSchema = Schema.Struct({
   agent: Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(Schema.refine(isIdentityName)),
   directory: Schema.String,
   harness: Schema.String,
   path: Schema.String,
+  timeoutMinutes: Schema.optionalKey(Minutes),
   url: Schema.String,
   wakeCommand: Schema.NonEmptyArray(Schema.String),
 });
@@ -36,7 +52,10 @@ interface RegisteredSession {
   readonly registration: Registration;
 }
 
-type Wake = Arr.NonEmptyReadonlyArray<string>;
+interface Wake {
+  readonly command: Arr.NonEmptyReadonlyArray<string>;
+  readonly timeoutMinutes: Option.Option<number>;
+}
 
 interface Registering {
   readonly file: AgentSessionStateFile;
@@ -64,8 +83,12 @@ function registrationFor({
   return Effect.gen(function* makeRegistration() {
     const path = yield* Path.Path;
     const found = yield* Effect.orDie(pathVariable);
-    const wakeCommand = Arr.map(wake, Str.replaceAll(SESSION_ID_PLACEHOLDER, sessionId));
-    return { agent, directory: path.resolve("."), harness, path: found, url, wakeCommand };
+    const wakeCommand = Arr.map(wake.command, Str.replaceAll(SESSION_ID_PLACEHOLDER, sessionId));
+    const timeout = Option.match(wake.timeoutMinutes, {
+      onNone: () => NOTHING,
+      onSome: (timeoutMinutes) => ({ timeoutMinutes }),
+    });
+    return { agent, directory: path.resolve("."), harness, path: found, url, wakeCommand, ...timeout };
   });
 }
 
@@ -83,21 +106,47 @@ function register({
     const { identity, url } = stored.value;
     const registration = yield* registrationFor({ agent: identity, harness, sessionId, url, wake });
     const text = yield* Effect.orDie(encodeRegistration(registration));
-    yield* file.writeBeside(REGISTRATION_SUFFIX, text);
+    yield* file.beside(REGISTRATION_SUFFIX).write(text);
+    yield* file.beside(DROPPED_SUFFIX).remove;
     return registration;
   });
 }
 
-function registerHere(words: readonly string[]): Effect.Effect<Registration, CallFailure, AgentSessionStateNeeds> {
+interface Asked {
+  readonly timeoutMinutes: Option.Option<number>;
+  readonly words: readonly string[];
+}
+
+function wakeOf({ timeoutMinutes, words }: Asked): Effect.Effect<Wake, CallFailure> {
   if (!Arr.isReadonlyArrayNonEmpty(words)) {
     return Effect.fail(noWakeCommand);
   }
-  return Effect.flatMap(joinPlace, ({ file, place }) =>
-    Option.match(file, {
-      onNone: () => Effect.fail(notJoined),
-      onSome: (found) => register({ file: found, place, wake: words }),
-    }),
+  if (Option.exists(timeoutMinutes, (minutes) => !Number.isSafeInteger(minutes) || minutes < AT_LEAST_ONE_MINUTE)) {
+    return Effect.fail(badTimeout);
+  }
+  return Effect.succeed({ command: words, timeoutMinutes });
+}
+
+function registerHere(asked: Asked): Effect.Effect<Registration, CallFailure, AgentSessionStateNeeds> {
+  return Effect.flatMap(wakeOf(asked), (wake) =>
+    Effect.flatMap(joinPlace, ({ file, place }) =>
+      Option.match(file, {
+        onNone: () => Effect.fail(notJoined),
+        onSome: (found) => register({ file: found, place, wake }),
+      }),
+    ),
   );
+}
+
+function forgetRegistration(file: AgentSessionStateFile): Effect.Effect<void, AgentSessionStateFailure> {
+  return Effect.andThen(file.beside(REGISTRATION_SUFFIX).remove, file.beside(RUNNER_SUFFIX).remove);
+}
+
+function notRegistered(agent: string): CallFailure {
+  return {
+    code: "not_registered",
+    message: `No session is registered to wake ${agent}. \`cookout runner status\` lists the registered agents.`,
+  };
 }
 
 function opened({ file, registration }: RegisteredSession): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
@@ -131,5 +180,32 @@ const registeredSessions: Effect.Effect<
   Arr.map(found, ({ file, value }) => ({ file, registration: value })),
 );
 
-export { SESSION_ID_PLACEHOLDER, opened, register, registerHere, registeredSessions };
+function unregister(
+  agent: string,
+): Effect.Effect<{ readonly unregistered: string }, CallFailure, AgentSessionStateNeeds> {
+  return Effect.gen(function* unregisterAgent() {
+    const registered = yield* registeredSessions;
+    const found = Arr.filter(registered, ({ registration }) => registration.agent === agent);
+    if (!Arr.isReadonlyArrayNonEmpty(found)) {
+      return yield* Effect.fail(notRegistered(agent));
+    }
+    yield* Effect.forEach(found, ({ file }) => forgetRegistration(file), { concurrency: 1, discard: true });
+    return { unregistered: agent };
+  });
+}
+
+export {
+  DROPPED_SUFFIX,
+  REGISTRATION_SUFFIX,
+  RUNNER_SUFFIX,
+  SESSION_ID_PLACEHOLDER,
+  TIMEOUT_DESCRIPTION,
+  forgetRegistration,
+  opened,
+  register,
+  registerHere,
+  registeredSessions,
+  unregister,
+  wakeOf,
+};
 export type { RegisteredSession, Registration, Wake };

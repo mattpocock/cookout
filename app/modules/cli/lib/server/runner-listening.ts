@@ -2,37 +2,28 @@ import { Array as Arr, Effect, Option, Order, Ref, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import { lastSeenAfter, source, start, whileUnavailable } from "./watch-connection.ts";
-import type { ChildProcessSpawner } from "effect/process";
 import type { Heard } from "./watch-connection.ts";
 import type { PresenceResponse } from "../../../presence/index.ts";
-import type { RegisteredSession } from "./registrations.ts";
-import type { RunPlace } from "./wake-run.ts";
-import type { Scope } from "effect";
 import type { WakeQueue } from "./wake-queue.ts";
 import { callClient } from "./adapters/sdk.ts";
-import { opened } from "./registrations.ts";
 import { printLine } from "./output.ts";
-import { wakeQueue } from "./wake-queue.ts";
 import { watchReplaced } from "../../../presence/index.ts";
 
 const PRESENCE_POLL = "5 seconds";
-
-type Spawner = ChildProcessSpawner.ChildProcessSpawner;
 
 function isMention(event: Readonly<Heard>): event is Extract<Heard, { readonly type: "inbox-item" }> {
   return event.type === "inbox-item" && Arr.contains(event.item.reasons, "mention");
 }
 
-interface Listening {
-  readonly connected: Effect.Effect<boolean>;
-  readonly place: RunPlace;
-  readonly registered: RegisteredSession;
+interface Heeding {
+  readonly agent: string;
+  readonly asAgent: ClientWithAgentSessionState;
+  readonly connected: Effect.Effect<unknown>;
+  readonly queue: WakeQueue;
+  readonly replaced: Effect.Effect<void>;
 }
 
-interface Holding {
-  readonly asAgent: ClientWithAgentSessionState;
-  readonly listening: Listening;
-  readonly runs: WakeQueue;
+interface Holding extends Heeding {
   readonly saw: (event: Heard) => Effect.Effect<void>;
   readonly seen: Effect.Effect<Option.Option<MessageId>>;
 }
@@ -44,7 +35,7 @@ interface Hearing {
 }
 
 function heardUntilReplaced({ from, holding, onConnected }: Hearing): Effect.Effect<void, CallFailure> {
-  const { asAgent, listening, runs, saw } = holding;
+  const { asAgent, connected, queue, saw } = holding;
   const runnerOf = { opened: asAgent, runner: true };
   return Effect.scoped(
     Effect.gen(function* listenAsRunner() {
@@ -52,9 +43,9 @@ function heardUntilReplaced({ from, holding, onConnected }: Hearing): Effect.Eff
       yield* onConnected;
       yield* source({ first, from, listening: runnerOf }).pipe(
         Stream.tap(saw),
-        Stream.tap((event) => Effect.when(listening.connected, Effect.succeed(event.type === "connected"))),
+        Stream.tap((event) => Effect.when(connected, Effect.succeed(event.type === "connected"))),
         Stream.filter(isMention),
-        Stream.runForEach((event) => runs.hear(event.item)),
+        Stream.runForEach((event) => queue.hear(event.item)),
       );
     }),
   );
@@ -64,11 +55,8 @@ function isOffline(agent: string): (answer: PresenceResponse) => boolean {
   return ({ presence }) => !Arr.some(presence, ({ identity, online }) => identity === agent && online);
 }
 
-function untilOffline({ asAgent, listening }: Holding): Effect.Effect<void, CallFailure> {
-  const offline = Effect.map(
-    whileUnavailable(callClient((client) => client.presence())(asAgent)),
-    isOffline(listening.registered.registration.agent),
-  );
+function untilOffline({ agent, asAgent }: Holding): Effect.Effect<void, CallFailure> {
+  const offline = Effect.map(whileUnavailable(callClient((client) => client.presence())(asAgent)), isOffline(agent));
   const afterAPause = Effect.andThen(Effect.sleep(PRESENCE_POLL), offline);
   return Effect.asVoid(Effect.repeat(afterAPause, { until: Boolean }));
 }
@@ -79,11 +67,10 @@ function newestOf(items: readonly InboxItem[], seen: Option.Option<MessageId>): 
 }
 
 function takenBack(holding: Holding): Effect.Effect<void, CallFailure> {
-  const { agent } = holding.listening.registered.registration;
   return Effect.gen(function* takeAgentBack() {
     const { items } = yield* whileUnavailable(callClient((client) => client.inbox())(holding.asAgent));
     const seen = yield* holding.seen;
-    const onConnected = Effect.andThen(printLine({ agent, type: "reconnected" }), holding.runs.catchUp);
+    const onConnected = Effect.andThen(printLine({ agent: holding.agent, type: "reconnected" }), holding.queue.catchUp);
     yield* heardUntilReplaced({ from: newestOf(items, seen), holding, onConnected });
   });
 }
@@ -95,32 +82,25 @@ function isReplaced(failure: CallFailure): boolean {
 function whenReplaced(
   holding: Holding,
 ): (listen: Effect.Effect<void, CallFailure>) => Effect.Effect<void, CallFailure> {
-  const { agent } = holding.listening.registered.registration;
-  const standDown = Effect.andThen(
-    holding.runs.standDown,
-    Effect.andThen(printLine({ agent, type: "watch-replaced" }), untilOffline(holding)),
-  );
+  const said = Effect.andThen(holding.replaced, printLine({ agent: holding.agent, type: "watch-replaced" }));
+  const standDown = Effect.andThen(holding.queue.standDown, Effect.andThen(said, untilOffline(holding)));
   function standingDown(listen: Effect.Effect<void, CallFailure>): Effect.Effect<void, CallFailure> {
     return Effect.catchIf(listen, isReplaced, () => Effect.andThen(standDown, standingDown(takenBack(holding))));
   }
   return standingDown;
 }
 
-function wakeOnMentions(listening: Listening): Effect.Effect<void, CallFailure, Scope.Scope | Spawner> {
-  return Effect.gen(function* listenAndWake() {
-    const asAgent = yield* opened(listening.registered);
-    const { place, registered } = listening;
-    const runs = yield* wakeQueue({ asAgent, place, registration: registered.registration });
+function heedMentions(heeding: Heeding): Effect.Effect<void, CallFailure> {
+  return Effect.gen(function* listenAndStandDown() {
     const lastSeen = yield* Ref.make(Option.none<MessageId>());
     const holding: Holding = {
-      asAgent,
-      listening,
-      runs,
+      ...heeding,
       saw: (event) => Ref.update(lastSeen, lastSeenAfter(event)),
       seen: Ref.get(lastSeen),
     };
-    yield* heardUntilReplaced({ from: Option.none(), holding, onConnected: runs.catchUp }).pipe(whenReplaced(holding));
+    const first = { from: Option.none(), holding, onConnected: heeding.queue.catchUp };
+    yield* heardUntilReplaced(first).pipe(whenReplaced(holding));
   });
 }
 
-export { type Listening, wakeOnMentions };
+export { heedMentions };

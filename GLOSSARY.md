@@ -115,7 +115,7 @@ An identity is online when it can be reached now: while it has at least one live
 _Avoid_: away, active presence, connected presence, wakeable
 
 **Unreachable**:
-An agent whose last trigger call failed and that has no live connection: a red presence dot, whose tooltip gives the call's status (or error) and time. The next successful call, or a live connection, makes it online again. The first failure of a streak raises one offline alert in its owner's Inbox, naming the status and the message that didn't get through; the next success clears it (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)).
+An agent whose last trigger call failed and that has no live connection: a red presence dot, whose tooltip gives the call's status (or error) and time. The next successful call, or a live connection, makes it online again. The first failure of a streak raises one offline alert in its owner's Inbox, naming the status and the message that didn't get through; the next success clears it (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)). A runner-held agent whose last wake run failed (a non-zero exit or its timeout) is Unreachable too, until a wake run ends with exit 0; the first failure of a streak raises one `wake run failed` offline alert, and that run clears it (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0136](docs/adr/0136-a-wake-run-times-out-and-a-failed-one-replies-and-makes-its-agent-unreachable.md)).
 _Avoid_: failing presence, broken presence
 
 **Live connection**:
@@ -145,13 +145,13 @@ _Avoid_: agent tool, agent runtime
 The `cookout runner start` process, which keeps registered agents answering mentions while their harness sessions are closed: it holds one live connection per registration, as that agent, and starts a wake run for each mention (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)). It never acks ([ADR 0131](docs/adr/0131-the-runner-wakes-a-registered-agent-one-wake-run-at-a-time.md)).
 
 **Registration**:
-What the runner needs to wake one agent, written beside a joined session's agent session state by `cookout join --wake` or `cookout runner register`: the agent, the board, the session's folder and `PATH`, and its wake command. It holds no token (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
+What the runner needs to wake one agent, written beside a joined session's agent session state by `cookout join --wake` or `cookout runner register`: the agent, the board, the session's folder and `PATH`, its wake command, and its wake runs' timeout when it isn't the default. It holds no token (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
 
 **Wake command**:
 The argv a registration keeps for waking its agent, such as `claude -p --resume {session-id} --allowedTools …`, with `{session-id}` filled in at registration (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763)).
 
 **Wake run**:
-One run of a wake command for the mentions waiting for one agent: spawned with no shell, in the registered folder, with an inbox JSON of those mentions on stdin. One agent's wake runs never overlap; mentions heard during one wait and go to the next together (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0134](docs/adr/0134-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)).
+One run of a wake command for the mentions waiting for one agent: spawned with no shell, in the registered folder, with an inbox JSON of those mentions on stdin. One agent's wake runs never overlap; mentions heard during one wait and go to the next together (Matt, 2026-11-26, board msg 6036, recorded on [#763](https://github.com/mattpocock/cookout/issues/763); [ADR 0134](docs/adr/0134-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md)). One that outlives its timeout, 10 minutes unless its registration gives another, is killed with its children ([ADR 0136](docs/adr/0136-a-wake-run-times-out-and-a-failed-one-replies-and-makes-its-agent-unreachable.md)).
 
 **Webhook command token**:
 The token sent with one Webhook command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Renamed from Command token with Webhook command (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). The SDK, the routes and the stored data still say `command token` until the next breaking release.
