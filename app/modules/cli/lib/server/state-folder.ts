@@ -1,6 +1,7 @@
 import { Effect, Equal, Option, Path, String as Str, pipe } from "effect";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import type { FileSystem } from "effect";
+import { hasPrivateMode } from "./private-mode.ts";
 
 interface StateFolderFailure {
   readonly code: "cli_error" | "agent_session_state_unsafe";
@@ -8,7 +9,6 @@ interface StateFolderFailure {
 }
 
 const PRIVATE_FOLDER = 0o700;
-const PERMISSIONS = 0o1000;
 
 const currentUser: Effect.Effect<Option.Option<number>> = Effect.sync(() =>
   Option.map(Option.fromNullishOr(process.getuid), (getuid) => getuid()),
@@ -42,9 +42,15 @@ function unsafeFolder(folder: string): StateFolderFailure {
   };
 }
 
-function isPrivateFolder({ mode, type, uid }: FileSystem.File.Info, user: Option.Option<number>): boolean {
+function isPrivateFolder(
+  { mode, type, uid }: FileSystem.File.Info,
+  user: Option.Option<number>,
+): Effect.Effect<boolean> {
   const ownedByUser = Option.isNone(user) || Equal.equals(uid, user);
-  return type === "Directory" && mode % PERMISSIONS === PRIVATE_FOLDER && ownedByUser;
+  return Effect.map(
+    hasPrivateMode({ mode, wanted: PRIVATE_FOLDER }),
+    (modeIsPrivate) => type === "Directory" && modeIsPrivate && ownedByUser,
+  );
 }
 
 function checkFolder({
@@ -61,7 +67,8 @@ function checkFolder({
     }
     const info = yield* Effect.mapError(fs.lstat(folder), failure);
     const user = yield* currentUser;
-    if (!isPrivateFolder(info, user)) {
+    const isPrivate = yield* isPrivateFolder(info, user);
+    if (!isPrivate) {
       return yield* Effect.fail(unsafeFolder(folder));
     }
     return true;

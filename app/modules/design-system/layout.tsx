@@ -4,7 +4,7 @@
  * This entry point is its layout: the page, its panes and panels, and the sidebar. `messages.tsx`, `feed.tsx`, `controls.tsx` and `content.tsx` are its other parts.
  *
  * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`.
- * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` and its `SidebarFooter`.
+ * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` and its `SidebarFooter`; the edge comes after them in Tab order, so the first Tab lands on the sidebar's items, not on a handle shown only as a thin line (mattpocock/cookout#541).
  * - `SidebarBody` is the sidebar's body of links (following one, but not pressing a button, closes it on a narrow screen).
  * - `SidebarFooter` is the sidebar's footer.
  * - `WorkspaceMain` holds the route's panes on the right.
