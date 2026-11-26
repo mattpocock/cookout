@@ -10,7 +10,7 @@ name: Check
 # run in the Release workflow, the gate, on the newest v1 commit whose Check run is green, before
 # it publishes and deploys (#636, docs/adr/0114-release-is-the-gate-on-the-newest-green-v1-commit.md).
 # The e2e suite runs here too so that a pull request that breaks it gets a red Check and never
-# lands (#786, docs/adr/0131-check-runs-the-e2e-suite.md).
+# lands (#786, docs/adr/0132-check-runs-the-e2e-suite.md).
 #
 # A pull request into v1 runs the same jobs on its merge with v1, plus `browser` ×6: Release's
 # browser job, each shard running only its share of the browser tests the change reaches (#737).
