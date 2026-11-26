@@ -39,20 +39,32 @@ function returnedTo({ around, opener, returnTo }: Returning): Element | null {
   return globalThis.document.querySelector(returnTo);
 }
 
-function useReturnFocus(returnTo: string | null): ReturnFocus {
+function focusReturned(returning: Returning): void {
+  const element = returnedTo(returning);
+  const claimed = globalThis.document.activeElement;
+  if (claimed !== null && claimed !== globalThis.document.body) {
+    return;
+  }
+  if (element instanceof HTMLElement) {
+    element.focus();
+  }
+}
+
+interface Returns {
+  readonly returnTo: string | null;
+  readonly onFocused?: (() => void) | undefined;
+}
+
+function useReturnFocus({ onFocused, returnTo }: Returns): ReturnFocus {
   const opener = useRef<unknown>(null);
   const around = useRef<readonly unknown[]>([]);
   return useMemo(
     () => ({
       onClose: (event: Readonly<Event>) => {
         event.preventDefault();
-        const element = returnedTo({ around: around.current, opener: opener.current, returnTo });
-        const claimed = globalThis.document.activeElement;
-        if (claimed !== null && claimed !== globalThis.document.body) {
-          return;
-        }
-        if (element instanceof HTMLElement) {
-          element.focus();
+        focusReturned({ around: around.current, opener: opener.current, returnTo });
+        if (typeof onFocused === "function") {
+          onFocused();
         }
       },
       onOpen: () => {
@@ -60,7 +72,7 @@ function useReturnFocus(returnTo: string | null): ReturnFocus {
         around.current = ancestorsOf(opener.current);
       },
     }),
-    [returnTo],
+    [onFocused, returnTo],
   );
 }
 
