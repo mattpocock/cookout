@@ -125,6 +125,7 @@ const KEYS = [
     does: "Schedule the message, to post later",
     scope: "text box",
   },
+  { action: "attachFiles", chord: "Mod+Shift+U", does: "Attach files", scope: "text box" },
   { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
   { action: "messagePerson", chord: "m", does: "Message them, where there's a message box", scope: "person" },
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
