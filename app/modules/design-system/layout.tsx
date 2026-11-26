@@ -13,7 +13,7 @@
  * - `NavLink` is one link in the sidebar, bold when it has something new (`marked`), highlighted when it is the open item, with an icon and any `Pill` after it; a `menu` is its `ActionMenu`.
  * - `NavHeading` heads a `NavList` of links, with any `HeadingButton` on its line.
  * - `NavList` is a list of links under a `NavHeading`.
- * - `HeadingButton` is a plus named by its label that starts something new, such as a channel.
+ * - `HeadingButton` is a plus named by its label that starts something new, such as a channel. It takes focus while `focused`, and calls any `onFocused` whenever it takes focus.
  * - `FooterLink` is a link in the footer with a gear, such as Settings, highlighted when open.
  * - `Pane` is the main column (given `onFiles`, a drop zone over all of it, lit while files are dragged over it, that hands files dropped on it to `onFiles` and leaves anything else alone), with a `PaneHeader`, a named `Page` or `ScrollArea`, and anything under it, such as a message box in a `BoxFrame` with its keyboard hint.
  * - `PaneHeader` is a pane's title (a level-1 heading that takes focus from a script, not from Tab), description and any action on its right, such as a `PressButton`; its title is mono, as a channel's name, unless `sans`.

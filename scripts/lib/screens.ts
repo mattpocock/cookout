@@ -52,6 +52,7 @@ const SCREENS: readonly Screen[] = [
     text: "Marked as read",
   },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
+  { hash: "#/channels/general", name: "titled-thread", text: "Flaky login test" },
   {
     focus: 'article:has-text("Lunch at 12:30.")',
     hash: "#/channels/general",
