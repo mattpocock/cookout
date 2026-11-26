@@ -78,6 +78,7 @@ function onHeading(page: Page, channel: string): readonly Step[] {
     ["Shift+Tab", button(page, "Close thread")],
     ["Shift+Tab", link(page, "Open thread on its own")],
     ["Shift+Tab", link(page, "Close panel")],
+    ["Shift+Tab", button(page, "Add title")],
     ["Shift+Tab", named({ name: "Thread", page, role: "heading" })],
   ];
 }
@@ -93,6 +94,7 @@ test("replying in a thread and leaving it work by keys alone", async ({ page }) 
       ["Control+]", replyBox(page)],
       ...onHeading(page, channel),
       ["Tab", button(page, "More actions")],
+      ["Tab", button(page, "Add title")],
       ["Tab", link(page, "Close panel")],
       ["Tab", link(page, "Open thread on its own")],
       ["Tab", button(page, "Close thread")],

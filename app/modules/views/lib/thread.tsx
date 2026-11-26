@@ -5,12 +5,13 @@ import type { ReactNode } from "react";
 import { SidePanel } from "../../design-system/layout.tsx";
 import { ThreadContent } from "./thread-content.tsx";
 import { ThreadGone } from "./thread-gone.tsx";
+import type { ThreadHeadingOf } from "./use-thread-heading.ts";
 import type { Unread } from "../../unread/index.ts";
 import { threadDraft } from "./thread-draft.ts";
-import { threadHeading } from "./thread-heading.ts";
 import { useShownThread } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 import { useThreadHeader } from "./use-thread-header.ts";
+import { useThreadHeading } from "./use-thread-heading.ts";
 
 const TEXT = { close: "Close panel", thread: "Thread" } as const;
 const CLOSE_LINK = `aside[aria-label="${TEXT.thread}"] a[aria-label="${TEXT.close}"]`;
@@ -20,6 +21,7 @@ interface ThreadProps {
   readonly channel: ChannelName;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
+  readonly keymap: ThreadHeadingOf["keymap"];
   readonly thread: MessageId;
   readonly linked: MessageId | null;
   readonly unread: Unread;
@@ -32,7 +34,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const line = props.unread.newLine(channel, thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
   const header = useThreadHeader({ alone: props.alone, channel, closing, menu: props.unread.menu, state, thread });
-  const heading = threadHeading({ channel, state });
+  const heading = useThreadHeading({ channel, gone: header.gone, keymap: props.keymap, state });
   const handleClose = header.onClose;
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread });
   const handleFiles = draft.attachments.attach;
@@ -48,6 +50,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       onClose={handleClose}
       onFiles={handleFiles}
       title={heading.title}
+      titling={heading.titling}
     >
       {header.gone && <ThreadGone landing={CLOSE_LINK} />}
       {!header.gone && (
