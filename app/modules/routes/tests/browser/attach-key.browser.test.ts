@@ -28,7 +28,12 @@ interface Attaching {
 
 async function attachedByKey({ box, form, page }: Attaching): Promise<void> {
   await box.fill(DRAFT);
-  const [fileChooser] = await Promise.all([page.waitForEvent("filechooser"), page.keyboard.press(CHORD)]);
+  const chosen = page.waitForEvent("filechooser");
+
+  await expect(box).toBeFocused();
+
+  await page.keyboard.press(CHORD);
+  const fileChooser = await chosen;
   await fileChooser.setFiles([{ buffer: Buffer.from(hillsPng()), mimeType: "image/png", name: "hills.png" }]);
 
   await expect(form.getByRole("list", { exact: true, name: "Files to send" }).getByRole("listitem")).toHaveCount(
