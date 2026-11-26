@@ -1,4 +1,9 @@
-import type { TopLevelMessage } from "../../sdk/index.ts";
+import type { CookoutClient, MessageId, Refusal, TopLevelMessage } from "../../sdk/index.ts";
+import { CookoutError, refusalOf } from "../../sdk/index.ts";
+
+type TitlingClient = Pick<CookoutClient, "setThreadTitle">;
+
+type SetTitle = (messageId: MessageId, title: string) => Promise<Refusal | null>;
 
 interface Titled {
   readonly message: TopLevelMessage;
@@ -16,4 +21,13 @@ function titledAs({ message, parent }: Titled): TopLevelMessage {
   };
 }
 
-export { titledAs };
+function titleRefusal(error: unknown): Refusal {
+  const refusal = refusalOf(error);
+  if (!(error instanceof CookoutError)) {
+    return refusal;
+  }
+  const [message = refusal.message] = error.schemaProblems.map((problem) => problem.message);
+  return { ...refusal, message };
+}
+
+export { type SetTitle, type TitlingClient, titledAs, titleRefusal };

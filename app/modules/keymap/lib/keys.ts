@@ -2,6 +2,7 @@ const SCOPES = [
   "image viewer",
   "search box",
   "prompt form",
+  "title field",
   "text box",
   "person",
   "people list",
@@ -34,6 +35,7 @@ const GROUPS: Readonly<Record<Scope, string>> = {
   sidebar: "Sidebar",
   "text box": "Message box",
   "thread panel": "Thread panel",
+  "title field": "Thread title field",
 };
 
 const KEYS = [
@@ -106,6 +108,7 @@ const KEYS = [
   { action: "openHighlighted", chord: "Enter", does: "Open the highlighted result", scope: "search box" },
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
   { action: "cancelPrompt", chord: "Escape", does: "Cancel the form", scope: "prompt form" },
+  { action: "cancelTitle", chord: "Escape", does: "Cancel, leaving the title as it was", scope: "title field" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   {
     action: "newestMessage",

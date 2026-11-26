@@ -64,6 +64,9 @@
  * is applied once to the table, so every view of a message agrees; a read puts what it brings with every event heard
  * meanwhile applied again, so the event wins. `calls.close` and `calls.reopen` close or reopen a thread, one at a time
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
+ * `calls.setTitle(id, title)` sets, changes or (with an empty title) clears the Thread title of the thread holding the
+ * message, applying the answer as a `thread` event, and answers `null`, or the server's refusal (an `invalid_request`'s
+ * first schema problem as its message, such as "Use at most 100 characters."), changing nothing;
  * `calls.askDelete(message)` asks to delete one of the logged-in human's messages, held as `messageDeleting`'s `asked`
  * for the confirmation to show until `calls.cancelDelete` or the delete; `calls.deleteMessage` deletes it through the SDK
  * (for a top-level message, its whole thread), one delete at a time, applying the answer as a `message-deleted` event,
