@@ -18,7 +18,7 @@ interface Keyed {
 function actionOf({ keys, parts }: Keyed): readonly MenuChoice[] {
   const { actionHref, actionLabel, onAction } = parts;
   if (actionHref !== null) {
-    return [{ href: actionHref, icon: "reply", keys: keys.reply, label: actionLabel, onSelect: null }];
+    return [{ href: actionHref, icon: "reply", keys: keys.reply, label: actionLabel, onSelect: onAction }];
   }
   if (onAction === null) {
     return [];

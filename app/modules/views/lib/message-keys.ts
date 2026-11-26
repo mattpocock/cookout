@@ -81,6 +81,7 @@ function press({ action, keymap, whenOpen }: Pressing): Act {
       return false;
     }
     if (control instanceof HTMLAnchorElement && control.hash === globalThis.location.hash) {
+      control.click();
       return focused(whenOpen);
     }
     control.click();
