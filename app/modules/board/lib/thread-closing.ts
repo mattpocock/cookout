@@ -30,17 +30,9 @@ interface Closed {
   readonly parent: TopLevelMessage;
 }
 
-function titleOf({ title, titleSetAt, titleSetBy }: TopLevelMessage): Partial<TopLevelMessage> {
-  if (typeof title !== "string" || typeof titleSetAt !== "string" || typeof titleSetBy !== "string") {
-    return {};
-  }
-  return { title, titleSetAt, titleSetBy };
-}
-
-function standingAs({ message, parent }: Closed): TopLevelMessage {
+function closedAs({ message, parent }: Closed): TopLevelMessage {
   const { closedAt, closedBy } = parent;
-  const { title: _title, titleSetAt: _titleSetAt, titleSetBy: _titleSetBy, ...untitled } = reopened(message);
-  return { ...untitled, ...(closedAt && closedBy && { closedAt, closedBy }), ...titleOf(parent) };
+  return { ...reopened(message), ...(closedAt && closedBy && { closedAt, closedBy }) };
 }
 
 async function after(previous: Promise<void> | null, step: () => Promise<void>): Promise<void> {
@@ -87,4 +79,4 @@ function createThreadClosing({ changed, client, refused: notify }: ClosingOption
   };
 }
 
-export { type ClosingClient, type ClosingRefusal, createThreadClosing, standingAs };
+export { type ClosingClient, type ClosingRefusal, closedAs, createThreadClosing };
