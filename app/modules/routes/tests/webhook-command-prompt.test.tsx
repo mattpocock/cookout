@@ -1,4 +1,11 @@
-import { addCommand, channelWithCommand, openChannel, pick, suggestedFor, type } from "./commands.ts";
+import {
+  addWebhookCommand,
+  channelWithWebhookCommand,
+  openChannel,
+  pickWebhookCommand,
+  suggestedFor,
+  type,
+} from "./webhook-commands.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { adminClient } from "./identities.ts";
@@ -29,17 +36,17 @@ function optionsShown(): readonly (string | null)[] {
   return shown;
 }
 
-it("typing / suggests the registered commands with their descriptions, narrowed as the person types", {
+it("typing / suggests the registered Webhook commands with their descriptions, narrowed as the person types", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({
+  await channelWithWebhookCommand({
     channel: "web-command-suggests",
-    command: { description: "Ship a branch", name: "web-suggest-deploy" },
+    webhookCommand: { description: "Ship a branch", name: "web-suggest-deploy" },
   });
-  await addCommand({ name: "web-suggest-docs" });
-  await addCommand({ name: "web-other-suggest" });
+  await addWebhookCommand({ name: "web-suggest-docs" });
+  await addWebhookCommand({ name: "web-other-suggest" });
   const close = await openChannel({ channel: "web-command-suggests" });
 
   const both = await suggestedFor("/web-suggest-");
@@ -57,36 +64,39 @@ it("typing / suggests the registered commands with their descriptions, narrowed 
 
 const MANY = 12;
 const TWO_DIGITS = 2;
-const MANY_COMMANDS = Array.from({ length: MANY }, (_value, at) => `web-many-${String(at).padStart(TWO_DIGITS, "0")}`);
+const MANY_WEBHOOK_COMMANDS = Array.from(
+  { length: MANY },
+  (_value, at) => `web-many-${String(at).padStart(TWO_DIGITS, "0")}`,
+);
 
-it("every command matching what was typed is suggested, in order, not only the first few", {
+it("every Webhook command matching what was typed is suggested, in order, not only the first few", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   await adminClient().createChannel({ name: "web-command-many" });
   await Promise.all(
-    MANY_COMMANDS.map(async (name) => {
-      await addCommand({ name });
+    MANY_WEBHOOK_COMMANDS.map(async (name) => {
+      await addWebhookCommand({ name });
     }),
   );
   const close = await openChannel({ channel: "web-command-many" });
 
-  await expect(suggestedFor("/web-many-")).resolves.toStrictEqual(MANY_COMMANDS.map((name) => `/${name}`));
+  await expect(suggestedFor("/web-many-")).resolves.toStrictEqual(MANY_WEBHOOK_COMMANDS.map((name) => `/${name}`));
 
   close();
 });
 
-it("picking a command shows a labelled field for each property of its schema", { timeout: 5000 }, async () => {
+it("picking a Webhook command shows a labelled field for each property of its schema", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({
+  await channelWithWebhookCommand({
     channel: "web-command-fields",
-    command: { description: "Ship with options", name: "web-fields", schema: fieldsSchema },
+    webhookCommand: { description: "Ship with options", name: "web-fields", schema: fieldsSchema },
   });
   const close = await openChannel({ channel: "web-command-fields" });
 
-  const prompt = await pick("web-fields");
+  const prompt = await pickWebhookCommand("web-fields");
   const title = within(prompt).getByText("Ship with options");
 
   expect([
@@ -112,13 +122,13 @@ it("picking a command shows a labelled field for each property of its schema", {
   close();
 });
 
-it("cancelling a command's prompt brings back an empty message box", { timeout: 5000 }, async () => {
+it("cancelling a Webhook command's prompt brings back an empty message box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-cancel", command: { name: "web-call-cancel" } });
+  await channelWithWebhookCommand({ channel: "web-command-cancel", webhookCommand: { name: "web-call-cancel" } });
   const close = await openChannel({ channel: "web-command-cancel" });
 
-  const prompt = await pick("web-call-cancel");
+  const prompt = await pickWebhookCommand("web-call-cancel");
   fireEvent.click(within(prompt).getByRole("button", { name: "Cancel" }));
 
   expect([
@@ -129,15 +139,15 @@ it("cancelling a command's prompt brings back an empty message box", { timeout: 
   close();
 });
 
-it("escape in a command's prompt closes it and brings back the message box, focused, with its text kept", {
+it("escape in a Webhook command's prompt closes it and brings back the message box, focused, with its text kept", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-escape", command: { name: "web-call-escape" } });
+  await channelWithWebhookCommand({ channel: "web-command-escape", webhookCommand: { name: "web-call-escape" } });
   const close = await openChannel({ channel: "web-command-escape" });
 
-  const prompt = await pick("web-call-escape");
+  const prompt = await pickWebhookCommand("web-call-escape");
   fireEvent.keyDown(prompt, { key: "Escape" });
   const box = screen.getByLabelText<HTMLTextAreaElement>("Message");
 
@@ -150,7 +160,7 @@ it("escape in a command's prompt closes it and brings back the message box, focu
   close();
 });
 
-it("text starting with / that names no registered command posts as a message", { timeout: 5000 }, async () => {
+it("text starting with / that names no registered Webhook command posts as a message", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await adminClient().createChannel({ name: "web-command-not-one" });
@@ -168,10 +178,10 @@ it("text starting with / that names no registered command posts as a message", {
   close();
 });
 
-it("a thread's reply box offers no commands", { timeout: 5000 }, async () => {
+it("a thread's reply box offers no Webhook commands", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-thread", command: { name: "web-call-thread" } });
+  await channelWithWebhookCommand({ channel: "web-command-thread", webhookCommand: { name: "web-call-thread" } });
   const { message } = await adminClient().createMessage({ channel: "web-command-thread", text: "The parent" });
   const close = openAt({ client: adminClient(), hash: `#/channels/web-command-thread/threads/${String(message.id)}` });
 
@@ -196,9 +206,12 @@ it.each([
 ] as const)("a schema with %s falls back to a JSON data box", { timeout: 5000 }, async (_shape, name, properties) => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: `${name}-channel`, command: { name, schema: { properties, type: "object" } } });
+  await channelWithWebhookCommand({
+    channel: `${name}-channel`,
+    webhookCommand: { name, schema: { properties, type: "object" } },
+  });
   const close = await openChannel({ channel: `${name}-channel` });
-  const prompt = await pick(name);
+  const prompt = await pickWebhookCommand(name);
 
   expect([within(prompt).getByLabelText("Data").tagName, within(prompt).queryByLabelText("branch")]).toStrictEqual([
     "TEXTAREA",
