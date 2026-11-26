@@ -123,13 +123,18 @@ test("← straight after opening a thread by its reply count goes to the thread'
   await wentBackToChannel(page);
 });
 
-test("← straight after opening a thread by its Reply link goes to the thread's message in the channel", async ({
+test("← at the first character of the mention opening a thread by its Reply link puts there goes to the channel, keeping the mention", async ({
   page,
 }) => {
   await channelOpened(page, "browser-thread-left-link");
   await openedByReplyLink(page);
 
+  await expect(replyBox(page)).toHaveValue("@admin ");
+
+  await replyBox(page).press("Home");
   await wentBackToChannel(page);
+
+  await expect(replyBox(page)).toHaveValue("@admin ");
 });
 
 const PAST_A_PAGE = 60;
