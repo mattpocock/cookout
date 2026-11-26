@@ -1,5 +1,6 @@
 import type { Act, Action, Keymap } from "../../keymap/index.ts";
-import { useContext, useEffect } from "react";
+import { useContext, useLayoutEffect } from "react";
+import type { InboxSelection } from "../../paths/index.ts";
 import type { MessageActions } from "./message-actions.ts";
 import { MessageChoices } from "./message-actions.ts";
 import { chooseOn } from "./message-keys.ts";
@@ -15,10 +16,13 @@ const TOP_MESSAGE = 'article[aria-label="First message"]';
 const FIRST = 0;
 const STEPS = { next: 1, previous: -1 } as const;
 const NOT_FOUND = -1;
+const QUERY = "?";
+const WAIT_MS = 10_000;
+const WATCHED = { childList: true, subtree: true } as const;
 
 interface InboxKeys {
   readonly keymap: Keymap;
-  readonly selected: boolean;
+  readonly selected: InboxSelection | null;
   readonly conversation: string;
   readonly watch: (target: () => unknown) => void;
 }
@@ -91,8 +95,50 @@ function onAControl(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.matches(CONTROLS) && !target.matches(ROWS);
 }
 
-function focusIn(conversation: string, selector: string): Act {
-  return ({ target }) => !onAControl(target) && focused(inConversation(conversation, selector));
+function addressNow(): string {
+  const [address = ""] = globalThis.location.hash.split(QUERY);
+  return address;
+}
+
+function focusWhenShown(selector: string, old: unknown): void {
+  const control = new AbortController();
+  const observer = new MutationObserver(() => {
+    const now = globalThis.document.querySelector(selector);
+    if (now instanceof HTMLElement && now !== old) {
+      control.abort();
+      now.focus();
+    }
+  });
+  const signal = AbortSignal.any([control.signal, AbortSignal.timeout(WAIT_MS)]);
+  signal.addEventListener("abort", () => {
+    observer.disconnect();
+  });
+  globalThis.document.addEventListener(
+    "focusin",
+    () => {
+      control.abort();
+    },
+    { capture: true, signal },
+  );
+  observer.observe(globalThis.document.body, WATCHED);
+}
+
+function focusIn(keys: Pick<InboxKeys, "conversation" | "selected">, selector: string): Act {
+  const inIt = inConversation(keys.conversation, selector);
+  const shown = hrefOf({ name: "inbox", selected: keys.selected });
+  return ({ target }) => {
+    if (onAControl(target)) {
+      return false;
+    }
+    if (shown === addressNow() && focused(inIt)) {
+      return true;
+    }
+    if (keys.selected === null) {
+      return false;
+    }
+    focusWhenShown(inIt, globalThis.document.querySelector(inIt));
+    return true;
+  };
 }
 
 interface TopMessage extends Pick<InboxKeys, "conversation" | "keymap"> {
@@ -113,7 +159,7 @@ function leaveTextBox({ target }: KeyboardEvent): boolean {
   if (target instanceof HTMLElement) {
     target.blur();
   }
-  focused(rowAt(globalThis.location.hash));
+  focused(rowAt(addressNow()));
   return true;
 }
 
@@ -123,7 +169,7 @@ function rowOrNewest(address: string): () => unknown {
 
 function back({ selected, watch }: Pick<InboxKeys, "selected" | "watch">): Act {
   return () => {
-    if (!selected || !isNarrowWindow()) {
+    if (selected === null || !isNarrowWindow()) {
       return false;
     }
     watch(rowOrNewest(globalThis.location.hash));
@@ -165,7 +211,7 @@ function thenNext(act: Act): Act {
 function useInboxKeys(keys: InboxKeys): void {
   const { conversation, keymap, selected, watch } = keys;
   const actions = useContext(MessageChoices);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const unbindRows = keymap.bind({
       actions: {
         backToRows: back({ selected, watch }),
@@ -175,9 +221,9 @@ function useInboxKeys(keys: InboxKeys): void {
         markSelectedRowRead: press({ conversation, keymap }, "markRowRead"),
         nextRow: select("next"),
         openRow: press({ conversation, keymap }, "openRow"),
-        openThread: focusIn(conversation, TOP_MESSAGE),
+        openThread: focusIn({ conversation, selected }, TOP_MESSAGE),
         previousRow: select("previous"),
-        replyToRow: focusIn(conversation, REPLY_BOX),
+        replyToRow: focusIn({ conversation, selected }, REPLY_BOX),
         toggleThreadClosed: onTopMessage({ actions, conversation, keymap }, "toggleThreadClosed"),
         toggleThumbsDown: onTopMessage({ actions, conversation, keymap }, "toggleThumbsDown"),
         toggleThumbsUp: onTopMessage({ actions, conversation, keymap }, "toggleThumbsUp"),

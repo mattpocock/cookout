@@ -127,9 +127,11 @@ async function fillAll(page: Page, fills: Required<Screen>["fill"]): Promise<voi
   await fillAll(page, rest);
 }
 
-async function chooseAndFill(page: Page, screen: Screen): Promise<void> {
-  if (typeof screen.choose === "string") {
-    await page.getByRole("menuitem", { exact: true, name: screen.choose }).click({ timeout: RENDER_MS });
+async function sendAndFill(page: Page, screen: Screen): Promise<void> {
+  if (typeof screen.send === "string") {
+    const box = page.getByLabel("Message", { exact: true });
+    await box.fill(screen.send, { timeout: RENDER_MS });
+    await box.press("Enter");
   }
   await fillAll(page, screen.fill ?? []);
 }
@@ -145,7 +147,7 @@ async function interact(page: Page, shot: Shot): Promise<void> {
     const scope = page.locator(shot.screen.clickIn ?? "body");
     await scope.getByRole("button", { exact: true, name: shot.screen.click }).click({ timeout: RENDER_MS });
   }
-  await chooseAndFill(page, shot.screen);
+  await sendAndFill(page, shot.screen);
   await attachScreenFiles({ image: hillsPng(), page, screen: shot.screen, timeout: RENDER_MS });
 }
 

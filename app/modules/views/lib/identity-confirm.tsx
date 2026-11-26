@@ -17,6 +17,7 @@ function returnToOf(confirming: string | null): string | null {
 interface IdentityConfirmProps {
   readonly actions: IdentityActions;
   readonly identity: Identity;
+  readonly onCloseFocused?: (() => void) | undefined;
 }
 
 export function IdentityConfirm(props: IdentityConfirmProps): ReactNode {
@@ -25,6 +26,7 @@ export function IdentityConfirm(props: IdentityConfirmProps): ReactNode {
   const question = questionOf({ identity: props.identity, state });
   const handleConfirm = actions.confirm;
   const handleCancel = actions.cancel;
+  const handleCloseFocused = props.onCloseFocused;
   return (
     <ConfirmDialog
       body={question.body}
@@ -32,6 +34,7 @@ export function IdentityConfirm(props: IdentityConfirmProps): ReactNode {
       destructive={question.destructive}
       error={refusalOf(state)}
       onCancel={handleCancel}
+      onCloseFocused={handleCloseFocused}
       onConfirm={handleConfirm}
       open={state.confirming !== null}
       pending={state.action.status === "sending"}

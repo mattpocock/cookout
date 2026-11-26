@@ -3,7 +3,7 @@ interface Screen {
   readonly hash: string;
   readonly click?: string;
   readonly clickIn?: string;
-  readonly choose?: string;
+  readonly send?: string;
   readonly fill?: readonly (readonly [label: string, value: string])[];
   readonly attach?: "pending" | "refused";
   readonly focus?: string;
@@ -144,16 +144,14 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/settings", name: "settings", text: "System" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   {
-    choose: "Schedule…",
-    click: "Post later",
     fill: [
-      ["Text", "@grace the deploy window opens now"],
       ["Date", "2099-06-01"],
       ["Time", "09:30"],
       ["Time zone", "Europe/London"],
     ],
     hash: "#/channels/general",
     name: "schedule",
+    send: "/schedule @grace the deploy window opens now",
     text: "1 Jun 2099, 09:30",
   },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },

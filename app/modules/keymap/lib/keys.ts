@@ -2,6 +2,7 @@ const SCOPES = [
   "image viewer",
   "search box",
   "prompt form",
+  "title field",
   "text box",
   "person",
   "people list",
@@ -34,6 +35,7 @@ const GROUPS: Readonly<Record<Scope, string>> = {
   sidebar: "Sidebar",
   "text box": "Message box",
   "thread panel": "Thread panel",
+  "title field": "Thread title field",
 };
 
 const KEYS = [
@@ -106,6 +108,7 @@ const KEYS = [
   { action: "openHighlighted", chord: "Enter", does: "Open the highlighted result", scope: "search box" },
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
   { action: "cancelPrompt", chord: "Escape", does: "Cancel the form", scope: "prompt form" },
+  { action: "cancelTitle", chord: "Escape", does: "Cancel, leaving the title as it was", scope: "title field" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   {
     action: "newestMessage",
@@ -119,6 +122,13 @@ const KEYS = [
     does: "Column on the left, from the box's first character",
     scope: "text box",
   },
+  {
+    action: "scheduleMessage",
+    chord: "Mod+Shift+Enter",
+    does: "Schedule the message, to post later",
+    scope: "text box",
+  },
+  { action: "attachFiles", chord: "Mod+Shift+U", does: "Attach files", scope: "text box" },
   { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
   { action: "messagePerson", chord: "m", does: "Message them, where there's a message box", scope: "person" },
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
@@ -134,6 +144,14 @@ const KEYS = [
   },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
+  {
+    action: "toggleThreadClosed",
+    chord: "x",
+    does: "Close the thread, or reopen it, from its title",
+    scope: "thread panel",
+  },
+  { action: "markUnread", chord: "Alt+Enter", does: "Mark the thread unread, from its title", scope: "thread panel" },
+  { action: "copyMessageLink", chord: "l", does: "Copy the thread's link, from its title", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
   { action: "toggleThumbsDown", chord: "-", does: "React with 👎, or take it back", scope: "message" },
   { action: "unfoldMessage", chord: "Enter", does: "Unfold it, when it's folded", scope: "message" },
