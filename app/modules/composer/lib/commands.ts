@@ -1,6 +1,7 @@
 import type { CommandName, WebhookCommand } from "../../webhook-commands/index.ts";
 import type { WebhookCommandsState } from "../../board/index.ts";
 import { commandList } from "../../webhook-commands/index.ts";
+import { inlineField } from "./schema-fields.ts";
 
 const SLASH = 1;
 const SPACE = 1;
@@ -11,8 +12,14 @@ interface Command {
   readonly description: string;
 }
 
-interface CommandRun {
-  readonly command: Command;
+type CommandRun =
+  | { readonly kind: "command"; readonly command: Command; readonly text: string }
+  | { readonly kind: "call"; readonly webhookCommand: WebhookCommand; readonly field: string; readonly text: string }
+  | { readonly kind: "form"; readonly webhookCommand: WebhookCommand };
+
+interface Sent {
+  readonly commands: readonly Command[];
+  readonly webhookCommands: readonly WebhookCommand[];
   readonly text: string;
 }
 
@@ -36,11 +43,33 @@ function startingTyped<Named extends { readonly name: string }>({ listed, text }
   return listed.filter((named) => named.name.startsWith(prefix));
 }
 
-function commandRunIn({ listed, text }: Typed<Command>): CommandRun | null {
-  for (const command of listed) {
-    const word = `/${command.name}`;
-    if (text === word || text.startsWith(`${word} `)) {
-      return { command, text: text.slice(word.length + SPACE) };
+function typedAfter(name: string, text: string): string | null {
+  const word = `/${name}`;
+  if (text === word || text.startsWith(`${word} `)) {
+    return text.slice(word.length + SPACE);
+  }
+  return null;
+}
+
+function webhookCommandRun(webhookCommand: WebhookCommand, typed: string): CommandRun {
+  const field = inlineField(webhookCommand.schema);
+  if (field === null || typed === "") {
+    return { kind: "form", webhookCommand };
+  }
+  return { field, kind: "call", text: typed, webhookCommand };
+}
+
+function commandRunIn({ commands, text, webhookCommands }: Sent): CommandRun | null {
+  for (const command of commands) {
+    const typed = typedAfter(command.name, text);
+    if (typed !== null) {
+      return { command, kind: "command", text: typed };
+    }
+  }
+  for (const webhookCommand of webhookCommands) {
+    const typed = typedAfter(webhookCommand.name, text);
+    if (typed !== null) {
+      return webhookCommandRun(webhookCommand, typed);
     }
   }
   return null;
