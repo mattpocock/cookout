@@ -103,3 +103,20 @@ test("Enter in a thread's reply box picks the highlighted Webhook command and op
 
   await expect(inThread(page).getByRole("form", { exact: true, name: `Call /${prefix}-second` })).toBeVisible();
 });
+
+test("in a thread's reply box, / and Enter pick /schedule, and sending it with a text opens the schedule dialog with that text", async ({
+  page,
+}) => {
+  const box = await replyBoxIn(page, unique("browser-reply-schedule"));
+  await box.pressSequentially("/");
+  await expectActive(box, "/scheduleSchedule a message");
+  await page.keyboard.press("Enter");
+
+  await expect(box).toHaveValue("/schedule ");
+
+  await box.pressSequentially("Standup in 5");
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { exact: true, name: "Schedule a message" });
+
+  await expect(dialog.getByLabel("Text", { exact: true })).toHaveValue("Standup in 5");
+});

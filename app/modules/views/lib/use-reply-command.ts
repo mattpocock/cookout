@@ -5,6 +5,7 @@ import type { Draft } from "../../composer/index.ts";
 import { LandingContext } from "../../landing/index.ts";
 import type { Outgoing } from "../../board/index.ts";
 import type { WebhookCommandCalls } from "./use-board.ts";
+import { useScheduling } from "./scheduling-context.ts";
 import { useWebhookCommandRun } from "./use-webhook-command-run.ts";
 
 interface ReplyCommand {
@@ -23,6 +24,7 @@ interface ReplyHandlers {
 
 function useReplyCommand(command: ReplyCommand): ReplyHandlers {
   const { channel, draft, form, thread } = command;
+  const scheduling = useScheduling();
   const calls = useThreadCalls({ channel, id: thread });
   const reply = useReply({ place: { channel, id: thread }, replied: command.replied });
   const { watch } = useContext(LandingContext);
@@ -34,13 +36,15 @@ function useReplyCommand(command: ReplyCommand): ReplyHandlers {
   const post = useCallback(
     (outgoing: Outgoing, posted: () => void) => {
       const run = draft.commandRun(outgoing.text);
-      if (run === null || run.kind === "command") {
+      if (run === null) {
         reply(outgoing, posted);
-        return;
+      } else if (run.kind === "command") {
+        scheduling.open({ channel, thread }, run.text);
+      } else {
+        runWebhookCommand(run);
       }
-      runWebhookCommand(run);
     },
-    [draft, reply, runWebhookCommand],
+    [channel, draft, reply, runWebhookCommand, scheduling, thread],
   );
   return { calls, post, saved };
 }

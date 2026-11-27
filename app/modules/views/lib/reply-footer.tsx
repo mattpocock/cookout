@@ -4,6 +4,7 @@ import type { Draft } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { MessageBox } from "./message-box.tsx";
 import type { ReactNode } from "react";
+import { ReplySchedule } from "./reply-schedule.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
 import { WebhookCommandPrompt } from "./webhook-command-prompt.tsx";
 import { useReplyCommand } from "./use-reply-command.ts";
@@ -55,6 +56,7 @@ export function ReplyFooter(props: ReplyFooterProps): ReactNode {
           webhookCommand={command}
         />
       )}
+      <ReplySchedule channel={channel} form={REPLY_BOX.form} onSaved={handleSaved} thread={thread} />
     </>
   );
 }
