@@ -1,6 +1,9 @@
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const WEEK = 7;
 const TWO = 2;
+const LAST = -1;
+const FIRST = 0;
+const NONE = 0;
 const FIELDS = 5;
 const MINUTE = 0;
 const HOUR = 1;
@@ -51,6 +54,15 @@ function dayName(part: string): string | null {
   return DAYS[Number(part) % WEEK] ?? null;
 }
 
+function listed(names: readonly (string | null)[]): string {
+  const first = names.slice(FIRST, LAST);
+  const last = names.at(LAST) ?? "";
+  if (first.length === NONE) {
+    return last;
+  }
+  return `${first.join(", ")} and ${last}`;
+}
+
 function weekdaysOf(weekday: string): string | null {
   const named = NAMED_DAYS[weekday] ?? null;
   if (named !== null) {
@@ -60,7 +72,7 @@ function weekdaysOf(weekday: string): string | null {
   if (names.includes(null)) {
     return null;
   }
-  return `Every ${names.join(" and ")}`;
+  return listed(names);
 }
 
 function daysOf({ day, month, weekday }: Fields): string | null {
@@ -71,7 +83,7 @@ function daysOf({ day, month, weekday }: Fields): string | null {
     return weekdaysOf(weekday);
   }
   if (WHOLE.test(day) && weekday === "*") {
-    return `On day ${day} of every month`;
+    return `Day ${day} of each month`;
   }
   return null;
 }
@@ -86,7 +98,7 @@ function repeatingOf(fields: Fields): string | null {
     return `Every ${minutes} minutes`;
   }
   if (WHOLE.test(fields.minute)) {
-    return `Every hour at ${fields.minute.padStart(TWO, "0")} minutes past`;
+    return `Every hour at :${fields.minute.padStart(TWO, "0")}`;
   }
   return null;
 }
@@ -101,5 +113,5 @@ export function cronWords(cron: string): string | null {
   if (clock === null || days === null) {
     return repeatingOf(fields);
   }
-  return `${days} at ${clock}`;
+  return `${days} · ${clock}`;
 }

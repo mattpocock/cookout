@@ -1,5 +1,6 @@
 import { Close } from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
+import { RemoveIcon } from "./remove-icon.tsx";
 
 interface ListDialogCloseParts {
   readonly label: string;
@@ -7,15 +8,15 @@ interface ListDialogCloseParts {
 
 export function ListDialogClose(parts: ListDialogCloseParts): ReactNode {
   return (
-    <div className="flex justify-end">
-      <Close asChild>
-        <button
-          className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-          type="button"
-        >
-          {parts.label}
-        </button>
-      </Close>
-    </div>
+    <Close asChild>
+      <button
+        aria-label={parts.label}
+        className="absolute top-4 right-4 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        title={parts.label}
+        type="button"
+      >
+        <RemoveIcon />
+      </button>
+    </Close>
   );
 }

@@ -52,7 +52,8 @@ interface Opening {
 async function finishedLines(text: string): Promise<readonly (string | null)[]> {
   const lines = await waitFor(async () => {
     const shown = await linesOf(text);
-    if (!shown.includes("Finished")) {
+    const [heading = ""] = shown;
+    if (!(heading ?? "").startsWith("Finished")) {
       throw new Error(`${text} isn't finished yet`);
     }
     return shown;
@@ -89,8 +90,8 @@ it("a scheduled post's Scheduled marker opens its schedule in the list, and dele
 
   expect([...opened, said.closest("button"), inPane().queryByRole("button", { name: "Scheduled" })]).toStrictEqual([
     "true",
-    ["Lunch", "Once, at Mon, 1 Jun 2099, 09:30", "Next run Mon, 1 Jun 2099, 09:30 · UTC", "Created by @admin"],
-    ["Lunch", "Once, at Mon, 1 Jun 2099, 09:30", "No next run · UTC", "Created by @admin", "Finished"],
+    ["Once · Mon, 1 Jun 2099, 09:30", "Lunch", "Next Mon 1 Jun, 09:30 UTC · by @admin"],
+    ["Finished · Once · Mon, 1 Jun 2099, 09:30", "Lunch", "No next run · UTC · by @admin"],
     null,
     null,
   ]);

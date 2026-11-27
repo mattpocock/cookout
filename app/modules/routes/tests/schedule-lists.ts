@@ -59,6 +59,19 @@ export async function linesOf(text: string): Promise<readonly (string | null)[]>
   return lines;
 }
 
+export async function listedLines(channel: string): Promise<readonly (readonly (string | null)[])[]> {
+  const list = await within(listDialog()).findByRole("list", { name: `#${channel} scheduled messages` });
+  const rows: (readonly (string | null)[])[] = [];
+  for (const row of within(list).getAllByRole("listitem")) {
+    const lines: (string | null)[] = [];
+    for (const line of row.querySelectorAll("p, span")) {
+      lines.push(line.textContent);
+    }
+    rows.push(lines);
+  }
+  return rows;
+}
+
 export async function buttonsOf(text: string): Promise<readonly string[]> {
   const row = await rowOf(text);
   const names: string[] = [];
