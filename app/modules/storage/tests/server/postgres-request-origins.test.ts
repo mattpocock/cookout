@@ -206,7 +206,11 @@ const agentSubscribedBeforeTheUpgrade = Effect.gen(function* storeAgentSubscript
   yield* storage.subscribeChannel(triage.name, grill);
   yield* close;
   yield* onPostgresDatabase({
-    statements: ["ALTER TABLE offline_alerts DROP COLUMN made_via", "UPDATE schema_version SET version = version - 2"],
+    statements: [
+      "DROP TABLE agent_keys",
+      "ALTER TABLE offline_alerts DROP COLUMN made_via",
+      "UPDATE schema_version SET version = version - 3",
+    ],
     url,
   });
   return url;
