@@ -245,6 +245,8 @@ export const xdgStateHome = Config.String("XDG_STATE_HOME").pipe(Config.withDefa
  * three, the CLI keeps no agent session token and `join` is refused with `state_folder_missing`.
  */
 export const home = Config.String("HOME").pipe(Config.withDefault(""));
+/** `CLAUDE_CONFIG_DIR`: Claude Code's config folder, `~/.claude` when unset, where the runner finds open sessions. */
+export const claudeConfigDir = Config.String("CLAUDE_CONFIG_DIR").pipe(Config.withDefault(""));
 
 /** `XDG_CONFIG_HOME`: the CLI keeps the Login in `cookout/credentials` under it, or under `~/.config` when unset. */
 export const xdgConfigHome = Config.String("XDG_CONFIG_HOME").pipe(Config.withDefault(""));

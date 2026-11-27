@@ -2,11 +2,13 @@ import { Array as Arr, Deferred, Effect, Fiber, Option, Order, Queue, Ref } from
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import type { ChildProcessSpawner } from "effect/process";
+import type { ClaudeCodeInboxNeeds } from "./claude-code-inbox.ts";
 import type { Registration } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
 import type { WakeRunFailure } from "../../../presence/index.ts";
 import { callClient } from "./adapters/sdk.ts";
+import { liveFirst } from "./live-delivery.ts";
 import { printLine } from "./output.ts";
 import { wakeRun } from "./wake-run.ts";
 
@@ -14,7 +16,7 @@ const RUNS_PER_MENTION = 2;
 const NONE = 0;
 const ONE = 1;
 
-type Spawner = ChildProcessSpawner.ChildProcessSpawner;
+type Spawner = ChildProcessSpawner.ChildProcessSpawner | ClaudeCodeInboxNeeds;
 
 interface During {
   readonly started: Effect.Effect<void>;
@@ -147,10 +149,19 @@ interface Queued extends Waking {
   readonly take: Effect.Effect<readonly InboxItem[]>;
 }
 
-function runGiven({ asAgent, change, during, place, registration }: Queued) {
-  return (given: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
+function runGiven(queued: Queued) {
+  const { asAgent, change, during, place, registration } = queued;
+  return (offered: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
     Effect.gen(function* runAndRetry() {
-      yield* change(withRun(given));
+      yield* change(withRun(offered));
+      const given = yield* liveFirst({
+        log: place.log,
+        registration,
+        unreadOf: (items) => stillUnread(asAgent, items),
+      })(offered);
+      if (!Arr.isReadonlyArrayNonEmpty(given)) {
+        return;
+      }
       const run = Effect.ensuring(wakeRun({ items: given, place, registration }), change(doneRunning));
       yield* during.started;
       const failure = yield* Effect.onInterrupt(run, () => during.ended);
