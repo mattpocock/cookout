@@ -98,8 +98,8 @@ function stepsOf({ list, name }: AgentKeysOptions, { current, publish }: Held): 
       publish({ making: SENDING });
       try {
         const { token } = await calls.makeKey(name, { name: keyName.trim(), ...expiryOf(expiresIn) });
-        publish({ expiresIn: "", keyName: "", made: { name: keyName.trim(), token }, making: IDLE });
         await load();
+        publish({ expiresIn: "", keyName: "", made: { name: keyName.trim(), token }, making: IDLE });
       } catch (error: unknown) {
         publish({ making: failed(error) });
       }

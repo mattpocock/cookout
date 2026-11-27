@@ -137,12 +137,12 @@ async function madeAndDone(agent: string, name: string): Promise<string> {
 async function revokedIn(agent: string, name: string): Promise<string> {
   const keys = within(await keysOf(agent));
   fireEvent.click(within(await keys.findByRole("group", { name })).getByRole("button", { name: "Revoke" }));
-  const title = await inDialog().findByRole("heading", { name: `Revoke the key ${name}?` });
+  const { textContent } = await inDialog().findByRole("heading", { name: `Revoke the key ${name}?` });
   fireEvent.click(inDialog().getByRole("button", { name: "Revoke key" }));
   await waitFor(() => {
     expect(keys.queryByRole("group", { name })).toBeNull();
   });
-  return title.textContent;
+  return textContent;
 }
 
 it("revoke on a key asks first, ends it, and the list reloads without it", { timeout: 5000 }, async () => {
