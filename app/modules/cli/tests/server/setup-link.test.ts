@@ -152,13 +152,24 @@ interface ConsoleActs {
   readonly adminNamed: boolean;
 }
 
-function consoleActsOf(server: { readonly adminToken: string; readonly url: string }): Effect.Effect<ConsoleActs> {
+const AdminActLogin = Schema.Struct({ kind: Schema.Literal("admin act") });
+const isAdminActAlert = Schema.is(Schema.Struct({ login: AdminActLogin }));
+const isAlertList = Schema.is(Schema.Struct({ alerts: Schema.Array(Schema.Unknown) }));
+
+function alertsIn(json: unknown): readonly unknown[] {
+  if (!isAlertList(json)) {
+    return [];
+  }
+  return json.alerts;
+}
+
+function consoleActsOf(url: string, cookie: string): Effect.Effect<ConsoleActs> {
   return Effect.gen(function* readConsoleActs() {
-    const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
-    const ada = yield* answer(() => admin.rotateToken("ada"));
-    const inbox = yield* answer(() => testClient({ env: {}, token: ada.token, url: server.url }).inbox());
-    const acts = Arr.filter(inbox.alerts, (alert) => "login" in alert && alert.login.kind === "admin act");
-    return { adminNamed: Arr.some(acts, (alert) => "login" in alert && "admin" in alert.login), alerts: acts };
+    const { json } = yield* answer(() =>
+      request({ baseUrl: url, headers: { cookie }, method: "GET", path: "/v1/inbox" }),
+    );
+    const acts = Arr.filter(alertsIn(json), isAdminActAlert);
+    return { adminNamed: Arr.some(acts, (alert) => "admin" in alert.login), alerts: acts };
   });
 }
 
@@ -188,7 +199,7 @@ function consoleLinksRunningAndStopped(): Effect.Effect<ConsoleLinks, never, Com
       const secret = yield* consoleLinkFor(database, "ada");
       const second = yield* startServe({ database });
       const stopped = yield* posted(second.url, redeemLoginLinkPath, { secret });
-      const acts = yield* consoleActsOf(second);
+      const acts = yield* consoleActsOf(second.url, stopped.cookie);
       return { ...acts, running, stopped: stopped.status };
     }),
   );
