@@ -80,6 +80,7 @@ export {
   agentSessionTokenIn,
   cookoutRunsIn,
   agentSessionTokensIn,
+  registerAs,
   registeredAgentsIn,
   registrationIn,
   runnerWritten,

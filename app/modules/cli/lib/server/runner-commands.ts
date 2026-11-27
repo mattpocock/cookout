@@ -8,7 +8,8 @@ import { runnerEvents } from "./runner-log.ts";
 const wakeCommandArgument = Argument.String("wake-command").pipe(
   Argument.variadic(),
   Argument.withDescription(
-    `The wake command's argv, after --, run with no shell. ${SESSION_ID_PLACEHOLDER} becomes this harness session's ID.`,
+    `The wake command's argv, after --, run with no shell. ${SESSION_ID_PLACEHOLDER} becomes this harness session's ID ` +
+      "(Claude Code's CLAUDE_CODE_SESSION_ID, the only harness that gives one today).",
   ),
 );
 
@@ -61,7 +62,8 @@ const statusCommand = Command.make("status", { json: jsonFlag }, ({ json }) =>
       "wake run for it, or no runner is running, and its last wake run: when it started, how it ended and its " +
       "output file; then each dropped registration, with the refusal that dropped it " +
       "and when. It warns when an open Claude Code session would hold or refuse the runner's messages " +
-      "(crossSessionInbound), naming the launch line that accepts them. --json prints the same as JSON. It prints " +
+      "(crossSessionInbound), naming the launch line that accepts them, as liveDelivery with its harness in --json; " +
+      "live delivery works only for Claude Code today. --json prints the same as JSON. It prints " +
       "no token.",
   ),
 );
@@ -82,7 +84,7 @@ const logsCommand = Command.make("logs", { agent: logsAgentArgument }, ({ agent 
 ).pipe(
   Command.withDescription(
     "Print the runner's event log, one JSON line per event, oldest first: runner-start, connect, mention, " +
-      "delivered-live, fell-back (with its reason), woken, wake-run-start (naming the run's output file), exit, " +
+      "delivered-live and fell-back (with its reason, each naming the harness it came from), woken, wake-run-start (naming the run's output file), exit, " +
       "timeout, wake-failed, skip, stand-down, unregister and refusal, each with the agent and the time. Give an agent to print only its events. It holds message " +
       "IDs, never a mention's text or a token. Each wake run's stdout and stderr are in its own file under runs/ " +
       "in the state folder; an agent's oldest files are deleted once its files pass 1 MiB.",

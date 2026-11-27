@@ -187,4 +187,4 @@ function inboundWarning(registration: Registration): Effect.Effect<Option.Option
   return Effect.flatMap(lookUp(registration), warningFor(registration));
 }
 
-export { type InboundWarning, inboundWarning };
+export { inboundWarning };

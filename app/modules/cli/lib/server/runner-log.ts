@@ -34,10 +34,11 @@ const RunnerEventSchema = Schema.Struct({
   dropped: Schema.optionalKey(Schema.Boolean),
   error: Schema.optionalKey(Schema.Struct({ code: Schema.String, message: Schema.String })),
   exitCode: Schema.optionalKey(Schema.Int),
+  harness: Schema.optionalKey(Schema.String),
   message: Schema.optionalKey(Schema.Int),
   messages: Schema.optionalKey(Schema.Array(Schema.Int)),
   output: Schema.optionalKey(Schema.String),
-  reason: Schema.optionalKey(Schema.Literals(["connection-refused", "no-inbox", "not-acked", "session-closed"])),
+  reason: Schema.optionalKey(Schema.String),
   timedOutAfterMinutes: Schema.optionalKey(Schema.Int),
   type: Schema.Literals([
     "runner-start",
