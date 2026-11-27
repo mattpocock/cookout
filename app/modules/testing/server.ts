@@ -28,7 +28,8 @@
  * does, and wait until it has answered 502 so many times, or freeze, so it stops answering: open streams send
  * nothing more and every later request waits for ever.
  * `pastOwnPresence` reads an all-channels feed past its own caller coming online, and `watchingAllChannels` opens one so.
- * `wakingAgents` joins agents with the fake wake command and starts a runner for them, and `runnerEventsIn` and
+ * `wakingAgents` joins agents with the fake wake command, or a command of their own such as `printingWakeCommand`'s
+ * (a shell that prints so many bytes and acks nothing, with no Node cold start), and starts a runner for them, and `runnerEventsIn` and
  * `untilRunnerEvents` read its event log through `cookout runner logs`.
  * `silentConnection` connects to a server and sends nothing. `cuttableRelay`,
  * from the http module, is a link a test can cut and restore, from another
@@ -64,7 +65,13 @@ export {
 } from "./lib/server/process.ts";
 export { signalWatchBinary, type StoppedWatch } from "./lib/server/cli-signal.ts";
 export { runCookoutWhile } from "./lib/server/cli-clock.ts";
-export { type FakeWakeSettings, type StartedRunner, fakeWakeCommand, startRunner } from "./lib/server/runner.ts";
+export {
+  type FakeWakeSettings,
+  type StartedRunner,
+  fakeWakeCommand,
+  printingWakeCommand,
+  startRunner,
+} from "./lib/server/runner.ts";
 export {
   type RegistrationFile,
   type WakeLogLine,
