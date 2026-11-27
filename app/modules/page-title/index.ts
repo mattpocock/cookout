@@ -22,6 +22,7 @@ const FIXED: Readonly<Record<Exclude<Route["name"], "channel" | "profile" | "sch
   approve: "Approve a device",
   inbox: "Inbox",
   login: "Logged in",
+  "login-link": "Log in",
   missing: "Nothing here",
   people: "People",
   settings: "Settings",

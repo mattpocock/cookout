@@ -1,11 +1,9 @@
-import { ButtonRow } from "../../design-system/controls.tsx";
-import { FeederButton } from "./feeder-button.tsx";
 import type { Identity } from "../../sdk/index.ts";
 import type { IdentityActions } from "../../composer/index.ts";
 import { IdentityConfirm } from "./identity-confirm.tsx";
+import { LoginLinkShown } from "./login-link-shown.tsx";
+import { ManageButtons } from "./manage-buttons.tsx";
 import type { ReactNode } from "react";
-import { RemovalButton } from "./removal-button.tsx";
-import { RotateButton } from "./rotate-button.tsx";
 import { TokenShown } from "./token-shown.tsx";
 import { TransferForm } from "./transfer-form.tsx";
 
@@ -18,17 +16,12 @@ interface ManageActionsProps {
 
 export function ManageActions(props: ManageActionsProps): ReactNode {
   const { actions, identity } = props;
-  const active = identity.deactivated !== true;
-  const agent = active && identity.kind === "agent";
   return (
     <>
-      <ButtonRow>
-        {agent && <RotateButton actions={actions} />}
-        {agent && <FeederButton actions={actions} agent={identity} />}
-        <RemovalButton actions={actions} active={active} deletable={props.deletable} />
-      </ButtonRow>
+      <ManageButtons actions={actions} deletable={props.deletable} identity={identity} />
       <IdentityConfirm actions={actions} identity={identity} />
       <TokenShown actions={actions} />
+      {identity.kind === "human" && <LoginLinkShown actions={actions} name={identity.name} />}
       {props.transfer && <TransferForm actions={actions} name={identity.name} />}
     </>
   );

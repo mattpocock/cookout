@@ -182,6 +182,7 @@ it.effect("cookout inbox prints a Login alert for a session a login link made, s
         exitCode: 0,
         stdoutJson: {
           alerts: [
+            { login: { act: "sent a login link", admin: "matt", kind: "admin act" }, read: false },
             { login: { ended: false, kind: "new session", sessionKind: "web", via: "login link" }, read: false },
           ],
           items: [],

@@ -1,5 +1,6 @@
 import { ApprovalView, Authors, LoginView } from "../../views/index.tsx";
 import { AppShell } from "../../design-system/layout.tsx";
+import { LoginLinkView } from "./login-link-view.tsx";
 import type { Place } from "../../paths/index.ts";
 import type { ReactNode } from "react";
 import { SignedInView } from "./signed-in-view.tsx";
@@ -19,6 +20,13 @@ export function RouteView(props: RouteViewProps): ReactNode {
   } = props;
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
   usePageTitle({ board: props.stores.boardStore, route });
+  if (route.name === "login-link") {
+    return (
+      <AppShell>
+        <LoginLinkView secret={route.secret} session={session} />
+      </AppShell>
+    );
+  }
   if (state.status !== "logged-in") {
     return (
       <AppShell>

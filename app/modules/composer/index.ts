@@ -50,6 +50,8 @@
  * so a row can still show it (#278).
  * Each answer goes in the identity list at once, and a fresh token is in its
  * snapshot until `forgetToken` (`copyToken` puts it on the clipboard).
+ * `sendLoginLink` makes a person's one-time login link (#969): the snapshot's `loginLink`, with its expiry, or the
+ * refusal, until `forgetLoginLink` (`copyLoginLink` puts it on the clipboard).
  * `identities.creation` creates an agent the caller owns, whose token then
  * shows in that agent's `actions`.
  * `channelDraft(channel)`, a channel's box, also suggests, when the whole text is `/` and a prefix, the Commands with names starting with it (only `/schedule`), then the registered Webhook commands that do (from the board store's list, read once the identities load), less any named like a Command.

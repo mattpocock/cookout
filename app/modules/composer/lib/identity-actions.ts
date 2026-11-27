@@ -13,9 +13,15 @@ type ActionState =
 
 type MessageCount = number | "loading" | "unknown";
 
+type LoginLinkState =
+  | { readonly status: "none" | "sending" }
+  | { readonly status: "shown"; readonly link: string; readonly expiresAt: string }
+  | (Refusal & { readonly status: "failed" });
+
 interface IdentityActionsSnapshot {
   readonly action: ActionState;
   readonly confirming: IdentityAction | null;
+  readonly loginLink: LoginLinkState;
   readonly messages: MessageCount;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
@@ -35,6 +41,9 @@ interface IdentityActions {
   readonly forgetToken: () => void;
   readonly copyToken: () => void;
   readonly showToken: (token: Token) => void;
+  readonly sendLoginLink: () => void;
+  readonly copyLoginLink: () => void;
+  readonly forgetLoginLink: () => void;
 }
 
 interface IdentityActionsOptions {
@@ -50,44 +59,43 @@ type Sends = Readonly<Record<IdentityAction, () => Promise<Sent>>>;
 
 const IDLE = { status: "idle" } as const;
 
+const NO_LINK: LoginLinkState = { status: "none" };
+
 const START: Held = {
   action: IDLE,
   confirming: null,
+  loginLink: NO_LINK,
   messages: "loading",
   token: null,
   tokenForgotten: false,
   transferTo: "",
 };
 
+function answering<Args extends readonly unknown[]>(
+  sent: Sent,
+  call: (...args: Args) => Promise<void>,
+  ...args: Args
+): () => Promise<Sent> {
+  return async () => {
+    await call(...args);
+    return sent;
+  };
+}
+
 function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => string): Sends {
   const { calls } = list;
   return {
-    deactivate: async () => {
-      await calls.deactivate(name);
-      return { token: null };
-    },
-    delete: async () => {
-      await calls.delete(name);
-      return { token: null };
-    },
-    feed: async () => {
-      await calls.setFeeder(name, true);
-      return {};
-    },
+    deactivate: answering({ token: null }, calls.deactivate, name),
+    delete: answering({ token: null }, calls.delete, name),
+    feed: answering({}, calls.setFeeder, name, true),
     reactivate: async () => ({ token: await calls.reactivate(name) }),
-    revoke: async () => {
-      await calls.revokeSession(name);
-      return {};
-    },
+    revoke: answering({}, calls.revokeSession, name),
     rotate: async () => ({ token: await calls.rotateToken(name) }),
     transfer: async () => {
       await calls.transfer(name, transferTo().trim());
       return { transferTo: "" };
     },
-    unfeed: async () => {
-      await calls.setFeeder(name, false);
-      return {};
-    },
+    unfeed: answering({}, calls.setFeeder, name, false),
   };
 }
 
@@ -135,11 +143,50 @@ function cancelOf(publish: Publish, snapshot: () => Held): () => void {
   };
 }
 
-async function copyAfter(previous: Promise<void>, token: Token | null): Promise<void> {
+async function copyAfter(previous: Promise<void>, text: string | null): Promise<void> {
   await previous;
-  if (token !== null) {
-    await globalThis.navigator.clipboard.writeText(token);
+  if (text !== null) {
+    await globalThis.navigator.clipboard.writeText(text);
   }
+}
+
+function linkOf(state: LoginLinkState): string | null {
+  return (state.status === "shown" && state.link) || null;
+}
+
+async function linkSent(options: IdentityActionsOptions, publish: Publish): Promise<void> {
+  publish({ loginLink: { status: "sending" } });
+  try {
+    const { expiresAt, link } = await options.list.calls.sendLoginLink(options.name);
+    publish({ loginLink: { expiresAt, link, status: "shown" } });
+  } catch (error: unknown) {
+    publish({ loginLink: { ...refusalOf(error), status: "failed" } });
+  }
+}
+
+async function sentAfter(previous: Promise<void>, options: IdentityActionsOptions, publish: Publish): Promise<void> {
+  await previous;
+  await linkSent(options, publish);
+}
+
+type LinkCalls = Pick<IdentityActions, "copyLoginLink" | "forgetLoginLink" | "sendLoginLink">;
+
+function linkCallsOf(options: IdentityActionsOptions, publish: Publish, held: () => Held): LinkCalls {
+  let copying = Promise.resolve();
+  let sending = Promise.resolve();
+  return {
+    copyLoginLink: () => {
+      copying = copyAfter(copying, linkOf(held().loginLink));
+    },
+    forgetLoginLink: () => {
+      publish({ loginLink: NO_LINK });
+    },
+    sendLoginLink: () => {
+      if (held().loginLink.status !== "sending") {
+        sending = sentAfter(sending, options, publish);
+      }
+    },
+  };
 }
 
 async function messagesOf(options: IdentityActionsOptions, publish: Publish): Promise<void> {
@@ -230,6 +277,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
 
   return {
     ...editsOf(publish, () => current),
+    ...linkCallsOf(options, publish, () => current),
     ask: asksOf(publish),
     cancel: cancelOf(publish, () => current),
     confirm: () => {

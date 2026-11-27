@@ -179,6 +179,7 @@ it.effect("redeeming a login link raises a web Login alert that says it came fro
     expect({ admins, alerts: Arr.map(alerts, loginOf) }).toMatchObject({
       admins: [],
       alerts: [
+        { act: "sent a login link", admin: "matt", kind: "admin act" },
         {
           ended: false,
           kind: "new session",
@@ -190,8 +191,27 @@ it.effect("redeeming a login link raises a web Login alert that says it came fro
       ],
     });
     expect(Arr.map(alerts, ({ login }) => login.kind === "new session" && typeof login.clientIp)).toStrictEqual([
+      false,
       "string",
     ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("making a login link raises an admin act Login alert for its person, naming the admin and the link", () =>
+  Effect.gen(function* adminActRaised() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { admin: true, kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* answer(() => matt.client.createLoginLink("ada"));
+    const [alerts, admins] = yield* Effect.all([loginAlertsOf(ada.client), loginAlertsOf(matt.client)], {
+      concurrency: 1,
+    });
+    const credential: unknown = expect.stringMatching(/^[0-9a-f]{16}$/u);
+
+    expect({ admins, alerts: Arr.map(alerts, ({ login, read }) => ({ login, read })) }).toStrictEqual({
+      admins: [],
+      alerts: [{ login: { act: "sent a login link", admin: "matt", credential, kind: "admin act" }, read: false }],
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 
