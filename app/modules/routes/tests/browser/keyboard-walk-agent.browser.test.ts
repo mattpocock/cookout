@@ -111,6 +111,7 @@ function revokeSteps({ page }: Walking): readonly Step[] {
 function transferSteps({ cast, page }: Walking): readonly Step[] {
   const field = textbox(page, "Transfer to (a human's name)");
   return [
+    { focused: button(page, "Make feeder"), keys: "Tab" },
     { focused: button(page, "Delete"), keys: "Tab" },
     { focused: field, keys: "Tab" },
     { focused: field, keys: cast.heir, typed: true },
