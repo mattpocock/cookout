@@ -5,6 +5,7 @@ export {
   POSTGRES_ATTACHMENTS_MIGRATION,
 } from "./attachments.ts";
 export { CALL_TIMES_MIGRATION, POSTGRES_CALL_TIMES_MIGRATION } from "./deliveries.ts";
+export { LOGIN_EXPIRY_MIGRATION, POSTGRES_LOGIN_EXPIRY_MIGRATION } from "./login-expiry-migrations.ts";
 export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION } from "./search-sqlite.ts";
 export {
   POSTGRES_TRIGGER_HEADERS_MIGRATION,

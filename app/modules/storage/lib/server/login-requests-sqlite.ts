@@ -2,11 +2,13 @@ import { Array as Arr, Effect, Function as Fn, Option, Predicate, Schema } from 
 import type {
   CollectLoginRequest,
   LoginCollection,
+  LoginCredentialLookup,
   LoginRequest,
   LoginRequestsSection,
   NewLoginRequest,
+  UseLoginCredential,
 } from "./login-requests.ts";
-import { GONE, PENDING, collected } from "./login-requests.ts";
+import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } from "./login-requests.ts";
 import type { Identity, TokenHash } from "../../../identities/index.ts";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
 import { isIdentityName, tokenHash } from "../../../identities/index.ts";
@@ -33,6 +35,12 @@ const REQUEST_COLUMNS = "approved_by, expires_at, host, user_code";
 const FIND_CREDENTIAL = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, i.avatar
   FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
 
+const LOOK_UP_CREDENTIAL = `SELECT c.last_used_at, i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name,
+  i.deactivated, i.avatar
+  FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
+
+const LastUsedRow = Schema.Struct({ last_used_at: IsoTimeSchema });
+
 const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE request_hash = ? AND expires_at > ?`;
 
 const FIND_LIVE_BY_CODE = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE user_code = ? AND expires_at > ?`;
@@ -40,11 +48,12 @@ const FIND_LIVE_BY_CODE = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE u
 const INSERT_REQUEST = `INSERT INTO login_requests (request_hash, user_code, host, created_at, expires_at)
   VALUES (?, ?, ?, ?, ?)`;
 
-const ISSUE_CREDENTIAL = `INSERT INTO login_credentials (hash, identity_name, host, created_at)
-  SELECT ?, name, ?, ? FROM identities WHERE name = ?`;
+const ISSUE_CREDENTIAL = `INSERT INTO login_credentials (hash, identity_name, host, created_at, last_used_at, expires_at)
+  SELECT ?, name, ?, ?, ?, ? FROM identities WHERE name = ?`;
 
-const ISSUE_MADE_WITH = `INSERT INTO login_credentials (hash, identity_name, host, created_at, made_with)
-  SELECT ?, name, ?, ?, coalesce((SELECT made_with FROM login_credentials WHERE hash = ?), ?)
+const ISSUE_MADE_WITH = `INSERT INTO login_credentials
+  (hash, identity_name, host, created_at, last_used_at, expires_at, made_with)
+  SELECT ?, name, ?, ?, ?, ?, coalesce((SELECT made_with FROM login_credentials WHERE hash = ?), ?)
   FROM identities WHERE name = ?`;
 
 function madeWithRevokedTokens(db: SqlDatabase): string {
@@ -68,6 +77,7 @@ function rowOf<Decoded, Failure>(decode: (row: unknown) => Effect.Effect<Decoded
 
 const requestRow = rowOf(Schema.decodeUnknownEffect(RequestRow));
 const identityRow = rowOf(Schema.decodeUnknownEffect(IdentityRow));
+const lastUsedRow = rowOf(Schema.decodeUnknownEffect(LastUsedRow));
 
 function shown(row: RequestRowType): LoginRequest {
   return { approved: row.approved_by !== null, expiresAt: row.expires_at, host: row.host, userCode: row.user_code };
@@ -125,7 +135,7 @@ function issueIn(db: SqlDatabase, { credentialHash, now, requestHash }: CollectL
   return ({ approved_by: approver, host }: RequestRowType): Fails<LoginCollection> =>
     Effect.gen(function* issueCredential() {
       yield* db.run("DELETE FROM login_requests WHERE request_hash = ?", requestHash);
-      yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, approver);
+      yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, now, loginCredentialExpiry(now), approver);
       const issued = yield* credential(credentialHash);
       return Option.match(issued, { onNone: Fn.constant(GONE), onSome: collected });
     });
@@ -152,9 +162,78 @@ function issueStraightIn(db: SqlDatabase): LoginRequestsSection["issueLoginCrede
   return ({ credentialHash, host, identity, madeWith, now }) =>
     db.transaction(
       Effect.gen(function* issueCredential() {
-        yield* db.run(ISSUE_MADE_WITH, credentialHash, host, now, madeWith, madeWith, identity);
+        const expiresAt = loginCredentialExpiry(now);
+        yield* db.run(ISSUE_MADE_WITH, credentialHash, host, now, now, expiresAt, madeWith, madeWith, identity);
         const issued = yield* credential(credentialHash);
         return Option.getOrUndefined(issued);
+      }),
+    );
+}
+
+interface FoundCredential {
+  readonly identity: Identity;
+  readonly lastUsedAt: IsoTime;
+}
+
+function foundCredential(db: SqlDatabase, hash: TokenHash): Fails<Option.Option<FoundCredential>> {
+  return Effect.gen(function* findCredential() {
+    const row = yield* db.get(LOOK_UP_CREDENTIAL, hash);
+    const identity = yield* identityRow(row);
+    const used = yield* lastUsedRow(row);
+    return Option.zipWith(identity, used, (found, { last_used_at: lastUsedAt }) => ({
+      identity: toIdentity(found),
+      lastUsedAt,
+    }));
+  });
+}
+
+interface SqlLookUp {
+  readonly db: SqlDatabase;
+  readonly renew: boolean;
+  readonly use: UseLoginCredential;
+}
+
+function expiredIn({ db, renew, use }: SqlLookUp): Fails<LoginCredentialLookup> {
+  return Effect.as(
+    Effect.when(db.run("DELETE FROM login_credentials WHERE hash = ?", use.hash), Effect.succeed(renew)),
+    EXPIRED,
+  );
+}
+
+function activeIn(
+  { db, renew, use }: SqlLookUp,
+  { identity, lastUsedAt: usedBefore }: FoundCredential,
+): Fails<LoginCredentialLookup> {
+  if (!renew) {
+    return Effect.succeed({
+      expiresAt: loginCredentialExpiry(usedBefore),
+      identity,
+      lastUsedAt: usedBefore,
+      status: "active",
+    });
+  }
+  const expiresAt = loginCredentialExpiry(use.now);
+  const renewing = "UPDATE login_credentials SET last_used_at = ?, expires_at = ? WHERE hash = ?";
+  return Effect.as(db.run(renewing, use.now, expiresAt, use.hash), {
+    expiresAt,
+    identity,
+    lastUsedAt: use.now,
+    status: "active",
+  } as const);
+}
+
+function lookUpIn(db: SqlDatabase, renew: boolean) {
+  return (use: UseLoginCredential): Fails<LoginCredentialLookup> =>
+    db.transaction(
+      Effect.gen(function* lookUpCredential() {
+        const found = yield* foundCredential(db, use.hash);
+        if (Option.isNone(found)) {
+          return UNKNOWN;
+        }
+        if (use.now >= loginCredentialExpiry(found.value.lastUsedAt)) {
+          return yield* expiredIn({ db, renew, use });
+        }
+        return yield* activeIn({ db, renew, use }, found.value);
       }),
     );
 }
@@ -194,6 +273,7 @@ function sqlLoginRequests(db: SqlDatabase): LoginRequestsSection {
   return {
     addLoginRequest: addIn(db),
     approveLoginRequest: approveIn(db),
+    checkLoginCredential: lookUpIn(db, false),
     collectLoginRequest: collectIn(db),
     findLoginCredential: (hash) => Effect.map(credential(hash), Option.getOrUndefined),
     findLoginRequest: (userCode, now) =>
@@ -201,6 +281,7 @@ function sqlLoginRequests(db: SqlDatabase): LoginRequestsSection {
     issueLoginCredential: issueStraightIn(db),
     revokeLoginCredential: revokeIn(db),
     revokeLoginCredentialsMadeWithRevokedTokens: revokeMadeWithRevokedIn(db),
+    useLoginCredential: lookUpIn(db, true),
   };
 }
 
