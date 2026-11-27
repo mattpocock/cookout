@@ -1,6 +1,7 @@
 import type {
   BoardState,
   BoardStore,
+  CallRequest,
   ChannelMessagesState,
   ChannelsState,
   ClosingRefusal,
@@ -66,7 +67,7 @@ interface Replying {
 }
 
 interface ChannelCalls {
-  readonly call: (command: string, data: string, called: () => void) => void;
+  readonly call: (request: CallRequest) => void;
   readonly editCallData: (data: string) => void;
 }
 
@@ -145,8 +146,8 @@ function useChannelCalls(channel: ChannelName): ChannelCalls {
   const { channelPages } = useBoardStore();
   return useMemo(
     () => ({
-      call: (command: string, data: string, called: () => void) => {
-        channelPages.call(channel, { called, data, webhookCommand: command });
+      call: (request: CallRequest) => {
+        channelPages.call(channel, request);
       },
       editCallData: (data: string) => {
         channelPages.editCallData(channel, data);
