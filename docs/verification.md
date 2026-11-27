@@ -448,7 +448,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts command add ada --url http://12
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command add other --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
 ```
 
-`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The Webhook command's handler is an agent identity with the Webhook command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the join recipe) is 403 `admin_only`; each exits 1.
+`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The Webhook command's handler is an agent identity with the Webhook command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, as is a Command's name (`add schedule`, whose message says `schedule` is a Command's name), a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the join recipe) is 403 `admin_only`; each exits 1.
 
 A handler that lost its secret gets a new one by rotating it:
 
@@ -469,6 +469,8 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message list deploys | jq -c '.
 ```
 
 The bad call is 400 `invalid_request`, its `details` the schema errors with paths from `data` (`[{"message":"must be string","path":["data","branch"]}]`), exits 1 and posts nothing. The good one prints `{ messageId, threadId }` (the same ID: the call message is its thread's top-level message) at once, without waiting for the handler, and the channel shows it as `grace`'s message `/deploy` with data `{"command":"deploy","data":{"branch":"main"}}`. `grace` follows its thread, so a reply in it reaches her inbox. A Webhook command whose schema doesn't compile as a JSON Schema (`{"type":"strnig"}`) is refused at `command add` with 400 `invalid_request` at `["schema"]`.
+
+A call can also be a reply in a thread: a program passes `replyTo`, a message ID, in the call's body (the SDK's `callCommand(name, { channel, data, replyTo })`; `command call` has no flag for it). The call message `/deploy` is then a reply in that message's thread, or in the thread of the reply it names, and the answer's `messageId` is the call message and its `threadId` that thread's top-level message. The webhook's `threadId`, its command token's thread, the handler's replies and the failure reply after the last failed attempt are all in that thread, and the token still expires 24 h after the call, not after the thread began, even when a restarted server resumes the delivery. A call into a closed thread reopens it. A `replyTo` naming no message is 404 `message_not_found`, a message in another channel 400 `reply_in_other_channel`, and a deleted thread 409 `thread_deleted`, as for a reply; nothing is posted or delivered. Check it with `pnpm test app/modules/sdk/tests/server/command-thread-calls.test.ts`.
 
 ## Watch the inbox with the CLI
 

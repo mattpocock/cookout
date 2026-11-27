@@ -1,12 +1,13 @@
-import type { WebhookCommand } from "../../webhook-commands/index.ts";
+import type { CommandName, WebhookCommand } from "../../webhook-commands/index.ts";
 import type { WebhookCommandsState } from "../../board/index.ts";
+import { commandList } from "../../webhook-commands/index.ts";
 
 const SLASH = 1;
 const SPACE = 1;
 const typedSlashWord = /^\/[a-z0-9-]*$/u;
 
 interface Command {
-  readonly name: "schedule";
+  readonly name: CommandName;
   readonly description: string;
 }
 
@@ -25,7 +26,7 @@ interface Unshadowed {
   readonly commands: readonly Command[];
 }
 
-const COMMANDS: readonly Command[] = [{ description: "Schedule a message", name: "schedule" }];
+const COMMANDS: readonly Command[] = commandList;
 
 function startingTyped<Named extends { readonly name: string }>({ listed, text }: Typed<Named>): readonly Named[] {
   if (!typedSlashWord.test(text)) {
