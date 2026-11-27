@@ -45,4 +45,4 @@ A CI job or service used its agent's one Identity token. Each agent had one toke
 - Reactivating an agent still answers a new Identity token, as before; making that a key is left to a later ticket.
 - An agent created by a person before this keeps its stored Identity token until the upgrade migration turns it into `legacy`. An agent created after it still has an Identity token stored that nobody is ever shown. The moving-over release removes Identity tokens.
 
-Superseded in part on 2026-11-27 by [ADR 0158](0158-a-reactivated-agent-gets-no-token-and-a-new-agent-stores-none.md): reactivating an agent answers no token, and a new agent stores no Identity token (#970).
+Superseded in part on 2026-11-27 by [ADR 0159](0159-a-reactivated-agent-gets-no-token-and-a-new-agent-stores-none.md): reactivating an agent answers no token, and a new agent stores no Identity token (#970).
