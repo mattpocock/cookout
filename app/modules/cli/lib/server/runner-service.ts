@@ -71,7 +71,8 @@ const SERVICE_FILE = 0o644;
 const PRIVATE_FOLDER = 0o700;
 const EXIT_SUCCESS = 0;
 const BUS_ERROR = "Failed to connect to bus";
-const LOGON_TASK = 'schtasks /create /tn "cookout runner" /sc onlogon /tr "wsl.exe --exec sleep infinity"';
+const KEEP_WSL_RUNNING = "wsl.exe --exec sleep infinity";
+const LOGON_TASK = `In a Windows terminal opened with Run as administrator, run: schtasks /create /tn "cookout runner" /sc onlogon /tr "${KEEP_WSL_RUNNING}". Without administrator rights, add a shortcut to shell:startup whose target is ${KEEP_WSL_RUNNING} instead.`;
 const NO_LOGON_TASK = {};
 
 const noHome: CallFailure = {

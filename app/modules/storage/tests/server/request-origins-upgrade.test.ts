@@ -3,6 +3,7 @@ import { expect, it } from "@effect/vitest";
 import { freshDatabasePath, identityName, isoTime, openStore, testSecretsCipher } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { sqliteStorage } from "../../server.ts";
+import { tokenHash } from "../../../identities/index.ts";
 
 const BEFORE_REQUEST_ORIGINS = new URL("fixtures/before-request-origins.db", import.meta.url);
 const created = isoTime("2026-01-01T00:00:00.000Z");
@@ -45,4 +46,22 @@ it.effect(
         "approved",
       ]);
     }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("a Login request stored on SQLite before request kinds collects as CLI after the upgrade, never as web", () =>
+  Effect.gen(function* upgradeKinds() {
+    const path = yield* copiedDatabase;
+    const { storage } = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path }));
+    const requestHash = tokenHash("hash:login");
+    yield* storage.approveLoginRequest({ approver: identityName("ada"), now, userCode: "WDJB-MJHT" });
+    const asWeb = yield* storage.collectLoginRequest({
+      credentialHash: tokenHash("hash:as-web"),
+      kind: "web",
+      now,
+      requestHash,
+    });
+    const asCli = yield* storage.collectLoginRequest({ credentialHash: tokenHash("hash:as-cli"), now, requestHash });
+
+    expect([asWeb, asCli]).toMatchObject([{ status: "gone" }, { identity: { name: "ada" }, status: "collected" }]);
+  }).pipe(Effect.provide(NodeServices.layer)),
 );

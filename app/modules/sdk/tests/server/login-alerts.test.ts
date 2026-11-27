@@ -1,12 +1,13 @@
-import { Array as Arr, Effect, Option } from "effect";
-import type { InboxAlert, LoginAlert, PublicId } from "../../index.ts";
+import { Array as Arr, Effect, Option, Predicate } from "effect";
+import type { InboxAlert, LoginAlert, PublicId, Token } from "../../index.ts";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
+import { collectLoginRequestPath, loginRequestsPath } from "../../../logins/index.ts";
 import { expect, it } from "@effect/vitest";
+import { sessionPath, token } from "../../../identities/index.ts";
 import { createTestAgent } from "../../../testing/index.ts";
 import { isOfflineAlert } from "../../../inbox/index.ts";
 import { request } from "../../../http/client.ts";
-import { sessionPath } from "../../../identities/index.ts";
 
 const FIREFOX_MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:132.0) Gecko/20100101 Firefox/132.0";
 
@@ -26,17 +27,44 @@ function cliSession(cookout: TestCookoutService, approver: Client, host: string)
   });
 }
 
-function webSession(url: string, token: string): Effect.Effect<void> {
+function webSession(url: string, pasted: string): Effect.Effect<void> {
   return Effect.asVoid(
     answer(() =>
       request({
         baseUrl: url,
-        headers: { authorization: `Bearer ${token}`, "user-agent": FIREFOX_MAC },
+        headers: { authorization: `Bearer ${pasted}`, "user-agent": FIREFOX_MAC },
         method: "POST",
         path: sessionPath,
       }),
     ),
   );
+}
+
+function inFirefox(url: string, path: string, body: object): Effect.Effect<unknown> {
+  return Effect.map(
+    answer(() => request({ baseUrl: url, body, headers: { "user-agent": FIREFOX_MAC }, method: "POST", path })),
+    ({ json }) => json,
+  );
+}
+
+interface Started {
+  readonly requestId: Token;
+  readonly userCode: string;
+}
+
+function startedOf(json: unknown): Effect.Effect<Started> {
+  if (Predicate.hasProperty(json, "userCode") && Predicate.hasProperty(json, "requestId")) {
+    return Effect.succeed({ requestId: token(String(json.requestId)), userCode: String(json.userCode) });
+  }
+  return Effect.die(new Error("The web login request did not start."));
+}
+
+function webLogin(cookout: TestCookoutService, approver: Client): Effect.Effect<void> {
+  return Effect.gen(function* approvedInFirefox() {
+    const started = yield* Effect.flatMap(inFirefox(cookout.url, loginRequestsPath, { kind: "web" }), startedOf);
+    yield* answer(() => approver.approveLogin(started.userCode));
+    yield* inFirefox(cookout.url, collectLoginRequestPath, { kind: "web", requestId: started.requestId });
+  });
 }
 
 function isLoginAlert(alert: InboxAlert): alert is LoginAlert {
@@ -104,6 +132,19 @@ it.effect("pasting a token on the web and approving a CLI Login request each rai
     expect(Arr.map(alerts, ({ login }) => login.kind === "new session" && typeof login.clientIp)).toStrictEqual([
       "string",
       "string",
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("approving a web Login request raises a web Login alert for the browser it was made in", () =>
+  Effect.gen(function* raisedForWeb() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* webLogin(cookout, ada.client);
+    const alerts = yield* loginAlertsOf(ada.client);
+
+    expect(Arr.map(alerts, ({ login }) => login)).toMatchObject([
+      { ended: false, kind: "new session", sessionKind: "web", where: "Firefox on macOS" },
     ]);
   }).pipe(Effect.provide(testCookout())),
 );

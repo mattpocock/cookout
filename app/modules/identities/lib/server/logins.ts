@@ -6,6 +6,7 @@ import {
   now,
   requestOriginOf,
   requireHuman,
+  webSessionWhere,
 } from "./login-support.ts";
 import { Caller, CredentialSent, credentialsOf, sentToken, sessionMade } from "./auth.ts";
 import {
@@ -17,10 +18,18 @@ import {
   LogoutResponseSchema,
   RevokeSessionResponseSchema,
   StartLoginRequestSchema,
+  WebLoginCollectedResponseSchema,
 } from "./login-wire.ts";
 import { Effect, Function, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { LoginCollection, LoginRequest, NewLoginRequest, StorageUnavailable } from "../../../storage/server.ts";
+import type { Identity, Token } from "../../index.ts";
+import type {
+  LoginCollection,
+  LoginRequest,
+  LoginRequestKind,
+  NewLoginRequest,
+  StorageUnavailable,
+} from "../../../storage/server.ts";
 import type { LoginRequestStartedResponse, LoginRequestView } from "../../../logins/index.ts";
 import {
   approvalPath,
@@ -32,13 +41,12 @@ import {
   loginRequestSeconds,
   loginRequestsPath,
 } from "../../../logins/index.ts";
+import { clientAddress, siteCookieOptions } from "../../../http/server.ts";
+import { sessionCookieName, token } from "../../index.ts";
 import type { IdentityChanges } from "./auth.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import type { Token } from "../../index.ts";
-import { clientAddress } from "../../../http/server.ts";
-import { token } from "../../index.ts";
 
 type Answer = HttpServerResponse.HttpServerResponse;
 
@@ -75,15 +83,30 @@ function addWithCode(request: UnnamedRequest): Effect.Effect<string, StorageUnav
   });
 }
 
+interface KindAndHost {
+  readonly kind: LoginRequestKind;
+  readonly host: string;
+}
+
+function kindAndHost(
+  body: typeof StartLoginRequestSchema.Type,
+  headers: Readonly<Record<string, string | undefined>>,
+): KindAndHost {
+  if ("kind" in body) {
+    return { host: webSessionWhere(headers["user-agent"]), kind: body.kind };
+  }
+  return { host: body.host, kind: "cli" };
+}
+
 const newRequest = Effect.gen(function* newLoginRequest() {
-  const { host } = yield* HttpServerRequest.schemaBodyJson(StartLoginRequestSchema);
+  const body = yield* HttpServerRequest.schemaBodyJson(StartLoginRequestSchema);
   const { headers } = yield* HttpServerRequest.HttpServerRequest;
   const origin = requestOriginOf({ clientIp: yield* clientAddress, headers });
   const secrets = yield* Secrets;
   const requestId = yield* secrets.newToken;
   const requestHash = yield* secrets.hashToken(requestId);
   const { createdAt, expiresAt } = yield* lifetimeOf(loginRequestSeconds);
-  return { request: { ...origin, createdAt, expiresAt, host, requestHash }, requestId };
+  return { request: { ...origin, ...kindAndHost(body, headers), createdAt, expiresAt, requestHash }, requestId };
 });
 
 const startRoute: Route<Storage | Secrets | AddressLimit> = {
@@ -108,17 +131,39 @@ const startRoute: Route<Storage | Secrets | AddressLimit> = {
 
 const collectedResponse = HttpServerResponse.schemaJson(LoginCollectedResponseSchema);
 
+const webCollectedResponse = HttpServerResponse.schemaJson(WebLoginCollectedResponseSchema);
+
+interface Collected {
+  readonly collection: LoginCollection;
+  readonly issued: Token;
+  readonly kind: LoginRequestKind;
+}
+
+function approvedAnswer(
+  identity: Identity,
+  { issued, kind }: Omit<Collected, "collection">,
+): Effect.Effect<Answer, never, HttpServerRequest.HttpServerRequest> {
+  if (kind === "web") {
+    return Effect.gen(function* setSessionCookie() {
+      const response = yield* webCollectedResponse({ identity, status: "approved" });
+      const options = yield* siteCookieOptions;
+      return yield* HttpServerResponse.setCookie(response, sessionCookieName, issued, options);
+    }).pipe(Effect.orDie);
+  }
+  return Effect.orDie(collectedResponse({ identity, status: "approved", token: issued }));
+}
+
 function collectionAnswer(
-  collection: LoginCollection,
-  issued: Token,
-): Effect.Effect<Answer, typeof loginRequestNotFound> {
+  collected: Collected,
+): Effect.Effect<Answer, typeof loginRequestNotFound, HttpServerRequest.HttpServerRequest> {
+  const { collection } = collected;
   if (collection.status === "pending") {
     return Effect.orDie(collectedResponse({ status: "pending" }, { status: ACCEPTED }));
   }
   if (collection.status === "gone") {
     return Effect.fail(loginRequestNotFound);
   }
-  return Effect.orDie(collectedResponse({ identity: collection.identity, status: "approved", token: issued }));
+  return approvedAnswer(collection.identity, collected);
 }
 
 function ipOf(clientIp: string | undefined): { readonly clientIp?: string } {
@@ -128,29 +173,32 @@ function ipOf(clientIp: string | undefined): { readonly clientIp?: string } {
   return { clientIp };
 }
 
-function announcedSession(collection: LoginCollection): Effect.Effect<void, never, IdentityChanges> {
+function announcedSession({
+  collection,
+  kind,
+}: Omit<Collected, "issued">): Effect.Effect<void, never, IdentityChanges> {
   if (collection.status !== "collected") {
     return Effect.void;
   }
   const { identity, session } = collection;
   const { clientIp, id, where } = session;
-  return sessionMade({ identity: identity.name, session: id, sessionKind: "cli", where, ...ipOf(clientIp) });
+  return sessionMade({ identity: identity.name, session: id, sessionKind: kind, where, ...ipOf(clientIp) });
 }
 
 const collectRoute: Route<Storage | Secrets | AddressLimit | IdentityChanges> = {
   handle: () =>
     withinAddressLimit(
       Effect.gen(function* collectLoginRequest() {
-        const { requestId } = yield* HttpServerRequest.schemaBodyJson(CollectLoginRequestSchema);
+        const { kind = "cli", requestId } = yield* HttpServerRequest.schemaBodyJson(CollectLoginRequestSchema);
         const secrets = yield* Secrets;
         const storage = yield* Storage;
         const requestHash = yield* secrets.hashToken(token(requestId));
         const issued = yield* secrets.newToken;
         const credentialHash = yield* secrets.hashToken(issued);
         const at = yield* now;
-        const collection = yield* storage.collectLoginRequest({ credentialHash, now: at, requestHash });
-        yield* announcedSession(collection);
-        return yield* collectionAnswer(collection, issued);
+        const collection = yield* storage.collectLoginRequest({ credentialHash, kind, now: at, requestHash });
+        yield* announcedSession({ collection, kind });
+        return yield* collectionAnswer({ collection, issued, kind });
       }),
     ),
   method: "POST",
@@ -240,4 +288,5 @@ export const loginResponseSchemas = {
   LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
   LogoutResponse: LogoutResponseSchema,
   RevokeSessionResponse: RevokeSessionResponseSchema,
+  WebLoginCollectedResponse: WebLoginCollectedResponseSchema,
 };

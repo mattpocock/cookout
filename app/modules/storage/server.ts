@@ -70,6 +70,7 @@ export type {
   LoginCollection,
   LoginCredentialLookup,
   LoginRequest,
+  LoginRequestKind,
   NewLoginRequest,
 } from "./lib/server/login-requests.ts";
 export type { EndedCredential } from "./lib/server/credential-lineage.ts";

@@ -173,6 +173,8 @@ const requestOverHttps: Effect.Effect<boolean, never, HttpServerRequest.HttpServ
     Effect.map((url) => Option.contains(Option.map(url, Struct.get("protocol")), "https:")),
   );
 
+const siteCookie = { httpOnly: true, path: "/", sameSite: "strict" } as const;
+
 function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
   return respond(toRefusal(failure));
 }
@@ -291,5 +293,5 @@ export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Ef
 /** The request's client address (ADR 0148): behind Fly its `Fly-Client-IP`, elsewhere the socket's, header ignored. */
 export const clientAddress = requestClientAddress;
 
-/** Whether the request came over HTTPS (ADR 0148): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
-export const overHttps = requestOverHttps;
+/** A cookie only this site's own pages send, for the whole site and out of scripts' reach: `Secure` over HTTPS (ADR 0148: on an encrypted socket, or behind Fly by `X-Forwarded-Proto`). */
+export const siteCookieOptions = Effect.map(requestOverHttps, (secure) => ({ ...siteCookie, secure }));
