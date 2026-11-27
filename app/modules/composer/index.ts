@@ -53,7 +53,8 @@
  * `identities.creation` creates an agent the caller owns, whose token then
  * shows in that agent's `actions`.
  * `channelDraft(channel)`, a channel's box, also suggests, when the whole text is `/` and a prefix, the Commands with names starting with it (only `/schedule`), then the registered Webhook commands that do (from the board store's list, read once the identities load), less any named like a Command.
- * Choosing a Command completes the box to `/name `; `commandRun(text)` says when sending `/name`, or `/name ` and a text, runs it instead of posting, and with what text. Choosing a Webhook command makes it the draft's `webhookCommand`, whose data the box prompts
+ * Choosing a Command completes the box to `/name `, and so does choosing an inline Webhook command, one whose form `inlineField` reads as exactly one text field (#872); `commandRun(text)` says when sending `/name`, or `/name ` and a text, runs a Command, calls an inline Webhook command with that text, or opens a Webhook command's form, instead of posting.
+ * Choosing any other Webhook command, or `openWebhookCommand`, makes it the draft's `webhookCommand`, whose data the box prompts
  * for, until `clear`, or `unpickWebhookCommand`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests neither, since both act at the top level.
  * Each box's text, unsent, is kept in the browser's storage (`options.storage`, under the browser-storage module's
@@ -111,7 +112,8 @@ function createDraft(list: IdentityList, sources: Sources, kept: KeptText): Omit
     clear: () => {
       change(() => changes.written(EMPTY, EMPTY));
     },
-    commandRun: (text) => commandRunIn({ listed: sources.commands, text }),
+    commandRun: (text) =>
+      commandRunIn({ commands: sources.commands, text, webhookCommands: sources.webhookCommands() }),
     dismiss: () => {
       change(changes.dismissed);
     },
@@ -120,6 +122,9 @@ function createDraft(list: IdentityList, sources: Sources, kept: KeptText): Omit
     },
     highlight: (direction) => {
       change((snapshot) => changes.highlightMoved(snapshot, direction));
+    },
+    openWebhookCommand: (name) => {
+      change((snapshot) => changes.opened(snapshot, name));
     },
     pickCommand: (name) => {
       change((snapshot) => changes.completed(snapshot, name));
@@ -185,10 +190,15 @@ export interface Draft {
   readonly replyTo: (name: string | null) => void;
   /** Completes the box to `/name ` with the caret at its end, if the box suggests the named Command. */
   readonly pickCommand: (name: string) => void;
-  /** The Command that sending `text` runs in place of posting, with the text after `/name `, or `null` when it names none, so it posts. */
+  /**
+   * What sending `text` runs in place of posting, or `null` when it names no Command or Webhook command, so it posts: a Command with the text after `/name `;
+   * a `call` of an inline Webhook command (one whose form is one text field) with that text verbatim as its field's value; or the `form` of a Webhook command to open, for one that isn't inline or has no text.
+   */
   readonly commandRun: (text: string) => CommandRun | null;
-  /** Picks the named Webhook command, if the box suggests it, keeping the text for `unpickWebhookCommand`. */
+  /** Picks the named Webhook command, if the box suggests it: an inline one completes the box to `/name ` as `pickCommand` does, any other one is picked as `openWebhookCommand` does. */
   readonly pickWebhookCommand: (name: string) => void;
+  /** Opens the named registered Webhook command's form, keeping the text for `unpickWebhookCommand`. */
+  readonly openWebhookCommand: (name: string) => void;
   /** Drops the picked Webhook command and keeps the text, so the box comes back as it was, its suggestions hidden and `returned` true until the next edit. */
   readonly unpickWebhookCommand: () => void;
   /** Hides the suggestions until the next edit. */
@@ -281,7 +291,8 @@ export function createComposer(options: ComposerOptions): Composer {
 }
 
 export type { AvatarChoice, DisplayNameDraft } from "./lib/profile-stores.ts";
-export type { Command } from "./lib/snapshot.ts";
+export type { Command, CommandRun } from "./lib/snapshot.ts";
+export { type Prompt, type PromptField, fieldsOf, promptOf } from "./lib/schema-fields.ts";
 export { canvasAvatarCrop } from "./lib/canvas-crop.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
