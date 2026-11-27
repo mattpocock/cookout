@@ -118,10 +118,22 @@ function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
   };
 }
 
+function deactivationsOf(data: MemoryIdentities): ReturnType<typeof memoryDeactivations> {
+  return memoryDeactivations({
+    holdToken: (name, hash) => {
+      data.activeTokens.set(hash, name);
+    },
+    identities: data.identities,
+    revokeTokensOf: (name) => {
+      revokeTokensOf(data, name);
+    },
+  });
+}
+
 interface MemoryIdentitiesSection extends Omit<IdentitiesSection, keyof IdentityDeletesSection> {
   readonly placeHandler: PlaceHandler;
   readonly findIdentity: FindIdentity;
-  readonly tokenRevoked: (hash: TokenHash) => boolean;
+  readonly tokens: Pick<MemoryIdentities, "activeTokens" | "revokedTokens">;
   readonly removeIdentity: (name: IdentityName, messages: number) => Fails<DeleteIdentityResult>;
 }
 
@@ -134,15 +146,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
   };
   state.lineage.useTokens(data);
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
-  const deactivations = memoryDeactivations({
-    holdToken: (name, hash) => {
-      data.activeTokens.set(hash, name);
-    },
-    identities: data.identities,
-    revokeTokensOf: (name) => {
-      revokeTokensOf(data, name);
-    },
-  });
+  const deactivations = deactivationsOf(data);
   const remove = memoryRemoveIdentity(data);
   return {
     ...memoryAvatarRemovals({ avatarsToRemove: data.avatarsToRemove, open }),
@@ -172,7 +176,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
       open(() => {
         setOnlyTokenIn(data, identity, hash);
       }),
-    tokenRevoked: (hash) => data.revokedTokens.has(hash),
+    tokens: data,
   };
 };
 

@@ -25,15 +25,8 @@ import type {
   ListCommandsResponse,
 } from "./lib/commands.ts";
 import type { AgentSessionCalls, AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/agent-sessions.ts";
+import type { CallGroups, CreateIdentityCall } from "./lib/identities.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
-import type {
-  CreateIdentityRequest,
-  DeactivateIdentityResponse,
-  IdentityResponse,
-  IdentityWithTokenResponse,
-  ListIdentitiesQuery,
-  ListIdentitiesResponse,
-} from "../identities/index.ts";
 import type {
   CreateMessageRequest,
   ListMessagesQuery,
@@ -44,9 +37,15 @@ import type {
   ReactionsResponse,
   ThreadResponse,
 } from "./lib/messages.ts";
+import type {
+  DeactivateIdentityResponse,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesQuery,
+  ListIdentitiesResponse,
+} from "../identities/index.ts";
 import type { EventStream, WatchOptions } from "./lib/events.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
-import type { CallGroups } from "./lib/identities.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { agentSessionCalls } from "./lib/agent-sessions.ts";
 import { channelCalls } from "./lib/channels.ts";
@@ -109,9 +108,9 @@ export type CookoutClient = CallGroups &
     readonly logout: () => Promise<IdentityResponse>;
     /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
     readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-    /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
-    readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
-    /** The agent's owner or an admin (else 403 `not_owner`). Issues a new token; the old one stops working at once. */
+    /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0157). */
+    readonly createIdentity: CreateIdentityCall;
+    /** A human's new token (403 `not_owner` unless an admin or themself); an agent is 409 `agent_keys_instead`. */
     readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
     /**
      * `POST /v1/identities/:name/deactivate`: an admin deactivates anyone, a human their own agents (403 `not_owner`

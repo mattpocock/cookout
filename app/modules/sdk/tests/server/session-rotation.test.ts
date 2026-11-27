@@ -104,9 +104,20 @@ function twoWebStreams(
 
 type Watch = Awaited<ReturnType<TestIdentity["client"]["watch"]>>;
 
+function revokeKeys(cookout: TestCookoutService, agent: string): Effect.Effect<void> {
+  return Effect.gen(function* revokeEach() {
+    const { agentKeys } = yield* answer(() => cookout.client.listAgentKeys(agent));
+    yield* Effect.forEach(agentKeys, ({ id }) => answer(() => cookout.client.revokeAgentKey(agent, id)), {
+      concurrency: 1,
+    });
+  });
+}
+
 function agentSessionWatch(cookout: TestCookoutService, owner: TestIdentity): Effect.Effect<Watch, never, Scope.Scope> {
   return Effect.gen(function* joinAndWatch() {
-    yield* answer(() => createTestAgent({ by: cookout.client, name: "triage", owner: owner.identity.name }));
+    yield* answer(() =>
+      createTestAgent({ by: cookout.client, keyBy: owner.client, name: "triage", owner: owner.identity.name }),
+    );
     const { agentSessionToken } = yield* answer(() => owner.client.join({ as: "triage" }));
     return yield* Effect.acquireRelease(
       answer(() => cookout.clientFor(agentSessionToken).watch()),
@@ -173,13 +184,13 @@ it.effect("rotating the human's token closes a web stream whose cookie holds tha
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
 
-it.effect("rotating an agent's Identity token leaves a watch sent with its agent session token open", () =>
+it.effect("revoking an agent's key leaves a watch sent with an agent session its owner joined open", () =>
   Effect.gen(function* agentSessionSurvives() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     const events = yield* agentSessionWatch(cookout, ada);
-    yield* answer(() => cookout.client.rotateToken("triage"));
+    yield* revokeKeys(cookout, "triage");
     yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "@triage still there?" }));
     const next = yield* answer(() => events[Symbol.asyncIterator]().next());
 

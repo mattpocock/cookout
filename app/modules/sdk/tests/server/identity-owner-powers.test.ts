@@ -38,17 +38,20 @@ function joinedAndUsed(cookout: TestCookoutService, bot: TestIdentity): Effect.E
   });
 }
 
-it.effect("the owner of an agent rotates its token, and the old token stops working", () =>
-  Effect.gen(function* ownerRotates() {
+it.effect("the owner of an agent is refused a token rotation, and the agent key it makes instead works", () =>
+  Effect.gen(function* ownerMakesKey() {
     const cookout = yield* TestCookout;
-    const { ada, bot } = yield* seeded(cookout);
-    const rotated = yield* answer(() => ada.rotateToken("release-bot"));
-    const old = yield* refusal(() => bot.client.whoami());
-    const fresh = yield* answer(() => cookout.clientFor(rotated.token).whoami());
+    const { ada } = yield* seeded(cookout);
+    const refused = yield* refusal(() => ada.rotateToken("release-bot"));
+    const made = yield* answer(() => ada.createAgentKey("release-bot", { name: "ci" }));
+    const fresh = yield* answer(() => cookout.clientFor(made.token).whoami());
 
-    expect(rotated.identity).toMatchObject({ name: "release-bot", owner: "ada" });
-    expect(old).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
-    expect(fresh.identity.name).toBe("release-bot");
+    expect({ code: refused.code, fresh: fresh.identity.name, message: refused.message }).toStrictEqual({
+      code: "agent_keys_instead",
+      fresh: "release-bot",
+      message:
+        "release-bot is an agent: it has agent keys, not a token to rotate. Make a new key with cookout agent-key create release-bot <key-name>, then revoke the old one.",
+    });
   }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
@@ -103,34 +106,36 @@ it.effect("the owner lists its agent's live session, never its token, and revoki
   }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
-it.effect("an admin rotates, lists and revokes for any agent, and naming a missing identity is 404", () =>
-  Effect.gen(function* adminManages() {
-    const cookout = yield* TestCookout;
-    const { bot } = yield* seeded(cookout);
-    yield* answer(() => bot.client.join({ as: "release-bot" }));
-    const listed = yield* answer(() => cookout.client.listAgentSessions("release-bot"));
-    const [revoked, rotated] = yield* Effect.all(
-      [
-        answer(() => cookout.client.revokeAgentSession("release-bot")),
-        answer(() => cookout.client.rotateToken("release-bot")),
-      ],
-      ONE_AT_A_TIME,
-    );
-    const missing = yield* Effect.all(
-      [
-        refusal(() => cookout.client.rotateToken("nobody")),
-        refusal(() => cookout.client.listAgentSessions("nobody")),
-        refusal(() => cookout.client.revokeAgentSession("nobody")),
-        refusal(() => cookout.client.transferAgent("nobody", "ada")),
-      ],
-      ONE_AT_A_TIME,
-    );
+it.effect(
+  "an admin lists and revokes sessions and lists keys for any agent, and naming a missing identity is 404",
+  () =>
+    Effect.gen(function* adminManages() {
+      const cookout = yield* TestCookout;
+      const { bot } = yield* seeded(cookout);
+      yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const listed = yield* answer(() => cookout.client.listAgentSessions("release-bot"));
+      const [revoked, keys] = yield* Effect.all(
+        [
+          answer(() => cookout.client.revokeAgentSession("release-bot")),
+          answer(() => cookout.client.listAgentKeys("release-bot")),
+        ],
+        ONE_AT_A_TIME,
+      );
+      const missing = yield* Effect.all(
+        [
+          refusal(() => cookout.client.rotateToken("nobody")),
+          refusal(() => cookout.client.listAgentSessions("nobody")),
+          refusal(() => cookout.client.revokeAgentSession("nobody")),
+          refusal(() => cookout.client.transferAgent("nobody", "ada")),
+        ],
+        ONE_AT_A_TIME,
+      );
 
-    expect(listed).toStrictEqual({ agentSessions: [{ expiresAt: WEEK_ON, issuedAt: BOOT }] });
-    expect(revoked).toStrictEqual({ revoked: true });
-    expect(rotated.identity.name).toBe("release-bot");
-    expect(missing).toMatchObject([MISSING, MISSING, MISSING, MISSING]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(listed).toStrictEqual({ agentSessions: [{ expiresAt: WEEK_ON, issuedAt: BOOT }] });
+      expect(revoked).toStrictEqual({ revoked: true });
+      expect(keys).toStrictEqual({ agentKeys: [] });
+      expect(missing).toMatchObject([MISSING, MISSING, MISSING, MISSING]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("an admin transfers an agent to another human, who then owns it in place of the old owner", () =>
@@ -138,14 +143,15 @@ it.effect("an admin transfers an agent to another human, who then owns it in pla
     const cookout = yield* TestCookout;
     const { ada, grace } = yield* seeded(cookout);
     const moved = yield* answer(() => cookout.client.transferAgent("release-bot", "grace"));
-    const refused = yield* refusal(() => ada.rotateToken("release-bot"));
-    const rotated = yield* answer(() => grace.rotateToken("release-bot"));
+    const refused = yield* refusal(() => ada.createAgentKey("release-bot", { name: "ci" }));
+    const made = yield* answer(() => grace.createAgentKey("release-bot", { name: "ci" }));
+    const fresh = yield* answer(() => cookout.clientFor(made.token).whoami());
 
     expect(moved).toStrictEqual({
       identity: { admin: false, createdAt: BOOT, kind: "agent", name: "release-bot", owner: "grace" },
     });
     expect(refused).toMatchObject({ code: "not_owner", status: FORBIDDEN });
-    expect(rotated.identity).toMatchObject({ owner: "grace" });
+    expect(fresh.identity).toMatchObject({ owner: "grace" });
   }).pipe(Effect.provide(testCookout())),
 );
 

@@ -1,4 +1,5 @@
 import type { AdminSettingSection } from "./admin-setting.ts";
+import type { AgentKeysSection } from "./agent-keys.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { LineageSection } from "./credential-lineage.ts";
 import type { LoginLinksSection } from "./login-links.ts";
@@ -8,6 +9,7 @@ import type { PresenceSection } from "./presence.ts";
 import type { TriggersSection } from "./triggers.ts";
 
 export type SectionsBesideIdentities = AdminSettingSection &
+  AgentKeysSection &
   LoginRequestsSection &
   LoginLinksSection &
   LineageSection &

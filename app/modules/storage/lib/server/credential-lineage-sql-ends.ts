@@ -11,6 +11,8 @@ import { unreadable } from "./errors.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
+const NEVER = "9999-12-31T23:59:59.999Z";
+
 interface Ending {
   readonly hash: TokenHash;
   readonly why: EndedWhy;
@@ -72,6 +74,14 @@ function kindTables(db: SqlDatabase): readonly KindTable[] {
       end: `UPDATE agent_session_tokens SET revoked = ${TRUE[db.dialect]} WHERE hash = ?`,
       find: `SELECT identity_name, expires_at FROM agent_session_tokens WHERE hash = ? AND ${isFalse[db.dialect]("revoked")}`,
       kind: "agent session",
+    },
+    {
+      end: `UPDATE tokens SET revoked = ${TRUE[db.dialect]}
+        WHERE token_hash = ? AND token_hash IN (SELECT hash FROM agent_keys)`,
+      find: `SELECT k.identity_name, COALESCE(k.expires_at, '${NEVER}') AS expires_at
+        FROM agent_keys AS k JOIN tokens AS t ON t.token_hash = k.hash
+        WHERE k.hash = ? AND ${isFalse[db.dialect]("t.revoked")}`,
+      kind: "agent key",
     },
     {
       end: "DELETE FROM join_codes WHERE code_hash = ?",

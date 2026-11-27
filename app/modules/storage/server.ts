@@ -74,6 +74,9 @@ export type {
   NewLoginRequest,
 } from "./lib/server/login-requests.ts";
 export type { EndedCredential } from "./lib/server/credential-lineage.ts";
+/** A new random 16-hex-digit public ID, for a credential the lineage lists (ADR 0153). */
+export { newPublicId } from "./lib/server/credential-lineage.ts";
+export type { NewAgentKey } from "./lib/server/agent-keys.ts";
 export type {
   AgentJoinApproval,
   AgentJoinCollection,

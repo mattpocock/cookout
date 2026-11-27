@@ -9,6 +9,7 @@ export {
   POSTGRES_ATTACHMENT_SIZES_MIGRATION,
   POSTGRES_ATTACHMENTS_MIGRATION,
 } from "./attachments.ts";
+export { AGENT_KEYS_MIGRATION, POSTGRES_AGENT_KEYS_MIGRATION } from "./agent-keys-migrations.ts";
 export { CALL_TIMES_MIGRATION, POSTGRES_CALL_TIMES_MIGRATION } from "./deliveries.ts";
 export {
   CREDENTIAL_LINEAGE_MIGRATION,

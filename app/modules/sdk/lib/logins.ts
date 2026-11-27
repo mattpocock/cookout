@@ -1,4 +1,13 @@
+import type {
+  CreateAgentKeyResponse,
+  ListAgentKeysResponse,
+  PublicId,
+  RevokeAgentKeyResponse,
+  LoginCalls as SessionLoginCalls,
+} from "../../logins/index.ts";
 import {
+  agentKeyPath,
+  agentKeysPath,
   collectLoginRequestPath,
   logOutEverywherePath,
   loginLinkPath,
@@ -11,7 +20,9 @@ import {
   sessionsPath,
 } from "../../logins/index.ts";
 import {
+  isCreateAgentKeyResponse,
   isIdentityResponse,
+  isListAgentKeysResponse,
   isListSessionsResponse,
   isLogOutEverywherePreview,
   isLogOutEverywhereResponse,
@@ -20,14 +31,57 @@ import {
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
   isLogoutResponse,
+  isRevokeAgentKeyResponse,
   isRevokeSessionResponse,
   isWebLoginCollectedResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { LoginCalls } from "../../logins/index.ts";
+import type { AgentKeyCalls as KeyCalls } from "../../identities/client.ts";
 import { send } from "./request.ts";
 
-type SessionCalls = Pick<LoginCalls, "listSessions" | "revokeSession" | "previewLogOutEverywhere" | "logOutEverywhere">;
+type AgentKeyCalls = KeyCalls<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
+
+type LoginCalls = SessionLoginCalls & AgentKeyCalls;
+
+function agentKeyCalls(server: ClientConnection): AgentKeyCalls {
+  return {
+    createAgentKey: async (name, body) => {
+      const made = await send(server, {
+        body,
+        isExpected: isCreateAgentKeyResponse,
+        method: "POST",
+        params: { name },
+        path: agentKeysPath,
+      });
+      return made;
+    },
+    listAgentKeys: async (name) => {
+      const params = { name };
+      const listed = await send(server, {
+        isExpected: isListAgentKeysResponse,
+        method: "GET",
+        params,
+        path: agentKeysPath,
+      });
+      return listed;
+    },
+    revokeAgentKey: async (name, id) => {
+      const params = { id, name };
+      const revoked = await send(server, {
+        isExpected: isRevokeAgentKeyResponse,
+        method: "DELETE",
+        params,
+        path: agentKeyPath,
+      });
+      return revoked;
+    },
+  };
+}
+
+type SessionCalls = Pick<
+  SessionLoginCalls,
+  "listSessions" | "revokeSession" | "previewLogOutEverywhere" | "logOutEverywhere"
+>;
 
 function sessionCalls(server: ClientConnection): SessionCalls {
   return {
@@ -109,7 +163,7 @@ function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogi
   };
 }
 
-function loginCalls(server: ClientConnection): LoginCalls {
+function sessionLoginCalls(server: ClientConnection): SessionLoginCalls {
   return {
     ...sessionCalls(server),
     ...loginLinkCalls(server),
@@ -160,5 +214,9 @@ function loginCalls(server: ClientConnection): LoginCalls {
   };
 }
 
+function loginCalls(server: ClientConnection): LoginCalls {
+  return { ...sessionLoginCalls(server), ...agentKeyCalls(server) };
+}
+
 export { loginCalls };
-export type { LoginCalls } from "../../logins/index.ts";
+export type { LoginCalls };

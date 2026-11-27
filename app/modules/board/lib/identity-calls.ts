@@ -7,15 +7,17 @@ type IdentityCallsClient = Pick<
   CookoutClient,
   | "clearTrigger"
   | "countMessagesBy"
+  | "createAgentKey"
   | "createIdentity"
   | "deactivateIdentity"
   | "deleteIdentity"
   | "getTrigger"
+  | "listAgentKeys"
   | "makeAdmin"
   | "reactivateIdentity"
   | "removeAdmin"
+  | "revokeAgentKey"
   | "revokeAgentSession"
-  | "rotateToken"
   | "setAvatar"
   | "setDescription"
   | "setDisplayName"
@@ -135,6 +137,19 @@ function triggerCalls({
   };
 }
 
+const WEB_KEY = "web";
+
+async function newWebKey(client: IdentityCallsClient, name: IdentityName): Promise<Token> {
+  const { agentKeys } = await client.listAgentKeys(name);
+  await Promise.all(
+    agentKeys.map(async ({ id }) => {
+      await client.revokeAgentKey(name, id);
+    }),
+  );
+  const { token } = await client.createAgentKey(name, { name: WEB_KEY });
+  return token;
+}
+
 function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
   const { client, identities, sessions } = options;
   function put(identity: Identity): void {
@@ -149,8 +164,9 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
       return messages;
     },
     createAgent: async ({ displayName, name }) => {
-      const { identity, token } = await client.createIdentity({ displayName, kind: "agent", name });
+      const { identity } = await client.createIdentity({ displayName, kind: "agent", name });
       put(identity);
+      const { token } = await client.createAgentKey(identity.name, { name: WEB_KEY });
       return { name: identity.name, token };
     },
     revokeSession: async (name) => {
@@ -158,9 +174,8 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
       sessions.put(name, []);
     },
     rotateToken: async (name) => {
-      const { identity, token } = await client.rotateToken(name);
-      put(identity);
-      return token;
+      const key = await newWebKey(client, name);
+      return key;
     },
     transfer: async (name, to) => {
       const { identity } = await client.transferAgent(name, to);

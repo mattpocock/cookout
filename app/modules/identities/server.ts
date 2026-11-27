@@ -20,6 +20,7 @@ import type { Credentials, IdentityChanges, IssuedToken, Principal } from "./lib
 import type { Gate, Route } from "../http/server.ts";
 import type { IdentityName, Token } from "./index.ts";
 import {
+  agentKeyRoutes,
   humanAdmin,
   identityAdminRoutes,
   loginLinkRoutes,
@@ -176,10 +177,8 @@ export function adminTokenSet(
 }
 
 /**
- * The identity routes, for the server's route list: whoami, logging the web
- * UI in and out, create, list and rotate, making and removing admins, and listing and revoking a person's sessions
- * (ADR 0153). They need `Caller`, which
- * `requireToken` provides.
+ * The identity routes: whoami, web login and logout, create, list and rotate, admins, a person's sessions (ADR 0153)
+ * and an agent's keys (ADR 0157). They need `Caller`, which `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   ...callerRoutes,
@@ -187,6 +186,7 @@ export const identityRoutes: readonly Route<Caller | Storage | Secrets | Identit
   ...loginRoutes,
   ...loginLinkRoutes,
   ...sessionRoutes,
+  ...agentKeyRoutes,
 ];
 
 /**

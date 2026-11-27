@@ -17,6 +17,11 @@ const refusals: Readonly<Record<Cause, Refusal>> = {
     message: "This identity was deactivated, so none of its tokens work.",
     status: UNAUTHORIZED,
   },
+  "key revoked": {
+    code: "token_revoked",
+    message: "This agent key was revoked, or what made it was. Ask the agent's owner for a new one.",
+    status: UNAUTHORIZED,
+  },
   left: {
     code: agentSessionRevoked,
     message: "This agent session token was revoked by leave. Join again.",
@@ -42,6 +47,7 @@ const refusals: Readonly<Record<Cause, Refusal>> = {
 
 const reasons: Readonly<Record<Cause, OfflineReason>> = {
   deactivated: "deactivated",
+  "key revoked": "session revoked",
   left: "left",
   revoked: "session revoked",
   rotated: "token rotated",
@@ -86,17 +92,20 @@ function credentialOf(sentWith: SentWith): Option.Option<TokenHash> {
   if (sentWith.kind === "agent session") {
     return Option.some(sentWith.hash);
   }
+  if (sentWith.kind === "agent key") {
+    return Option.some(sentWith.hash);
+  }
   return sentWith.loginCredential;
 }
 
 function madeWithIdentityToken(sentWith: SentWith, loginCredentials: readonly TokenHash[]): boolean {
-  if (sentWith.kind === "agent session") {
-    return false;
-  }
-  return Option.match(sentWith.loginCredential, {
-    onNone: () => true,
-    onSome: (hash) => loginCredentials.includes(hash),
-  });
+  return (
+    "loginCredential" in sentWith &&
+    Option.match(sentWith.loginCredential, {
+      onNone: () => true,
+      onSome: (hash) => loginCredentials.includes(hash),
+    })
+  );
 }
 
 function sentWithEnded(tokens: EndedTokens): (connection: Connection) => boolean {

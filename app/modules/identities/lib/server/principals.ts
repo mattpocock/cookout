@@ -91,4 +91,30 @@ function webhookCommandTokenPrincipal(lookup: LoginLookup) {
   };
 }
 
-export { type Principal, loginEnded, webhookCommandTokenPrincipal };
+const agentKeyExpiredRefusal: Refusal = {
+  code: "agent_key_expired",
+  message: "This agent key passed its expiry. Ask the agent's owner for a new one: cookout agent-key create.",
+  status: 401,
+};
+
+interface TokenUse extends LoginLookup {
+  readonly identity: Identity;
+}
+
+function tokenPrincipal({ hash, identity, storage }: TokenUse): Effect.Effect<Principal, Refusal | StorageUnavailable> {
+  return Effect.gen(function* useIdentityToken() {
+    if (identity.kind === "agent") {
+      const now = yield* DateTime.now;
+      const used = yield* storage.useAgentKey({ hash, now: isoTimeOf(now) });
+      yield* Effect.when(Effect.fail(agentKeyExpiredRefusal), Effect.succeed(used === "expired"));
+    }
+    return {
+      agentSession: Option.none(),
+      identity,
+      loginCredential: Option.none(),
+      webhookCommandThread: Option.none(),
+    };
+  });
+}
+
+export { type Principal, loginEnded, tokenPrincipal, webhookCommandTokenPrincipal };

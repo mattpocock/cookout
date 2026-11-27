@@ -111,10 +111,12 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
     const owner = yield* Effect.cached(createHuman("owner"));
     function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
       const agent = `${prefix}-${name}`;
-      return Effect.flatMap(owner, ({ identity }) =>
+      return Effect.flatMap(owner, ({ identity, token: ownerToken }) =>
         Effect.gen(function* createUnnamedAgent() {
           const asked = { displayName: agent, kind: "agent", name: agent, owner: identity.name } as const;
-          const { token } = yield* Effect.promise(() => admin.createIdentity(asked));
+          yield* Effect.promise(() => admin.createIdentity(asked));
+          const ownerClient = createCookoutClient({ token: ownerToken, url });
+          const { token } = yield* Effect.promise(() => ownerClient.createAgentKey(agent, { name: "e2e" }));
           const cleared = yield* Effect.promise(() => admin.setDisplayName(agent, null));
           return { ...cleared, token };
         }),

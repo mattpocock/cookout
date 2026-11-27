@@ -76,7 +76,6 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts channel list
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel get triage
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --kind agent --display-name Bot --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity rotate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel delete triage
 ```
@@ -332,7 +331,7 @@ Both exit 1 with `wake_run_no_login` and create or join nothing; without `COOKOU
 
 ## Manage an agent as its owner
 
-The human who owns an agent, or an admin, rotates its Identity token and lists and revokes its agent session token; only an admin transfers it to another human ([ADR 0041](adr/0041-every-agent-has-a-human-owner.md)). On a fresh seed, join as `release-bot` (owner `ada`), then act as `ada`, `grace` and the admin:
+The human who owns an agent makes its agent keys; the owner, or an admin, lists and revokes those and its agent session token; only an admin transfers it to another human ([ADR 0041](adr/0041-every-agent-has-a-human-owner.md)). On a fresh seed, join as `release-bot` (owner `ada`), then act as `ada`, `grace` and the admin:
 
 ```sh
 token() { jq -r --arg name "$1" '.identities[] | select(.identity.name == $name) | .token' /tmp/cookout-seed.json; }
@@ -342,8 +341,13 @@ env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts iden
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts identity sessions release-bot
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity sessions release-bot --revoke
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token release-bot) COOKOUT_STATE_DIR=/tmp/cookout-owned node app/main.ts whoami
-env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts identity rotate release-bot
-env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity rotate release-bot | jq .identity
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts agent-key create release-bot ci
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity rotate release-bot
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts agent-key create release-bot ci --expires 30d | jq -r .token > /tmp/cookout-ci.key
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(cat /tmp/cookout-ci.key) node app/main.ts whoami | jq -r .summary
+env $(cat /tmp/cookout-dev.env) node app/main.ts agent-key list release-bot
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts agent-key revoke release-bot $(env $(cat /tmp/cookout-dev.env) node app/main.ts agent-key list release-bot | jq -r '.agentKeys[] | select(.name == "ci") | .id')
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(cat /tmp/cookout-ci.key) node app/main.ts whoami
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts identity transfer release-bot --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity transfer release-bot --owner grace | jq -c .identity
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity sessions release-bot
@@ -351,7 +355,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity create ada/x --kind ag
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity transfer ada/x --owner grace
 ```
 
-`ada`'s first `sessions` prints `{ "agentSessions": [{ "issuedAt", "lastUsedAt", "expiresAt" }] }` (with `host` when the joining client sent one), never the token. `grace`'s `sessions`, `rotate` and `transfer` are each refused with 403 (`not_owner`, `not_owner`, `admin_only`) and exit 1. `--revoke` prints `{ "revoked": true }` (`false` when there was no live session), and the joined session's next `whoami` is 401 `agent_session_revoked`. `ada`'s `rotate` prints `release-bot` (its new token, in the full answer, is shown this once); the old token stops working. The admin's `transfer` prints `release-bot` with `"owner": "grace"`, after which `ada` gets 403 `not_owner`. Transferring `@ada/x` is refused with 400 `name_not_owned`: a namespaced agent can only move with a rename. An admin naming a missing identity gets 404 `identity_not_found`. Remove the state folder when done: `rm -r /tmp/cookout-owned`.
+`ada`'s first `sessions` prints `{ "agentSessions": [{ "issuedAt", "lastUsedAt", "expiresAt" }] }` (with `host` when the joining client sent one), never the token. `grace`'s `sessions`, `agent-key create` and `transfer` are each refused with 403 (`not_owner`, `not_owner`, `admin_only`) and exit 1. `--revoke` prints `{ "revoked": true }` (`false` when there was no live session), and the joined session's next `whoami` is 401 `agent_session_revoked`. `ada`'s `rotate` is refused with 409 `agent_keys_instead`, naming `cookout agent-key create`: an agent has agent keys, not a token to rotate ([ADR 0157](adr/0157-an-agent-s-ci-and-services-use-named-agent-keys-its-owner-makes.md)). `ada`'s `agent-key create` prints `{ "agentKey": { "id", "name": "ci", "madeAt", "expiresAt" }, "token" }`, its secret shown this once, and the key's `whoami` reads `release-bot (COOKOUT_TOKEN) at …`. The admin's `agent-key list` prints `{ "agentKeys" }`: the seed's key and `ci`, each with `lastUsedAt`, never a secret (an admin may list and revoke, but making one is `not_owner`). `revoke` prints `{ "ended": 1 }`, and the key's next `whoami` is 401 `token_revoked`. The admin's `transfer` prints `release-bot` with `"owner": "grace"`, after which `ada` gets 403 `not_owner`. Transferring `@ada/x` is refused with 400 `name_not_owned`: a namespaced agent can only move with a rename. An admin naming a missing identity gets 404 `identity_not_found`. Remove the state folder and the key when done: `rm -r /tmp/cookout-owned /tmp/cookout-ci.key`.
 
 ## Give an agent a trigger URL
 
@@ -504,7 +508,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=cookout_nope node app/main.ts watch                      # 3: token invalid
 ```
 
-`cookout identity rotate triage-agent` while a watch is open ends it with one `cookout watch stopped: … (token_revoked)` stdout line and exit 3 at its next reconnect; `join --force` from another session, or `leave` in its own, ends a watch sent with the agent session token with `agent_session_revoked` and exit 4; with the server stopped it never ends, but writes one `{"reconnecting":"board unavailable (cannot reach …), retrying in 30s"}` stderr note per retry, at most 30 s apart, and picks up when the server is back. A second `cookout watch` for the same agent ends the first with one `cookout watch stopped: replaced by another watch (watch_replaced)` stdout line and exit 6, while the agent stays online.
+Revoking the agent key a watch was sent with (`cookout agent-key revoke triage-agent <id>`, as its owner `grace`) while it is open ends it with one `cookout watch stopped: … (token_revoked)` stdout line and exit 3 at its next reconnect; `join --force` from another session, or `leave` in its own, ends a watch sent with the agent session token with `agent_session_revoked` and exit 4; with the server stopped it never ends, but writes one `{"reconnecting":"board unavailable (cannot reach …), retrying in 30s"}` stderr note per retry, at most 30 s apart, and picks up when the server is back. A second `cookout watch` for the same agent ends the first with one `cookout watch stopped: replaced by another watch (watch_replaced)` stdout line and exit 6, while the agent stays online.
 
 ## List and revoke your sessions (SDK)
 
