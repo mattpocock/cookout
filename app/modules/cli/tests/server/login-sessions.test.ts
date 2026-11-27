@@ -216,6 +216,18 @@ it.effect("logout --everywhere with no terminal to ask on and no --yes is refuse
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("logout --everywhere ended with Ctrl-D at its question is not confirmed, ending nothing", () =>
+  Effect.gen(function* endOfInput() {
+    const { desktop, laptop } = yield* twoMachines;
+
+    const declined = yield* typed("", laptop, "logout", "--everywhere");
+    const stillIn = yield* run(desktop, "whoami");
+
+    expect([declined, stillIn]).toMatchObject([{ exitCode: 1 }, { exitCode: 0 }]);
+    expect(declined.stderr).toContain('"code":"not_confirmed"');
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
 it.effect("logout --everywhere with --url is refused with usage, ending nothing", () =>
   Effect.gen(function* everywhereWithUrl() {
     const { cookout, desktop, laptop } = yield* twoMachines;
