@@ -224,7 +224,7 @@ it.effect("rotating a token issues a new one and the old one gets 401 at once", 
   Effect.gen(function* rotateToken() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("leaky", { credential: "identity token", kind: "human" });
-    const rotated = yield* answer(() => cookout.client.rotateToken("leaky"));
+    const rotated = yield* answer(() => agent.client.rotateToken("leaky"));
     const oldToken = yield* refusal(agent.client.whoami);
     const newToken = yield* answer(cookout.clientFor(rotated.token).whoami);
 

@@ -181,7 +181,7 @@ function sqlOfflineAlerts(db: SqlDatabase): OfflineAlertsSection {
       Effect.flatMap(
         db.all(
           `INSERT INTO offline_alerts (owner_name, raised_at, read, ${LOGIN_COLUMNS})
-           VALUES (?, ?, ${FALSE[db.dialect]}, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
+           VALUES (?, ?, ${FALSE[db.dialect]}, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
           owner,
           raisedAt,
           ...loginColumnValues(login),

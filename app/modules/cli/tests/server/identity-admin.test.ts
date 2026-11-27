@@ -2,6 +2,8 @@ import { Array as Arr, Effect, String as Str } from "effect";
 import { TestCookout, answer, commandLineServices, runCookout, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { sessionPath, whoamiPath } from "../../../identities/index.ts";
+import type { PublicId } from "../../../logins/index.ts";
+import type { TestCookoutService } from "../../../testing/server.ts";
 import { request } from "../../../http/client.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -62,7 +64,7 @@ it.effect("cookout identity rotate ends the web sessions logged in with the old 
     );
     const [setCookie = ""] = loggedIn.headers.getSetCookie();
     const cookie = Arr.headNonEmpty(Str.split("; ")(setCookie));
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: grace.token, COOKOUT_URL: cookout.url };
     const rotated = yield* runCookout({ args: ["identity", "rotate", "grace"], env });
     const afterwards = yield* answer(() =>
       request({ baseUrl: cookout.url, headers: { cookie }, method: "GET", path: whoamiPath }),
@@ -70,5 +72,55 @@ it.effect("cookout identity rotate ends the web sessions logged in with the old 
 
     expect(rotated).toMatchObject({ ...succeeded, stdoutJson: { identity: { name: "grace" } } });
     expect(afterwards).toMatchObject({ json: { error: { code: "token_unknown" } }, status: UNAUTHORIZED });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+function listedWith(id: PublicId): unknown {
+  return expect.arrayContaining([expect.objectContaining({ id, kind: "cli" })]);
+}
+
+function graceSessionId(cookout: TestCookoutService): Effect.Effect<PublicId> {
+  return Effect.gen(function* graceOnALaptop() {
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    const started = yield* answer(() => cookout.clientFor().startLogin({ host: "grace-laptop" }));
+    yield* answer(() => grace.client.approveLogin(started.userCode));
+    yield* answer(() => cookout.clientFor().collectLogin(started.requestId));
+    const { sessions } = yield* answer(() => grace.client.listSessions());
+    const session = yield* Effect.orDie(
+      Effect.fromOption(Arr.findFirst(sessions, (each) => each.where === "grace-laptop")),
+    );
+    return session.id;
+  });
+}
+
+it.effect("cookout identity sessions <person> lists and --revoke <id> revokes for an admin, and refuses others", () =>
+  Effect.gen(function* personSessions() {
+    const cookout = yield* TestCookout;
+    const id = yield* graceSessionId(cookout);
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const asAdmin = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const asAda = { COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
+    const results = yield* Effect.forEach(
+      [
+        { args: ["identity", "sessions", "grace"], env: asAda },
+        { args: ["identity", "sessions", "grace", "--revoke", id], env: asAda },
+        { args: ["identity", "sessions", "grace"], env: asAdmin },
+        { args: ["identity", "sessions", "grace", "--revoke", id], env: asAdmin },
+        { args: ["identity", "sessions", "grace", "--revoke"], env: asAdmin },
+      ],
+      runCookout,
+      ONE_AT_A_TIME,
+    );
+
+    expect(results).toMatchObject([
+      { exitCode: 1, stderrJson: { error: { code: "admin_only" } } },
+      { exitCode: 1, stderrJson: { error: { code: "admin_only" } } },
+      {
+        ...succeeded,
+        stdoutJson: { sessions: listedWith(id) },
+      },
+      { ...succeeded, stdoutJson: { ended: 1 } },
+      { exitCode: 1, stderrJson: { error: { code: "usage" } } },
+    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

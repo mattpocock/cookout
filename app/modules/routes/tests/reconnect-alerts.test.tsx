@@ -3,7 +3,6 @@ import { screen, waitFor } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Cuttable } from "./cuttable.ts";
 import type { OwnedAgent } from "./owned-agent.ts";
-import { adminClient } from "./identities.ts";
 import { cuttable } from "./cuttable.ts";
 import { inPane } from "./regions.ts";
 import { inboxOfOwnerWithWatchingAgent } from "./owned-agent.ts";
@@ -34,7 +33,7 @@ function historyReads(): HistoryReads {
 
 async function raisedWhileDown(report: Cuttable["report"], open: OwnedAgent): Promise<void> {
   report("down");
-  await adminClient().revokeAgentSession(open.agent);
+  await open.bringer.revokeAgentSession(open.agent);
   await waitFor(async () => {
     await expect(open.owner.inbox()).resolves.toMatchObject({ alerts: [{ read: false }] });
   });

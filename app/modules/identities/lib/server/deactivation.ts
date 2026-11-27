@@ -1,5 +1,6 @@
 import {
   Caller,
+  adminActedOn,
   announced,
   issueToken,
   reactivated,
@@ -102,6 +103,7 @@ const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
       const caller = yield* Caller;
       yield* tokensEnded({ by: caller.name, cause: "deactivated", identity: name, tokens: ALL_TOKENS });
       yield* endBelowDeactivated(name);
+      yield* adminActedOn({ act: "deactivated", caller, target: answer.identity });
       return yield* HttpServerResponse.schemaJson(DeactivateIdentityResponseSchema)(answer);
     }),
   method: "POST",

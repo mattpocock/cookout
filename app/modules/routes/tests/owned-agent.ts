@@ -1,5 +1,5 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { clientWith, newIdentity } from "./identities.ts";
 import { inPane, inSidebar } from "./regions.ts";
 import { screen, waitFor, within } from "@testing-library/react";
 import type { Live } from "../../testing/web.ts";
@@ -13,6 +13,7 @@ const ONE_MORE = 1;
 interface OwnedAgent {
   readonly owner: CookoutClient;
   readonly agent: string;
+  readonly bringer: CookoutClient;
   readonly row: string;
   readonly watchAgain: () => Promise<void>;
   readonly close: () => Promise<void>;
@@ -69,10 +70,17 @@ function linked(owner: CookoutClient, live: Live | null): Linked {
   return { live: watching.live, streams: streamsOf(watching.stream) };
 }
 
+async function broughtInBy(human: CookoutClient, owner: string): Promise<CookoutClient> {
+  const { token } = await createTestAgent({ by: human, name: `${owner}-bringer` });
+  const bringer = clientWith(token);
+  await createTestAgent({ broughtIn: true, by: bringer, name: `${owner}-agent` });
+  return bringer;
+}
+
 async function inboxOfOwnerWithWatchingAgent({ client = asItIs, live, owner }: Opening): Promise<OwnedAgent> {
   const human = await newIdentity({ kind: "human", name: owner });
   const agent = `${owner}-agent`;
-  await createTestAgent({ by: human.client, name: agent });
+  const bringer = await broughtInBy(human.client, owner);
   const watches = [await joinedWatch(human.client, agent)];
   const link = linked(human.client, live ?? null);
   const unmount = openAt({ client: client(human.client), hash: "#/inbox", live: link.live });
@@ -80,6 +88,7 @@ async function inboxOfOwnerWithWatchingAgent({ client = asItIs, live, owner }: O
   watches.push(...(await link.streams));
   return {
     agent,
+    bringer,
     close: async () => {
       unmount();
       await Promise.all(
@@ -100,9 +109,9 @@ function rowsShown(row: string): number {
   return within(inPane().element()).queryAllByText(row).length;
 }
 
-async function alertRaised({ agent, row }: Pick<OwnedAgent, "agent" | "row">): Promise<void> {
+async function alertRaised({ agent, bringer, row }: Pick<OwnedAgent, "agent" | "bringer" | "row">): Promise<void> {
   const before = rowsShown(row);
-  await adminClient().revokeAgentSession(agent);
+  await bringer.revokeAgentSession(agent);
   await waitFor(() => {
     expect(rowsShown(row)).toBe(before + ONE_MORE);
   });

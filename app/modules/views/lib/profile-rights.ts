@@ -41,6 +41,14 @@ export function adminChangeableBy(viewing: Viewing): boolean {
   return isAdmin(viewing) && viewing.identity.kind === "human";
 }
 
+export function manageShownTo(viewing: Viewing): boolean {
+  return actionableBy(viewing) || adminChangeableBy(viewing);
+}
+
+export function sessionsOverseenBy(viewing: Viewing): boolean {
+  return actionableBy(viewing) && adminChangeableBy(viewing) && viewing.identity.deactivated !== true;
+}
+
 export function deletableBy(viewing: Viewing): boolean {
   const owner = String(viewing.identity.name);
   return isAdmin(viewing) && !viewing.listed.some((each) => each.kind === "agent" && each.owner === owner);
