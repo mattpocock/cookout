@@ -29,6 +29,7 @@ const BEFORE_SECRETS_KEY = [
   `ALTER TABLE offline_alerts DROP CONSTRAINT offline_alerts_one_kind, DROP COLUMN login_kind, DROP COLUMN credential_id,
      DROP COLUMN session_kind, DROP COLUMN where_from, DROP COLUMN client_ip, DROP COLUMN admin_name, DROP COLUMN admin_act,
      ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL, DROP COLUMN made_via`,
+  "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys, login_links, credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN kind, DROP COLUMN approved_with, DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with, DROP COLUMN client_ip, DROP COLUMN user_agent",
@@ -42,11 +43,10 @@ const BEFORE_SEARCH = [
   "DROP TABLE avatars_to_remove",
   "DROP TABLE admin_setting",
   "ALTER TABLE messages DROP COLUMN deleted_at, DROP COLUMN deleted_by",
-  "ALTER TABLE agent_join_requests DROP COLUMN denied_at",
+  "ALTER TABLE agent_join_requests DROP COLUMN denied_at, DROP COLUMN session_url",
   "ALTER TABLE login_credentials DROP COLUMN made_with",
   "ALTER TABLE identities DROP COLUMN avatar",
   "ALTER TABLE agent_session_tokens DROP COLUMN session_url",
-  "ALTER TABLE agent_join_requests DROP COLUMN session_url",
   "DROP TABLE triggers",
   "ALTER TABLE offline_alerts DROP COLUMN trigger_message, DROP COLUMN trigger_status, DROP COLUMN trigger_error",
   "DROP TABLE scheduled_messages",
@@ -60,7 +60,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 10",
+  "UPDATE schema_version SET version = version - 11",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;

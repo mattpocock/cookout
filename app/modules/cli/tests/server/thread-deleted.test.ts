@@ -13,7 +13,7 @@ it.effect("cookout message post --reply-to … --seen … into a deleted thread 
   Effect.gen(function* postIntoDeleted() {
     const cookout = yield* TestCookout;
     const ann = yield* cookout.createIdentity("ann", { kind: "human" });
-    const bot = yield* cookout.createIdentity("bot");
+    const aide = yield* cookout.createIdentity("bot");
     const folder = yield* freshStateFolder;
     const { message } = yield* Effect.andThen(
       answer(() => ann.client.createChannel({ name: "grill" })),
@@ -23,7 +23,7 @@ it.effect("cookout message post --reply-to … --seen … into a deleted thread 
       ann.client.createMessage({ channel: "grill", replyTo: message.id, text: "on it" }),
     );
     yield* answer(() => ann.client.deleteMessage(message.id));
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url };
     const result = yield* runCookout({
       args: ["message", "post", "grill", "me too", "--reply-to", String(message.id), "--seen", String(read.message.id)],
       env,

@@ -11,12 +11,12 @@ const SESSION_URL = "https://claude.ai/code/session_01AbCdEf";
 interface Watched {
   readonly owner: CookoutClient;
   readonly reader: CookoutClient;
-  readonly bot: string;
+  readonly aide: string;
   readonly session: CookoutClient;
 }
 
 interface Shown {
-  readonly bot: string;
+  readonly aide: string;
   readonly channel: string;
 }
 
@@ -30,13 +30,13 @@ interface Link {
 async function watchedAgent(prefix: string): Promise<Watched> {
   const owner = await newIdentity({ kind: "human", name: `${prefix}-owner` });
   const reader = await newIdentity({ kind: "human", name: `${prefix}-reader` });
-  const bot = `${prefix}-bot`;
-  const agent = await newIdentity({ kind: "agent", name: bot, owner: `${prefix}-owner` });
-  const { agentSessionToken } = await agent.client.join({ as: bot, sessionUrl: SESSION_URL });
+  const aide = `${prefix}-bot`;
+  const agent = await newIdentity({ kind: "agent", name: aide, owner: `${prefix}-owner` });
+  const { agentSessionToken } = await agent.client.join({ as: aide, sessionUrl: SESSION_URL });
   const session = clientWith(agentSessionToken);
   await adminClient().createChannel({ name: prefix });
   await session.createMessage({ channel: prefix, text: "Working on it" });
-  return { bot, owner: owner.client, reader: reader.client, session };
+  return { aide, owner: owner.client, reader: reader.client, session };
 }
 
 async function openLive(client: CookoutClient, hash: string): Promise<() => Promise<void>> {
@@ -71,9 +71,9 @@ function shownLink(): Link | null {
   };
 }
 
-async function shownTo(client: CookoutClient, { bot, channel }: Shown): Promise<Link | null> {
+async function shownTo(client: CookoutClient, { aide, channel }: Shown): Promise<Link | null> {
   const close = openAt({ client, hash: `#/channels/${channel}` });
-  const card = await openedCard(bot);
+  const card = await openedCard(aide);
   await within(card).findByRole("link", { name: "View profile" });
   const link = shownLink();
   close();
@@ -85,9 +85,9 @@ it("an agent's owner sees Open session with its host on the agent's card while t
 }, async () => {
   expect.hasAssertions();
 
-  const { bot, owner } = await watchedAgent("web-session-owner");
+  const { aide, owner } = await watchedAgent("web-session-owner");
   const close = openAt({ client: owner, hash: "#/channels/web-session-owner" });
-  const card = await openedCard(bot);
+  const card = await openedCard(aide);
   await within(card).findByRole("link", { name: /Open session/u });
 
   expect(shownLink()).toStrictEqual({
@@ -103,9 +103,9 @@ it("an agent's owner sees Open session with its host on the agent's card while t
 it("the Open session link goes once the session ends", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, owner, session } = await watchedAgent("web-session-left");
+  const { aide, owner, session } = await watchedAgent("web-session-left");
   const close = await openLive(owner, "#/channels/web-session-left");
-  const card = await openedCard(bot);
+  const card = await openedCard(aide);
   await within(card).findByRole("link", { name: /Open session/u });
   await session.leave();
 
@@ -119,8 +119,8 @@ it("the Open session link goes once the session ends", { timeout: 5000 }, async 
 it("anyone but the agent's owner never sees Open session on its card", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, reader } = await watchedAgent("web-session-reader");
-  const shown = { bot, channel: "web-session-reader" };
+  const { aide, reader } = await watchedAgent("web-session-reader");
+  const shown = { aide, channel: "web-session-reader" };
 
   expect([await shownTo(reader, shown), await shownTo(adminClient(), shown)]).toStrictEqual([null, null]);
 });

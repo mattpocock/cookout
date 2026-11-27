@@ -3,7 +3,7 @@ import type { MessageDeletes, ThreadClosing } from "../../board/index.ts";
 import type { ReactionChoice, ThreadChoice } from "../../design-system/messages.tsx";
 import { useContext, useMemo } from "react";
 import type { Announce } from "./announcer.ts";
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import { createCopier } from "./copying.ts";
 import { hrefOf } from "../../paths/index.ts";
@@ -142,7 +142,7 @@ function deleteOf({ deletes, me, message }: DeleteOf): (() => void) | null {
 
 function useMessageMenu({ closing, me, menu, message, threadParent }: MenuOf): MenuParts {
   const messageId = message.id;
-  const announce = useContext(Announcer);
+  const announce = useContext(AnnounceContext);
   const reactions = useReactionChoices({ announce, me, message });
   const deletes = useBoardStore().calls;
   return useMemo(

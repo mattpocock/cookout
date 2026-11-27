@@ -32,8 +32,8 @@ function runAll(
 it.effect("with COOKOUT_AUTH=proxy, the CLI sends no token and whoami names the proxy as the source", () =>
   Effect.gen(function* proxyCredential() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
-    const proxy = yield* forwardingProxy({ addsToken: bot.token, target: cookout.url });
+    const aide = yield* cookout.createIdentity("release-bot");
+    const proxy = yield* forwardingProxy({ addsToken: aide.token, target: cookout.url });
     const env = claudeCode({
       COOKOUT_AUTH: "proxy",
       COOKOUT_STATE_DIR: yield* freshStateFolder,
@@ -65,8 +65,8 @@ it.effect("with COOKOUT_AUTH=proxy, the CLI sends no token and whoami names the 
 it.effect("with COOKOUT_AUTH=proxy, an ignored COOKOUT_TOKEN or joined session gets one note on stderr only", () =>
   Effect.gen(function* proxyIgnoredNote() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
-    const proxy = yield* forwardingProxy({ addsToken: bot.token, target: cookout.url });
+    const aide = yield* cookout.createIdentity("release-bot");
+    const proxy = yield* forwardingProxy({ addsToken: aide.token, target: cookout.url });
     const shared = claudeCode({
       COOKOUT_STATE_DIR: yield* freshStateFolder,
       COOKOUT_URL: UNKNOWN_HOST,
@@ -76,7 +76,7 @@ it.effect("with COOKOUT_AUTH=proxy, an ignored COOKOUT_TOKEN or joined session g
 
     const whoami = { args: ["whoami"], env };
     const whoamiWithToken = { args: ["whoami"], env: { ...env, COOKOUT_TOKEN: "cookout_x" } };
-    const join = { args: ["join", "--as", "release-bot"], env: { ...shared, COOKOUT_TOKEN: bot.token } };
+    const join = { args: ["join", "--as", "release-bot"], env: { ...shared, COOKOUT_TOKEN: aide.token } };
 
     const [nothingSet, tokenSet, , joined, both] = yield* Effect.forEach(
       [whoami, whoamiWithToken, join, whoami, whoamiWithToken],

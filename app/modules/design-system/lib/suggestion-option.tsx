@@ -10,6 +10,7 @@ export function SuggestionOption(parts: SuggestionOptionParts): ReactNode {
       {identity !== null && <Avatar agent={identity.agent} name={identity.name} presence={null} size="tiny" />}
       {presence !== null && (
         <PresenceDot
+          feeder={presence.feeder}
           label={presence.label}
           name={option}
           online={presence.online}

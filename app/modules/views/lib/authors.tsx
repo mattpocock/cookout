@@ -1,4 +1,4 @@
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import { AuthorCards } from "./author-cards.tsx";
 import type { BoardStore } from "../../board/index.ts";
 import { BoardStoreContext } from "./use-board.ts";
@@ -15,11 +15,11 @@ export function Authors(props: AuthorsProps): ReactNode {
   const { boardStore } = props;
   return (
     <BoardStoreContext value={boardStore}>
-      <Announcer value={props.keymap.announce}>
+      <AnnounceContext value={props.keymap.announce}>
         <AuthorCards boardStore={boardStore} keymap={props.keymap}>
           {props.children}
         </AuthorCards>
-      </Announcer>
+      </AnnounceContext>
     </BoardStoreContext>
   );
 }

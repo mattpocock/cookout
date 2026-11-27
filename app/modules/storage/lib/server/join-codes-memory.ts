@@ -48,6 +48,9 @@ function memoryJoinCodes({ findIdentity, issueAgentSession, state }: MemoryJoinC
     if (agent.deactivated === true) {
       return Effect.succeed({ identity: code.agent, status: "deactivated" });
     }
+    if (agent.kind === "agent" && agent.feeder === true) {
+      return Effect.succeed({ identity: code.agent, status: "feeder" });
+    }
     const issue = sessionFor({ agent: code.agent, redeem });
     return Effect.map(issueAgentSession(issue), (result) => {
       if (result.status === "issued") {

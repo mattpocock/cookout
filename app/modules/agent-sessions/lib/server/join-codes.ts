@@ -2,7 +2,7 @@ import type { AgentIdentity, DisplayName, HumanIdentity, IdentityName } from "..
 import { DateTime, Effect, Predicate } from "effect";
 import type { JoinCodeRedemption, StorageUnavailable } from "../../../storage/server.ts";
 import type { JoinCodeResponse, RedeemJoinCodeRequest, RedeemJoinCodeResponse } from "../../join-codes.ts";
-import { agentSessionLive, identityDeactivated, withParent } from "./refusals.ts";
+import { agentSessionLive, feederRefused, identityDeactivated, withParent } from "./refusals.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -127,6 +127,9 @@ function answerOf(
   }
   if (redemption.status === "deactivated") {
     return Effect.fail(identityDeactivated(redemption.identity));
+  }
+  if (redemption.status === "feeder") {
+    return Effect.fail(feederRefused(redemption.identity));
   }
   if (redemption.status === "live") {
     return Effect.fail(agentSessionLive(redemption));

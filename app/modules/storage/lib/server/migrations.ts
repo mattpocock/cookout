@@ -261,6 +261,7 @@ const migrations: readonly string[] = [
   AGENT_SUBSCRIPTIONS_MIGRATION,
   LOGIN_ALERT_VIA_MIGRATION,
   AGENT_KEYS_MIGRATION,
+  "ALTER TABLE identities ADD COLUMN feeder INTEGER NOT NULL DEFAULT 0 CHECK (feeder IN (0, 1));",
 ];
 
 export { migrations };

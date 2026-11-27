@@ -5,6 +5,7 @@ import { answer, answered } from "./output.ts";
 import { deactivation, identitiesAnswer, identityAnswer } from "./handles.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import { callServer } from "./adapters/sdk.ts";
+import { identityFeederCommand } from "./identity-feeder.ts";
 import { identityKinds } from "../../../identities/index.ts";
 import { identityTriggerCommand } from "./identity-trigger.ts";
 import { isDeactivationOfferId } from "../../../inbox/index.ts";
@@ -232,7 +233,7 @@ const identityGetCommand = Command.make("get", { name: identityName }, ({ name }
 
 const identityCommand = Command.make("identity").pipe(
   Command.withDescription(
-    "Create, list, get, rotate, deactivate, reactivate and delete identities, make or remove admins, set display names and agents' descriptions, and manage agents' sessions, owners and trigger URLs.",
+    "Create, list, get, rotate, deactivate, reactivate and delete identities, make or remove admins and feeders, set display names and agents' descriptions, and manage agents' sessions, owners and trigger URLs.",
   ),
   Command.withSubcommands([
     identityCreateCommand,
@@ -243,6 +244,7 @@ const identityCommand = Command.make("identity").pipe(
     identityReactivateCommand,
     identityDeleteCommand,
     identityAdminCommand,
+    identityFeederCommand,
     identityDisplayNameCommand,
     identityDescribeCommand,
     identitySessionsCommand,

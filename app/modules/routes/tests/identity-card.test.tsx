@@ -115,12 +115,12 @@ async function deactivatedAuthor(channel: string, author: CookoutClient): Promis
 
 async function describedAgent(channel: string): Promise<Awaited<ReturnType<typeof agentNamed>>> {
   const owner = `${channel}-owner`;
-  const bot = `${channel}-bot`;
+  const aide = `${channel}-bot`;
   await newIdentity({ kind: "human", name: owner });
-  const agent = await agentNamed(bot);
-  await adminClient().transferAgent(bot, owner);
-  await adminClient().setDisplayName(bot, "Mail Bot");
-  await adminClient().setDescription(bot, "Reads the mail");
+  const agent = await agentNamed(aide);
+  await adminClient().transferAgent(aide, owner);
+  await adminClient().setDisplayName(aide, "Mail Bot");
+  await adminClient().setDescription(aide, "Reads the mail");
   return agent;
 }
 
@@ -140,16 +140,16 @@ it("hovering an agent author's name opens a card led by its avatar tile with an 
   expect.hasAssertions();
 
   const channel = `${PREFIX}-agent`;
-  const bot = `${channel}-bot`;
+  const aide = `${channel}-bot`;
   const events = await onlineAgent(channel);
 
   await expect(hovered("Mail Bot")).resolves.toStrictEqual({
     avatar: { agent: "true", initials: "WC" },
     chip: "Agent",
     dot: "online",
-    lines: ["Mail Bot", `@${bot}`, "Online", `Agent · owned by ${channel}-owner`, "Reads the mail"],
+    lines: ["Mail Bot", `@${aide}`, "Online", `Agent · owned by ${channel}-owner`, "Reads the mail"],
     message: "enabled",
-    profile: `#/people/${bot}`,
+    profile: `#/people/${aide}`,
   });
 
   await events.close();
@@ -160,7 +160,7 @@ it("hovering an agent author's name opens a card led by its avatar tile with an 
 
   fireEvent.click(within(shownCard()).getByRole("link", { name: "View profile" }));
 
-  await expect(profileHeading()).resolves.toMatch(`Mail Bot@${bot}`);
+  await expect(profileHeading()).resolves.toMatch(`Mail Bot@${aide}`);
 });
 
 it("hovering a person's name opens a card led by their avatar tile with no Agent chip, with their presence, name and profile link, and no owner", {

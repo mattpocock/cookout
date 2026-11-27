@@ -1,4 +1,4 @@
-import type { AgentCreationCalls, DescriptionCalls } from "../../identities/client.ts";
+import type { AgentCreationCalls, DescriptionCalls, FeederCalls } from "../../identities/client.ts";
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
@@ -38,6 +38,7 @@ import type { LoginCalls } from "./logins.ts";
 import type { TriggerCalls } from "./triggers.ts";
 import { avatarCalls } from "./avatars.ts";
 import { healthPath } from "../../http/index.ts";
+import { identityFeederPath } from "../../identities/feeders.ts";
 import { loginCalls } from "./logins.ts";
 import { triggerCalls } from "./triggers.ts";
 
@@ -91,11 +92,18 @@ function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
   };
 }
 
-function adminCall(server: ClientConnection, method: "PUT" | "DELETE") {
+function flagCall(server: ClientConnection, method: "PUT" | "DELETE", path: string) {
   return async (name: string): Promise<IdentityResponse> => {
     const params = { name };
-    const answer = await send(server, { isExpected: isIdentityResponse, method, params, path: identityAdminPath });
+    const answer = await send(server, { isExpected: isIdentityResponse, method, params, path });
     return answer;
+  };
+}
+
+function feederCalls(server: ClientConnection): FeederCalls<IdentityResponse> {
+  return {
+    makeFeeder: flagCall(server, "PUT", identityFeederPath),
+    removeFeeder: flagCall(server, "DELETE", identityFeederPath),
   };
 }
 
@@ -233,8 +241,8 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDel
     },
     login: sessionCall(server, "POST"),
     logout: sessionCall(server, "DELETE"),
-    makeAdmin: adminCall(server, "PUT"),
-    removeAdmin: adminCall(server, "DELETE"),
+    makeAdmin: flagCall(server, "PUT", identityAdminPath),
+    removeAdmin: flagCall(server, "DELETE", identityAdminPath),
     rotateToken: async (name) => {
       const rotated = await send(server, {
         isExpected: isIdentityWithTokenResponse,
@@ -258,6 +266,7 @@ function identityCalls(
 ): IdentityCalls &
   IdentityDeletionCalls &
   DescriptionCalls<IdentityResponse> &
+  FeederCalls<IdentityResponse> &
   AgentCreationCalls<IdentityResponse> &
   LoginCalls &
   TriggerCalls &
@@ -268,6 +277,7 @@ function identityCalls(
     ...loginCalls(server),
     ...ownIdentityCalls(server),
     ...descriptionCalls(server),
+    ...feederCalls(server),
     ...triggerCalls(server),
   };
 }

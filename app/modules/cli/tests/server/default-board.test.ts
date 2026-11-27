@@ -229,7 +229,7 @@ it.effect("an agent session with no COOKOUT_URL joins the default board, but nev
   Effect.gen(function* agentUsesDefaultBoard() {
     const { ada, cookout, env } = yield* setUp;
     const fs = yield* FileSystem.FileSystem;
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const stateFolder = yield* Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-state-" }));
     const agent = { ...env, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "session-1", COOKOUT_STATE_DIR: stateFolder };
     yield* logIn(env, ada.token, "--url", cookout.url);
@@ -237,7 +237,7 @@ it.effect("an agent session with no COOKOUT_URL joins the default board, but nev
     const results = yield* Effect.all(
       [
         run(agent, "whoami"),
-        run({ ...agent, COOKOUT_TOKEN: bot.token }, "join", "--as", "release-bot"),
+        run({ ...agent, COOKOUT_TOKEN: aide.token }, "join", "--as", "release-bot"),
         run(agent, "whoami"),
       ],
       ONE_AT_A_TIME,

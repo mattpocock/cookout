@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { remarkMessageText } from "./markdown-tree.ts";
+import { useFeederNames } from "./use-feeders.ts";
 import { useMemo } from "react";
 
 const LINK = "a";
@@ -31,9 +32,10 @@ interface MarkdownTextProps {
 
 export function MarkdownText(props: MarkdownTextProps): ReactNode {
   const { me, message } = props;
+  const feeders = useFeederNames();
   const plugins = useMemo(
-    (): Plugins => [remarkGfm, remarkBreaks, [remarkMessageText, { me, mentions: message.mentions }]],
-    [me, message.mentions],
+    (): Plugins => [remarkGfm, remarkBreaks, [remarkMessageText, { feeders, me, mentions: message.mentions }]],
+    [feeders, me, message.mentions],
   );
   return (
     <Markdown components={COMPONENTS} remarkPlugins={plugins}>

@@ -70,7 +70,7 @@ function sessionSql(dialect: SqlDatabase["dialect"]): SessionSql {
 
 const SESSION_SQL: DialectForms<SessionSql> = { postgres: sessionSql("postgres"), sqlite: sessionSql("sqlite") };
 
-const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.description, i.deactivated, i.brought_in_by, i.avatar,
+const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.description, i.deactivated, i.brought_in_by, i.avatar, i.feeder,
   t.expires_at, t.idle_seconds, t.revoked
   FROM agent_session_tokens AS t JOIN identities AS i ON i.name = t.identity_name WHERE t.hash = ?`;
 

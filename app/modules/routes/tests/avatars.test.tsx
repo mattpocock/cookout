@@ -42,7 +42,7 @@ function threadRows(): readonly Drawn[] {
   return drawn(() => [parent, ...within(within(panel).getByRole("feed", { name: "Replies" })).getAllByRole("article")]);
 }
 
-async function botThread(): Promise<Message> {
+async function agentThread(): Promise<Message> {
   const agent = await newIdentity({ kind: "agent", name: "web-avatar-bot" });
   await adminClient().createChannel({ name: "web-avatars" });
   const { message } = await agent.client.createMessage({ channel: "web-avatars", text: "Beep" });
@@ -65,7 +65,7 @@ it("an agent's messages are drawn as an agent's and a human's as a human's, one 
 }, async () => {
   expect.hasAssertions();
 
-  const message = await botThread();
+  const message = await agentThread();
   const close = openAt({ client: adminClient(), hash: `#/channels/web-avatars/threads/${String(message.id)}` });
 
   await waitFor(() => {

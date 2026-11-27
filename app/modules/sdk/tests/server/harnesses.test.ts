@@ -87,12 +87,12 @@ it.effect("with COOKOUT_ALLOW_HUMAN=1, a human's token goes through from Claude 
 it.effect("an agent's token from Claude Code goes through, and the messages it posts record the tool", () =>
   Effect.gen(function* agentFromAgent() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("bot");
-    yield* answer(() => bot.client.createChannel({ name: "grill" }));
-    const client = createCookoutClient({ env: { ...envFor(cookout, bot.token), ...CLAUDE_CODE } });
+    const aide = yield* cookout.createIdentity("bot");
+    yield* answer(() => aide.client.createChannel({ name: "grill" }));
+    const client = createCookoutClient({ env: { ...envFor(cookout, aide.token), ...CLAUDE_CODE } });
     const { message: parent } = yield* answer(() => client.createMessage({ channel: "grill", text: "hello" }));
     yield* answer(() => client.createMessage({ channel: "grill", replyTo: parent.id, text: "again" }));
-    yield* answer(() => bot.client.createMessage({ channel: "grill", replyTo: parent.id, text: "by hand" }));
+    yield* answer(() => aide.client.createMessage({ channel: "grill", replyTo: parent.id, text: "by hand" }));
     const thread = yield* answer(() => cookout.client.getThread(parent.id));
 
     expect(thread.parent.harness).toBe("claude-code");
@@ -110,8 +110,8 @@ it.effect("a command call an agent makes from Claude Code records the tool on th
       cookout.client.addCommand({ name: "deploy", schema: {}, url: `${cookout.webhook.url}/deploy` }),
     );
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
-    const bot = yield* cookout.createIdentity("bot");
-    const client = createCookoutClient({ env: { ...envFor(cookout, bot.token), ...CLAUDE_CODE } });
+    const aide = yield* cookout.createIdentity("bot");
+    const client = createCookoutClient({ env: { ...envFor(cookout, aide.token), ...CLAUDE_CODE } });
     const called = yield* answer(() => client.callCommand("deploy", { channel: "grill", data: {} }));
     const thread = yield* answer(() => cookout.client.getThread(called.threadId));
 
@@ -159,12 +159,12 @@ it.effect("the server refuses the harness header with a human caller, takes it w
   Effect.gen(function* serverGuard() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("bot");
+    const aide = yield* cookout.createIdentity("bot");
     const statuses = yield* Effect.all(
       [
         whoamiWithTool(cookout, ada.token, "claude-code"),
-        whoamiWithTool(cookout, bot.token, "claude-code"),
-        whoamiWithTool(cookout, bot.token, "Not A Tool!"),
+        whoamiWithTool(cookout, aide.token, "claude-code"),
+        whoamiWithTool(cookout, aide.token, "Not A Tool!"),
       ],
       ONE_AT_A_TIME,
     );

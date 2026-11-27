@@ -108,10 +108,10 @@ function announced({
   });
 }
 
-function announcer(
+function openAnnounce(
   storage: Storage["Service"],
 ): Effect.Effect<Announce & { readonly hub: PubSub.PubSub<Presence> }, never, AnnounceNeeds> {
-  return Effect.gen(function* openAnnouncer() {
+  return Effect.gen(function* openAnnounceEffect() {
     const hub = yield* PubSub.unbounded<Presence>();
     const alerts = yield* OfflineAlerts;
     const offers = yield* DeactivationOffers;
@@ -126,4 +126,4 @@ function announcer(
 
 type AnnounceNeeds = OfflineAlerts | DeactivationOffers;
 
-export { type Announce, type AnnounceNeeds, announced, announcer, now };
+export { type Announce, type AnnounceNeeds, announced, openAnnounce, now };

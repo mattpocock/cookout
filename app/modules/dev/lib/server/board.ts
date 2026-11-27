@@ -30,7 +30,7 @@ interface SeededMessages {
   readonly graceReply: MessageId;
   readonly lunch: MessageId;
   readonly mentionOfGrace: MessageId;
-  readonly oldBotPost: MessageId;
+  readonly oldAgentPost: MessageId;
   readonly releaseNotes: MessageId;
   readonly rollbackCall: MessageId;
   readonly rollbackResult: MessageId;
@@ -53,7 +53,7 @@ interface SeededBoard {
 interface Cast {
   readonly ada: SeededIdentity;
   readonly grace: SeededIdentity;
-  readonly releaseBot: SeededIdentity;
+  readonly releaseAgent: SeededIdentity;
   readonly triageAgent: SeededIdentity;
 }
 
@@ -115,16 +115,18 @@ function createCast({ token, url }: BoardConnection): Effect.Effect<Cast, SeedFa
   return Effect.gen(function* cast() {
     const ada = yield* createHuman(seeding, "ada");
     const grace = yield* createHuman(seeding, "grace");
-    const releaseBot = yield* createAgent(seeding, ada, "release-bot");
+    const releaseAgent = yield* createAgent(seeding, ada, "release-bot");
     const triageAgent = yield* createAgent(seeding, grace, "triage-agent");
-    return { ada, grace, releaseBot, triageAgent };
+    return { ada, grace, releaseAgent, triageAgent };
   });
 }
 
 function createChannels(cast: Cast): Effect.Effect<void, SeedFailure> {
   return Effect.gen(function* channels() {
     yield* call(() => cast.ada.client.createChannel({ description: "Anything and everything.", name: "general" }));
-    yield* call(() => cast.releaseBot.client.createChannel({ description: "Release announcements.", name: "deploys" }));
+    yield* call(() =>
+      cast.releaseAgent.client.createChannel({ description: "Release announcements.", name: "deploys" }),
+    );
     yield* call(() => cast.grace.client.subscribe("deploys"));
   });
 }
@@ -148,7 +150,7 @@ function postConversation(cast: Cast): Effect.Effect<Conversation, SeedFailure> 
       text: "Morning! Who is looking at the flaky login test?",
     });
     const thread = { channel: "general", replyTo: opening.id } as const;
-    yield* call(() => cast.releaseBot.client.follow(opening.id));
+    yield* call(() => cast.releaseAgent.client.follow(opening.id));
     const triageReply = yield* post(cast.triageAgent, {
       ...thread,
       text: "I am. It fails about one run in ten on CI.",
@@ -156,7 +158,7 @@ function postConversation(cast: Cast): Effect.Effect<Conversation, SeedFailure> 
     const question = yield* post(cast.grace, { ...thread, text: "@triage-agent can you post the failing run?" });
     const inGeneral = yield* postInGeneral(cast);
     const thanks = yield* post(cast.ada, { channel: "general", replyTo: question.id, text: "Thanks, both of you." });
-    const deployed = yield* post(cast.releaseBot, {
+    const deployed = yield* post(cast.releaseAgent, {
       channel: "deploys",
       data: { version: "1.4.2" },
       text: "Deployed 1.4.2.",
@@ -217,10 +219,10 @@ function postBroughtIn(
   return Effect.gen(function* broughtIn() {
     const box = createCookoutClient({ env: {}, url });
     yield* call(() =>
-      cast.releaseBot.client.createAgentForOwner({ displayName: "build-worker", name: "build-worker" }),
+      cast.releaseAgent.client.createAgentForOwner({ displayName: "build-worker", name: "build-worker" }),
     );
     const started = yield* call(() => box.startAgentJoin({ as: "build-worker", host: "build-box" }));
-    yield* call(() => cast.releaseBot.client.approveAgentJoin(started.userCode));
+    yield* call(() => cast.releaseAgent.client.approveAgentJoin(started.userCode));
     const collected = yield* Effect.filterOrFail(
       call(() => box.collectAgentJoin(started.requestId)),
       isApproved,
@@ -235,24 +237,24 @@ function postBroughtIn(
 function postLast(
   { token, url }: BoardConnection,
   cast: Cast,
-): Effect.Effect<Pick<SeededMessages, "mentionOfGrace" | "oldBotPost">, SeedFailure> {
+): Effect.Effect<Pick<SeededMessages, "mentionOfGrace" | "oldAgentPost">, SeedFailure> {
   return Effect.gen(function* last() {
     const admin = clientAt(url, token);
-    const oldBot = yield* createAgent({ admin, url }, cast.ada, "old-deploy-bot");
-    const oldBotPost = yield* post(oldBot, { channel: "deploys", text: "Deployed 1.4.0." });
+    const oldAgent = yield* createAgent({ admin, url }, cast.ada, "old-deploy-bot");
+    const oldAgentPost = yield* post(oldAgent, { channel: "deploys", text: "Deployed 1.4.0." });
     yield* call(() => admin.deactivateIdentity("old-deploy-bot"));
     const mention = yield* post(cast.ada, {
       channel: "general",
       text: "@grace can you check the notes before we ship?",
     });
-    return { mentionOfGrace: mention.id, oldBotPost: oldBotPost.id };
+    return { mentionOfGrace: mention.id, oldAgentPost: oldAgentPost.id };
   });
 }
 
 function react(cast: Cast, conversation: Conversation): Effect.Effect<void, SeedFailure> {
   return Effect.gen(function* reactions() {
     yield* call(() => cast.ada.client.react(conversation.lunch, "thumbs_up"));
-    yield* call(() => cast.releaseBot.client.react(conversation.lunch, "thumbs_up"));
+    yield* call(() => cast.releaseAgent.client.react(conversation.lunch, "thumbs_up"));
     yield* call(() => cast.grace.client.react(conversation.adaReply, "thumbs_up"));
   });
 }
@@ -265,7 +267,7 @@ function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, Seed
     const command = yield* callWebhookCommand(connection, cast);
     const broughtIn = yield* postBroughtIn(connection, cast);
     const last = yield* postLast(connection, cast);
-    const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);
+    const identities = Arr.map([cast.ada, cast.grace, cast.releaseAgent, cast.triageAgent], ({ created }) => created);
     const messages = { ...conversation, ...command, ...broughtIn, ...last };
     return { channels: channelNames, identities, messages, thread: conversation.threadStart };
   });

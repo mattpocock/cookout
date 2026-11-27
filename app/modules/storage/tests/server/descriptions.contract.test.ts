@@ -40,16 +40,16 @@ it.effect.each(storageLayers)(
       yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
       yield* storage.createIdentity(identity("todo-bot", { owner: "ada" }), hashB);
       const set = yield* storage.setDescription(nameOf("todo-bot"), description("Ada's to-dos"));
-      const bot = described(identity("todo-bot", { owner: "ada" }), "Ada's to-dos");
+      const aide = described(identity("todo-bot", { owner: "ada" }), "Ada's to-dos");
       const listed = yield* storage.listIdentities();
       const byToken = yield* storage.findIdentityByTokenHash(hashB);
       const rotated = yield* storage.replaceToken(nameOf("todo-bot"), hashC);
 
-      expect(set).toStrictEqual({ identity: bot, status: "set" });
+      expect(set).toStrictEqual({ identity: aide, status: "set" });
       expect([listed, byToken, rotated]).toStrictEqual([
-        [identity("ada", { kind: "human" }), bot],
-        { identity: bot, status: "active" },
-        { identity: bot, status: "replaced" },
+        [identity("ada", { kind: "human" }), aide],
+        { identity: aide, status: "active" },
+        { identity: aide, status: "replaced" },
       ]);
     }),
 );

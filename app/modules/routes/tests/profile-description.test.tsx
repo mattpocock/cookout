@@ -113,18 +113,18 @@ it("an owner writes a multi-line description, Enter adding a line and Ctrl+Enter
 }, async () => {
   expect.hasAssertions();
 
-  const bot = "web-describe-lines-bot";
+  const aide = "web-describe-lines-bot";
   const { close, human } = await ownerOpens("web-describe-lines");
   const box = await typeDescription("To-dos\nLife admin");
   fireEvent.keyDown(box, { key: "Enter" });
 
   await expect(inProfile().findByText("17/500")).resolves.toBeDefined();
-  await expect(human.getIdentity(bot)).resolves.not.toHaveProperty("identity.description");
+  await expect(human.getIdentity(aide)).resolves.not.toHaveProperty("identity.description");
 
   fireEvent.keyDown(box, { ctrlKey: true, key: "Enter" });
 
   await waitFor(async () => {
-    await expect(human.getIdentity(bot)).resolves.toHaveProperty("identity.description", "To-dos\nLife admin");
+    await expect(human.getIdentity(aide)).resolves.toHaveProperty("identity.description", "To-dos\nLife admin");
   });
   close();
 });

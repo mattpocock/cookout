@@ -228,10 +228,10 @@ it("a row in the People list has the menu, without Message where there is no mes
   const prefix = "web-person-menu-people";
   const reader = await newIdentity({ kind: "human", name: `${prefix}-reader` });
   await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-reader` });
-  const bot = `${prefix}-bot`;
+  const aide = `${prefix}-bot`;
   const close = openAt({ client: reader.client, hash: "#/people" });
-  const byRightClick = await peopleRowMenu(bot, "right-click");
-  const byButton = await peopleRowMenu(bot, "button");
+  const byRightClick = await peopleRowMenu(aide, "right-click");
+  const byButton = await peopleRowMenu(aide, "button");
 
   expect([byRightClick, byButton]).toStrictEqual([WITHOUT_MESSAGE, WITHOUT_MESSAGE]);
 

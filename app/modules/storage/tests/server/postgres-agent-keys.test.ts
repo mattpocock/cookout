@@ -15,7 +15,11 @@ const HASH_LENGTH = 64;
 const [adaToken, triageToken] = [tokenHash(Str.repeat(HASH_LENGTH)("a")), tokenHash(Str.repeat(HASH_LENGTH)("c"))];
 const ada = identityFixture("ada", { kind: "human" });
 const triage = identityFixture("triage", { kind: "agent", owner: "ada" });
-const BEFORE_AGENT_KEYS = ["DROP TABLE agent_keys", "UPDATE schema_version SET version = version - 1"];
+const BEFORE_AGENT_KEYS = [
+  "ALTER TABLE identities DROP COLUMN feeder",
+  "DROP TABLE agent_keys",
+  "UPDATE schema_version SET version = version - 2",
+];
 const PUBLIC_ID = /^[0-9a-f]{16}$/u;
 
 it.effect(

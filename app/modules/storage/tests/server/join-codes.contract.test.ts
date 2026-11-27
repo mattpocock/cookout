@@ -87,6 +87,24 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): a join code for a feeder is kept unused, and works once it is an agent again",
+  ({ layer }) =>
+    Effect.gen(function* feederCode() {
+      const { storage } = yield* openStore(layer);
+      yield* withCode(storage);
+      yield* storage.setFeeder(agent.name, true);
+      const asFeeder = yield* storage.redeemJoinCode(redeem);
+      yield* storage.setFeeder(agent.name, false);
+      const afterwards = yield* storage.redeemJoinCode(redeem);
+
+      expect([asFeeder, afterwards]).toStrictEqual([
+        { identity: agent.name, status: "feeder" },
+        { expiresAt: sessionExpiry, identity: agent.name, issuedAt: before, status: "redeemed" },
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): a join code redeemed twice at once is redeemed once",
   ({ layer }) =>
     Effect.gen(function* redeemedOnce() {

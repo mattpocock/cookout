@@ -119,7 +119,9 @@ function knownNames(db: SqlDatabase, names: Message["mentions"]): Fails<Readonly
   return pipe(
     names,
     Effect.filter((name) =>
-      db.get("SELECT 1 AS found FROM identities WHERE name = ? AND NOT deactivated", name).pipe(Effect.map(isFoundRow)),
+      db
+        .get("SELECT 1 AS found FROM identities WHERE name = ? AND NOT deactivated AND NOT feeder", name)
+        .pipe(Effect.map(isFoundRow)),
     ),
     Effect.map((found: Message["mentions"]) => new Set(found)),
   );

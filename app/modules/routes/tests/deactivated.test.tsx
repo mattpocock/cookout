@@ -11,14 +11,14 @@ const ONE = 1;
 
 interface Crew {
   readonly human: CookoutClient;
-  readonly bot: CookoutClient;
+  readonly aide: CookoutClient;
 }
 
 async function crewOf(prefix: string): Promise<Crew> {
   const human = await newIdentity({ kind: "human", name: `${prefix}-human` });
-  const bot = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
+  const aide = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
   await human.client.setDisplayName(`${prefix}-bot`, "Release Bot");
-  return { bot: bot.client, human: human.client };
+  return { aide: aide.client, human: human.client };
 }
 
 function textsOf(elements: () => readonly HTMLElement[]): readonly string[] {
@@ -64,9 +64,9 @@ it("a deactivated author keeps their display name on their messages, marked (dea
 }, async () => {
   expect.hasAssertions();
 
-  const { bot } = await crewOf("web-off-author");
+  const { aide } = await crewOf("web-off-author");
   await adminClient().createChannel({ name: "web-off-author" });
-  await bot.createMessage({ channel: "web-off-author", text: "Deployed" });
+  await aide.createMessage({ channel: "web-off-author", text: "Deployed" });
   await adminClient().deactivateIdentity("web-off-author-bot");
   const { close } = await viewOpened({
     client: adminClient(),
@@ -154,7 +154,7 @@ it("an admin deactivates and reactivates from a profile, and the fresh token sho
 it("deactivating a person asks without mentioning their agents, which stay active", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot } = await crewOf("web-off-person");
+  const { aide } = await crewOf("web-off-person");
   const { answered, close } = await profileOpened({
     client: adminClient(),
     name: "web-off-person-human",
@@ -166,7 +166,7 @@ it("deactivating a person asks without mentioning their agents, which stay activ
   await waitFor(async () => {
     await expect(profileHeading()).resolves.toBe("web-off-person-human(deactivated)");
   });
-  const { identity } = await bot.whoami();
+  const { identity } = await aide.whoami();
 
   expect([asked.includes("agent"), identity.deactivated === true]).toStrictEqual([false, false]);
 

@@ -34,11 +34,11 @@ async function summaryShown(count: string): Promise<Summary> {
 
 async function threadRepliedTo(): Promise<Replied> {
   const ada = await newIdentity({ kind: "human", name: "ada-summary" });
-  const bot = await newIdentity({ kind: "agent", name: "bot-summary", owner: "admin" });
+  const aide = await newIdentity({ kind: "agent", name: "bot-summary", owner: "admin" });
   await adminClient().createChannel({ name: CHANNEL });
   const { message: parent } = await adminClient().createMessage({ channel: CHANNEL, text: "The parent" });
   const { message: first } = await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "First" });
-  await bot.client.createMessage({ channel: CHANNEL, replyTo: parent.id, seen: first.id, text: "Second" });
+  await aide.client.createMessage({ channel: CHANNEL, replyTo: parent.id, seen: first.id, text: "Second" });
   return { ada, parent };
 }
 

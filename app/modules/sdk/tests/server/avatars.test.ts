@@ -112,8 +112,8 @@ it.effect("an agent sets its own avatar, and its owner sets it from their own Lo
   Effect.gen(function* agentAvatar() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
-    const byItself = yield* answer(() => bot.client.setAvatar("todo-bot", avatarPng()));
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const byItself = yield* answer(() => aide.client.setAvatar("todo-bot", avatarPng()));
     const byOwner = yield* answer(() => ada.client.setAvatar("todo-bot", avatarPng()));
 
     expect([byItself.identity, byOwner.identity]).toMatchObject([

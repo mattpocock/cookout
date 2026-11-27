@@ -4,7 +4,7 @@ import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
-type IdentityAction = "deactivate" | "delete" | "reactivate" | "revoke" | "rotate" | "transfer";
+type IdentityAction = "deactivate" | "delete" | "feed" | "reactivate" | "revoke" | "rotate" | "transfer" | "unfeed";
 
 type ActionState =
   | { readonly status: "idle" }
@@ -71,27 +71,31 @@ const START: Held = {
   transferTo: "",
 };
 
+function answering<Args extends readonly unknown[]>(
+  sent: Sent,
+  call: (...args: Args) => Promise<void>,
+  ...args: Args
+): () => Promise<Sent> {
+  return async () => {
+    await call(...args);
+    return sent;
+  };
+}
+
 function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => string): Sends {
   const { calls } = list;
   return {
-    deactivate: async () => {
-      await calls.deactivate(name);
-      return { token: null };
-    },
-    delete: async () => {
-      await calls.delete(name);
-      return { token: null };
-    },
+    deactivate: answering({ token: null }, calls.deactivate, name),
+    delete: answering({ token: null }, calls.delete, name),
+    feed: answering({}, calls.setFeeder, name, true),
     reactivate: async () => ({ token: await calls.reactivate(name) }),
-    revoke: async () => {
-      await calls.revokeSession(name);
-      return {};
-    },
+    revoke: answering({}, calls.revokeSession, name),
     rotate: async () => ({ token: await calls.rotateToken(name) }),
     transfer: async () => {
       await calls.transfer(name, transferTo().trim());
       return { transferTo: "" };
     },
+    unfeed: answering({}, calls.setFeeder, name, false),
   };
 }
 
@@ -122,10 +126,12 @@ function asksOf(publish: Publish): IdentityActions["ask"] {
   return {
     deactivate: askTo("deactivate"),
     delete: askTo("delete"),
+    feed: askTo("feed"),
     reactivate: askTo("reactivate"),
     revoke: askTo("revoke"),
     rotate: askTo("rotate"),
     transfer: askTo("transfer"),
+    unfeed: askTo("unfeed"),
   };
 }
 

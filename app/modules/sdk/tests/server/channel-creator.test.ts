@@ -70,10 +70,10 @@ it.effect("the creator's other sessions hear the new channel and their subscript
 it.effect("an agent that creates a channel hears the channel and no subscription to it", () =>
   Effect.gen(function* agentCreatorHears() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("bot");
-    const events = yield* watchingAllChannels(bot);
-    const { channel } = yield* answer(() => bot.client.createChannel({ name: "grill" }));
-    const { message } = yield* answer(() => bot.client.createMessage({ channel: "grill", text: "first" }));
+    const aide = yield* cookout.createIdentity("bot");
+    const events = yield* watchingAllChannels(aide);
+    const { channel } = yield* answer(() => aide.client.createChannel({ name: "grill" }));
+    const { message } = yield* answer(() => aide.client.createMessage({ channel: "grill", text: "first" }));
     const first = yield* answer(() => events.next());
     const second = yield* answer(() => events.next());
 

@@ -82,6 +82,7 @@ export const AgentIdentitySchema = Schema.Struct({
   deactivated: Schema.optionalKey(Schema.Literal(true)),
   description: Schema.optionalKey(DescriptionSchema),
   displayName: Schema.optionalKey(DisplayNameSchema),
+  feeder: Schema.optionalKey(Schema.Literal(true)),
   handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
   name: IdentityNameSchema,

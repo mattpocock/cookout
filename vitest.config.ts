@@ -8,6 +8,7 @@ const postgresFiles = [
   "app/modules/storage/tests/server/postgres-request-origins.test.ts",
   "app/modules/storage/tests/server/postgres-login-alerts.test.ts",
   "app/modules/storage/tests/server/postgres-agent-keys.test.ts",
+  "app/modules/storage/tests/server/postgres-feeders.test.ts",
   "app/modules/cli/tests/server/serve-postgres.test.ts",
 ];
 

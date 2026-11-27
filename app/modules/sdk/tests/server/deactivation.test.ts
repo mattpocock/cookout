@@ -24,18 +24,18 @@ function adaWithAgents(cookout: TestCookoutService): Effect.Effect<TestIdentity>
 it.effect("deactivating an identity makes every token it holds fail, while its messages keep its name", () =>
   Effect.gen(function* deactivateKeepsHistory() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("auth-griller");
-    yield* answer(() => bot.client.createChannel({ name: "grill" }));
-    const { message } = yield* answer(() => bot.client.createMessage({ channel: "grill", text: "hello" }));
-    const session = yield* answer(() => bot.client.join({ as: "auth-griller" }));
+    const aide = yield* cookout.createIdentity("auth-griller");
+    yield* answer(() => aide.client.createChannel({ name: "grill" }));
+    const { message } = yield* answer(() => aide.client.createMessage({ channel: "grill", text: "hello" }));
+    const session = yield* answer(() => aide.client.join({ as: "auth-griller" }));
     const deactivated = yield* answer(() => cookout.client.deactivateIdentity("auth-griller"));
     const tokens = yield* Effect.all(
-      [refusal(bot.client.whoami), refusal(cookout.clientFor(session.agentSessionToken).whoami)],
+      [refusal(aide.client.whoami), refusal(cookout.clientFor(session.agentSessionToken).whoami)],
       ONE_AT_A_TIME,
     );
     const { messages } = yield* answer(() => cookout.client.listMessages("grill"));
 
-    expect(deactivated).toStrictEqual({ identity: { ...bot.identity, deactivated: true } });
+    expect(deactivated).toStrictEqual({ identity: { ...aide.identity, deactivated: true } });
     expect([tokens, Arr.map(messages, ({ author, id }) => [id, author.name])]).toMatchObject([
       [
         { code: "token_revoked", status: UNAUTHORIZED },
@@ -115,8 +115,8 @@ it.effect("reactivating answers a fresh token while the old tokens stay dead", (
 it.effect("an agent session token from before deactivation stays dead after reactivation", () =>
   Effect.gen(function* sessionStaysDead() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("auth-griller");
-    const session = yield* answer(() => bot.client.join({ as: "auth-griller" }));
+    const aide = yield* cookout.createIdentity("auth-griller");
+    const session = yield* answer(() => aide.client.join({ as: "auth-griller" }));
     yield* answer(() => cookout.client.deactivateIdentity("auth-griller"));
     yield* answer(() => cookout.client.reactivateIdentity("auth-griller"));
     const old = yield* refusal(cookout.clientFor(session.agentSessionToken).whoami);

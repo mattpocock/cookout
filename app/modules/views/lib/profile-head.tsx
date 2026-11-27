@@ -22,7 +22,7 @@ export function ProfileHead(props: ProfileHeadProps): ReactNode {
     <Profile
       agent={identity.kind === "agent"}
       name={identity.name}
-      presence={shownIn({ name: identity.name, presences: props.presences })}
+      presence={shownIn({ identity, presences: props.presences })}
     >
       <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)}>
         <IdentityTags identity={identity} />
