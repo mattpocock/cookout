@@ -56,7 +56,8 @@ const statusCommand = Command.make("status", { json: jsonFlag }, ({ json }) =>
   Effect.matchEffect(runnerStatus, { onFailure: refused, onSuccess: printStatus(json) }),
 ).pipe(
   Command.withDescription(
-    "List each registration: its agent, its folder, and whether the runner is connecting, connected or running a " +
+    "List each registration: its agent, its folder, and whether the runner is connecting, connected, retrying an " +
+      "unavailable board (with its last error) or running a " +
       "wake run for it, or no runner is running, and its last wake run: when it started, how it ended and its " +
       "output file; then each dropped registration, with the refusal that dropped it " +
       "and when. It warns when an open Claude Code session would hold or refuse the runner's messages " +
