@@ -18,6 +18,7 @@ const RunnerEventSchema = Schema.Struct({
   at: Schema.String,
   messages: Schema.optionalKey(Schema.Array(Schema.Int)),
   output: Schema.optionalKey(Schema.String),
+  reason: Schema.optionalKey(Schema.String),
   type: Schema.String,
 });
 

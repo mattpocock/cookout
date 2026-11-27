@@ -119,6 +119,7 @@ it.effect.each([
           directory: path.resolve("."),
           harness: "claude-code",
           path: joined.env["PATH"],
+          sessionId: joined.harnessSession,
           url: on.url,
           wakeCommand: ["claude", "-p", "--resume", joined.harnessSession, "--allowedTools", "Bash(cookout:*)"],
         },
