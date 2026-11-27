@@ -56,7 +56,7 @@ interface IdentityCalls {
   readonly createIdentity: CreateIdentityCall;
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
-  readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
+  readonly reactivateIdentity: (name: string) => Promise<IdentityResponse | IdentityWithTokenResponse>;
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
@@ -163,6 +163,10 @@ function transferAgentCall(server: ClientConnection): IdentityCalls["transferAge
   };
 }
 
+function isReactivated(answer: unknown): answer is IdentityResponse | IdentityWithTokenResponse {
+  return isIdentityWithTokenResponse(answer) || isIdentityResponse(answer);
+}
+
 function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deactivateIdentity" | "reactivateIdentity"> {
   return {
     deactivateIdentity: async (name) => {
@@ -176,7 +180,7 @@ function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deact
     },
     reactivateIdentity: async (name) => {
       const reactivated = await send(server, {
-        isExpected: isIdentityWithTokenResponse,
+        isExpected: isReactivated,
         method: "POST",
         params: { name },
         path: identityReactivatePath,

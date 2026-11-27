@@ -172,7 +172,7 @@ function storedOrRefused(result: "created" | Refused, identity: Identity): Effec
   return Effect.fail(createRefusal(result, identity));
 }
 
-function storeNew(identity: Identity, hash: TokenHash): Effect.Effect<void, Refusal | StorageUnavailable, Storage> {
+function storeNew(identity: Identity, hash?: TokenHash): Effect.Effect<void, Refusal | StorageUnavailable, Storage> {
   return Effect.gen(function* storeNewIdentity() {
     const storage = yield* Storage;
     const result = yield* storage.createIdentity(identity, hash);
@@ -197,13 +197,17 @@ function createIdentity(request: {
   readonly caller: HumanIdentity;
   readonly body: CreateIdentityBody;
   readonly origin: string;
-}): Effect.Effect<IdentityWithTokenResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+}): Effect.Effect<IdentityResponse | IdentityWithTokenResponse, Refusal | StorageUnavailable, Storage | Secrets> {
   const { body, caller, origin } = request;
   return Effect.gen(function* createRequestedIdentity() {
     const now = yield* DateTime.now;
     const identity = requested(newIdentity(caller, body, isoTimeOf(now)), body);
     yield* requireMayCreate(caller, identity);
     yield* requireAgentNamed(identity);
+    if (identity.kind === "agent") {
+      yield* storeNew(identity);
+      return { identity };
+    }
     const { token, hash } = yield* issueToken;
     yield* storeNew(identity, hash);
     return yield* withLoginLinkIfPerson({ identity, token }, origin);
@@ -213,15 +217,14 @@ function createIdentity(request: {
 function createAgentByAgent(request: {
   readonly caller: AgentIdentity;
   readonly body: CreateIdentityBody;
-}): Effect.Effect<IdentityResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+}): Effect.Effect<IdentityResponse, Refusal | StorageUnavailable, Storage> {
   const { body, caller } = request;
   return Effect.gen(function* createBroughtInAgent() {
     const now = yield* DateTime.now;
     const brought = yield* agentBroughtInBy(caller, body, isoTimeOf(now));
     const identity = requested(brought, body);
     yield* requireAgentNamed(identity);
-    const { hash } = yield* issueToken;
-    yield* storeNew(identity, hash);
+    yield* storeNew(identity);
     return { identity };
   });
 }

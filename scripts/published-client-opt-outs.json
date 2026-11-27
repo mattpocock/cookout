@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "step": "reactivate",
+    "version": "0.12.0",
+    "date": "2026-11-27",
+    "reason": "#970 (Matt's ticket, rest of #910 and ADR 0157): reactivating an agent answers { identity } with no token, which the published client's validator still requires. This commit's client accepts both answers."
+  }
+]

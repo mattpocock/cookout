@@ -1,5 +1,5 @@
-import { Array as Arr, Effect } from "effect";
-import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
+import { Array as Arr, Effect, Struct } from "effect";
+import { TestCookout, answer, freshToken, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 
@@ -104,7 +104,7 @@ it.effect("reactivating answers a fresh token while the old tokens stay dead", (
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const reactivated = yield* answer(() => cookout.client.reactivateIdentity("ada"));
     const old = yield* refusal(ada.client.whoami);
-    const fresh = yield* answer(cookout.clientFor(reactivated.token).whoami);
+    const fresh = yield* Effect.flatMap(freshToken(reactivated), (token) => answer(cookout.clientFor(token).whoami));
 
     expect(reactivated.identity).toStrictEqual(ada.identity);
     expect(old).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
@@ -125,7 +125,7 @@ it.effect("an agent session token from before deactivation stays dead after reac
   }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
-it.effect("an admin reactivates an agent whose owner is deactivated, and gets a fresh token", () =>
+it.effect("an admin reactivates an agent whose owner is deactivated, answering the agent and no token", () =>
   Effect.gen(function* reactivateOwnerless() {
     const cookout = yield* TestCookout;
     yield* adaWithAgents(cookout);
@@ -133,14 +133,34 @@ it.effect("an admin reactivates an agent whose owner is deactivated, and gets a 
     yield* answer(() => cookout.client.deactivateIdentity("ada/helper-2"));
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const reactivated = yield* answer(() => cookout.client.reactivateIdentity("ada/helper-2"));
-    const [old, fresh] = yield* Effect.all(
-      [refusal(helper.client.whoami), answer(cookout.clientFor(reactivated.token).whoami)],
+    const old = yield* refusal(helper.client.whoami);
+
+    expect(reactivated).toStrictEqual({ identity: helper.identity });
+    expect(old).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a reactivated agent holds no credential until its owner makes it an agent key", () =>
+  Effect.gen(function* reactivatedAgentKey() {
+    const cookout = yield* TestCookout;
+    const ada = yield* adaWithAgents(cookout);
+    yield* answer(() => ada.client.deactivateIdentity("release-bot"));
+    const reactivated = yield* answer(() => ada.client.reactivateIdentity("release-bot"));
+    const [keys, made] = yield* Effect.all(
+      [
+        answer(() => ada.client.listAgentKeys("release-bot")),
+        answer(() => ada.client.createAgentKey("release-bot", { name: "ci" })),
+      ],
       ONE_AT_A_TIME,
     );
+    const keyed = yield* answer(cookout.clientFor(made.token).whoami);
 
-    expect(reactivated.identity).toStrictEqual(helper.identity);
-    expect([old, fresh.identity]).toMatchObject([{ code: "token_revoked", status: UNAUTHORIZED }, helper.identity]);
-  }).pipe(Effect.provide(testCookout())),
+    expect([reactivated, keys, keyed.identity]).toStrictEqual([
+      { identity: reactivated.identity },
+      { agentKeys: [] },
+      reactivated.identity,
+    ]);
+  }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
 it.effect("an admin transfers an agent whose owner is deactivated to another human", () =>
@@ -180,8 +200,7 @@ it.effect("an owner deactivates and reactivates their own agents", () =>
     const back = yield* answer(() => ada.client.reactivateIdentity("ada/helper"));
 
     expect(own.identity).toMatchObject({ deactivated: true, name: "ada/helper" });
-    expect(back.identity).toMatchObject({ name: "ada/helper" });
-    expect(back.identity).not.toHaveProperty("deactivated");
+    expect(back).toStrictEqual({ identity: Struct.omit(own.identity, ["deactivated"]) });
   }).pipe(Effect.provide(testCookout())),
 );
 

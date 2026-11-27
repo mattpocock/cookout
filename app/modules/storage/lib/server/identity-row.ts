@@ -1,6 +1,6 @@
+import { Array as Arr, Effect, Schema } from "effect";
 import type { Avatar, AvatarId } from "../../../avatars/index.ts";
 import type { DisplayName, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { Effect, Schema } from "effect";
 import { isDisplayName, isIdentityName, isOwner } from "../../../identities/index.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { Fails } from "./errors.ts";
@@ -141,7 +141,7 @@ function adminColumn(identity: Identity): number {
   return NOT_ADMIN;
 }
 
-function insertIdentity(db: SqlDatabase): (identity: Identity, hash: TokenHash) => Fails<void> {
+function insertIdentity(db: SqlDatabase): (identity: Identity, hash: TokenHash | undefined) => Fails<void> {
   return (identity, hash) =>
     Effect.andThen(
       db.run(
@@ -155,7 +155,12 @@ function insertIdentity(db: SqlDatabase): (identity: Identity, hash: TokenHash) 
         identity.displayName ?? null,
         broughtInByColumn(identity),
       ),
-      db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", hash, identity.name),
+      Effect.forEach(
+        Arr.fromNullishOr(hash),
+        (held) =>
+          db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", held, identity.name),
+        { concurrency: 1, discard: true },
+      ),
     );
 }
 

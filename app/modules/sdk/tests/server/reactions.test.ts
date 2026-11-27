@@ -1,6 +1,6 @@
 import type { CookoutClient, CookoutEvent, EventStream, Message, WatchOptions } from "../../index.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { TestCookout, answer, messageId, refusal, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, freshToken, messageId, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
@@ -192,7 +192,10 @@ it.effect("reacting to a deactivated author's message notifies no one, though th
     const { message } = yield* answer(() => bob.client.createMessage({ channel: "bobs", text: "mine" }));
     yield* answer(() => cookout.client.deactivateIdentity("bob"));
     yield* answer(() => ann.client.react(message.id, "thumbs_up"));
-    const { token } = yield* answer(() => cookout.client.reactivateIdentity("bob"));
+    const token = yield* Effect.flatMap(
+      answer(() => cookout.client.reactivateIdentity("bob")),
+      freshToken,
+    );
     const { items } = yield* answer(() => cookout.clientFor(token).inbox());
 
     expect(items).toStrictEqual([]);

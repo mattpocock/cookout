@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Schema } from "effect";
+import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
 import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { SqlDatabase, SqlDialect } from "./adapters/sql-database.ts";
@@ -23,7 +23,7 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface DeactivationsSection {
   readonly deactivateIdentity: (name: IdentityName) => Fails<DeactivateIdentityResult>;
-  readonly reactivateIdentity: (name: IdentityName, hash: TokenHash) => Fails<ReactivateIdentityResult>;
+  readonly reactivateIdentity: (name: IdentityName, hash?: TokenHash) => Fails<ReactivateIdentityResult>;
 }
 
 interface MemoryDeactivationsOptions {
@@ -34,12 +34,12 @@ interface MemoryDeactivationsOptions {
 
 interface MemoryDeactivations {
   readonly deactivate: (name: IdentityName) => DeactivateIdentityResult;
-  readonly reactivate: (name: IdentityName, hash: TokenHash) => ReactivateIdentityResult;
+  readonly reactivate: (name: IdentityName, hash: TokenHash | undefined) => ReactivateIdentityResult;
 }
 
 interface Reactivating {
   readonly identity: Identity;
-  readonly hash: TokenHash;
+  readonly hash: TokenHash | undefined;
 }
 
 const LAST_ADMIN_COUNT = 1;
@@ -98,14 +98,16 @@ function memoryDeactivations({
     revokeTokensOf(identity.name);
     return { identity: deactivated(identity), status: "deactivated" };
   }
-  function reactivateFound(identity: Identity, hash: TokenHash): ReactivateIdentityResult {
+  function reactivateFound(identity: Identity, hash: TokenHash | undefined): ReactivateIdentityResult {
     if (isActive(identity)) {
       return NOT_DEACTIVATED;
     }
     const active = reactivated(identity);
     identities.set(identity.name, active);
     revokeTokensOf(identity.name);
-    holdToken(identity.name, hash);
+    if (Predicate.isNotUndefined(hash)) {
+      holdToken(identity.name, hash);
+    }
     return { identity: { ...active }, status: "reactivated" };
   }
   return {
@@ -157,7 +159,12 @@ function sqlReactivate(db: SqlDatabase, { hash, identity }: Reactivating): Fails
       `UPDATE tokens SET revoked = TRUE WHERE identity_name = ? AND ${isFalse[db.dialect]("revoked")}`,
       identity.name,
     );
-    yield* db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", hash, identity.name);
+    yield* Effect.forEach(
+      Arr.fromNullishOr(hash),
+      (held) =>
+        db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", held, identity.name),
+      { concurrency: 1, discard: true },
+    );
     return { identity: reactivated(identity), status: "reactivated" } as const;
   });
 }

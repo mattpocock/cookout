@@ -2026,10 +2026,10 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
   /**
    * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents, even while the
-   * agent's owner is Deactivated. Answers a fresh token, shown this once; old tokens stay dead. 409 `not_deactivated`
-   * if it isn't.
+   * agent's owner is Deactivated. A person's answer has a fresh token, shown this once; an agent's has none, and its
+   * owner makes it an agent key (`createAgentKey`). Old tokens stay dead. 409 `not_deactivated` if it isn't.
    */
-  readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
+  readonly reactivateIdentity: (name: string) => Promise<IdentityResponse | IdentityWithTokenResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */

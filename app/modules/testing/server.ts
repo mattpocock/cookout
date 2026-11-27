@@ -37,7 +37,7 @@
  * from the http module, is a link a test can cut and restore, from another
  * process too, as the browser tests do.
  */
-export { answer, refusal } from "./lib/server/calls.ts";
+export { answer, freshToken, refusal } from "./lib/server/calls.ts";
 export { pastOwnPresence, watchingAllChannels } from "./lib/server/own-presence.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
 export {

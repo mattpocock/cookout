@@ -177,13 +177,12 @@ it.effect("marking all as read covers the entry, and one the caller didn't get i
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
 
-it.effect("reactivating reads the entry, gives a fresh token, and the next offer comes 30 days later", () =>
+it.effect("reactivating reads the entry, answers no token, and the next offer comes 30 days later", () =>
   Effect.gen(function* reactivated() {
-    const { ada, cookout } = yield* board;
+    const { ada } = yield* board;
     yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(ada.client));
-    const { token } = yield* answer(() => ada.client.reactivateIdentity("ada/scout"));
+    const back = yield* answer(() => ada.client.reactivateIdentity("ada/scout"));
     const [after, read] = yield* Effect.all([unread(ada.client), history(ada.client)], { concurrency: 1 });
-    const fresh = yield* answer(cookout.clientFor(token).whoami);
     const early = yield* Effect.andThen(
       quietFor(JUST_UNDER_THIRTY_DAYS),
       answer(() => ada.client.inbox()),
@@ -196,7 +195,12 @@ it.effect("reactivating reads the entry, gives a fresh token, and the next offer
       ),
     );
 
-    expect([after, Arr.map(read, (entry) => entry.read), fresh.identity.name]).toStrictEqual([[], [true], "ada/scout"]);
+    expect([after, Arr.map(read, (entry) => entry.read), "token" in back, back.identity.name]).toStrictEqual([
+      [],
+      [true],
+      false,
+      "ada/scout",
+    ]);
     expect([early.deactivationOffers, offer.deactivationOffers]).toMatchObject([
       [],
       [{ identity: { name: "ada/scout" }, quietDays: 30, raisedAt: later("120 days") }],

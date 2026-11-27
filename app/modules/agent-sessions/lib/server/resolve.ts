@@ -12,7 +12,6 @@ import {
   onlyAgentsJoin,
 } from "./refusals.ts";
 import type { Refusal } from "../../../http/index.ts";
-import type { Secrets } from "../../../secrets/server.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
@@ -25,7 +24,6 @@ interface Resolved {
 
 interface On {
   readonly publishIdentity: (identity: Identity) => Effect.Effect<void>;
-  readonly secrets: Secrets["Service"];
   readonly storage: Storage["Service"];
 }
 
@@ -87,8 +85,7 @@ function createOwned(asked: Asked): Fails<Resolved> {
       name,
       owner,
     };
-    const hash = yield* Effect.flatMap(on.secrets.newToken, on.secrets.hashToken);
-    const result = yield* on.storage.createIdentity(identity, hash);
+    const result = yield* on.storage.createIdentity(identity);
     if (result !== "created") {
       return yield* Effect.fail(createRefusals(name)[result]);
     }

@@ -9,7 +9,7 @@
 # login). If the Webhook command exists but the app has no COOKOUT_COMMAND_SECRET (staging failed after an
 # earlier add), it rotates the Webhook command's secret and stages the new one the same way. If the handler
 # identity (the agent named after the Webhook command) is deactivated, it reactivates it, because a deactivated
-# handler's result replies are refused with token_revoked (#191); it discards the fresh token that shows.
+# handler's result replies are refused with token_revoked (#191); an agent is reactivated with no token (#970).
 # It never prints a secret or token, and changes nothing on a rerun once the app has the secret, the
 # handler identity is active and the channel is gone.
 set -euo pipefail
