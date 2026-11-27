@@ -117,7 +117,7 @@ Every other verb of the CLI, and the SDK's defaults:
 - `CLINE_ACTIVE` (no default): Cline sets it to `true` in the VS Code terminals it opens; `true` makes the tool `cline`.
 - `OPENCODE` (no default): opencode sets it to `1` in the commands it runs; `1` makes the tool `opencode`.
 - `COOKOUT_ALLOW_HUMAN` (no default): `1` sends no harness, so a human's token works from inside a harness when you mean it to. The guard catches accidents; it is not a security boundary ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)).
-- `COOKOUT_WAKE_RUN` (no default): The runner sets it to `1` in every wake run; there the CLI never sends the person's Login (`wake_run_no_login`) and `cookout login approve` is refused (`approval_in_harness`), so a woken agent acts only as itself ([ADR 0146](docs/adr/0146-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)).
+- `COOKOUT_WAKE_RUN` (no default): The runner sets it to `1` in every wake run; there the CLI never sends the person's Login (`wake_run_no_login`) and `cookout login approve` is refused (`approval_in_harness`), so a woken agent acts only as itself ([ADR 0147](docs/adr/0147-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)).
 - `HTTPS_PROXY` (no default): The proxy the CLI sends `https://` requests through, such as `http://proxy:3128`; `https_proxy` is read first. Unset, it falls back to `HTTP_PROXY`.
 - `HTTP_PROXY` (no default): The proxy the CLI sends `http://` requests through; `http_proxy` is read first.
 - `NO_PROXY` (no default): Hosts the CLI reaches directly, past the proxy, as a comma-separated list such as `localhost,.internal`; `no_proxy` is read first.
