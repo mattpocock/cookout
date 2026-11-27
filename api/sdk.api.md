@@ -911,6 +911,21 @@ interface CallCommandResponse {
 interface StartLoginRequest {
   readonly host: string;
 }
+declare const brand$1: unique symbol;
+interface SessionMadeByView {
+  readonly kind: "web" | "cli" | "identity token";
+  readonly where?: string;
+}
+interface SessionView {
+  readonly id: PublicId;
+  readonly kind: "web" | "cli";
+  readonly where: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly current: boolean;
+  readonly madeBy?: SessionMadeByView;
+}
 /** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
 type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
 /**
@@ -932,21 +947,6 @@ interface LoginRequestView extends ApprovalRequestDetails {
   readonly host: string;
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
-}
-declare const brand$1: unique symbol;
-interface SessionMadeByView {
-  readonly kind: "web" | "cli" | "identity token";
-  readonly where?: string;
-}
-interface SessionView {
-  readonly id: PublicId;
-  readonly kind: "web" | "cli";
-  readonly where: string;
-  readonly madeAt: IsoTime;
-  readonly lastUsedAt: IsoTime;
-  readonly expiresAt: IsoTime;
-  readonly current: boolean;
-  readonly madeBy?: SessionMadeByView;
 }
 /** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
 type PublicId = string & {
