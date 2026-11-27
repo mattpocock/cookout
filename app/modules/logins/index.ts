@@ -20,7 +20,8 @@ interface SessionMadeByView {
   readonly where?: string;
 }
 
-interface SessionView {
+/** One of a person's live sessions, as `GET /v1/sessions` lists it. */
+export interface SessionView {
   readonly id: PublicId;
   readonly kind: "web" | "cli";
   readonly where: string;
