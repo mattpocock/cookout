@@ -94,14 +94,4 @@ function sqlClosedThreads(options: ClosedThreadsOptions): ClosedThreadsSection {
   };
 }
 
-const THREAD_TITLES_MIGRATION = `ALTER TABLE messages ADD COLUMN title TEXT;
-   ALTER TABLE messages ADD COLUMN title_set_by TEXT;
-   ALTER TABLE messages ADD COLUMN title_set_at TEXT;`;
-
-const POSTGRES_THREAD_TITLES_MIGRATION: readonly string[] = [
-  'ALTER TABLE messages ADD COLUMN title text COLLATE "C"',
-  'ALTER TABLE messages ADD COLUMN title_set_by text COLLATE "C"',
-  'ALTER TABLE messages ADD COLUMN title_set_at text COLLATE "C"',
-];
-
-export { POSTGRES_THREAD_TITLES_MIGRATION, THREAD_TITLES_MIGRATION, sqlClosedThreads, threadChangedBy };
+export { sqlClosedThreads, threadChangedBy };

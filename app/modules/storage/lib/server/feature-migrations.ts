@@ -6,7 +6,6 @@ export {
 } from "./attachments.ts";
 export { CALL_TIMES_MIGRATION, POSTGRES_CALL_TIMES_MIGRATION } from "./deliveries.ts";
 export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION } from "./search-sqlite.ts";
-export { POSTGRES_THREAD_TITLES_MIGRATION, THREAD_TITLES_MIGRATION } from "./closed-threads-sqlite.ts";
 export {
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
