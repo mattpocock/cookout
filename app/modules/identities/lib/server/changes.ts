@@ -15,7 +15,7 @@ type EndedTokens =
 interface TokensEnded {
   readonly identity: IdentityName;
   readonly tokens: EndedTokens;
-  readonly cause: "left" | "revoked" | "rotated" | "deactivated" | "session revoked";
+  readonly cause: "left" | "revoked" | "rotated" | "deactivated" | "session revoked" | "key revoked";
   readonly by: IdentityName | typeof THE_COOKOUT;
 }
 
@@ -151,6 +151,7 @@ interface CredentialsEnded {
 type Streamed = Exclude<EndedCredential["kind"], "join code" | "login link">;
 
 const CAUSE_OF: Readonly<Record<Streamed, TokensEnded["cause"]>> = {
+  "agent key": "key revoked",
   "agent session": "revoked",
   session: "session revoked",
 };

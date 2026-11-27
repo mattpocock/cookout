@@ -28,6 +28,7 @@ export type {
 export type {
   AgentCreationCalls,
   CreateAgentForOwnerRequest,
+  CreateAgentKeyRequest,
   Description,
   DescriptionCalls,
   UpdateIdentityRequest,

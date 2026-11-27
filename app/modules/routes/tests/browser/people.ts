@@ -17,7 +17,7 @@ export interface Creating {
 
 export async function createdBy({ by, request }: Creating): Promise<IdentityWithTokenResponse> {
   if (request.kind === "human") {
-    const human = await by.createIdentity(request);
+    const human = await by.createIdentity({ ...request, kind: "human" });
     return human;
   }
   const { kind: _kind, ...agent } = request;

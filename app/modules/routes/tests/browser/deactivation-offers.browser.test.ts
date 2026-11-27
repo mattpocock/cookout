@@ -27,7 +27,7 @@ test("an offer row's name opens the identity's profile panel", async ({ page }) 
   const ownerName = unique("browser-offers-owner");
   const agent = `${ownerName}/scout`;
   const owner = await newIdentity({ kind: "human", name: ownerName });
-  const { identity } = await createTestAgent({ by: adminClient(), name: agent, owner: ownerName });
+  const { identity } = await createTestAgent({ by: adminClient(), keyBy: owner.client, name: agent, owner: ownerName });
   await offeredOn(page, identity);
   await logIn({ page, token: owner.token, url: "/#/inbox" });
 

@@ -261,7 +261,12 @@ async function offeredOn(page: Page, identity: Identity): Promise<void> {
 
 async function offerShown(page: Page, ownerName: string): Promise<void> {
   const owner = await newIdentity({ kind: "human", name: ownerName });
-  const { identity } = await createTestAgent({ by: adminClient(), name: `${ownerName}/scout`, owner: ownerName });
+  const { identity } = await createTestAgent({
+    by: adminClient(),
+    keyBy: owner.client,
+    name: `${ownerName}/scout`,
+    owner: ownerName,
+  });
   await offeredOn(page, identity);
   await page.setViewportSize(WIDE);
   await logIn({ page, token: owner.token, url: "/#/inbox" });

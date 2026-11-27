@@ -1,6 +1,7 @@
 import type { IdentitySections } from "./identity-section-types.ts";
 import type { SealingDatabase } from "./sealed-secrets.ts";
 import { sqlAdminSetting } from "./admin-setting.ts";
+import { sqlAgentKeys } from "./agent-keys-sql.ts";
 import { sqlIdentities } from "./identities.ts";
 import { sqlLineage } from "./credential-lineage-sql.ts";
 import { sqlLoginLinks } from "./login-links-sql.ts";
@@ -18,6 +19,7 @@ function sqlIdentitySections(sealing: SealingDatabase): IdentitySections {
     ...sqlReach(sealing),
     ...sqlOfflineAlerts(db),
     ...sqlLineage(db),
+    ...sqlAgentKeys(db),
   };
 }
 

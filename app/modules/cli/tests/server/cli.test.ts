@@ -55,7 +55,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
 
     expect(results).toMatchObject([
       { ...succeeded, stdoutJson: { identity: { kind: "agent", name: "bot", owner: "admin" } } },
-      { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
+      { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "agent_keys_instead" } } },
       { ...succeeded, stdoutJson: { channel: { description: "Grill it", name: "grill" } } },
       { ...succeeded, stdoutJson: { channel: { name: "grill" } } },
       { ...succeeded, stdoutJson: { message: { data: { question: 1 }, id: 1 } } },

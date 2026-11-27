@@ -3,6 +3,7 @@ import type { Harness, Identity, IdentityName, Token, TokenHash } from "../../in
 import type { StorageUnavailable, TokenLookup, UseAgentSessionResult } from "../../../storage/server.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
 import { sessionCookieName, token } from "../../index.ts";
+import { tokenPrincipal, webhookCommandTokenPrincipal } from "./principals.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Principal } from "./principals.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -10,7 +11,6 @@ import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messagesPath } from "../../../messages/index.ts";
-import { webhookCommandTokenPrincipal } from "./principals.ts";
 
 const authorizationHeader = /^Bearer +(\S+)\s*$/iu;
 
@@ -158,12 +158,7 @@ function principalOf(storage: Storage["Service"], hash: TokenHash) {
   return (found: TokenLookup): Effect.Effect<Principal, Refusal | StorageUnavailable> => {
     switch (found.status) {
       case "active": {
-        return Effect.succeed({
-          agentSession: Option.none(),
-          identity: found.identity,
-          loginCredential: Option.none(),
-          webhookCommandThread: Option.none(),
-        });
+        return tokenPrincipal({ hash, identity: found.identity, storage });
       }
       case "revoked": {
         return Effect.fail(tokenRevoked);

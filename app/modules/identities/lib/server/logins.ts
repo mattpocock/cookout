@@ -11,6 +11,8 @@ import {
 import { Caller, CredentialSent, credentialsOf, sentToken, sessionMade } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
+  CreateAgentKeyResponseSchema,
+  ListAgentKeysResponseSchema,
   ListSessionsResponseSchema,
   LogOutEverywherePreviewSchema,
   LogOutEverywhereResponseSchema,
@@ -18,6 +20,7 @@ import {
   LoginRequestResponseSchema,
   LoginRequestStartedResponseSchema,
   LogoutResponseSchema,
+  RevokeAgentKeyResponseSchema,
   RevokeSessionResponseSchema,
   StartLoginRequestSchema,
   WebLoginCollectedResponseSchema,
@@ -277,6 +280,8 @@ export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit | 
 export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRoute, approveRoute, logoutRoute];
 
 export const loginResponseSchemas = {
+  CreateAgentKeyResponse: CreateAgentKeyResponseSchema,
+  ListAgentKeysResponse: ListAgentKeysResponseSchema,
   ListSessionsResponse: ListSessionsResponseSchema,
   LogOutEverywherePreview: LogOutEverywherePreviewSchema,
   LogOutEverywhereResponse: LogOutEverywhereResponseSchema,
@@ -284,6 +289,7 @@ export const loginResponseSchemas = {
   LoginRequestResponse: LoginRequestResponseSchema,
   LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
   LogoutResponse: LogoutResponseSchema,
+  RevokeAgentKeyResponse: RevokeAgentKeyResponseSchema,
   RevokeSessionResponse: RevokeSessionResponseSchema,
   WebLoginCollectedResponse: WebLoginCollectedResponseSchema,
 };

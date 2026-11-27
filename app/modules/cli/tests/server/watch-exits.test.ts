@@ -26,6 +26,7 @@ interface Watch {
   readonly cookout: TestCookoutService;
   readonly folder: string;
   readonly link: CuttableLink;
+  readonly revokeBobKey: Effect.Effect<unknown>;
 }
 
 type Needs = CommandLineNeeds | Scope.Scope;
@@ -66,10 +67,11 @@ const board: Effect.Effect<Watch, never, TestCookout | Needs> = Effect.gen(funct
   const cookout = yield* TestCookout;
   const link = yield* cuttableLink(cookout.url);
   const ann = yield* cookout.createIdentity("ann");
-  const bob = yield* cookout.createIdentity("bob");
-  const folder = yield* freshStateFolder;
+  const seeded = yield* cookout.createIdentity("bob");
+  const made = yield* answer(() => cookout.client.createAgentKey("bob", { name: "watch" }));
+  const revokeBobKey = answer(() => cookout.client.revokeAgentKey("bob", made.agentKey.id));
   yield* answer(() => ann.client.createChannel({ name: "grill" }));
-  return { ann, bob, cookout, folder, link };
+  return { ann, bob: { ...seeded, token: made.token }, cookout, folder: yield* freshStateFolder, link, revokeBobKey };
 });
 
 function envOf({ bob, link }: Watch, folder: string): Readonly<Record<string, string>> {
@@ -102,11 +104,11 @@ function joinIn(watch: Watch, folder: string, flags: readonly string[] = []): Ef
   return Effect.asVoid(runCookout({ args: ["join", "--as", "bob", ...flags], env: envOf(watch, folder) }));
 }
 
-it.effect("cookout watch prints one stdout line and exits 3 when its token is rotated", () =>
+it.effect("cookout watch prints one stdout line and exits 3 when its agent key is revoked", () =>
   Effect.gen(function* watchRotated() {
     const { result, stdoutLines } = yield* watchUntilExit({
       args: ["watch"],
-      whileWatching: cutAfter(({ cookout }) => answer(() => cookout.client.rotateToken("bob"))),
+      whileWatching: cutAfter(({ revokeBobKey }) => revokeBobKey),
     });
 
     expect(result.exitCode).toBe(EXIT_TOKEN);

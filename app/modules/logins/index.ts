@@ -267,3 +267,34 @@ export interface LoginCalls {
    */
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
+
+/** `POST` (the agent's owner) makes an agent key, its secret shown once; `GET` (or an admin) lists them (ADR 0157). */
+export const agentKeysPath = "/v1/identities/:name/agent-keys";
+
+/** `DELETE` (the owner or an admin) revokes an agent's live key by its public ID, with what it made. */
+export const agentKeyPath = "/v1/identities/:name/agent-keys/:id";
+
+/** An agent key as listed: never its secret. */
+export interface AgentKeyView {
+  readonly id: PublicId;
+  readonly name: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt?: IsoTime;
+}
+
+/** The answer to making an agent key: the key, and its secret, shown only here. */
+export interface CreateAgentKeyResponse {
+  readonly agentKey: AgentKeyView;
+  readonly token: Token;
+}
+
+/** The answer to `GET /v1/identities/:name/agent-keys`, oldest first. */
+export interface ListAgentKeysResponse {
+  readonly agentKeys: readonly AgentKeyView[];
+}
+
+/** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
+export interface RevokeAgentKeyResponse {
+  readonly ended: number;
+}

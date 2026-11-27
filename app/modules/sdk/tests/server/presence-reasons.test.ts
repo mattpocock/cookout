@@ -48,10 +48,11 @@ it.effect("an agent's offline reason is kept across a restart", () =>
   }).pipe(Effect.provide(testCookout({ storage: "sqlite" }))),
 );
 
-it.effect("rotating the token of an agent that is offline leaves its presence as it was", () =>
-  Effect.gen(function* rotatedWhileOffline() {
+it.effect("revoking a key of an agent that is offline leaves its presence as it was", () =>
+  Effect.gen(function* revokedWhileOffline() {
     const watched = yield* board;
-    yield* answer(() => watched.matt.client.rotateToken(AGENT));
+    const made = yield* answer(() => watched.matt.client.createAgentKey(AGENT, { name: "ci" }));
+    yield* answer(() => watched.matt.client.revokeAgentKey(AGENT, made.agentKey.id));
     const presence = yield* presenceOf(watched.cookout.client, AGENT);
 
     expect(presence).toStrictEqual({ identity: AGENT, online: false });

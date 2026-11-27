@@ -1,6 +1,6 @@
-import { AgentSessionSent, LoginCredentialSent } from "../../../identities/server.ts";
+import { AgentSessionSent, CredentialSent, LoginCredentialSent } from "../../../identities/server.ts";
 import { DateTime, Effect, Option, Predicate } from "effect";
-import type { Identity, IdentityName } from "../../../identities/index.ts";
+import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Connection } from "./book.ts";
 import type { LiveConnectionDetail } from "../../index.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -31,6 +31,21 @@ function joinedHost(identity: IdentityName): Effect.Effect<Option.Option<string>
   }).pipe(Effect.orElseSucceed(Option.none<string>));
 }
 
+function tokenSentWith(
+  caller: Identity,
+  loginCredential: Option.Option<TokenHash>,
+): Effect.Effect<Connection["sentWith"]> {
+  return Effect.map(CredentialSent, (credential) =>
+    Option.match(
+      Option.filter(credential, () => caller.kind === "agent"),
+      {
+        onNone: (): Connection["sentWith"] => ({ kind: "identity token", loginCredential }),
+        onSome: (hash): Connection["sentWith"] => ({ hash, kind: "agent key" }),
+      },
+    ),
+  );
+}
+
 const connectionOf = Effect.fnUntraced(function* detailOfConnection({
   authorization,
   caller,
@@ -42,7 +57,8 @@ const connectionOf = Effect.fnUntraced(function* detailOfConnection({
   }
   const sent = yield* AgentSessionSent;
   if (Option.isNone(sent)) {
-    return { detail: WATCH, runner: runnerOf(runner), sentWith: { kind: "identity token", loginCredential } };
+    const sentWith = yield* tokenSentWith(caller, loginCredential);
+    return { detail: WATCH, runner: runnerOf(runner), sentWith };
   }
   const host = yield* joinedHost(caller.name);
   const detail = Option.match(host, {

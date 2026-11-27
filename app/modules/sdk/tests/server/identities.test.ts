@@ -27,13 +27,19 @@ const ownerRefused = {
   status: BAD_REQUEST,
 };
 
-it.effect("an admin creates an identity with an owner and gets its token once", () =>
+it.effect("an admin creates an agent with an owner, and the key its owner makes authenticates as it", () =>
   Effect.gen(function* createWithOwner() {
     const cookout = yield* TestCookout;
-    yield* cookout.createIdentity("matt", { kind: "human" });
+    const matt = yield* cookout.createIdentity("matt", { kind: "human" });
     yield* TestClock.adjust("1 second");
     const created = yield* answer(() =>
-      createTestAgent({ by: cookout.client, displayName: "auth-griller", name: "auth-griller", owner: "matt" }),
+      createTestAgent({
+        by: cookout.client,
+        displayName: "auth-griller",
+        keyBy: matt.client,
+        name: "auth-griller",
+        owner: "matt",
+      }),
     );
     const whoami = yield* answer(cookout.clientFor(created.token).whoami);
 
@@ -217,7 +223,7 @@ it.effect("any identity lists every identity with its kind and owner, sorted by 
 it.effect("rotating a token issues a new one and the old one gets 401 at once", () =>
   Effect.gen(function* rotateToken() {
     const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("leaky");
+    const agent = yield* cookout.createIdentity("leaky", { kind: "human" });
     const rotated = yield* answer(() => cookout.client.rotateToken("leaky"));
     const oldToken = yield* refusal(agent.client.whoami);
     const newToken = yield* answer(cookout.clientFor(rotated.token).whoami);

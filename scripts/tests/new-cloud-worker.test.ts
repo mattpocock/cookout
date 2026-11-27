@@ -54,7 +54,7 @@ function wrote(bin: string, file: string): boolean {
   return existsSync(path.join(bin, file));
 }
 
-it("creates the worker's agent identity and copies its token to the clipboard without printing it", {
+it("creates the worker's agent identity, makes it a key named cloud and copies it to the clipboard without printing it", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -63,7 +63,7 @@ it("creates the worker's agent identity and copies its token to the clipboard wi
 
   expect(ran.status).toBe(PASSED);
   expect(read(ran.bin, "cookout.log")).toBe(
-    "identity create cookout-cloud-worker-2 --kind agent --display-name Cookout (cloud 2)\n",
+    "identity create cookout-cloud-worker-2 --kind agent --display-name Cookout (cloud 2)\nagent-key create cookout-cloud-worker-2 cloud\n",
   );
   expect(read(ran.bin, "pbcopy.clipboard")).toBe(TOKEN);
   expect(`${ran.stdout}${ran.stderr}`).not.toContain(TOKEN);

@@ -10,7 +10,9 @@ it.effect("a test agent shows a display name that differs from its name", () =>
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const chief = yield* cookout.createIdentity("chief", { owner: "ada" });
     const made = yield* answer(() => createTestAgent({ by: ada.client, name: "ada/review-bot" }));
-    const owned = yield* answer(() => createTestAgent({ by: cookout.client, name: "auth-2", owner: "ada" }));
+    const owned = yield* answer(() =>
+      createTestAgent({ by: cookout.client, keyBy: ada.client, name: "auth-2", owner: "ada" }),
+    );
     const brought = yield* answer(() => createTestAgent({ broughtIn: true, by: chief.client, name: "worker" }));
 
     expect(Arr.map([made, owned, brought], ({ identity }) => identity.displayName)).toStrictEqual([

@@ -2,13 +2,14 @@ import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
 import type { SectionsBesideIdentities } from "./identity-section-types.ts";
 import { memoryAdminSetting } from "./admin-setting.ts";
+import { memoryAgentKeys } from "./agent-keys-memory.ts";
 import { memoryIdentities } from "./identities.ts";
 import { memoryLoginLinks } from "./login-links-memory.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
 import { memoryOfflineAlerts } from "./offline-alerts.ts";
 import { memoryReach } from "./reach-sections.ts";
 
-type MemoryIdentitySections = ReturnType<typeof memoryIdentities> & SectionsBesideIdentities;
+type MemoryIdentitySections = Omit<ReturnType<typeof memoryIdentities>, "tokens"> & SectionsBesideIdentities;
 
 type LineageCalls = Pick<
   MemoryIdentitySections,
@@ -41,7 +42,7 @@ function memoryLineageCalls(state: MemoryState): LineageCalls {
 }
 
 function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
-  const identities = memoryIdentities(state);
+  const { tokens, ...identities } = memoryIdentities(state);
   const { dropLoginCredentials, ...loginRequests } = memoryLoginRequests({
     findIdentity: identities.findIdentity,
     state,
@@ -55,6 +56,11 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   const { dropOfflineAlerts, ...offlineAlerts } = memoryOfflineAlerts(state);
   return {
     ...identities,
+    ...memoryAgentKeys({
+      lineage: state.lineage,
+      open: (work) => Effect.andThen(state.ensureOpen, Effect.sync(work)),
+      tokens,
+    }),
     ...memoryAdminSetting(identities),
     ...loginRequests,
     ...loginLinks,

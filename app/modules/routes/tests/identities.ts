@@ -63,7 +63,7 @@ function tracked(client: CookoutClient): Tracked {
 
 async function created(by: CookoutClient, request: CreateIdentityRequest): Promise<IdentityWithTokenResponse> {
   if (request.kind === "human") {
-    const human = await by.createIdentity(request);
+    const human = await by.createIdentity({ ...request, kind: "human" });
     return human;
   }
   const { kind: _kind, ...agent } = request;
@@ -74,6 +74,20 @@ async function created(by: CookoutClient, request: CreateIdentityRequest): Promi
 interface Refusing {
   readonly client: CookoutClient;
   readonly refused: Promise<unknown>;
+}
+
+async function endToken({ kind, name }: CreateIdentityRequest): Promise<void> {
+  const admin = testClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  if (kind === "human") {
+    await admin.rotateToken(name);
+    return;
+  }
+  const { agentKeys } = await admin.listAgentKeys(name);
+  await Promise.all(
+    agentKeys.map(async ({ id }) => {
+      await admin.revokeAgentKey(name, id);
+    }),
+  );
 }
 
 export function refusalNoticed(client: CookoutClient): Refusing {
@@ -116,7 +130,7 @@ export async function newIdentity(request: CreateIdentityRequest): Promise<NewId
     client,
     rotateToken: async () => {
       await settled();
-      await adminClient().rotateToken(request.name);
+      await endToken(request);
     },
     token,
   };

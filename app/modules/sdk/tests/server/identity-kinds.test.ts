@@ -76,16 +76,17 @@ it.effect("an identity keeps the kind it was created with, through a second crea
     const human = yield* answer(() => cookout.client.createIdentity({ kind: "human", name: "ada" }));
     const agent = yield* answer(() => createTestAgent({ by: cookout.client, displayName: "bot", name: "bot" }));
     const recreated = yield* refusal(() => createTestAgent({ by: cookout.client, displayName: "ada", name: "ada" }));
-    const rotated = yield* Effect.forEach(
-      ["ada", "bot"],
-      (name) => answer(() => cookout.client.rotateToken(name)),
+    const rotated = yield* answer(() => cookout.client.rotateToken("ada"));
+    const agentRotated = yield* refusal(() => cookout.client.rotateToken("bot"));
+    const now = yield* Effect.forEach(
+      [rotated.token, agent.token],
+      (token) => answer(cookout.clientFor(token).whoami),
       ONE_AT_A_TIME,
     );
-    const now = yield* Effect.forEach(rotated, ({ token }) => answer(cookout.clientFor(token).whoami), ONE_AT_A_TIME);
 
     expect(recreated).toMatchObject({ code: "identity_exists", status: 409 });
-    expect(Arr.map(rotated, ({ identity }) => identity)).toStrictEqual([human.identity, agent.identity]);
-    expect(Arr.map(now, ({ identity }) => identity.kind)).toStrictEqual(["human", "agent"]);
+    expect(agentRotated).toMatchObject({ code: "agent_keys_instead", status: 409 });
+    expect(Arr.map(now, ({ identity }) => identity)).toStrictEqual([human.identity, agent.identity]);
   }).pipe(Effect.provide(testCookout())),
 );
 

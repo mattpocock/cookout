@@ -1,6 +1,7 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { createTestAgent } from "../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -40,7 +41,12 @@ it("the name filter matches part of a display name in any case, or of owner/name
   const human = await newIdentity({ kind: "human", name: "web-people-filter-human" });
   await newIdentity({ kind: "human", name: "web-people-filter-boss" });
   await adminClient().setDisplayName("web-people-filter-boss", "Ada Web-People-Filter Lovelace");
-  await newIdentity({ kind: "agent", name: "web-people-filter-human/scout", owner: "web-people-filter-human" });
+  await createTestAgent({
+    by: adminClient(),
+    keyBy: human.client,
+    name: "web-people-filter-human/scout",
+    owner: "web-people-filter-human",
+  });
   const close = openAt({ client: human.client, hash: "#/people" });
   await screen.findByRole("list", { name: "Identities" });
 

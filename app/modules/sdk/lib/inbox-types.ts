@@ -36,4 +36,10 @@ export type {
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
-export type { PublicId } from "../../logins/index.ts";
+export type {
+  AgentKeyView,
+  CreateAgentKeyResponse,
+  ListAgentKeysResponse,
+  PublicId,
+  RevokeAgentKeyResponse,
+} from "../../logins/index.ts";

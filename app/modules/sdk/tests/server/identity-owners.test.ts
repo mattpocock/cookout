@@ -68,10 +68,16 @@ it.effect(
 it.effect("an admin creates an agent owned by any human, and an owner who is no human is refused with 400", () =>
   Effect.gen(function* adminNamesOwner() {
     const cookout = yield* TestCookout;
-    yield* cookout.createIdentity("ada", HUMAN);
+    const ada = yield* cookout.createIdentity("ada", HUMAN);
     yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const reviewer = yield* answer(() =>
-      createTestAgent({ by: cookout.client, displayName: "reviewer", name: "reviewer", owner: "ada" }),
+      createTestAgent({
+        by: cookout.client,
+        displayName: "reviewer",
+        keyBy: ada.client,
+        name: "reviewer",
+        owner: "ada",
+      }),
     );
     const refused = yield* Effect.forEach(
       ["release-bot", "nobody"],
@@ -96,7 +102,13 @@ it.effect("owner/name is an agent's name only when owner owns it, and has one '/
       createTestAgent({ by: grace.client, displayName: "grace/helper", name: "grace/helper" }),
     );
     const byAdmin = yield* answer(() =>
-      createTestAgent({ by: cookout.client, displayName: "grace/scout", name: "grace/scout", owner: "grace" }),
+      createTestAgent({
+        by: cookout.client,
+        displayName: "grace/scout",
+        keyBy: grace.client,
+        name: "grace/scout",
+        owner: "grace",
+      }),
     );
     const refused = yield* Effect.all(
       [
@@ -142,26 +154,26 @@ it.effect("@owner/name mentions a namespaced agent and reaches its inbox", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("whoami, display-name, rotate and deactivate work on a namespaced name", () =>
+it.effect("whoami, display-name, agent keys and deactivate work on a namespaced name", () =>
   Effect.gen(function* namespacedRoutes() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", HUMAN);
     const helper = yield* cookout.createIdentity("grace/helper", { owner: "grace" });
     const whoami = yield* answer(helper.client.whoami);
     const named = yield* answer(() => grace.client.setDisplayName("grace/helper", "Helper"));
-    const [rotated, deactivated] = yield* Effect.all(
+    const [made, deactivated] = yield* Effect.all(
       [
-        answer(() => cookout.client.rotateToken("grace/helper")),
+        answer(() => grace.client.createAgentKey("grace/helper", { name: "ci" })),
         answer(() => cookout.client.deactivateIdentity("grace/helper")),
       ],
       ONE_AT_A_TIME,
     );
-    const gone = yield* refusal(cookout.clientFor(rotated.token).whoami);
+    const gone = yield* refusal(cookout.clientFor(made.token).whoami);
 
     expect(whoami.identity).toMatchObject({ name: "grace/helper", owner: "grace" });
-    expect([named, rotated, deactivated]).toMatchObject([
+    expect([named, made, deactivated]).toMatchObject([
       { identity: { displayName: "Helper", name: "grace/helper" } },
-      { identity: { name: "grace/helper" } },
+      { agentKey: { name: "ci" } },
       { identity: { name: "grace/helper" } },
     ]);
     expect(gone).toMatchObject({ code: "token_revoked" });

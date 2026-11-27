@@ -45,11 +45,11 @@ function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSy
 }
 
 function issueTokens(url: string, adminToken: string): Effect.Effect<readonly string[]> {
-  return Effect.gen(function* createAndRotate() {
+  return Effect.gen(function* createAndKeyAgain() {
     const admin = testClient({ env: {}, token: adminToken, url });
     const created = yield* answer(() => createTestAgent({ by: admin, displayName: "agent", name: "agent" }));
-    const rotated = yield* answer(() => admin.rotateToken("agent"));
-    return [adminToken, created.token, rotated.token];
+    const second = yield* answer(() => admin.createAgentKey("agent", { name: "second" }));
+    return [adminToken, created.token, second.token];
   });
 }
 
