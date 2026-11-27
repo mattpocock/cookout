@@ -1,7 +1,6 @@
 import type {
   ChannelName,
   DeactivatedQuietAgent,
-  DeactivatedQuietAgentId,
   DeactivationOffer,
   InboxAgentJoinRequest,
   InboxAlert,
@@ -28,7 +27,6 @@ type InboxShown =
       readonly nudges: readonly Nudge[];
       readonly deactivationOffers: readonly DeactivationOffer[];
       readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
-      readonly heldDeactivatedQuietAgents: readonly DeactivatedQuietAgent[];
       readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
       readonly markAll: MarkAllState;
     }
@@ -61,7 +59,6 @@ type OffersShown = HistoryShown<{
 type QuietAgentsShown = HistoryShown<{
   readonly status: "loaded";
   readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
-  readonly held: readonly DeactivatedQuietAgentId[];
 }>;
 
 interface JoinsShown {
@@ -83,12 +80,8 @@ function withoutRead({ read: _read, ...nudge }: InboxHistoryNudge): Nudge {
 
 function quietOf(
   entries: InboxEntries,
-): Pick<Extract<InboxShown, { readonly status: "loaded" }>, "deactivatedQuietAgents" | "heldDeactivatedQuietAgents"> {
-  const all = newestFirst(entries.deactivatedQuietAgents);
-  return {
-    deactivatedQuietAgents: all.filter(({ read }) => !read),
-    heldDeactivatedQuietAgents: all.filter(({ id, read }) => read && entries.held.has(id)),
-  };
+): Pick<Extract<InboxShown, { readonly status: "loaded" }>, "deactivatedQuietAgents"> {
+  return { deactivatedQuietAgents: newestFirst(entries.deactivatedQuietAgents).filter(({ read }) => !read) };
 }
 
 function loadedOf(entries: InboxEntries, markAll: MarkAllState, items: readonly InboxItem[]): InboxShown {
@@ -184,7 +177,6 @@ const quietShown = keptOn(
   (entries: InboxEntries, history: Loaded): QuietAgentsShown =>
     historyOf(history, () => ({
       deactivatedQuietAgents: newestFirst(entries.deactivatedQuietAgents),
-      held: [...entries.held],
       status: "loaded" as const,
     })),
 );

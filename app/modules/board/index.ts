@@ -97,7 +97,7 @@
  * deleted message's items and Earlier rows, and for a top-level message its whole thread's and its Nudges. On a link back the slice reads
  * again and merges: an item the server shows unread comes back, one it no longer shows moves to Earlier. Each selector
  * returns the same object until what it reads changes. `inboxCalls` makes the Inbox's changes on the server (mark all,
- * mark a channel, mark unread, keep an offer, read a notice, close a nudged thread, hold or release a quiet agent,
+ * mark a channel, mark unread, keep an offer, read a notice, close a nudged thread,
  * approve a join), one at a time in the order asked, applying each answer to the slice or keeping the refusal.
  * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` groups the
  * unread items into rows (`rowsOf`: one per thread, its replies, or per channel,

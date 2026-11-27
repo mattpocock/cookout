@@ -37,10 +37,9 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   if (unread.status === "failed") {
     return <Alert>{`Couldn't load the inbox (${unread.code}): ${unread.message}`}</Alert>;
   }
-  const held = unread.heldDeactivatedQuietAgents.length;
   return (
     <>
-      {unread.items.length + besideCountOf(unread) + held === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      {unread.items.length + besideCountOf(unread) === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
       <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} onRevoke={props.onRevokeSession} />
       <InboxSections
         actions={props.actions}

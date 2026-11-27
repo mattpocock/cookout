@@ -10,7 +10,7 @@ import { UnreadNudgeRow } from "./unread-nudge-row.tsx";
 interface NoticeActions {
   readonly nudges: Pick<Nudges, "close" | "markRead">;
   readonly deactivationOffers: Pick<DeactivationOffers, "keep">;
-  readonly deactivatedQuietAgents: Pick<DeactivatedQuietAgents, "hold" | "markRead" | "release">;
+  readonly deactivatedQuietAgents: Pick<DeactivatedQuietAgents, "markRead">;
   readonly identities: Pick<Identities, "actions">;
   readonly agentJoinRequests: AgentJoinRequests;
 }
@@ -19,13 +19,8 @@ interface ForYouNoticesProps {
   readonly nudges: readonly Nudge[];
   readonly offers: readonly DeactivationOffer[];
   readonly deactivated: readonly DeactivatedQuietAgent[];
-  readonly held: readonly DeactivatedQuietAgent[];
   readonly joinRequests: readonly InboxAgentJoinRequest[];
   readonly actions: NoticeActions;
-}
-
-function newestFirst(entries: readonly DeactivatedQuietAgent[]): readonly DeactivatedQuietAgent[] {
-  return entries.toSorted((first, second) => second.id - first.id);
 }
 
 export function ForYouNotices(props: ForYouNoticesProps): ReactNode {
@@ -39,7 +34,7 @@ export function ForYouNotices(props: ForYouNoticesProps): ReactNode {
           requests={actions.agentJoinRequests}
         />
       ))}
-      {newestFirst([...props.deactivated, ...props.held]).map((entry) => (
+      {props.deactivated.map((entry) => (
         <UnreadDeactivatedQuietAgentRow
           entries={actions.deactivatedQuietAgents}
           entry={entry}
