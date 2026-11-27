@@ -916,6 +916,7 @@ interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
   readonly where?: string;
 }
+/** One of a person's live sessions, as `GET /v1/sessions` lists it. */
 interface SessionView {
   readonly id: PublicId;
   readonly kind: "web" | "cli";
@@ -990,6 +991,20 @@ interface LogoutResponse {
  * the person types the code into the page on a device already logged in (#905).
  */
 declare const approvalPath = "/#/approve";
+/** The live credentials Log out everywhere ends, counted by kind. */
+interface LogOutEverywhereCounts {
+  readonly sessions: number;
+  readonly agentSessions: number;
+  readonly joinCodes: number;
+}
+/** The answer to `GET /v1/sessions/log-out-everywhere`: what Log out everywhere would end now. */
+interface LogOutEverywherePreview {
+  readonly willEnd: LogOutEverywhereCounts;
+}
+/** The answer to `POST /v1/sessions/log-out-everywhere`: what it ended. */
+interface LogOutEverywhereResponse {
+  readonly ended: LogOutEverywhereCounts;
+}
 /** The answer to `GET /v1/sessions`, oldest first. */
 interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -1034,6 +1049,13 @@ interface LoginCalls$1 {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
+  readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
+  /**
+   * `POST /v1/sessions/log-out-everywhere` (a human): ends every credential in the caller's lineage except this
+   * client's session and what it made, whose open event streams close, and answers what ended by kind.
+   */
+  readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 /** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
 interface CreateAgentKeyRequest {
@@ -1061,19 +1083,13 @@ interface ListAgentKeysResponse {
 interface RevokeAgentKeyResponse {
   readonly ended: number;
 }
-/** The SDK's calls for an agent's keys (ADR 0154). */
+/** The SDK's calls for an agent's keys (ADR 0155). */
 interface AgentKeyCalls {
-  /**
-   * `POST /v1/identities/:name/agent-keys` (the agent's owner): makes a key, answering its secret this once. Set it as
-   * the agent's `COOKOUT_TOKEN` (in CI, a secret). A name one of its live keys has is 409 `agent_key_name_taken`.
-   */
+  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
   readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
   /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
   readonly listAgentKeys: (agent: string) => Promise<ListAgentKeysResponse>;
-  /**
-   * `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key, with the agent session
-   * joined with it, whose open event streams close. An unknown ID is 404 `agent_key_not_found`.
-   */
+  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
   readonly revokeAgentKey: (agent: string, id: PublicId) => Promise<RevokeAgentKeyResponse>;
 }
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
@@ -1949,7 +1965,7 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
   readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0154). */
+  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0155). */
   readonly createIdentity: CreateIdentityCall;
   /** A human's new token (403 `not_owner` unless an admin or themself); an agent is 409 `agent_keys_instead`. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;

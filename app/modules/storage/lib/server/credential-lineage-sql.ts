@@ -1,145 +1,46 @@
-import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
-import type { EndedCredential, EndedWhy, LineageSection, ListedSession, NewLineage } from "./credential-lineage.ts";
+import { Array as Arr, Effect, Option, Schema } from "effect";
+import type {
+  EndedCredential,
+  LineageSection,
+  ListedSession,
+  LogOutEverywhere,
+  NewLineage,
+} from "./credential-lineage.ts";
+import {
+  HashRow,
+  NameColumn,
+  ONE_AT_A_TIME,
+  decodedWith,
+  endEach,
+  hashesIn,
+  liveAmong,
+  markEndedIn,
+} from "./credential-lineage-sql-ends.ts";
 import type { IdentityName, TokenHash } from "../../../identities/index.ts";
-import { TRUE, isFalse } from "./adapters/sql-database.ts";
-import { isIdentityName, tokenHash } from "../../../identities/index.ts";
+import type { Ending } from "./credential-lineage-sql-ends.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
+import { TRUE } from "./adapters/sql-database.ts";
 import { isPublicId } from "../../../logins/index.ts";
 import { loginCredentialExpiry } from "./login-requests.ts";
 import { madeByOf } from "./credential-lineage.ts";
+import { tokenHash } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
-
-const ONE_AT_A_TIME = { concurrency: 1 } as const;
-
-const NEVER = "9999-12-31T23:59:59.999Z";
 
 const RECORD = `INSERT INTO credential_lineage (hash, public_id, kind, identity_name, parent_hash, made_at, where_from)
   VALUES (?, ?, ?, ?, ?, ?, ?)`;
-
-interface Ending {
-  readonly hash: TokenHash;
-  readonly why: EndedWhy;
-  readonly now: IsoTime;
-}
-
-const MARK_ENDED = "UPDATE credential_lineage SET ended_at = ?, ended_why = ? WHERE hash = ? AND ended_at IS NULL";
 
 function recordIn(db: SqlDatabase): (row: NewLineage) => Fails<void> {
   return ({ hash, identity, kind, madeAt, parent, publicId, where }) =>
     db.run(RECORD, hash, publicId, kind, identity, parent ?? null, madeAt, where ?? null);
 }
 
-function markEndedIn(db: SqlDatabase): (ending: Ending) => Fails<void> {
-  return ({ hash, now, why }) => db.run(MARK_ENDED, now, why, hash);
-}
-
-function treeOf(roots: string): string {
-  return `WITH RECURSIVE tree(hash) AS (
-    ${roots}
-    UNION
-    SELECT l.hash FROM credential_lineage AS l JOIN tree ON l.parent_hash = tree.hash
-  ) SELECT hash FROM tree`;
-}
-
-const NameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
-const HashRow = Schema.Struct({ hash: Schema.String });
-const HolderRow = Schema.Struct({ expires_at: IsoTimeSchema, identity_name: NameColumn });
-
-function decodedWith<RowSchema extends Schema.Decoder<unknown>>(schema: RowSchema) {
-  return (row: unknown): Fails<Option.Option<RowSchema["Type"]>> => {
-    if (!Predicate.isObject(row)) {
-      return Effect.succeedNone;
-    }
-    return Effect.mapBoth(Schema.decodeEffect(schema)(row), { onFailure: unreadable, onSuccess: Option.some });
-  };
-}
-
-const holderRow = decodedWith(HolderRow);
-
-function hashesIn(db: SqlDatabase, roots: string, ...params: readonly string[]): Fails<readonly TokenHash[]> {
-  return Effect.flatMap(db.all(treeOf(roots), ...params), (rows) =>
-    Effect.mapBoth(
-      Effect.forEach(rows, (row) => Schema.decodeUnknownEffect(HashRow)(row), ONE_AT_A_TIME),
-      { onFailure: unreadable, onSuccess: Arr.map(({ hash }) => tokenHash(hash)) },
-    ),
-  );
-}
-
-interface KindTable {
-  readonly kind: EndedCredential["kind"];
-  readonly find: string;
-  readonly end: string;
-}
-
-function kindTables(db: SqlDatabase): readonly KindTable[] {
-  return [
-    {
-      end: "DELETE FROM login_credentials WHERE hash = ?",
-      find: "SELECT identity_name, expires_at FROM login_credentials WHERE hash = ?",
-      kind: "session",
-    },
-    {
-      end: `UPDATE agent_session_tokens SET revoked = ${TRUE[db.dialect]} WHERE hash = ?`,
-      find: `SELECT identity_name, expires_at FROM agent_session_tokens WHERE hash = ? AND ${isFalse[db.dialect]("revoked")}`,
-      kind: "agent session",
-    },
-    {
-      end: `UPDATE tokens SET revoked = ${TRUE[db.dialect]} WHERE token_hash = ?`,
-      find: `SELECT k.identity_name, COALESCE(k.expires_at, '${NEVER}') AS expires_at
-        FROM agent_keys AS k JOIN tokens AS t ON t.token_hash = k.hash
-        WHERE k.hash = ? AND ${isFalse[db.dialect]("t.revoked")}`,
-      kind: "agent key",
-    },
-    {
-      end: "DELETE FROM join_codes WHERE code_hash = ?",
-      find: "SELECT agent AS identity_name, expires_at FROM join_codes WHERE code_hash = ?",
-      kind: "join code",
-    },
-  ];
-}
-
-interface EndingIn {
-  readonly db: SqlDatabase;
-  readonly hash: TokenHash;
-  readonly now: IsoTime;
-}
-
-function endIn({ db, hash, now }: EndingIn) {
-  return (table: KindTable): Fails<Option.Option<EndedCredential>> =>
-    Effect.gen(function* endInTable() {
-      const found = yield* Effect.flatMap(db.get(table.find, hash), holderRow);
-      if (Option.isNone(found)) {
-        return Option.none();
-      }
-      yield* db.run(table.end, hash);
-      const ended = { hash, identity: found.value.identity_name, kind: table.kind };
-      return Option.some(ended).pipe(Option.filter(() => now < found.value.expires_at));
-    });
-}
-
-function endEach(db: SqlDatabase, hashes: readonly TokenHash[], now: IsoTime): Fails<readonly EndedCredential[]> {
-  return Effect.map(
-    Effect.forEach(
-      hashes,
-      (hash) =>
-        Effect.gen(function* endOne() {
-          const ended = yield* Effect.forEach(kindTables(db), endIn({ db, hash, now }), ONE_AT_A_TIME);
-          yield* markEndedIn(db)({ hash, now, why: "revoked" });
-          return Arr.getSomes(ended);
-        }),
-      ONE_AT_A_TIME,
-    ),
-    Arr.flatten,
-  );
-}
-
 function revokeTreeIn(db: SqlDatabase): (hash: TokenHash, now: IsoTime) => Fails<readonly EndedCredential[]> {
   return (hash, now) =>
     Effect.flatMap(hashesIn(db, "SELECT hash FROM credential_lineage WHERE hash = ?", hash), (hashes) =>
-      endEach(db, hashes, now),
+      endEach({ db, hashes, now }),
     );
 }
 
@@ -239,20 +140,56 @@ function revokeSessionIn(db: SqlDatabase): LineageSection["revokeSession"] {
 function belowRevokedTokensIn(db: SqlDatabase): LineageSection["revokeBelowRevokedTokens"] {
   const roots = `SELECT token_hash AS hash FROM tokens WHERE identity_name = ? AND revoked = ${TRUE[db.dialect]}`;
   return (identity, now) =>
-    db.transaction(Effect.flatMap(hashesIn(db, roots, identity), (hashes) => endEach(db, hashes, now)));
+    db.transaction(Effect.flatMap(hashesIn(db, roots, identity), (hashes) => endEach({ db, hashes, now })));
 }
 
-function credentialsOfIn(db: SqlDatabase): LineageSection["endCredentialsOf"] {
-  const roots = `SELECT token_hash AS hash FROM tokens WHERE identity_name = ?
+const PERSON_ROOTS = `SELECT token_hash AS hash FROM tokens WHERE identity_name = ?
     UNION SELECT hash FROM credential_lineage WHERE identity_name = ? AND kind <> 'join code'`;
+
+function credentialsOfIn(db: SqlDatabase): LineageSection["endCredentialsOf"] {
   return (identity, now) =>
-    db.transaction(Effect.flatMap(hashesIn(db, roots, identity, identity), (hashes) => endEach(db, hashes, now)));
+    db.transaction(
+      Effect.flatMap(hashesIn(db, PERSON_ROOTS, identity, identity), (hashes) => endEach({ db, hashes, now })),
+    );
+}
+
+const SENT_ROOT = `SELECT token_hash AS hash FROM tokens WHERE token_hash = ?
+    UNION SELECT hash FROM credential_lineage WHERE hash = ?`;
+
+const MAKE_ROOT = "UPDATE credential_lineage SET parent_hash = NULL WHERE hash = ?";
+
+function everywhereBut(db: SqlDatabase, { current, identity }: LogOutEverywhere): Fails<readonly TokenHash[]> {
+  return Effect.gen(function* everywhereButCurrent() {
+    const tree = yield* hashesIn(db, PERSON_ROOTS, identity, identity);
+    const sent = Arr.fromNullishOr(current);
+    const kept = yield* Effect.forEach(sent, (hash) => hashesIn(db, SENT_ROOT, hash, hash), ONE_AT_A_TIME);
+    return Arr.difference(tree, Arr.flatten(kept));
+  });
+}
+
+function previewIn(db: SqlDatabase): LineageSection["previewLogOutEverywhere"] {
+  return (request) =>
+    db.transaction(Effect.flatMap(everywhereBut(db, request), (hashes) => liveAmong({ db, hashes, now: request.now })));
+}
+
+function logOutEverywhereIn(db: SqlDatabase): LineageSection["logOutEverywhere"] {
+  return (request) =>
+    db.transaction(
+      Effect.gen(function* logOutEverywhere() {
+        const hashes = yield* everywhereBut(db, request);
+        const ended = yield* endEach({ db, hashes, now: request.now });
+        yield* Effect.forEach(Arr.fromNullishOr(request.current), (hash) => db.run(MAKE_ROOT, hash), ONE_AT_A_TIME);
+        return ended;
+      }),
+    );
 }
 
 function sqlLineage(db: SqlDatabase): LineageSection {
   return {
     endCredentialsOf: credentialsOfIn(db),
     listSessions: listIn(db),
+    logOutEverywhere: logOutEverywhereIn(db),
+    previewLogOutEverywhere: previewIn(db),
     revokeBelowRevokedTokens: belowRevokedTokensIn(db),
     revokeSession: revokeSessionIn(db),
   };

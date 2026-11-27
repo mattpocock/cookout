@@ -119,15 +119,20 @@ function activeKey({ keys, tokens }: MemoryKeys, hash: TokenHash): Option.Option
 
 function enderOf(held: MemoryKeys): Ender {
   const { tokens } = held;
-  return (hash, now) =>
-    Option.flatMap(activeKey(held, hash), (key) => {
-      tokens.activeTokens.delete(hash);
-      tokens.revokedTokens.set(hash, key.identity);
-      return Option.as(
-        Option.liftPredicate(key, () => !isPastExpiry(now)(key.expiresAt)),
-        endedKey({ hash, identity: key.identity }),
-      );
-    });
+  return {
+    end: (hash) => {
+      Option.map(activeKey(held, hash), (key) => {
+        tokens.activeTokens.delete(hash);
+        tokens.revokedTokens.set(hash, key.identity);
+        return key;
+      });
+    },
+    live: (hash, now) =>
+      Option.map(
+        Option.filter(activeKey(held, hash), (key) => !isPastExpiry(now)(key.expiresAt)),
+        (key) => endedKey({ hash, identity: key.identity }),
+      ),
+  };
 }
 
 function memoryAgentKeys({ lineage, open, tokens }: MemoryAgentKeysOptions): AgentKeysSection {

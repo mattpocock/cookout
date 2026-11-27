@@ -2,6 +2,8 @@ import type {
   CreateAgentKeyResponse,
   ListAgentKeysResponse,
   ListSessionsResponse,
+  LogOutEverywherePreview,
+  LogOutEverywhereResponse,
   LoginCollectedResponse,
   LoginRequestResponse,
   LoginRequestStartedResponse,
@@ -112,6 +114,20 @@ const ListSessionsResponseSchema = matchesWire<ListSessionsResponse>()(
   Schema.Struct({ sessions: Schema.Array(SessionViewSchema) }),
 );
 
+const LogOutEverywhereCountsSchema = Schema.Struct({
+  agentSessions: Schema.Int,
+  joinCodes: Schema.Int,
+  sessions: Schema.Int,
+});
+
+const LogOutEverywherePreviewSchema = matchesWire<LogOutEverywherePreview>()(
+  Schema.Struct({ willEnd: LogOutEverywhereCountsSchema }),
+);
+
+const LogOutEverywhereResponseSchema = matchesWire<LogOutEverywhereResponse>()(
+  Schema.Struct({ ended: LogOutEverywhereCountsSchema }),
+);
+
 const RevokeSessionResponseSchema = matchesWire<RevokeSessionResponse>()(Schema.Struct({ ended: Schema.Int }));
 
 const CreateAgentKeyRequestSchema = Schema.Struct({
@@ -155,6 +171,8 @@ export {
   RevokeAgentKeyResponseSchema,
   CollectLoginRequestSchema,
   ListSessionsResponseSchema,
+  LogOutEverywherePreviewSchema,
+  LogOutEverywhereResponseSchema,
   RevokeSessionResponseSchema,
   LoginCollectedResponseSchema,
   LoginRequestResponseSchema,

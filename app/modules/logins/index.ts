@@ -20,7 +20,8 @@ interface SessionMadeByView {
   readonly where?: string;
 }
 
-interface SessionView {
+/** One of a person's live sessions, as `GET /v1/sessions` lists it. */
+export interface SessionView {
   readonly id: PublicId;
   readonly kind: "web" | "cli";
   readonly where: string;
@@ -158,6 +159,29 @@ export const sessionsPath = "/v1/sessions";
  */
 export const sessionByIdPath = "/v1/sessions/:id";
 
+/**
+ * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in
+ * the caller's lineage ends except the session the request was sent with and what it made, which becomes a root.
+ */
+export const logOutEverywherePath = "/v1/sessions/log-out-everywhere";
+
+/** The live credentials Log out everywhere ends, counted by kind. */
+export interface LogOutEverywhereCounts {
+  readonly sessions: number;
+  readonly agentSessions: number;
+  readonly joinCodes: number;
+}
+
+/** The answer to `GET /v1/sessions/log-out-everywhere`: what Log out everywhere would end now. */
+export interface LogOutEverywherePreview {
+  readonly willEnd: LogOutEverywhereCounts;
+}
+
+/** The answer to `POST /v1/sessions/log-out-everywhere`: what it ended. */
+export interface LogOutEverywhereResponse {
+  readonly ended: LogOutEverywhereCounts;
+}
+
 /** The answer to `GET /v1/sessions`, oldest first. */
 export interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -204,12 +228,19 @@ export interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
+  readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
+  /**
+   * `POST /v1/sessions/log-out-everywhere` (a human): ends every credential in the caller's lineage except this
+   * client's session and what it made, whose open event streams close, and answers what ended by kind.
+   */
+  readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 
 /**
  * `POST /v1/identities/:name/agent-keys` (the agent's owner only: an agent is 403 `human_only`, anyone else 403
  * `not_owner`, an admin included) makes an agent key, answering its secret this once; `GET` (the owner or an admin)
- * lists the agent's live keys, never a secret (ADR 0154).
+ * lists the agent's live keys, never a secret (ADR 0155).
  */
 export const agentKeysPath = "/v1/identities/:name/agent-keys";
 
@@ -256,18 +287,12 @@ export interface RevokeAgentKeyResponse {
   readonly ended: number;
 }
 
-/** The SDK's calls for an agent's keys (ADR 0154). */
+/** The SDK's calls for an agent's keys (ADR 0155). */
 export interface AgentKeyCalls {
-  /**
-   * `POST /v1/identities/:name/agent-keys` (the agent's owner): makes a key, answering its secret this once. Set it as
-   * the agent's `COOKOUT_TOKEN` (in CI, a secret). A name one of its live keys has is 409 `agent_key_name_taken`.
-   */
+  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
   readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
   /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
   readonly listAgentKeys: (agent: string) => Promise<ListAgentKeysResponse>;
-  /**
-   * `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key, with the agent session
-   * joined with it, whose open event streams close. An unknown ID is 404 `agent_key_not_found`.
-   */
+  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
   readonly revokeAgentKey: (agent: string, id: PublicId) => Promise<RevokeAgentKeyResponse>;
 }

@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import type { Fails } from "./errors.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SectionsBesideIdentities } from "./identity-section-types.ts";
 import { memoryAdminSetting } from "./admin-setting.ts";
@@ -10,6 +11,10 @@ import { memoryReach } from "./reach-sections.ts";
 
 type MemoryIdentitySections = Omit<ReturnType<typeof memoryIdentities>, "tokens"> & SectionsBesideIdentities;
 
+function openIn(state: MemoryState): <Done>(work: () => Done) => Fails<Done> {
+  return (work) => Effect.andThen(state.ensureOpen, Effect.sync(work));
+}
+
 function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   const { tokens, ...identities } = memoryIdentities(state);
   const { dropLoginCredentials, ...loginRequests } = memoryLoginRequests({
@@ -18,11 +23,12 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   });
   const { dropPresence, ...presence } = memoryReach(state);
   const { dropOfflineAlerts, ...offlineAlerts } = memoryOfflineAlerts(state);
+  const open = openIn(state);
   return {
     ...identities,
     ...memoryAgentKeys({
       lineage: state.lineage,
-      open: (work) => Effect.andThen(state.ensureOpen, Effect.sync(work)),
+      open,
       tokens,
     }),
     ...memoryAdminSetting(identities),
@@ -33,11 +39,9 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
       Effect.tap(identities.deactivateIdentity(name), ({ status }) =>
         Effect.when(dropLoginCredentials(name), Effect.succeed(status === "deactivated")),
       ),
-    endCredentialsOf: (name, now) =>
-      Effect.andThen(
-        state.ensureOpen,
-        Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
-      ),
+    endCredentialsOf: (name, now) => open(() => state.lineage.endCredentialsOf(name, now)),
+    logOutEverywhere: (request) => open(() => state.lineage.logOutEverywhere(request)),
+    previewLogOutEverywhere: (request) => open(() => state.lineage.previewLogOutEverywhere(request)),
     removeIdentity: (name, messages) =>
       Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
         Effect.when(
@@ -48,11 +52,7 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
           Effect.succeed(status === "deleted"),
         ),
       ),
-    revokeBelowRevokedTokens: (name, now) =>
-      Effect.andThen(
-        state.ensureOpen,
-        Effect.sync(() => state.lineage.revokeBelowRevokedTokens(name, now)),
-      ),
+    revokeBelowRevokedTokens: (name, now) => open(() => state.lineage.revokeBelowRevokedTokens(name, now)),
   };
 }
 

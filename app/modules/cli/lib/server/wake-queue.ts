@@ -39,6 +39,7 @@ interface Heard {
 interface Waking {
   readonly asAgent: ClientWithAgentSessionState;
   readonly during: During;
+  readonly latest: Effect.Effect<Registration>;
   readonly place: RunPlace;
   readonly registration: Registration;
 }
@@ -150,10 +151,10 @@ interface Queued extends Waking {
 }
 
 function runGiven(queued: Queued) {
-  const { asAgent, change, during, place, registration } = queued;
+  const { asAgent, change, during, latest, place } = queued;
   return (offered: readonly InboxItem[]): Effect.Effect<void, never, Spawner> =>
     Effect.gen(function* runAndRetry() {
-      yield* change(withRun(offered));
+      const registration = yield* Effect.andThen(change(withRun(offered)), latest);
       const given = yield* liveFirst({
         log: place.log,
         registration,

@@ -3,6 +3,7 @@ import {
   agentKeyPath,
   agentKeysPath,
   collectLoginRequestPath,
+  logOutEverywherePath,
   loginPath,
   loginRequestApprovalPath,
   loginRequestPath,
@@ -14,6 +15,8 @@ import {
   isCreateAgentKeyResponse,
   isListAgentKeysResponse,
   isListSessionsResponse,
+  isLogOutEverywherePreview,
+  isLogOutEverywhereResponse,
   isLoginCollectedResponse,
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
@@ -62,11 +65,32 @@ function agentKeyCalls(server: ClientConnection): AgentKeyCalls {
   };
 }
 
-function sessionCalls(server: ClientConnection): Pick<SessionLoginCalls, "listSessions" | "revokeSession"> {
+type SessionCalls = Pick<
+  SessionLoginCalls,
+  "listSessions" | "revokeSession" | "previewLogOutEverywhere" | "logOutEverywhere"
+>;
+
+function sessionCalls(server: ClientConnection): SessionCalls {
   return {
     listSessions: async () => {
       const listed = await send(server, { isExpected: isListSessionsResponse, method: "GET", path: sessionsPath });
       return listed;
+    },
+    logOutEverywhere: async () => {
+      const ended = await send(server, {
+        isExpected: isLogOutEverywhereResponse,
+        method: "POST",
+        path: logOutEverywherePath,
+      });
+      return ended;
+    },
+    previewLogOutEverywhere: async () => {
+      const preview = await send(server, {
+        isExpected: isLogOutEverywherePreview,
+        method: "GET",
+        path: logOutEverywherePath,
+      });
+      return preview;
     },
     revokeSession: async (id) => {
       const params = { id };
