@@ -9,6 +9,7 @@ import {
   newMessageFixture,
   onPostgresDatabase,
   openStore,
+  testSecretsCipher,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Redacted } from "effect";
@@ -25,6 +26,7 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "DROP TABLE secrets_key",
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
   "ALTER TABLE deliveries DROP COLUMN called_at",
   "ALTER TABLE messages DROP COLUMN title, DROP COLUMN title_set_by, DROP COLUMN title_set_at",
@@ -46,8 +48,9 @@ const BEFORE_SEARCH = [
   "UPDATE schema_version SET version = 3",
 ];
 const BEFORE_LOGIN_EXPIRY = [
+  "DROP TABLE secrets_key",
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 1",
+  "UPDATE schema_version SET version = version - 2",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
@@ -74,7 +77,7 @@ function failInsertsWith(
 }
 
 function opened(url: Redacted.Redacted): ReturnType<typeof openStore<StorageUnavailable, never>> {
-  return url.pipe(postgresStorage, openStore);
+  return openStore(postgresStorage({ cipher: testSecretsCipher, url }));
 }
 
 function openAndClose(url: Redacted.Redacted): Effect.Effect<void, StorageUnavailable> {

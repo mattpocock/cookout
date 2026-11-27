@@ -12,6 +12,13 @@ import type { AvatarId } from "../avatars/index.ts";
 import type { Effect } from "effect";
 import { liveSecrets } from "./lib/server/live.ts";
 
+/**
+ * The cipher for the secrets the server must send on, kept encrypted at rest (ADR 0150): trigger tokens, trigger
+ * header values and Webhook command secrets. `secretsCipher` makes one from `COOKOUT_SECRETS_KEY`; `isSecretsKey`
+ * says whether a value can be that key, and `newSecretsKey` makes one.
+ */
+export { type SecretsCipher, isSecretsKey, newSecretsKey, secretsCipher } from "./lib/server/cipher.ts";
+
 export interface SecretsService {
   /** A new bearer token: `cookout_` and at least 256 random bits. */
   readonly newToken: Effect.Effect<Token>;
