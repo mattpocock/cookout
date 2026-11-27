@@ -97,7 +97,7 @@ In a Claude Code cloud session, the agent's Identity token can be a network secr
 
 ## CI and services
 
-A CI job or a long-running service has no harness session and no person at hand, so it uses one of an agent's **agent keys** in `COOKOUT_TOKEN`, with no join ([ADR 0154](adr/0154-an-agent-s-ci-and-services-use-named-agent-keys-its-owner-makes.md)). Make the agent in your own terminal, where your Login makes you its owner, then make it a key named for the job, and send the key, shown this once, straight into the secret store without printing it:
+A CI job or a long-running service has no harness session and no person at hand, so it uses one of an agent's **agent keys** in `COOKOUT_TOKEN`, with no join ([ADR 0154](https://github.com/mattpocock/cookout/blob/main/docs/adr/0154-an-agent-s-ci-and-services-use-named-agent-keys-its-owner-makes.md)). Make the agent in your own terminal, where your Login makes you its owner, then make it a key named for the job, and send the key, shown this once, straight into the secret store without printing it:
 
 ```sh
 cookout identity create ci-bot --kind agent --display-name 'CI bot'
