@@ -17,6 +17,7 @@ import {
   isLoginRequestStartedResponse,
   isLogoutResponse,
   isRevokeSessionResponse,
+  isWebLoginCollectedResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { LoginCalls } from "../../logins/index.ts";
@@ -59,9 +60,35 @@ function sessionCalls(server: ClientConnection): SessionCalls {
   };
 }
 
+function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogin" | "collectWebLogin"> {
+  return {
+    collectWebLogin: async (requestId) => {
+      const body = { kind: "web", requestId };
+      const collected = await send(server, {
+        body,
+        isExpected: isWebLoginCollectedResponse,
+        method: "POST",
+        path: collectLoginRequestPath,
+      });
+      return collected;
+    },
+    startWebLogin: async () => {
+      const body = { kind: "web" };
+      const started = await send(server, {
+        body,
+        isExpected: isLoginRequestStartedResponse,
+        method: "POST",
+        path: loginRequestsPath,
+      });
+      return started;
+    },
+  };
+}
+
 function loginCalls(server: ClientConnection): LoginCalls {
   return {
     ...sessionCalls(server),
+    ...webLoginCalls(server),
     approveLogin: async (userCode) => {
       const params = { code: userCode };
       const approved = await send(server, {

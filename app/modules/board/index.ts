@@ -119,6 +119,11 @@
  * (`POST /v1/session`) through a client with that token for the cookout at `url`; a refused login (an agent's token, a bad token)
  * keeps the server's error code to show. `logOut` ends the session on the server (`DELETE /v1/session`, which revokes the
  * session cookie's credential) and is then logged out; if the server doesn't answer, it asks who is logged in again.
+ * `session.webLogin` logs in by approval from another device: `start` starts a web Login request (`startWebLogin`) and
+ * shows its code, where to type it (`approvalUrl`) and when it expires, then collects it every 2 s, the CLI's interval
+ * (`collectWebLogin`), passing over a rate limit or an unreachable server. An approved collect has set the session
+ * cookie, so the session is logged in as the approver at once, without a reload; a request the server no longer has
+ * has expired. The request ID lives only in memory: `back`, or the last reader leaving, drops it.
  *
  * `createApprovalCode` makes the approval page's code field store: the code a person types (trimmed, upper-cased, its
  * dash put back), or that what they typed isn't a code; it starts empty and empties again when the page closes, so no
@@ -186,7 +191,7 @@ export {
   reactionRefusal,
   reactionsOf,
 } from "./lib/part-selectors.ts";
-export type { BoardState } from "./lib/board-store.ts";
+export type { BoardState, SessionState, WebLoginState } from "./lib/board-store.ts";
 export type { MarkAllState, MarkChannelRefusal } from "./lib/inbox-calls.ts";
 export {
   type AlertsShown,

@@ -27,15 +27,18 @@ const RequestRow = Schema.Struct({
   created_at: IsoTimeSchema,
   expires_at: IsoTimeSchema,
   host: Schema.String,
+  kind: Schema.Literals(["web", "cli"]),
   user_agent: Schema.NullOr(Schema.String),
   user_code: Schema.String,
 });
 
 type RequestRowType = typeof RequestRow.Type;
 
-const REQUEST_COLUMNS = "approved_by, approved_with, client_ip, created_at, expires_at, host, user_agent, user_code";
+const REQUEST_COLUMNS =
+  "approved_by, approved_with, client_ip, created_at, expires_at, host, kind, user_agent, user_code";
 
-const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE request_hash = ? AND expires_at > ?`;
+const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests
+  WHERE request_hash = ? AND kind = ? AND expires_at > ?`;
 
 const APPROVE = `UPDATE login_requests
   SET approved_with = CASE WHEN approved_by IS NULL THEN ? ELSE approved_with END, approved_by = coalesce(approved_by, ?)
@@ -44,8 +47,8 @@ const APPROVE = `UPDATE login_requests
 const FIND_LIVE_BY_CODE = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE user_code = ? AND expires_at > ?`;
 
 const INSERT_REQUEST = `INSERT INTO login_requests
-  (request_hash, user_code, host, created_at, expires_at, client_ip, user_agent)
-  VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  (request_hash, user_code, kind, host, created_at, expires_at, client_ip, user_agent)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const ISSUE_CREDENTIAL = `INSERT INTO login_credentials (hash, identity_name, host, created_at, last_used_at, expires_at)
   SELECT ?, name, ?, ?, ?, ? FROM identities WHERE name = ?`;
@@ -85,8 +88,9 @@ function addIn(db: SqlDatabase): LoginRequestsSection["addLoginRequest"] {
         if (Option.isSome(taken)) {
           return "code_taken" as const;
         }
-        const { createdAt, expiresAt, host, requestHash, userCode } = request;
-        yield* db.run(INSERT_REQUEST, requestHash, userCode, host, createdAt, expiresAt, ...originColumns(request));
+        const { createdAt, expiresAt, host, kind = "cli", requestHash, userCode } = request;
+        const columns = [requestHash, userCode, kind, host, createdAt, expiresAt, ...originColumns(request)];
+        yield* db.run(INSERT_REQUEST, ...columns);
         return "added" as const;
       }),
     );
@@ -119,7 +123,7 @@ function parentOf(approvedWith: string | null): TokenHash | undefined {
 function issueIn(db: SqlDatabase, { collect, publicId }: Issuing) {
   const { credential } = sqlQueries(db);
   const { credentialHash, now, requestHash } = collect;
-  return ({ approved_by: approver, approved_with: approvedWith, host }: RequestRowType): Fails<LoginCollection> =>
+  return ({ approved_by: approver, approved_with: approvedWith, host, kind }: RequestRowType): Fails<LoginCollection> =>
     Effect.gen(function* issueCredential() {
       yield* db.run("DELETE FROM login_requests WHERE request_hash = ?", requestHash);
       yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, now, loginCredentialExpiry(now), approver);
@@ -129,7 +133,7 @@ function issueIn(db: SqlDatabase, { collect, publicId }: Issuing) {
           lineageIn(db).record({
             hash: credentialHash,
             identity: identity.name,
-            kind: "cli",
+            kind,
             madeAt: now,
             parent: parentOf(approvedWith),
             publicId,
@@ -147,7 +151,8 @@ function collectIn(db: SqlDatabase): LoginRequestsSection["collectLoginRequest"]
     Effect.flatMap(newPublicId, (publicId) =>
       db.transaction(
         Effect.gen(function* collectRequest() {
-          const found = yield* Effect.flatMap(db.get(FIND_LIVE_BY_HASH, collect.requestHash, collect.now), requestRow);
+          const { kind = "cli", now, requestHash } = collect;
+          const found = yield* Effect.flatMap(db.get(FIND_LIVE_BY_HASH, requestHash, kind, now), requestRow);
           if (Option.isNone(found)) {
             return GONE;
           }

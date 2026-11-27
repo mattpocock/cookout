@@ -104,6 +104,14 @@ export interface LoginRequestStartedResponse {
   readonly approvalPath: string;
 }
 
+/**
+ * A web login request's collect answer (#909): pending until a human approves, then, once, that human, with the new
+ * session set as the session cookie. The body never holds the session's secret.
+ */
+export type WebLoginCollectedResponse =
+  | { readonly status: "pending" }
+  | { readonly status: "approved"; readonly identity: Identity };
+
 /** Pending until a human approves, then that human and a new Login credential for this machine, once. */
 export type LoginCollectedResponse =
   | { readonly status: "pending" }
@@ -196,6 +204,17 @@ export interface LoginCalls {
    * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
    */
   readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
+  /**
+   * `POST /v1/login-requests` with `{ kind: "web" }` (no token): starts a browser's login request (#909), recording
+   * the browser and OS its User-Agent names. It is approved as any other, and collects only with `collectWebLogin`.
+   */
+  readonly startWebLogin: () => Promise<LoginRequestStartedResponse>;
+  /**
+   * `POST /v1/login-requests/collect` with `{ kind: "web" }` (no token): `pending` until a human approves, then, once,
+   * that human, setting the session cookie. A CLI request, or a wrong, expired or collected request ID, is 404
+   * `login_request_not_found`, as a web request is to `collectLogin`.
+   */
+  readonly collectWebLogin: (requestId: Token) => Promise<WebLoginCollectedResponse>;
   /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
   readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
   /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
