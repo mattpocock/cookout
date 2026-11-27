@@ -4,6 +4,7 @@ const postgresFiles = [
   "app/modules/storage/tests/server/*.contract.test.ts",
   "app/modules/storage/tests/server/postgres.test.ts",
   "app/modules/storage/tests/server/postgres-query-plans.test.ts",
+  "app/modules/storage/tests/server/postgres-sealed-secrets.test.ts",
   "app/modules/cli/tests/server/serve-postgres.test.ts",
 ];
 

@@ -1,11 +1,5 @@
 import { Array as Arr, Context, Effect, Layer, Ref } from "effect";
-import {
-  AssetStore,
-  StorageUnavailable,
-  diskAssetStore,
-  memoryStorage,
-  sqliteStorage,
-} from "../../../storage/server.ts";
+import { AssetStore, StorageUnavailable, diskAssetStore, memoryStorage } from "../../../storage/server.ts";
 import type { FileSystem, Path, Scope } from "effect";
 import {
   ScriptedTriggers,
@@ -19,6 +13,7 @@ import {
   freshDatabasePath,
   memoryAssets,
   pausedMidRunStorage,
+  testSqliteStorage,
   unusableStorage,
 } from "./storage.ts";
 import type { AgedLogins } from "./aged-logins.ts";
@@ -51,7 +46,7 @@ function sharedStore(layer: Layer.Layer<Storage>): StorageFactory {
 
 function sqliteStores(database: string): Layer.Layer<Stores> {
   const assets = diskAssetStore(`${database}-assets`);
-  return Layer.merge(sqliteStorage(database), assets).pipe(Layer.provide(nodeServices), Layer.orDie);
+  return Layer.merge(testSqliteStorage(database), assets).pipe(Layer.provide(nodeServices), Layer.orDie);
 }
 
 const sharedLayers: Readonly<Record<Exclude<StorageKind, "sqlite">, Layer.Layer<Storage>>> = {

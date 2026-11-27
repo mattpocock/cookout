@@ -220,7 +220,12 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
         );
       }).pipe(
         Effect.provideService(ConfigProvider.ConfigProvider, env),
-        Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
+        Effect.catchTags({
+          ConfigError: Effect.die,
+          SecretsKeyMismatch: Effect.die,
+          ServeError: Effect.die,
+          StorageUnavailable: Effect.die,
+        }),
       );
     const boot = Effect.orDie(bootAs(options.adminName));
     return { adminToken, ageLogin, boot, bootAs, logs: logs.lines, triggers: scriptedTriggersIn(services) };

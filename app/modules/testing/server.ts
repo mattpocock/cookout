@@ -121,6 +121,13 @@ export {
   writeAgentSessionStates,
 } from "./lib/server/agent-sessions.ts";
 export { callId, secretsTest } from "./lib/server/secrets.ts";
+export {
+  otherSecretsCipher,
+  otherSecretsKey,
+  plaintextCipher,
+  testSecretsCipher,
+  testSecretsKey,
+} from "./lib/server/secrets-key.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export {
   freshDatabasePath,
@@ -129,7 +136,7 @@ export {
   openStore,
   storageLayers,
 } from "./lib/server/storage.ts";
-export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
+export { emptyPostgresDatabase, onPostgresDatabase, postgresRows } from "./lib/server/postgres.ts";
 export { assetStoreLayers, freshS3Bucket, s3ServeSettings } from "./lib/server/s3.ts";
 
 export {
