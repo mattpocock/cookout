@@ -138,10 +138,10 @@ it.effect.each(storageLayers)(
         raisedAt: FAILED_AT,
         trigger,
       });
-      const listed = yield* storage.listOfflineAlerts(ADA);
+      const listed = yield* storage.listAlerts(ADA);
 
       expect(stored).toMatchObject({ lastResult: { at: FAILED_AT, ok: false, ...FAILURE } });
-      expect(Arr.map(listed, (each) => each.trigger)).toStrictEqual([trigger]);
+      expect(Arr.map(listed, (each) => "trigger" in each && each.trigger)).toStrictEqual([trigger]);
     }),
 );
 
@@ -162,7 +162,7 @@ it.effect.each(storageLayers)(
       });
       const backOnline = yield* storage.markBackOnline(TRIAGE, CLEARED_AT);
       const cleared = yield* storage.markTriggerAlertsCleared(TRIAGE, CLEARED_AT);
-      const listed = yield* storage.listOfflineAlerts(owner);
+      const listed = yield* storage.listAlerts(owner);
 
       expect([raised, backOnline]).toMatchObject([{ offlineReason: "trigger failed", trigger }, []]);
       expect([cleared, listed]).toStrictEqual([

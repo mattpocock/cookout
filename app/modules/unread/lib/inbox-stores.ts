@@ -18,6 +18,7 @@ import type {
   Nudge,
   NudgeId,
   OfflineAlertId,
+  PublicId,
   Refusal,
 } from "../../sdk/index.ts";
 import {
@@ -50,6 +51,7 @@ type AlertsState = AlertsShown;
 
 interface Alerts extends Shown<AlertsState> {
   readonly markRead: (id: OfflineAlertId) => void;
+  readonly revoke: (session: PublicId) => void;
 }
 
 type NudgesState = NudgesShown;
@@ -114,7 +116,7 @@ function noticeStores(
 ): Pick<InboxStores, "alerts" | "deactivatedQuietAgents" | "deactivationOffers" | "nudges"> {
   const calls = board.inboxCalls;
   return {
-    alerts: { ...shownBy(board, alertsOf), markRead: calls.markAlertRead },
+    alerts: { ...shownBy(board, alertsOf), markRead: calls.markAlertRead, revoke: calls.revokeLoginSession },
     deactivatedQuietAgents: {
       ...shownBy(board, quietAgentsOf),
       hold: calls.hold,

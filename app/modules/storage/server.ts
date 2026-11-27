@@ -55,6 +55,7 @@ export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactiv
 export type { StoredDeactivatedQuietAgent } from "./lib/server/deactivated-quiet-agents.ts";
 export type { StoredPresence } from "./lib/server/presence.ts";
 export type { StoredTrigger } from "./lib/server/triggers.ts";
+export type { StoredInboxAlert, StoredLoginAlert } from "./lib/server/inbox-alerts.ts";
 export type { NewWebhookCommandCall } from "./lib/server/command-calls.ts";
 export type { JoinCodeRedemption } from "./lib/server/join-codes.ts";
 export type { AgentAt, StoredAgentSession, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
@@ -65,6 +66,7 @@ export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
  */
 export type { RequestOrigin } from "./lib/server/request-origins.ts";
 export type {
+  IssuedLoginCredential,
   LoginCollection,
   LoginCredentialLookup,
   LoginRequest,

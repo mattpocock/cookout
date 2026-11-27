@@ -541,400 +541,10 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
-declare const brand$4: unique symbol;
-/**
- * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
- * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
- */
-type LiveConnectionId = number & {
-  readonly [brand$4]: "LiveConnectionId";
-};
-/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
-declare const presenceName = "presence";
-/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
-type LiveConnectionDetail = {
-  readonly via: "watch";
-  readonly host?: string;
-} | {
-  readonly via: "web";
-};
-/**
- * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
- * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
- * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
- */
-declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed", "wake run failed"];
-/** One of `offlineReasons`. */
-type OfflineReason = (typeof offlineReasons)[number];
-/**
- * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
- * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
- * it never was, and why it went offline when the server knows. A Deactivated identity is always offline. `warning` is
- * the owner's warning: set only in what the agent's owner reads, while the agent is offline after an unexpected end
- * (the end that raised an offline alert), until it next has a live connection.
- *
- * An agent with a trigger URL whose last call didn't fail can be reached now, so it is online too (Matt, 2026-11-24,
- * mattpocock/cookout#378): when that is the only reason, it carries `wakesOnMention` and no `connection`. One whose
- * last trigger call failed and that has no live connection is Unreachable: offline, carrying that call's result in
- * `unreachable`.
- *
- * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
- * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
- * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
- * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
- * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
- */
-interface Presence {
-  readonly identity: IdentityName;
-  readonly online: boolean;
-  readonly connection?: LiveConnectionDetail;
-  readonly lastSeenAt?: IsoTime;
-  readonly offlineReason?: OfflineReason;
-  readonly warning?: true;
-  readonly wakesOnMention?: true;
-  readonly unreachable?: TriggerResult;
-}
-/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
-interface PresenceResponse {
-  readonly presence: readonly Presence[];
-}
-/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
-type WakeRunFailure = {
-  readonly exitCode: number;
-} | {
-  readonly timedOutAfterMinutes: number;
-};
-/** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
-interface WakeRunResponse {
-  readonly wakeRun: boolean;
-}
-/**
- * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
- * newest one the caller has seen.
- */
-type OfflineAlertId = number & {
-  readonly [brand$4]: "OfflineAlertId";
-};
-/**
- * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
- * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
- * when the agent next had a live connection, absent while it is still offline.
- *
- * A failed call to an agent's trigger URL raises one, `trigger failed`, once per failure streak (Matt, 2026-11-24,
- * mattpocock/cookout#378). It carries `trigger`: the message that didn't get through and the status or error the
- * call ended with. The next successful call sets its `backOnlineAt`; a live connection doesn't.
- */
-interface OfflineAlert {
-  readonly id: OfflineAlertId;
-  readonly agent: IdentityName;
-  readonly offlineReason: OfflineReason;
-  readonly raisedAt: IsoTime;
-  readonly read: boolean;
-  readonly backOnlineAt?: IsoTime;
-  readonly trigger?: TriggerFailure;
-}
-interface InboxAgentJoinRequest {
-  readonly userCode: string;
-  readonly agent: Identity;
-  readonly host: string;
-  readonly text: string;
-  readonly createdAt: IsoTime;
-  readonly expiresAt: IsoTime;
-  readonly liveSessionExpiresAt?: IsoTime;
-}
-declare const brand$3: unique symbol;
-/** A nudge's ID: a positive whole number, increasing in the order nudges are raised. */
-type NudgeId = number & {
-  readonly [brand$3]: "NudgeId";
-};
-/** Which nudge of a quiet spell: the first, after `nudgeIntervals.first`, or the second, `nudgeIntervals.second` later. */
-type NudgeKind = "first" | "second";
-/**
- * A Nudge: a reminder in the Inbox of a thread's starter that the open thread has been quiet for a while. It is not
- * a message, so it moves no read position. It turns read when the thread is closed or gets a new message, when its
- * recipient marks it read, or with an ack of the whole inbox.
- */
-interface Nudge {
-  readonly id: NudgeId;
-  readonly kind: NudgeKind;
-  /** What the nudge says: "Quiet for 3 days: close it, or follow up?" for the first. */
-  readonly text: string;
-  readonly raisedAt: IsoTime;
-  readonly channel: Channel;
-  /** The quiet thread's top-level message, as it now stands. */
-  readonly parent: TopLevelMessage;
-}
-/** A nudge in the inbox history: `read` says it has been read. */
-interface InboxHistoryNudge extends Nudge {
-  readonly read: boolean;
-}
-/** The answer to marking a nudge read: the nudge, now read. */
-interface NudgeResponse {
-  readonly nudge: InboxHistoryNudge;
-}
-/**
- * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
- */
-type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
-/** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
-interface InboxItem {
-  readonly reasons: readonly InboxReason[];
-  readonly channel: Channel;
-  /** The thread's top-level message: the message itself when it is top-level. */
-  readonly parent: TopLevelMessage;
-  readonly message: Message;
-  /**
-   * For the `reaction` reason only, other identities' reactions on the identity's own message, oldest first, shown as
-   * "@name reacted with 👍": in the inbox the unacked ones; in the history all of them, `read` once all are acked.
-   */
-  readonly newReactions?: readonly Reaction[];
-}
-/**
- * An identity's read position in one scope: a channel's top-level messages (`thread` is `null`) or one thread's
- * replies. Every message in the scope up to `messageId` is read.
- */
-interface ReadPosition {
-  readonly channel: ChannelName;
-  readonly thread: MessageId | null;
-  readonly messageId: MessageId;
-}
-/**
- * The inbox, oldest first, each message once, and beside it the caller's unread offline alerts, oldest first (always
- * none for an agent, which owns no agent), and its unread Nudges, oldest first. Reading it changes nothing.
- */
-interface InboxResponse {
-  readonly items: readonly InboxItem[];
-  readonly alerts: readonly OfflineAlert[];
-  readonly nudges: readonly Nudge[];
-  readonly deactivationOffers: readonly DeactivationOffer[];
-  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
-  /**
-   * The pending Agent join requests for agents the caller owns or brought in, oldest first; none is in the history. One whose agent is already joined in another session has `liveSessionExpiresAt`, and approving it replaces that session only with `force`; any can be dismissed with `denyAgentJoin`.
-   */
-  readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
-}
-/** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
-interface InboxHistoryItem extends InboxItem {
-  readonly read: boolean;
-}
-/** The query of an inbox history page. With no `before`, the page is the newest items. */
-interface InboxHistoryQuery {
-  /** Only items before this message ID: pass the last item's ID to read further back. */
-  readonly before?: number;
-  /** 1–200 items. Default 50. */
-  readonly limit?: number;
-}
-/**
- * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
- * newest first, each message once. `hasMore` says older items remain after the last. The first page (no `before`)
- * also lists every offline alert raised for the caller, read or not, newest first; a later page lists none. Reading it
- * changes nothing.
- */
-interface InboxHistoryResponse {
-  readonly items: readonly InboxHistoryItem[];
-  readonly alerts: readonly OfflineAlert[];
-  readonly hasMore: boolean;
-  /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
-  readonly nudges: readonly InboxHistoryNudge[];
-  readonly deactivationOffers: readonly DeactivationOffer[];
-  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
-}
-/** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
-interface ReadPositionsResponse {
-  readonly readPositions: readonly ReadPosition[];
-}
-/** The body of an ack. */
-interface AckRequest {
-  readonly messageId: MessageId;
-}
-/** The answer to an ack: the read position of the message's scope, which never moves backwards. */
-interface AckResponse {
-  readonly readPosition: ReadPosition;
-}
-/**
- * The body of an ack of the whole inbox, each part up to the newest the caller has seen: items up to `upTo`, offline
- * alerts up to `alertsUpTo`, Nudges up to `nudgesUpTo` and deactivated quiet agent entries up to
- * `deactivatedQuietAgentsUpTo` are read, and Deactivation offers up to `deactivationOffersUpTo` are cleared as Keep does.
- */
-interface AckAllRequest {
-  readonly upTo?: MessageId;
-  readonly alertsUpTo?: OfflineAlertId;
-  readonly nudgesUpTo?: NudgeId;
-  readonly deactivationOffersUpTo?: DeactivationOfferId;
-  readonly deactivatedQuietAgentsUpTo?: DeactivatedQuietAgentId;
-}
-/**
- * The answer to an ack of the whole inbox: the read positions it moved, oldest first, and the offline alerts it
- * marked read, oldest first. An item after `upTo`, or an alert after `alertsUpTo`, stays unread.
- */
-interface AckAllResponse {
-  readonly readPositions: readonly ReadPosition[];
-  readonly alerts: readonly OfflineAlert[];
-}
-/** The answer to marking one offline alert read: the alert, now read. */
-interface OfflineAlertResponse {
-  readonly alert: OfflineAlert;
-}
-/** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
-interface MarkUnreadRequest {
-  readonly messageId: MessageId;
-}
-/**
- * A read position moved back by a mark unread: `messageId` is the newest message in the scope still read, `null` where
- * none is. In a thread with no reply left read it is the top-level message.
- */
-interface MovedBackReadPosition {
-  readonly channel: ChannelName;
-  readonly thread: MessageId | null;
-  readonly messageId: MessageId | null;
-}
-/** The answer to a mark unread: the read position of the message's scope, which never moves forward. */
-interface MarkUnreadResponse {
-  readonly readPosition: MovedBackReadPosition;
-}
-/** The answer to following or unfollowing: the thread, by its top-level message's ID. */
-interface FollowResponse {
-  readonly thread: MessageId;
-  readonly following: boolean;
-}
-/** The answer to subscribing or unsubscribing. */
-interface SubscriptionResponse {
-  readonly channel: ChannelName;
-  readonly subscribed: boolean;
-}
-/** The SDK's call on an offline alert. */
-interface OfflineAlertCalls {
-  /**
-   * `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert read, so it leaves the inbox and stays in its
-   * history. An alert the caller has none of is 404 `offline_alert_not_found`.
-   */
-  readonly markOfflineAlertRead: (id: OfflineAlertId) => Promise<OfflineAlertResponse>;
-}
-/** The SDK's call on a Nudge. */
-interface NudgeCalls {
-  /**
-   * `POST /v1/inbox/nudges/:id/read`: marks one of the caller's Nudges read and answers it. Another identity's nudge,
-   * or one that doesn't exist, is 404 `nudge_not_found`. A nudge also turns read when its thread is closed or gets a
-   * new message, and with `ackAll({ nudgesUpTo })`.
-   */
-  readonly markNudgeRead: (nudgeId: NudgeId) => Promise<NudgeResponse>;
-}
-/** The SDK's calls on a Deactivation offer and an entry about a deactivated quiet agent. */
-interface DeactivationOfferCalls {
-  /**
-   * `POST /v1/inbox/deactivation-offers/:id/keep`: answers Keep on one of the caller's Deactivation offers, clearing it
-   * for every recipient, and answers it. The next comes 30 days after it if the agent stays quiet. An offer the caller
-   * didn't get, or one that doesn't exist, is 404 `deactivation_offer_not_found`. To deactivate instead, call
-   * `deactivateIdentity`.
-   */
-  readonly keepDeactivationOffer: (offerId: DeactivationOfferId) => Promise<DeactivationOfferResponse>;
-  /**
-   * `POST /v1/inbox/deactivated-quiet-agents/:id/read`: marks one of the caller's entries about deactivated quiet agents read, for every
-   * recipient, and answers it. One the caller didn't get, or one that doesn't exist, is 404
-   * `deactivated_quiet_agent_not_found`. Reactivating the agent (`reactivateIdentity`) also reads it.
-   */
-  readonly markDeactivatedQuietAgentRead: (entryId: DeactivatedQuietAgentId) => Promise<DeactivatedQuietAgentResponse>;
-}
-/** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
-interface ServerSentEvent {
-  readonly event: string;
-  readonly data: string;
-}
-/**
- * Where a client connects: the server's base URL, the bearer token if there is one, and the harness running the
- * process if one was found, which the client names in `cookout-harness` on every request.
- */
-interface CookoutConnection {
-  readonly url: string;
-  readonly token?: string;
-  readonly harness?: string;
-}
-type ClientConnection = CookoutConnection;
-interface InboxCalls {
-  readonly inbox: () => Promise<InboxResponse>;
-  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
-  readonly readPositions: () => Promise<ReadPositionsResponse>;
-  readonly ack: (messageId: MessageId) => Promise<AckResponse>;
-  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
-  readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
-  readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
-  readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
-  readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
-  readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
-}
-declare function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls & NudgeCalls & DeactivationOfferCalls;
-declare const brand$2: unique symbol;
-type Brand<Name extends string> = string & {
-  readonly [brand$2]: Name;
-};
-/** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
-type WebhookCommandName = Brand<"CommandName">;
-/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
-type WebhookCommandSecret = Brand<"CommandSecret">;
-/** A JSON Schema, the rule a command's call data must follow. */
-type JsonSchema = Readonly<Record<string, JsonValue>>;
-/** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
-interface RegisteredWebhookCommand {
-  readonly name: WebhookCommandName;
-  /** The `http` or `https` URL the server posts calls to. */
-  readonly url: string;
-  /** The JSON Schema a call's data must follow. */
-  readonly schema: JsonSchema;
-  /** 1-500 characters. */
-  readonly description?: string;
-  /** The agent identity the command's results post as. It has the command's name. */
-  readonly handler: IdentityName;
-  readonly createdAt: IsoTime;
-}
-/** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
-interface BuiltInCommand extends Omit<RegisteredWebhookCommand, "url"> {
-  readonly builtIn: true;
-}
-/** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
-type WebhookCommand = RegisteredWebhookCommand | BuiltInCommand;
-/** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
-interface AddCommandRequest {
-  readonly name: string;
-  readonly url: string;
-  readonly schema: JsonSchema;
-  readonly description?: string;
-}
-/** The answer to adding a command or rotating its secret. The secret is shown this once only. */
-interface CommandWithSecretResponse {
-  readonly command: RegisteredWebhookCommand;
-  readonly secret: WebhookCommandSecret;
-}
-/**
- * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
- * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
- */
-interface ListCommandsResponse {
-  readonly commands: readonly WebhookCommand[];
-}
-/** The body of a command call. The server checks `data` against the command's schema. */
-interface CallCommandRequest {
-  /** The channel the call message is posted in. */
-  readonly channel: string;
-  readonly data: JsonValue;
-  /**
-   * A message whose thread the call is made in, as a reply's `replyTo` (mattpocock/cookout#871). Without it the call
-   * message is top-level and starts its own thread.
-   */
-  readonly replyTo?: MessageId;
-}
-/**
- * The answer to a command call (202): the call message, and the thread it was made in, which the handler replies in.
- * A call without `replyTo` starts its own thread, so the two are the same message.
- */
-interface CallCommandResponse {
-  readonly messageId: MessageId;
-  readonly threadId: MessageId;
-}
 interface StartLoginRequest {
   readonly host: string;
 }
-declare const brand$1: unique symbol;
+declare const brand$4: unique symbol;
 interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
   readonly where?: string;
@@ -974,7 +584,7 @@ interface LoginRequestView extends ApprovalRequestDetails {
 }
 /** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
 type PublicId = string & {
-  readonly [brand$1]: "PublicId";
+  readonly [brand$4]: "PublicId";
 };
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 interface LoginRequestStartedResponse {
@@ -1110,6 +720,424 @@ interface ListAgentKeysResponse {
 /** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
 interface RevokeAgentKeyResponse {
   readonly ended: number;
+}
+declare const brand$3: unique symbol;
+/**
+ * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
+ * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
+ */
+type LiveConnectionId = number & {
+  readonly [brand$3]: "LiveConnectionId";
+};
+/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
+declare const presenceName = "presence";
+/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
+type LiveConnectionDetail = {
+  readonly via: "watch";
+  readonly host?: string;
+} | {
+  readonly via: "web";
+};
+/**
+ * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
+ * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
+ * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
+ */
+declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed", "wake run failed"];
+/** One of `offlineReasons`. */
+type OfflineReason = (typeof offlineReasons)[number];
+/**
+ * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
+ * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
+ * it never was, and why it went offline when the server knows. A Deactivated identity is always offline. `warning` is
+ * the owner's warning: set only in what the agent's owner reads, while the agent is offline after an unexpected end
+ * (the end that raised an offline alert), until it next has a live connection.
+ *
+ * An agent with a trigger URL whose last call didn't fail can be reached now, so it is online too (Matt, 2026-11-24,
+ * mattpocock/cookout#378): when that is the only reason, it carries `wakesOnMention` and no `connection`. One whose
+ * last trigger call failed and that has no live connection is Unreachable: offline, carrying that call's result in
+ * `unreachable`.
+ *
+ * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
+ * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
+ * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
+ * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
+ * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
+ */
+interface Presence {
+  readonly identity: IdentityName;
+  readonly online: boolean;
+  readonly connection?: LiveConnectionDetail;
+  readonly lastSeenAt?: IsoTime;
+  readonly offlineReason?: OfflineReason;
+  readonly warning?: true;
+  readonly wakesOnMention?: true;
+  readonly unreachable?: TriggerResult;
+}
+/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
+interface PresenceResponse {
+  readonly presence: readonly Presence[];
+}
+/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
+type WakeRunFailure = {
+  readonly exitCode: number;
+} | {
+  readonly timedOutAfterMinutes: number;
+};
+/** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
+interface WakeRunResponse {
+  readonly wakeRun: boolean;
+}
+/**
+ * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
+ * newest one the caller has seen.
+ */
+type OfflineAlertId = number & {
+  readonly [brand$3]: "OfflineAlertId";
+};
+/**
+ * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
+ * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
+ * when the agent next had a live connection, absent while it is still offline.
+ *
+ * A failed call to an agent's trigger URL raises one, `trigger failed`, once per failure streak (Matt, 2026-11-24,
+ * mattpocock/cookout#378). It carries `trigger`: the message that didn't get through and the status or error the
+ * call ended with. The next successful call sets its `backOnlineAt`; a live connection doesn't.
+ */
+interface OfflineAlert {
+  readonly id: OfflineAlertId;
+  readonly agent: IdentityName;
+  readonly offlineReason: OfflineReason;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+  readonly backOnlineAt?: IsoTime;
+  readonly trigger?: TriggerFailure;
+}
+/** What an admin did to someone's credentials, as a Login alert tells them. */
+type AdminAct = "revoked" | "sent a login link";
+/**
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
+ * ended), or an admin acting on the person's credentials.
+ */
+type LoginAlertEvent = {
+  readonly kind: "new session";
+  readonly session: PublicId;
+  readonly sessionKind: "web" | "cli";
+  readonly where: string;
+  readonly clientIp?: string;
+  readonly ended: boolean;
+} | {
+  readonly kind: "admin act";
+  readonly admin: IdentityName;
+  readonly act: AdminAct;
+  readonly credential: PublicId;
+};
+/** A Login alert in a person's Inbox: an alert of the offline alert kind, read and cleared like one. */
+interface LoginAlert {
+  readonly id: OfflineAlertId;
+  readonly login: LoginAlertEvent;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+}
+/** Any alert an Inbox holds: an offline alert or a Login alert. */
+type InboxAlert = OfflineAlert | LoginAlert;
+/** The answer to marking one alert read. */
+interface OfflineAlertResponse {
+  readonly alert: InboxAlert;
+}
+interface InboxAgentJoinRequest {
+  readonly userCode: string;
+  readonly agent: Identity;
+  readonly host: string;
+  readonly text: string;
+  readonly createdAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly liveSessionExpiresAt?: IsoTime;
+}
+declare const brand$2: unique symbol;
+/** A nudge's ID: a positive whole number, increasing in the order nudges are raised. */
+type NudgeId = number & {
+  readonly [brand$2]: "NudgeId";
+};
+/** Which nudge of a quiet spell: the first, after `nudgeIntervals.first`, or the second, `nudgeIntervals.second` later. */
+type NudgeKind = "first" | "second";
+/**
+ * A Nudge: a reminder in the Inbox of a thread's starter that the open thread has been quiet for a while. It is not
+ * a message, so it moves no read position. It turns read when the thread is closed or gets a new message, when its
+ * recipient marks it read, or with an ack of the whole inbox.
+ */
+interface Nudge {
+  readonly id: NudgeId;
+  readonly kind: NudgeKind;
+  /** What the nudge says: "Quiet for 3 days: close it, or follow up?" for the first. */
+  readonly text: string;
+  readonly raisedAt: IsoTime;
+  readonly channel: Channel;
+  /** The quiet thread's top-level message, as it now stands. */
+  readonly parent: TopLevelMessage;
+}
+/** A nudge in the inbox history: `read` says it has been read. */
+interface InboxHistoryNudge extends Nudge {
+  readonly read: boolean;
+}
+/** The answer to marking a nudge read: the nudge, now read. */
+interface NudgeResponse {
+  readonly nudge: InboxHistoryNudge;
+}
+/**
+ * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
+ * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
+ */
+type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
+/** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
+interface InboxItem {
+  readonly reasons: readonly InboxReason[];
+  readonly channel: Channel;
+  /** The thread's top-level message: the message itself when it is top-level. */
+  readonly parent: TopLevelMessage;
+  readonly message: Message;
+  /**
+   * For the `reaction` reason only, other identities' reactions on the identity's own message, oldest first, shown as
+   * "@name reacted with 👍": in the inbox the unacked ones; in the history all of them, `read` once all are acked.
+   */
+  readonly newReactions?: readonly Reaction[];
+}
+/**
+ * An identity's read position in one scope: a channel's top-level messages (`thread` is `null`) or one thread's
+ * replies. Every message in the scope up to `messageId` is read.
+ */
+interface ReadPosition {
+  readonly channel: ChannelName;
+  readonly thread: MessageId | null;
+  readonly messageId: MessageId;
+}
+/**
+ * The inbox, oldest first, each message once, and beside it the caller's unread alerts, oldest first (always none for
+ * an agent, which owns no agent and has no session), and its unread Nudges, oldest first. Reading it changes nothing.
+ */
+interface InboxResponse {
+  readonly items: readonly InboxItem[];
+  readonly alerts: readonly InboxAlert[];
+  readonly nudges: readonly Nudge[];
+  readonly deactivationOffers: readonly DeactivationOffer[];
+  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+  /**
+   * The pending Agent join requests for agents the caller owns or brought in, oldest first; none is in the history. One whose agent is already joined in another session has `liveSessionExpiresAt`, and approving it replaces that session only with `force`; any can be dismissed with `denyAgentJoin`.
+   */
+  readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
+}
+/** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
+interface InboxHistoryItem extends InboxItem {
+  readonly read: boolean;
+}
+/** The query of an inbox history page. With no `before`, the page is the newest items. */
+interface InboxHistoryQuery {
+  /** Only items before this message ID: pass the last item's ID to read further back. */
+  readonly before?: number;
+  /** 1–200 items. Default 50. */
+  readonly limit?: number;
+}
+/**
+ * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
+ * newest first, each message once. `hasMore` says older items remain after the last. The first page (no `before`)
+ * also lists every alert (offline or Login) raised for the caller, read or not, newest first; a later page lists none.
+ * Reading it changes nothing.
+ */
+interface InboxHistoryResponse {
+  readonly items: readonly InboxHistoryItem[];
+  readonly alerts: readonly InboxAlert[];
+  readonly hasMore: boolean;
+  /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
+  readonly nudges: readonly InboxHistoryNudge[];
+  readonly deactivationOffers: readonly DeactivationOffer[];
+  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+}
+/** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
+interface ReadPositionsResponse {
+  readonly readPositions: readonly ReadPosition[];
+}
+/** The body of an ack. */
+interface AckRequest {
+  readonly messageId: MessageId;
+}
+/** The answer to an ack: the read position of the message's scope, which never moves backwards. */
+interface AckResponse {
+  readonly readPosition: ReadPosition;
+}
+/**
+ * The body of an ack of the whole inbox, each part up to the newest the caller has seen: items up to `upTo`, offline
+ * alerts up to `alertsUpTo`, Nudges up to `nudgesUpTo` and deactivated quiet agent entries up to
+ * `deactivatedQuietAgentsUpTo` are read, and Deactivation offers up to `deactivationOffersUpTo` are cleared as Keep does.
+ */
+interface AckAllRequest {
+  readonly upTo?: MessageId;
+  readonly alertsUpTo?: OfflineAlertId;
+  readonly nudgesUpTo?: NudgeId;
+  readonly deactivationOffersUpTo?: DeactivationOfferId;
+  readonly deactivatedQuietAgentsUpTo?: DeactivatedQuietAgentId;
+}
+/**
+ * The answer to an ack of the whole inbox: the read positions it moved, oldest first, and the offline alerts it
+ * marked read, oldest first. An item after `upTo`, or an alert after `alertsUpTo`, stays unread.
+ */
+interface AckAllResponse {
+  readonly readPositions: readonly ReadPosition[];
+  readonly alerts: readonly InboxAlert[];
+}
+/** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
+interface MarkUnreadRequest {
+  readonly messageId: MessageId;
+}
+/**
+ * A read position moved back by a mark unread: `messageId` is the newest message in the scope still read, `null` where
+ * none is. In a thread with no reply left read it is the top-level message.
+ */
+interface MovedBackReadPosition {
+  readonly channel: ChannelName;
+  readonly thread: MessageId | null;
+  readonly messageId: MessageId | null;
+}
+/** The answer to a mark unread: the read position of the message's scope, which never moves forward. */
+interface MarkUnreadResponse {
+  readonly readPosition: MovedBackReadPosition;
+}
+/** The answer to following or unfollowing: the thread, by its top-level message's ID. */
+interface FollowResponse {
+  readonly thread: MessageId;
+  readonly following: boolean;
+}
+/** The answer to subscribing or unsubscribing. */
+interface SubscriptionResponse {
+  readonly channel: ChannelName;
+  readonly subscribed: boolean;
+}
+/** The SDK's call on an offline alert. */
+interface OfflineAlertCalls {
+  /**
+   * `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert read, so it leaves the inbox and stays in its
+   * history. An alert the caller has none of is 404 `offline_alert_not_found`.
+   */
+  readonly markOfflineAlertRead: (id: OfflineAlertId) => Promise<OfflineAlertResponse>;
+}
+/** The SDK's call on a Nudge. */
+interface NudgeCalls {
+  /**
+   * `POST /v1/inbox/nudges/:id/read`: marks one of the caller's Nudges read and answers it. Another identity's nudge,
+   * or one that doesn't exist, is 404 `nudge_not_found`. A nudge also turns read when its thread is closed or gets a
+   * new message, and with `ackAll({ nudgesUpTo })`.
+   */
+  readonly markNudgeRead: (nudgeId: NudgeId) => Promise<NudgeResponse>;
+}
+/** The SDK's calls on a Deactivation offer and an entry about a deactivated quiet agent. */
+interface DeactivationOfferCalls {
+  /**
+   * `POST /v1/inbox/deactivation-offers/:id/keep`: answers Keep on one of the caller's Deactivation offers, clearing it
+   * for every recipient, and answers it. The next comes 30 days after it if the agent stays quiet. An offer the caller
+   * didn't get, or one that doesn't exist, is 404 `deactivation_offer_not_found`. To deactivate instead, call
+   * `deactivateIdentity`.
+   */
+  readonly keepDeactivationOffer: (offerId: DeactivationOfferId) => Promise<DeactivationOfferResponse>;
+  /**
+   * `POST /v1/inbox/deactivated-quiet-agents/:id/read`: marks one of the caller's entries about deactivated quiet agents read, for every
+   * recipient, and answers it. One the caller didn't get, or one that doesn't exist, is 404
+   * `deactivated_quiet_agent_not_found`. Reactivating the agent (`reactivateIdentity`) also reads it.
+   */
+  readonly markDeactivatedQuietAgentRead: (entryId: DeactivatedQuietAgentId) => Promise<DeactivatedQuietAgentResponse>;
+}
+/** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
+interface ServerSentEvent {
+  readonly event: string;
+  readonly data: string;
+}
+/**
+ * Where a client connects: the server's base URL, the bearer token if there is one, and the harness running the
+ * process if one was found, which the client names in `cookout-harness` on every request.
+ */
+interface CookoutConnection {
+  readonly url: string;
+  readonly token?: string;
+  readonly harness?: string;
+}
+type ClientConnection = CookoutConnection;
+interface InboxCalls {
+  readonly inbox: () => Promise<InboxResponse>;
+  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  readonly readPositions: () => Promise<ReadPositionsResponse>;
+  readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
+  readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
+  readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
+  readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
+  readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
+  readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
+}
+declare function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls & NudgeCalls & DeactivationOfferCalls;
+declare const brand$1: unique symbol;
+type Brand<Name extends string> = string & {
+  readonly [brand$1]: Name;
+};
+/** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
+type WebhookCommandName = Brand<"CommandName">;
+/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
+type WebhookCommandSecret = Brand<"CommandSecret">;
+/** A JSON Schema, the rule a command's call data must follow. */
+type JsonSchema = Readonly<Record<string, JsonValue>>;
+/** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
+interface RegisteredWebhookCommand {
+  readonly name: WebhookCommandName;
+  /** The `http` or `https` URL the server posts calls to. */
+  readonly url: string;
+  /** The JSON Schema a call's data must follow. */
+  readonly schema: JsonSchema;
+  /** 1-500 characters. */
+  readonly description?: string;
+  /** The agent identity the command's results post as. It has the command's name. */
+  readonly handler: IdentityName;
+  readonly createdAt: IsoTime;
+}
+/** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
+interface BuiltInCommand extends Omit<RegisteredWebhookCommand, "url"> {
+  readonly builtIn: true;
+}
+/** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
+type WebhookCommand = RegisteredWebhookCommand | BuiltInCommand;
+/** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
+interface AddCommandRequest {
+  readonly name: string;
+  readonly url: string;
+  readonly schema: JsonSchema;
+  readonly description?: string;
+}
+/** The answer to adding a command or rotating its secret. The secret is shown this once only. */
+interface CommandWithSecretResponse {
+  readonly command: RegisteredWebhookCommand;
+  readonly secret: WebhookCommandSecret;
+}
+/**
+ * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
+ * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
+ */
+interface ListCommandsResponse {
+  readonly commands: readonly WebhookCommand[];
+}
+/** The body of a command call. The server checks `data` against the command's schema. */
+interface CallCommandRequest {
+  /** The channel the call message is posted in. */
+  readonly channel: string;
+  readonly data: JsonValue;
+  /**
+   * A message whose thread the call is made in, as a reply's `replyTo` (mattpocock/cookout#871). Without it the call
+   * message is top-level and starts its own thread.
+   */
+  readonly replyTo?: MessageId;
+}
+/**
+ * The answer to a command call (202): the call message, and the thread it was made in, which the handler replies in.
+ * A call without `replyTo` starts its own thread, so the two are the same message.
+ */
+interface CallCommandResponse {
+  readonly messageId: MessageId;
+  readonly threadId: MessageId;
 }
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 declare const agentSessionPath = "/v1/agent-session";
@@ -1860,13 +1888,13 @@ interface PresenceEvent {
   readonly presence: Presence;
 }
 /**
- * An offline alert of the caller's (GLOSSARY.md) as it now stands: raised the moment an agent it owns goes offline
- * unexpectedly, and sent again when the agent is back online or the alert is marked read. Sent on every stream of the
- * owner, so its sessions stay in sync. It has no SSE `id`.
+ * An alert of the caller's (GLOSSARY.md) as it now stands: raised when an agent it owns goes offline unexpectedly or a
+ * new session of theirs is made, and sent again when the agent is back, the session ends or the alert is marked read.
+ * Sent on every stream of the owner, so its sessions stay in sync. It has no SSE `id`.
  */
 interface OfflineAlertEvent {
   readonly type: "offline-alert";
-  readonly alert: OfflineAlert;
+  readonly alert: InboxAlert;
 }
 /**
  * An agent's trigger URL as `GET /v1/identities/:name/trigger` answers it, sent the moment a call to it settles, with
@@ -2155,5 +2183,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentKeyView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateAgentKeyRequest, type CreateAgentKeyResponse, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type DenyAgentJoinResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentKeysResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageDeletedEvent, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type PublicId, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentKeyResponse, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WakeRunResponse, type WatchOptions, type approvalPath as agentJoinApprovalPath, type agentJoinRequestApprovalPath, type agentJoinRequestDenialPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AdminAct, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentKeyView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateAgentKeyRequest, type CreateAgentKeyResponse, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type DenyAgentJoinResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxAlert, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentKeysResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type LoginAlert, type LoginAlertEvent, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageDeletedEvent, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type PublicId, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentKeyResponse, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WakeRunResponse, type WatchOptions, type approvalPath as agentJoinApprovalPath, type agentJoinRequestApprovalPath, type agentJoinRequestDenialPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

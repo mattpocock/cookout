@@ -1,3 +1,4 @@
+import type { LoginAlert } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
@@ -11,7 +12,30 @@ interface LogIn {
 }
 
 const SESSION_PATH = "/v1/session";
+const INBOX_PATH = "/v1/inbox";
 const STREAM_PATH = "/v1/events";
+
+function isLoginAlert(alert: unknown): alert is LoginAlert {
+  return typeof alert === "object" && alert !== null && "login" in alert;
+}
+
+function loginAlertsIn(inbox: unknown): readonly LoginAlert[] {
+  if (typeof inbox !== "object" || inbox === null || !("alerts" in inbox) || !Array.isArray(inbox.alerts)) {
+    return [];
+  }
+  return inbox.alerts.filter((alert) => isLoginAlert(alert));
+}
+
+async function loginAlertsRead({ page, token }: LogIn): Promise<void> {
+  const headers = { authorization: `Bearer ${token}` };
+  const response = await page.request.get(INBOX_PATH, { headers });
+  const inbox: unknown = await response.json();
+  await Promise.all(
+    loginAlertsIn(inbox).map(async ({ id }) => {
+      await page.request.post(`${INBOX_PATH}/alerts/${String(id)}/read`, { headers });
+    }),
+  );
+}
 
 export async function logInThroughForm({ page, token, url = "/" }: LogIn): Promise<void> {
   await page.goto(url);
@@ -24,6 +48,7 @@ export async function logIn({ page, token, url = "/", waitUntil = "load" }: LogI
 
   expect(response.ok(), await response.text()).toBe(true);
 
+  await loginAlertsRead({ page, token });
   await page.goto(url, { waitUntil });
 }
 

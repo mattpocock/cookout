@@ -1,17 +1,17 @@
 import type { AlertsState, InboxRow } from "../../unread/index.ts";
-import type { OfflineAlert } from "../../sdk/index.ts";
+import type { InboxAlert } from "../../sdk/index.ts";
 import { millisOf } from "../../format/index.ts";
 
 type EarlierEntry =
-  | { readonly kind: "alert"; readonly key: string; readonly alert: OfflineAlert }
+  | { readonly kind: "alert"; readonly key: string; readonly alert: InboxAlert }
   | { readonly kind: "row"; readonly key: string; readonly row: InboxRow };
 
 interface EarlierLists {
-  readonly alerts: readonly OfflineAlert[];
+  readonly alerts: readonly InboxAlert[];
   readonly rows: readonly InboxRow[];
 }
 
-function readAlertsOf(state: AlertsState): readonly OfflineAlert[] {
+function readAlertsOf(state: AlertsState): readonly InboxAlert[] {
   if (state.status !== "loaded") {
     return [];
   }

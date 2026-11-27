@@ -88,9 +88,9 @@ it.effect.each(storageLayers)(
       const sessions = yield* sessionsOfAda(storage);
 
       expect(crossed).toStrictEqual([{ status: "gone" }, { status: "gone" }]);
-      expect(own).toStrictEqual([
-        { identity: ada, status: "collected" },
-        { identity: ada, status: "collected" },
+      expect(own).toMatchObject([
+        { identity: ada, session: { where: "Firefox on macOS" }, status: "collected" },
+        { identity: ada, session: { where: "ada-laptop" }, status: "collected" },
       ]);
       expect(sessions).toStrictEqual(["cli: ada-laptop", "web: Firefox on macOS"]);
     }),

@@ -33,10 +33,3 @@ export type {
   DescriptionCalls,
   UpdateIdentityRequest,
 } from "../../identities/client.ts";
-export type {
-  AgentKeyView,
-  CreateAgentKeyResponse,
-  ListAgentKeysResponse,
-  PublicId,
-  RevokeAgentKeyResponse,
-} from "../../logins/index.ts";

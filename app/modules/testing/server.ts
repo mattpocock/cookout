@@ -22,6 +22,7 @@
  * and `pendingDeliveries` reads the deliveries its storage holds as pending. `restartServerAfter` stops the server,
  * runs an effect while it is down (moving the `TestClock` on, say) and boots it again on the same storage;
  * `seedMessage` stores a message as it is given, with any `createdAt`, as if posted before the test began.
+ * `seedLoginAlert` stores a Login alert as it is given, such as an admin act no route raises yet.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
  * drop a client's connection, take down, so every later request gets 502, or
  * answer 502 to just its next few requests (or those to one path), as a deploy
