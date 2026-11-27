@@ -8,7 +8,7 @@ import {
   LogoutResponseSchema,
   StartLoginRequestSchema,
 } from "./login-wire.ts";
-import { Effect, Function, Option, Predicate } from "effect";
+import { Effect, Function, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { LoginCollection, LoginRequest, NewLoginRequest, StorageUnavailable } from "../../../storage/server.ts";
 import {
@@ -26,6 +26,7 @@ import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../index.ts";
+import { clientAddress } from "../../../http/server.ts";
 import { token } from "../../index.ts";
 
 type Answer = HttpServerResponse.HttpServerResponse;
@@ -42,8 +43,8 @@ function withinAddressLimit<Value, Failure, Needs>(
 > {
   return Effect.gen(function* admitAddressThenRun() {
     const limit = yield* AddressLimit;
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    yield* limit.admit(Option.getOrElse(request.remoteAddress, Function.constant("unknown")));
+    const address = yield* clientAddress;
+    yield* limit.admit(address);
     return yield* effect;
   });
 }

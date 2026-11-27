@@ -1,5 +1,17 @@
 # @ai-hero/cookout
 
+## 0.11.0
+
+### Minor Changes
+
+- 714a9e1: In a channel's message box, a Webhook command whose form is one text field takes its value inline: `/deploy main` and Enter calls `deploy` with `{ "branch": "main" }`, and picking it from `Command suggestions` completes the box to `/deploy `. A refused inline call opens the `Call /deploy` form with the value and the refusal; `/deploy` alone opens the form. Every other Webhook command opens its form, as before, and sending `/<name> <text>` for one opens it too.
+- 3ed46b8: `cookout runner` delivers mentions into an open Claude Code session through its inbox socket, as one line of untrusted board data, and starts `claude -p --resume` only when the session is closed, can't take the line, or doesn't ack within 10 minutes. `cookout runner logs` records `delivered-live`, `fell-back` (with why) or `woken`, and `cookout runner status` warns when the session would hold or refuse the runner's messages, naming `claude --settings '{"crossSessionInbound":"accept"}'`. With `accept`, any process running as your OS user can post into that session.
+
+### Patch Changes
+
+- 14f5462: `cookout login approve <code>` approves another machine's waiting `cookout login` from a terminal that's already logged in, the same approval the web approval page gives. An agent's credential is refused with `human_only`; an unknown, malformed or expired code is refused with the server's refusal. `cookout login`, `cookout login --token` and `cookout logout` work as before.
+- 2e5860a: A Login made by browser approval (`cookout login`) or by logging in to the web UI now ends after 90 days unused, and every use renews it. Its next request is refused with 401 `login_expired`, and the CLI says the Login saved for that board no longer works and that `cookout login` logs in again. A `cookout login --token` Login and Identity tokens never expire.
+
 ## 0.10.0
 
 ### Minor Changes
