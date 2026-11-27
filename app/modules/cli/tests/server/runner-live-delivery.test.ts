@@ -16,6 +16,7 @@ import {
   commandLineServices,
   inboxJson,
   joinWaking,
+  registerAs,
   sentLine,
   startRunner,
   startsIn,
@@ -61,6 +62,7 @@ const ONE_CLOSING_TAG = 2;
 const OPENING = '<cross-session-message from-name="cookout-runner">';
 const CLOSING = "</cross-session-message>";
 const NO_REASON = "none";
+const CLAUDE_CODE = "claude-code";
 
 const tick = Effect.andThen(TestClock.adjust(TICK), TestClock.withLive(Effect.sleep(PAUSE)));
 
@@ -70,12 +72,13 @@ function whilePassingTime<Value, Requirements>(
   return Effect.raceFirst(effect, Effect.andThen(Effect.forever(tick), Effect.never));
 }
 
-function liveBrigid(session: Session): Effect.Effect<Live, never, Needs> {
+function liveBrigid(session: Session, harness = CLAUDE_CODE): Effect.Effect<Live, never, Needs> {
   return Effect.gen(function* brigidWithAnOpenSession() {
     const path = yield* Path.Path;
     const on = yield* wakeBoard;
     const log = path.join(on.folder, "wake.log");
     const brigid = yield* joinWaking({ name: BRIGID, on, settings: { ack: true, log } });
+    yield* Effect.when(registerAs({ harness, stateFolder: on.folder }), Effect.succeed(harness !== CLAUDE_CODE));
     const home = yield* claudeCodeHome({ ...session, harnessSession: brigid.harnessSession });
     yield* startRunner({ CLAUDE_CONFIG_DIR: home.folder, COOKOUT_STATE_DIR: on.folder });
     return { brigid, home, log, on };
@@ -95,11 +98,11 @@ function eventsOf(type: string, live: Live): Effect.Effect<readonly RunnerEvent[
   );
 }
 
-function deliveryEvents(events: readonly RunnerEvent[]): readonly (readonly [string, string])[] {
+function deliveryEvents(events: readonly RunnerEvent[]): readonly (readonly [string, string, string])[] {
   const kinds = new Set(["delivered-live", "fell-back", "woken"]);
   return Arr.map(
     Arr.filter(events, ({ type }) => kinds.has(type)),
-    ({ reason = NO_REASON, type }) => [type, reason] as const,
+    ({ harness = NO_REASON, reason = NO_REASON, type }) => [type, reason, harness] as const,
   );
 }
 
@@ -151,7 +154,7 @@ it.effect("an open session gets the mention as one inbox line, and no wake run",
     expect(line).toMatchObject({ msgV: 1, priority: "next", type: "user" });
     expect(line.msg_id).toMatch(/^[0-9a-f-]{36}$/u);
     expect(lines).toHaveLength(ONE);
-    expect(deliveryEvents(events)).toStrictEqual([["delivered-live", NO_REASON]]);
+    expect(deliveryEvents(events)).toStrictEqual([["delivered-live", NO_REASON, CLAUDE_CODE]]);
     expect(starts).toStrictEqual([]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -183,7 +186,7 @@ it.effect.each([
       const starts = yield* wakeStarts(live.log);
       const lines = yield* live.home.lines;
 
-      expect(deliveryEvents(events)).toStrictEqual([["fell-back", reason]]);
+      expect(deliveryEvents(events)).toStrictEqual([["fell-back", reason, CLAUDE_CODE]]);
       expect(starts).toStrictEqual([[id]]);
       expect(lines).toStrictEqual([]);
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
@@ -200,7 +203,7 @@ it.effect("a mention not acked in time after its live delivery goes to one wake 
     const lines = yield* live.home.lines;
 
     expect([startsBefore, starts]).toStrictEqual([[], [[id]]]);
-    expect(deliveryEvents(events)).toStrictEqual([["fell-back", "not-acked"]]);
+    expect(deliveryEvents(events)).toStrictEqual([["fell-back", "not-acked", CLAUDE_CODE]]);
     expect(lines).toHaveLength(ONE);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -216,7 +219,21 @@ it.effect("a runner with no Claude Code folder wakes the session as before, reco
     const events = yield* untilRunnerEvents({ agent: BRIGID, on, type: "exit" });
     const starts = yield* wakeStarts(log);
 
-    expect(deliveryEvents(events)).toStrictEqual([["woken", NO_REASON]]);
+    expect(deliveryEvents(events)).toStrictEqual([["woken", NO_REASON, NO_REASON]]);
     expect(starts).toStrictEqual([[id]]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a registration for another harness never tries live delivery and wakes at once", () =>
+  Effect.gen(function* wokenForCodex() {
+    const live = yield* liveBrigid({}, "codex");
+    const id = yield* mention(live.on, "@brigid from codex");
+    const events = yield* eventsOf("exit", live);
+    const starts = yield* wakeStarts(live.log);
+    const lines = yield* live.home.lines;
+
+    expect(deliveryEvents(events)).toStrictEqual([["woken", NO_REASON, NO_REASON]]);
+    expect(starts).toStrictEqual([[id]]);
+    expect(lines).toStrictEqual([]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
