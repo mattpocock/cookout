@@ -1,11 +1,14 @@
 import { Effect, FileSystem } from "effect";
 import { expect, it } from "@effect/vitest";
-import { freshDatabasePath, runAdmin } from "../../../testing/server.ts";
+import { freshDatabasePath, refusal, runAdmin, startServe } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { secretsLive } from "../../../secrets/server.ts";
+import { testClient } from "../../../testing/index.ts";
+import { token } from "../../../identities/index.ts";
 
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
+const BAD_REQUEST = 400;
 
 it.effect("cookout admin setup-link names the board by COOKOUT_PUBLIC_URL when it is set", () =>
   Effect.gen(function* publicBoard() {
@@ -33,4 +36,16 @@ it.effect("cookout admin on a file that isn't a database says why on stderr, and
       error: { code: "storage_unavailable", message: "file is not a database" },
     });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("a setup link sent with a name that has a '/' is refused as a bad request, not looked up", () =>
+  Effect.gen(function* slashName() {
+    const server = yield* startServe({ adminToken: "", database: yield* freshDatabasePath });
+    const anonymous = testClient({ env: {}, url: server.url });
+    const secret = token("cookout_setup-unused");
+    const slashed = yield* refusal(() => anonymous.redeemSetupLink({ name: "ops/bot", secret }));
+    const plain = yield* refusal(() => anonymous.redeemSetupLink({ name: "ops", secret }));
+
+    expect([slashed.status, plain.code]).toStrictEqual([BAD_REQUEST, "setup_link_not_found"]);
+  }).pipe(Effect.scoped, Effect.provide([NodeServices.layer, secretsLive])),
 );
