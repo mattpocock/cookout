@@ -1,9 +1,10 @@
 import type { ChannelName, MessageId, TopLevelMessage } from "../../sdk/index.ts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { Keymap } from "../../keymap/index.ts";
 import type { PanelTitling } from "../../design-system/layout.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
 import { threadHeading } from "./thread-heading.ts";
+import { titleAsked } from "../../board/index.ts";
 import { useBoardStore } from "./use-board.ts";
 
 const TEXT = { add: "Add title", edit: "Edit title", field: "Title", form: "Thread title" } as const;
@@ -52,7 +53,7 @@ function shownParent({ gone, state }: Pick<HeadingOf, "gone" | "state">): TopLev
   return state.parent;
 }
 
-function editLabel(parent: TopLevelMessage): string {
+function titleEditLabel(parent: TopLevelMessage): string {
   if (typeof parent.title === "string") {
     return TEXT.edit;
   }
@@ -74,6 +75,24 @@ function useCancelKey(keymap: Keymap, cancel: () => void): void {
       }),
     [cancel, keymap],
   );
+}
+
+interface TakingAsk {
+  readonly open: (title: string) => void;
+  readonly parent: TopLevelMessage | null;
+}
+
+function useTakenAsk({ open, parent }: TakingAsk): void {
+  const store = useBoardStore();
+  const asked = useSyncExternalStore(store.subscribe, () => titleAsked(store.snapshot()));
+  const { takeTitle } = store.calls;
+  useEffect(() => {
+    if (parent === null || asked !== parent.id) {
+      return;
+    }
+    takeTitle();
+    open(parent.title ?? "");
+  }, [asked, open, parent, takeTitle]);
 }
 
 function useEditing(keymap: Keymap): EditingCalls {
@@ -107,7 +126,7 @@ function useEditing(keymap: Keymap): EditingCalls {
 function titlingOf(parent: TopLevelMessage, { editing, open, save, write }: EditingCalls): PanelTitling {
   const edit = {
     focused: editing.returned,
-    label: editLabel(parent),
+    label: titleEditLabel(parent),
     onEdit: (): void => {
       open(parent.title ?? "");
     },
@@ -133,6 +152,7 @@ function titlingOf(parent: TopLevelMessage, { editing, open, save, write }: Edit
 
 function useThreadHeading({ channel, gone, keymap, state }: HeadingOf): ThreadTitleHeading {
   const calls = useEditing(keymap);
+  useTakenAsk({ open: calls.open, parent: shownParent({ gone, state }) });
   return useMemo(() => {
     const heading = threadHeading({ channel, state });
     const parent = shownParent({ gone, state });
@@ -143,4 +163,4 @@ function useThreadHeading({ channel, gone, keymap, state }: HeadingOf): ThreadTi
   }, [calls, channel, gone, state]);
 }
 
-export { type HeadingOf as ThreadHeadingOf, useThreadHeading };
+export { type HeadingOf as ThreadHeadingOf, titleEditLabel, useThreadHeading };

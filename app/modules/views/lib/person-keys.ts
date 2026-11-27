@@ -40,6 +40,7 @@ function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
     thread: keymap.shortcutOf("toggleThreadClosed"),
     thumbsDown: keymap.shortcutOf("toggleThumbsDown"),
     thumbsUp: keymap.shortcutOf("toggleThumbsUp"),
+    title: keymap.shortcutOf("editThreadTitle"),
     unfold: keymap.shortcutOf("unfoldMessage"),
   };
 }

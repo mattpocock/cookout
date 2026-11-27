@@ -56,6 +56,7 @@ function MessageEntryView(props: MessageEntryProps): ReactNode {
     menu: props.menu,
     message,
     threadParent: props.threadParent,
+    titling: props.channel !== null,
   });
   const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (

@@ -41,6 +41,14 @@ function openThreadOf({ keys, parts }: Keyed): readonly MenuChoice[] {
   ];
 }
 
+function titleOf(menu: MessageMenuParts, keys: MessageShortcuts): readonly MenuChoice[] {
+  if (menu.title === null) {
+    return [];
+  }
+  const { label, onSelect } = menu.title;
+  return [{ href: null, icon: "edit-title", keys: keys.title, label, onSelect }];
+}
+
 function deleteOf(menu: MessageMenuParts, keys: MessageShortcuts): readonly MenuChoice[] {
   if (menu.onDelete === null) {
     return [];
@@ -79,6 +87,7 @@ export function useMessageChoices({
       { href: null, icon: "mark-unread", keys: keys.markUnread, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
       { href: null, icon: "copy-link", keys: keys.copyLink, label: TEXT.copyLink, onSelect: menu.onCopyLink },
       { href: null, icon: "copy-text", keys: keys.copyText, label: TEXT.copyText, onSelect: menu.onCopyText },
+      ...titleOf(menu, keys),
       ...[menu.thread]
         .filter((choice) => choice !== null)
         .map(

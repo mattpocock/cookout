@@ -45,6 +45,7 @@ it("every item in a message's More actions menu shows an icon before its label",
       "Mark unreadAlt+Enter",
       "Copy linkl",
       "Copy textc",
+      "Add titlee",
       "Closex",
     ]),
   );
@@ -68,6 +69,7 @@ it("every item in a closed message's context menu shows an icon before its label
       "Mark unreadAlt+Enter",
       "Copy linkl",
       "Copy textc",
+      "Add titlee",
       "Reopenx",
     ]),
   );

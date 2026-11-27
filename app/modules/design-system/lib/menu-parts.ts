@@ -15,12 +15,18 @@ interface ThreadChoice {
   readonly onSelect: () => void;
 }
 
+interface TitleChoice {
+  readonly label: string;
+  readonly onSelect: () => void;
+}
+
 interface MessageMenuParts {
   readonly onMarkUnread: () => void;
   readonly onCopyLink: () => void;
   readonly onCopyText: () => void;
   readonly reactions: readonly ReactionChoice[];
   readonly thread: ThreadChoice | null;
+  readonly title: TitleChoice | null;
   readonly onDelete: (() => void) | null;
 }
 
@@ -66,4 +72,5 @@ export type {
   MessageMenuParts,
   ReactionChoice,
   ThreadChoice,
+  TitleChoice,
 };

@@ -21,6 +21,27 @@ function titledAs({ message, parent }: Titled): TopLevelMessage {
   };
 }
 
+interface TitleAsking {
+  readonly askTitle: (messageId: MessageId) => void;
+  readonly takeTitle: () => void;
+  readonly titleAsked: () => MessageId | null;
+}
+
+function createTitleAsking(changed: () => void): TitleAsking {
+  let asked: MessageId | null = null;
+  function become(next: MessageId | null): void {
+    asked = next;
+    changed();
+  }
+  return {
+    askTitle: become,
+    takeTitle: () => {
+      become(null);
+    },
+    titleAsked: () => asked,
+  };
+}
+
 function titleRefusal(error: unknown): Refusal {
   const refusal = refusalOf(error);
   if (!(error instanceof CookoutError)) {
@@ -30,4 +51,4 @@ function titleRefusal(error: unknown): Refusal {
   return { ...refusal, message };
 }
 
-export { type SetTitle, type TitlingClient, titledAs, titleRefusal };
+export { type SetTitle, type TitleAsking, type TitlingClient, createTitleAsking, titledAs, titleRefusal };
