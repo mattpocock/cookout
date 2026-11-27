@@ -8,6 +8,7 @@ import {
   IdentityWithTokenResponseSchema,
   ListIdentitiesQuerySchema,
   ListIdentitiesResponseSchema,
+  LoginLinkResponseSchema,
 } from "./wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityName, ListIdentitiesQuery } from "../../index.ts";
@@ -19,6 +20,7 @@ import type { SetAdminResult } from "../../../storage/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { echoed } from "../../../http/index.ts";
 import { endBelowRotated } from "./cascade.ts";
+import { requestOrigin } from "../../../http/server.ts";
 
 const CONFLICT = 409;
 const PATH_BASE = "http://cookout.invalid";
@@ -64,7 +66,8 @@ const createRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
         yield* announced(brought.identity);
         return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)(brought, { status: CREATED });
       }
-      const created = yield* createIdentity({ body, caller });
+      const origin = yield* requestOrigin;
+      const created = yield* createIdentity({ body, caller, origin });
       yield* announced(created.identity);
       return yield* withToken(created, { status: CREATED });
     }),
@@ -173,6 +176,7 @@ export const responseSchemas = {
   IdentityResponse: IdentityResponseSchema,
   IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
   ListIdentitiesResponse: ListIdentitiesResponseSchema,
+  LoginLinkResponse: LoginLinkResponseSchema,
 };
 
 export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
@@ -190,4 +194,6 @@ export { humanAdmin } from "./create.ts";
 
 export { loginResponseSchemas, loginRoutes, openLoginRoutes } from "./logins.ts";
 export { sessionRoutes } from "./sessions.ts";
+export { loginLinkRoutes } from "./login-links.ts";
+export { openLoginLinkRoutes } from "./login-link-redeem.ts";
 export { AddressLimit, now } from "./login-support.ts";
