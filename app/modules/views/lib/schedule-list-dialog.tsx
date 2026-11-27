@@ -10,7 +10,7 @@ import { useEditScheduling } from "./use-edit-scheduling.ts";
 
 const TEXT = {
   close: "Close",
-  description: (channel: string) => `What posts into #${channel} on a schedule, soonest made first.`,
+  description: (channel: string) => `Messages that post into #${channel} on a schedule.`,
   title: "Scheduled messages",
 } as const;
 

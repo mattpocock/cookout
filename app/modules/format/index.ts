@@ -217,5 +217,23 @@ export function runTimeIn(run: RunTime): string {
   return new Intl.DateTimeFormat("en-GB", { ...shape, timeZone }).format(new Date(iso));
 }
 
+/**
+ * A Scheduled message's run as the zone it is scheduled in shows it, without the year, as a schedule's next run.
+ * @param run The run's ISO time, and the IANA time zone to write it in, one the server has accepted.
+ * @returns Its weekday, day, month and 24-hour time, such as `Mon 30 Nov, 09:00`.
+ */
+export function shortRunTimeIn(run: RunTime): string {
+  const { iso, timeZone } = run;
+  const shape = {
+    day: "numeric",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "short",
+    weekday: "short",
+  } as const;
+  return new Intl.DateTimeFormat("en-GB", { ...shape, timeZone }).format(new Date(iso));
+}
+
 export { runPartsIn } from "./lib/run-parts.ts";
 export { type Clock, browserClock } from "./lib/browser-clock.ts";

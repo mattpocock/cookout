@@ -25,7 +25,7 @@ const COMPONENTS: Components = {
 };
 
 interface MarkdownTextProps {
-  readonly message: Message;
+  readonly message: Pick<Message, "mentions" | "text">;
   readonly me: string;
 }
 

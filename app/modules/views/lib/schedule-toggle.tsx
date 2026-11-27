@@ -28,7 +28,7 @@ export function ScheduleToggle(props: ScheduleToggleProps): ReactNode {
   }, [paused, schedule.id, scheduleList]);
   return (
     schedule.status !== "finished" && (
-      <Button disabled={props.busy} focused={props.focused} onClick={handleClick}>
+      <Button disabled={props.busy} focused={props.focused} onClick={handleClick} tone="quiet">
         {paused && TEXT.resume}
         {!paused && TEXT.pause}
       </Button>
