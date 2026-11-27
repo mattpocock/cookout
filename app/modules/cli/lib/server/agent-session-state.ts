@@ -15,6 +15,8 @@ interface AgentSessionStateFailure {
 
 type Needs = FileSystem.FileSystem | Path.Path | Secrets;
 
+type Codec<Value> = Schema.ConstraintCodec<Value, unknown>;
+
 interface AgentSessionStateFile {
   readonly read: Effect.Effect<Option.Option<AgentSessionState>, AgentSessionStateFailure>;
   readonly write: (state: AgentSessionState) => Effect.Effect<void, AgentSessionStateFailure>;
@@ -272,22 +274,23 @@ function filesBeside<Value>({
   });
 }
 
-function stateJsonLines<Value>(
-  schema: Schema.ConstraintCodec<Value, unknown>,
-): (text: string) => Effect.Effect<readonly Value[]> {
+function stateJson<Value>(schema: Codec<Value>): (text: string) => Effect.Effect<Option.Option<Value>> {
   const decode = Schema.decodeEffect(Schema.fromJsonString(schema));
+  return (text) => Effect.option(decode(text));
+}
+
+function stateJsonLines<Value>(schema: Codec<Value>): (text: string) => Effect.Effect<readonly Value[]> {
+  const decode = stateJson(schema);
   return (text) => {
     const lines = Arr.filter(Str.split("\n")(text), Str.isNonEmpty);
-    return Effect.map(
-      Effect.forEach(lines, (line) => Effect.option(decode(line)), { concurrency: 1 }),
-      Arr.getSomes,
-    );
+    return Effect.map(Effect.forEach(lines, decode, { concurrency: 1 }), Arr.getSomes);
   };
 }
 
 export {
   type AgentSessionState,
   filesBeside,
+  stateJson,
   stateJsonLines,
   type AgentSessionStateFailure,
   type AgentSessionStateFile,
