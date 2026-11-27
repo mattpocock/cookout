@@ -111,6 +111,28 @@ it("finds nothing user-facing in a range touching only a test helper under a tes
   });
 });
 
+it("finds nothing user-facing in a range touching only the shared test utilities under app/modules/testing", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  expect(decided({ changed: ["app/modules/testing/lib/calls-in-flight.ts"] })).toMatchObject({
+    ok: true,
+    value: { go: false, promote: true },
+  });
+});
+
+it("runs the gate, so Release can publish, for a Version Packages merge that only bumps the version", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  expect(decided({ changed: [".changeset/small-wasps-act.md", "CHANGELOG.md", "package.json"] })).toMatchObject({
+    ok: true,
+    value: { go: true, promote: true },
+  });
+});
+
 it.each([["app/modules/routes/index.ts"], ["package.json"]])(
   "still runs the gate when %s, outside any tests/ folder, changed",
   { timeout: 1000 },
