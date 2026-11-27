@@ -462,15 +462,6 @@ interface ListOpenThreadsResponse {
 }
 /** An open thread: its top-level message and when anything last happened in it. */
 type OpenThread = ListOpenThreadsResponse["threads"][number];
-interface InboxAgentJoinRequest {
-  readonly userCode: string;
-  readonly agent: Identity;
-  readonly host: string;
-  readonly text: string;
-  readonly createdAt: IsoTime;
-  readonly expiresAt: IsoTime;
-  readonly liveSessionExpiresAt?: IsoTime;
-}
 /**
  * Why a mention didn't call a trigger URL (mattpocock/cookout#644): `agent_session_live`, the agent held a live agent
  * session, which hears the mention through its inbox and stream, so a new run would only ask to join and be refused.
@@ -536,102 +527,10 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
-declare const brand$4: unique symbol;
-/**
- * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
- * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
- */
-type LiveConnectionId = number & {
-  readonly [brand$4]: "LiveConnectionId";
-};
-/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
-declare const presenceName = "presence";
-/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
-type LiveConnectionDetail = {
-  readonly via: "watch";
-  readonly host?: string;
-} | {
-  readonly via: "web";
-};
-/**
- * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
- * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
- * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
- */
-declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed", "wake run failed"];
-/** One of `offlineReasons`. */
-type OfflineReason = (typeof offlineReasons)[number];
-/**
- * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
- * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
- * it never was, and why it went offline when the server knows. A Deactivated identity is always offline. `warning` is
- * the owner's warning: set only in what the agent's owner reads, while the agent is offline after an unexpected end
- * (the end that raised an offline alert), until it next has a live connection.
- *
- * An agent with a trigger URL whose last call didn't fail can be reached now, so it is online too (Matt, 2026-11-24,
- * mattpocock/cookout#378): when that is the only reason, it carries `wakesOnMention` and no `connection`. One whose
- * last trigger call failed and that has no live connection is Unreachable: offline, carrying that call's result in
- * `unreachable`.
- *
- * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
- * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
- * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
- * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
- * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
- */
-interface Presence {
-  readonly identity: IdentityName;
-  readonly online: boolean;
-  readonly connection?: LiveConnectionDetail;
-  readonly lastSeenAt?: IsoTime;
-  readonly offlineReason?: OfflineReason;
-  readonly warning?: true;
-  readonly wakesOnMention?: true;
-  readonly unreachable?: TriggerResult;
-}
-/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
-interface PresenceResponse {
-  readonly presence: readonly Presence[];
-}
-/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
-type WakeRunFailure = {
-  readonly exitCode: number;
-} | {
-  readonly timedOutAfterMinutes: number;
-};
-/** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
-interface WakeRunResponse {
-  readonly wakeRun: boolean;
-}
-/**
- * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
- * newest one the caller has seen.
- */
-type OfflineAlertId = number & {
-  readonly [brand$4]: "OfflineAlertId";
-};
-/**
- * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
- * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
- * when the agent next had a live connection, absent while it is still offline.
- *
- * A failed call to an agent's trigger URL raises one, `trigger failed`, once per failure streak (Matt, 2026-11-24,
- * mattpocock/cookout#378). It carries `trigger`: the message that didn't get through and the status or error the
- * call ended with. The next successful call sets its `backOnlineAt`; a live connection doesn't.
- */
-interface OfflineAlert {
-  readonly id: OfflineAlertId;
-  readonly agent: IdentityName;
-  readonly offlineReason: OfflineReason;
-  readonly raisedAt: IsoTime;
-  readonly read: boolean;
-  readonly backOnlineAt?: IsoTime;
-  readonly trigger?: TriggerFailure;
-}
 interface StartLoginRequest {
   readonly host: string;
 }
-declare const brand$3: unique symbol;
+declare const brand$4: unique symbol;
 interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
   readonly where?: string;
@@ -671,7 +570,7 @@ interface LoginRequestView extends ApprovalRequestDetails {
 }
 /** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
 type PublicId = string & {
-  readonly [brand$3]: "PublicId";
+  readonly [brand$4]: "PublicId";
 };
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 interface LoginRequestStartedResponse {
@@ -787,7 +686,104 @@ interface LoginCalls {
    */
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
+declare const brand$3: unique symbol;
+/**
+ * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
+ * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
+ */
+type LiveConnectionId = number & {
+  readonly [brand$3]: "LiveConnectionId";
+};
+/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
+declare const presenceName = "presence";
+/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
+type LiveConnectionDetail = {
+  readonly via: "watch";
+  readonly host?: string;
+} | {
+  readonly via: "web";
+};
+/**
+ * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
+ * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
+ * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
+ */
+declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost", "trigger failed", "wake run failed"];
+/** One of `offlineReasons`. */
+type OfflineReason = (typeof offlineReasons)[number];
+/**
+ * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
+ * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
+ * it never was, and why it went offline when the server knows. A Deactivated identity is always offline. `warning` is
+ * the owner's warning: set only in what the agent's owner reads, while the agent is offline after an unexpected end
+ * (the end that raised an offline alert), until it next has a live connection.
+ *
+ * An agent with a trigger URL whose last call didn't fail can be reached now, so it is online too (Matt, 2026-11-24,
+ * mattpocock/cookout#378): when that is the only reason, it carries `wakesOnMention` and no `connection`. One whose
+ * last trigger call failed and that has no live connection is Unreachable: offline, carrying that call's result in
+ * `unreachable`.
+ *
+ * An agent whose live connection is a `cookout runner`'s is online too, and carries `wakesOnMention` (beside its
+ * `connection`) while the runner is asleep; while one of its wake runs is in progress it is plain online (Matt,
+ * 2026-11-26, board msg 6036, mattpocock/cookout#763). Its runner opens the stream with `runnerQuery` and says when a
+ * wake run starts and ends at `wakeRunPath`. Once a wake run fails (`wakeRunFailurePath`), the runner-held agent is
+ * Unreachable, carrying how it failed in `unreachable`, until a wake run of its ends with exit 0 (#763, "Failure").
+ */
+interface Presence {
+  readonly identity: IdentityName;
+  readonly online: boolean;
+  readonly connection?: LiveConnectionDetail;
+  readonly lastSeenAt?: IsoTime;
+  readonly offlineReason?: OfflineReason;
+  readonly warning?: true;
+  readonly wakesOnMention?: true;
+  readonly unreachable?: TriggerResult;
+}
+/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
+interface PresenceResponse {
+  readonly presence: readonly Presence[];
+}
+/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
+type WakeRunFailure = {
+  readonly exitCode: number;
+} | {
+  readonly timedOutAfterMinutes: number;
+};
+/** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
+interface WakeRunResponse {
+  readonly wakeRun: boolean;
+}
+/**
+ * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
+ * newest one the caller has seen.
+ */
+type OfflineAlertId = number & {
+  readonly [brand$3]: "OfflineAlertId";
+};
+/**
+ * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
+ * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
+ * when the agent next had a live connection, absent while it is still offline.
+ *
+ * A failed call to an agent's trigger URL raises one, `trigger failed`, once per failure streak (Matt, 2026-11-24,
+ * mattpocock/cookout#378). It carries `trigger`: the message that didn't get through and the status or error the
+ * call ended with. The next successful call sets its `backOnlineAt`; a live connection doesn't.
+ */
+interface OfflineAlert {
+  readonly id: OfflineAlertId;
+  readonly agent: IdentityName;
+  readonly offlineReason: OfflineReason;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+  readonly backOnlineAt?: IsoTime;
+  readonly trigger?: TriggerFailure;
+}
+/** What an admin did to someone's credentials, as a Login alert tells them. */
 type AdminAct = "revoked" | "sent a login link";
+/**
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
+ * ended), or an admin acting on the person's credentials.
+ */
 type LoginAlertEvent = {
   readonly kind: "new session";
   readonly session: PublicId;
@@ -801,15 +797,27 @@ type LoginAlertEvent = {
   readonly act: AdminAct;
   readonly credential: PublicId;
 };
+/** A Login alert in a person's Inbox: an alert of the offline alert kind, read and cleared like one. */
 interface LoginAlert {
   readonly id: OfflineAlertId;
   readonly login: LoginAlertEvent;
   readonly raisedAt: IsoTime;
   readonly read: boolean;
 }
+/** Any alert an Inbox holds: an offline alert or a Login alert. */
 type InboxAlert = OfflineAlert | LoginAlert;
+/** The answer to marking one alert read. */
 interface OfflineAlertResponse {
   readonly alert: InboxAlert;
+}
+interface InboxAgentJoinRequest {
+  readonly userCode: string;
+  readonly agent: Identity;
+  readonly host: string;
+  readonly text: string;
+  readonly createdAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly liveSessionExpiresAt?: IsoTime;
 }
 declare const brand$2: unique symbol;
 /** A nudge's ID: a positive whole number, increasing in the order nudges are raised. */
