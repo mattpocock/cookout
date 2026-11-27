@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { SessionCard } from "./session-card.tsx";
 import type { SessionList } from "../../board/index.ts";
 import { SessionsConfirm } from "./sessions-confirm.tsx";
-import { refusalWords } from "./sessions-words.ts";
+import { alertOf } from "./sessions-words.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { everywhere: "Log out everywhere" } as const;
@@ -19,13 +19,13 @@ export function SessionsSection(props: SessionsSectionProps): ReactNode {
   const { onLogOut, sessionList } = props;
   const state = useSyncExternalStore(sessionList.subscribe, sessionList.snapshot);
   const handleEverywhere = sessionList.askLogOutEverywhere;
-  const failed = state.asked === null && refusalWords(state);
+  const failed = alertOf(state);
   return (
     <>
       {(state.sessions ?? []).map((session) => (
         <SessionCard key={session.id} onLogOut={onLogOut} session={session} sessionList={sessionList} />
       ))}
-      {failed !== false && failed !== null && <Alert>{failed}</Alert>}
+      {failed !== null && <Alert>{failed}</Alert>}
       <ButtonRow>
         <LogOutButton onLogOut={onLogOut} />
         <Button disabled={state.action.status === "sending"} onClick={handleEverywhere}>

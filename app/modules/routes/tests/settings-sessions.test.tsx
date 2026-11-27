@@ -142,3 +142,53 @@ it("log out everywhere says what will end, and after confirming only this browse
 
   close();
 });
+
+it("revoke on this browser logs it out", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { browser } = await devicesOf("web-sessions-own");
+  const close = await openSessions(browser);
+  const own = await sessionCard("web-sessions-own-browser");
+  fireEvent.click(within(own).getByRole("button", { name: "Revoke" }));
+  const form = await screen.findByRole("form", { name: "Log in" });
+
+  expect(form.getAttribute("aria-label")).toBe("Log in");
+
+  close();
+});
+
+it("a Log out everywhere preview that can't be answered says why, with no dialog", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { browser } = await devicesOf("web-sessions-unanswered");
+  const refusing = {
+    ...clientWith(browser),
+    previewLogOutEverywhere: async (): Promise<never> => {
+      await Promise.resolve();
+      throw new Error("board unavailable");
+    },
+  };
+  const close = openAt({ client: refusing, hash: "#/settings/session" });
+  fireEvent.click(await inSettings().findByRole("button", { name: "Log out everywhere" }));
+  const alert = await inSettings().findByRole("alert");
+
+  expect([alert.textContent, screen.queryByRole("alertdialog")]).toStrictEqual([
+    "Couldn't do that. Error: board unavailable",
+    null,
+  ]);
+
+  close();
+});
+
+it("with nothing else logged in, Log out everywhere says so", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { token } = await newIdentity({ kind: "human", name: "web-sessions-alone" });
+  const close = await openSessions(token);
+  fireEvent.click(await inSettings().findByRole("button", { name: "Log out everywhere" }));
+  const body = await inDialog().findByText(/stays logged in/u);
+
+  expect(body.textContent).toBe("Nothing else is logged in. This browser stays logged in.");
+
+  close();
+});

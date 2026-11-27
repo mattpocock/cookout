@@ -7,12 +7,16 @@ const NONE = 0;
 
 const KINDS = { cli: "Terminal", web: "Browser" } as const;
 
+function isText(where: string | undefined): where is string {
+  return typeof where === "string";
+}
+
 function approvedByOf(session: SessionView): readonly string[] {
   const madeBy = session.madeBy ?? null;
-  if (madeBy === null || madeBy.kind === "identity token") {
+  if (madeBy === null) {
     return [];
   }
-  return [`approved by ${madeBy.where ?? "web browser"}`];
+  return [madeBy.where].filter((where) => isText(where)).map((where) => `approved by ${where}`);
 }
 
 function sessionDetail(session: SessionView): string {
@@ -35,11 +39,7 @@ function counted(count: number, one: string, many: string): readonly string[] {
 }
 
 function listed(parts: readonly string[]): string {
-  const last = parts.at(-ONE) ?? "";
-  if (parts.length <= ONE) {
-    return last;
-  }
-  return `${parts.slice(NONE, -ONE).join(", ")} and ${last}`;
+  return [parts.slice(NONE, -ONE).join(", "), ...parts.slice(-ONE)].filter((part) => part !== "").join(" and ");
 }
 
 function willEndWords(willEnd: LogOutEverywhereCounts): string {
@@ -78,4 +78,11 @@ function refusalWords(state: SessionListState): string | null {
   return `Couldn't do that. ${state.action.message}`;
 }
 
-export { questionOf, refusalWords, sessionDetail };
+function alertOf(state: SessionListState): string | null {
+  if (state.asked !== null) {
+    return null;
+  }
+  return refusalWords(state);
+}
+
+export { alertOf, questionOf, refusalWords, sessionDetail };
