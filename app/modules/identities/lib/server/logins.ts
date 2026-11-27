@@ -1,4 +1,12 @@
-import { AddressLimit, lifetimeOf, loginRequestNotFound, now, requireHuman } from "./login-support.ts";
+import {
+  AddressLimit,
+  lifetimeOf,
+  loginRequestDetails,
+  loginRequestNotFound,
+  now,
+  requestOriginOf,
+  requireHuman,
+} from "./login-support.ts";
 import { Caller, CredentialSent, credentialsOf, sentToken } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
@@ -13,8 +21,9 @@ import {
 import { Effect, Function, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { LoginCollection, LoginRequest, NewLoginRequest, StorageUnavailable } from "../../../storage/server.ts";
+import type { LoginRequestStartedResponse, LoginRequestView } from "../../../logins/index.ts";
 import {
-  approvalPathOf,
+  approvalPath,
   collectLoginRequestPath,
   isUserCode,
   loginPath,
@@ -23,7 +32,6 @@ import {
   loginRequestSeconds,
   loginRequestsPath,
 } from "../../../logins/index.ts";
-import type { LoginRequestStartedResponse } from "../../../logins/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -68,11 +76,13 @@ function addWithCode(request: UnnamedRequest): Effect.Effect<string, StorageUnav
 
 const newRequest = Effect.gen(function* newLoginRequest() {
   const { host } = yield* HttpServerRequest.schemaBodyJson(StartLoginRequestSchema);
+  const { headers } = yield* HttpServerRequest.HttpServerRequest;
+  const origin = requestOriginOf({ clientIp: yield* clientAddress, headers });
   const secrets = yield* Secrets;
   const requestId = yield* secrets.newToken;
   const requestHash = yield* secrets.hashToken(requestId);
   const { createdAt, expiresAt } = yield* lifetimeOf(loginRequestSeconds);
-  return { request: { createdAt, expiresAt, host, requestHash }, requestId };
+  return { request: { ...origin, createdAt, expiresAt, host, requestHash }, requestId };
 });
 
 const startRoute: Route<Storage | Secrets | AddressLimit> = {
@@ -83,7 +93,7 @@ const startRoute: Route<Storage | Secrets | AddressLimit> = {
         const userCode = yield* addWithCode(request);
         const { expiresAt } = request;
         const started: LoginRequestStartedResponse = {
-          approvalPath: approvalPathOf(userCode),
+          approvalPath,
           expiresAt,
           requestId,
           userCode,
@@ -133,11 +143,15 @@ function codeParam(params: Readonly<Record<string, string>>): string {
   return String(params["code"]);
 }
 
+function viewOf({ approved, expiresAt, host, userCode, ...started }: LoginRequest): LoginRequestView {
+  return { ...loginRequestDetails({ ...started, host }), approved, expiresAt, host, userCode };
+}
+
 function requestAnswer(found: LoginRequest | undefined): Effect.Effect<Answer, typeof loginRequestNotFound> {
   if (Predicate.isUndefined(found)) {
     return Effect.fail(loginRequestNotFound);
   }
-  return Effect.orDie(HttpServerResponse.schemaJson(LoginRequestResponseSchema)({ loginRequest: found }));
+  return Effect.orDie(HttpServerResponse.schemaJson(LoginRequestResponseSchema)({ loginRequest: viewOf(found) }));
 }
 
 const userCodeSegments = { code: isUserCode };

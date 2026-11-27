@@ -1,43 +1,50 @@
 import { Array as Arr, Option, String as Str } from "effect";
 
-type Marks = readonly (readonly [string, string])[];
+interface Named {
+  readonly name: string;
+  readonly marks: readonly string[];
+}
 
-const BROWSERS: Marks = [
-  ["Edg/", "Edge"],
-  ["OPR/", "Opera"],
-  ["Firefox/", "Firefox"],
-  ["Chrome/", "Chrome"],
-  ["Safari/", "Safari"],
+const BROWSERS: readonly Named[] = [
+  { marks: ["Edg/", "EdgA/", "EdgiOS/", "Edge/"], name: "Edge" },
+  { marks: ["OPR/"], name: "Opera" },
+  { marks: ["Firefox/", "FxiOS/"], name: "Firefox" },
+  { marks: ["Chrome/", "CriOS/"], name: "Chrome" },
+  { marks: ["Safari/"], name: "Safari" },
 ];
 
-const SYSTEMS: Marks = [
-  ["Android", "Android"],
-  ["iPhone", "iOS"],
-  ["iPad", "iOS"],
-  ["CrOS", "ChromeOS"],
-  ["Windows", "Windows"],
-  ["Mac OS X", "macOS"],
-  ["Linux", "Linux"],
+const SYSTEMS: readonly Named[] = [
+  { marks: ["iPhone", "iPad", "iPod"], name: "iOS" },
+  { marks: ["Android"], name: "Android" },
+  { marks: ["CrOS"], name: "ChromeOS" },
+  { marks: ["Windows"], name: "Windows" },
+  { marks: ["Mac OS X", "Macintosh"], name: "macOS" },
+  { marks: ["Linux"], name: "Linux" },
 ];
 
 const UNNAMED = "web browser";
 
-function named(userAgent: string, marks: Marks): Option.Option<string> {
+function nameIn(named: readonly Named[], userAgent: string): Option.Option<string> {
   return Option.map(
-    Arr.findFirst(marks, ([mark]) => Str.includes(mark)(userAgent)),
-    ([, name]) => name,
+    Arr.findFirst(named, ({ marks }) => Arr.some(marks, (mark) => Str.includes(mark)(userAgent))),
+    ({ name }) => name,
   );
+}
+
+function browserOn(userAgent: string): string {
+  const browser = Option.getOrElse(nameIn(BROWSERS, userAgent), () => "A browser");
+  return `${browser} on ${Option.getOrElse(nameIn(SYSTEMS, userAgent), () => "an unknown OS")}`;
 }
 
 function webSessionWhere(userAgent = ""): string {
   return Option.getOrElse(
     Option.zipWith(
-      named(userAgent, BROWSERS),
-      named(userAgent, SYSTEMS),
+      nameIn(BROWSERS, userAgent),
+      nameIn(SYSTEMS, userAgent),
       (browser, system) => `${browser} on ${system}`,
     ),
     () => UNNAMED,
   );
 }
 
-export { webSessionWhere };
+export { browserOn, webSessionWhere };

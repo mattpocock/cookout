@@ -10,7 +10,7 @@ import type {
   UseLoginCredential,
 } from "./login-requests.ts";
 import { Array as Arr, Effect, Option, pipe } from "effect";
-import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } from "./login-requests.ts";
+import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry, originOf } from "./login-requests.ts";
 import type { EndedCredential, LineageSection, NewLineage } from "./credential-lineage.ts";
 import type { Ender, Ending, MemoryLineage } from "./credential-lineage-memory.ts";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
@@ -52,8 +52,9 @@ interface MemoryLoginRequestsSection
 }
 
 function shown({ approvedBy, request }: MemoryRequest): LoginRequest {
-  const { expiresAt, host, userCode } = request;
-  return { approved: Option.isSome(approvedBy), expiresAt, host, userCode };
+  const { clientIp, createdAt, expiresAt, host, userAgent, userCode } = request;
+  const origin = originOf({ clientIp, userAgent });
+  return { ...origin, approved: Option.isSome(approvedBy), createdAt, expiresAt, host, userCode };
 }
 
 function dropExpired(requests: Requests, now: IsoTime): void {

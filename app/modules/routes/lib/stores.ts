@@ -1,5 +1,6 @@
 import type {
   AgentJoinApprovals,
+  ApprovalCode,
   BoardStore,
   ChannelCreation,
   LoginApprovals,
@@ -15,6 +16,7 @@ import type { Search } from "../../search/web.ts";
 
 interface Stores {
   readonly agentJoinApprovals: AgentJoinApprovals;
+  readonly approvalCode: ApprovalCode;
   readonly boardStore: BoardStore;
   readonly channelCreation: ChannelCreation;
   readonly composer: Composer;

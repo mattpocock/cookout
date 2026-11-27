@@ -1,16 +1,14 @@
 import type {
   CollectLoginRequest,
   LoginCollection,
-  LoginCredentialLookup,
   LoginRequest,
   LoginRequestsSection,
   NewLoginRequest,
-  UseLoginCredential,
 } from "./login-requests.ts";
-import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } from "./login-requests.ts";
 import { Effect, Function as Fn, Option, Predicate, Schema, pipe } from "effect";
+import { GONE, PENDING, collected, loginCredentialExpiry, originColumns, originOf } from "./login-requests.ts";
 import type { Identity, TokenHash } from "../../../identities/index.ts";
-import { IdentityRow, toIdentity } from "./identity-row.ts";
+import { credentialIn, lookUpIn, rowOf } from "./login-credential-lookup-sqlite.ts";
 import { isIdentityName, tokenHash } from "../../../identities/index.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -19,30 +17,23 @@ import type { NewLineage } from "./credential-lineage.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
 import { lineageIn } from "./credential-lineage-sql.ts";
 import { newPublicId } from "./credential-lineage.ts";
-import { unreadable } from "./errors.ts";
 
 const ApproverColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 
 const RequestRow = Schema.Struct({
   approved_by: Schema.NullOr(ApproverColumn),
   approved_with: Schema.NullOr(Schema.String),
+  client_ip: Schema.NullOr(Schema.String),
+  created_at: IsoTimeSchema,
   expires_at: IsoTimeSchema,
   host: Schema.String,
+  user_agent: Schema.NullOr(Schema.String),
   user_code: Schema.String,
 });
 
 type RequestRowType = typeof RequestRow.Type;
 
-const REQUEST_COLUMNS = "approved_by, approved_with, expires_at, host, user_code";
-
-const FIND_CREDENTIAL = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, i.avatar
-  FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
-
-const LOOK_UP_CREDENTIAL = `SELECT c.last_used_at, i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name,
-  i.deactivated, i.avatar
-  FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
-
-const LastUsedRow = Schema.Struct({ last_used_at: IsoTimeSchema });
+const REQUEST_COLUMNS = "approved_by, approved_with, client_ip, created_at, expires_at, host, user_agent, user_code";
 
 const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE request_hash = ? AND expires_at > ?`;
 
@@ -52,27 +43,23 @@ const APPROVE = `UPDATE login_requests
 
 const FIND_LIVE_BY_CODE = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE user_code = ? AND expires_at > ?`;
 
-const INSERT_REQUEST = `INSERT INTO login_requests (request_hash, user_code, host, created_at, expires_at)
-  VALUES (?, ?, ?, ?, ?)`;
+const INSERT_REQUEST = `INSERT INTO login_requests
+  (request_hash, user_code, host, created_at, expires_at, client_ip, user_agent)
+  VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
 const ISSUE_CREDENTIAL = `INSERT INTO login_credentials (hash, identity_name, host, created_at, last_used_at, expires_at)
   SELECT ?, name, ?, ?, ?, ? FROM identities WHERE name = ?`;
 
-function rowOf<Decoded, Failure>(decode: (row: unknown) => Effect.Effect<Decoded, Failure>) {
-  return (row: unknown): Fails<Option.Option<Decoded>> => {
-    if (!Predicate.isObject(row)) {
-      return Effect.succeedNone;
-    }
-    return Effect.mapBoth(decode(row), { onFailure: unreadable, onSuccess: Option.some });
-  };
-}
-
 const requestRow = rowOf(Schema.decodeUnknownEffect(RequestRow));
-const identityRow = rowOf(Schema.decodeUnknownEffect(IdentityRow));
-const lastUsedRow = rowOf(Schema.decodeUnknownEffect(LastUsedRow));
-
 function shown(row: RequestRowType): LoginRequest {
-  return { approved: row.approved_by !== null, expiresAt: row.expires_at, host: row.host, userCode: row.user_code };
+  return {
+    ...originOf({ clientIp: row.client_ip, userAgent: row.user_agent }),
+    approved: row.approved_by !== null,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    host: row.host,
+    userCode: row.user_code,
+  };
 }
 
 interface Queries {
@@ -82,8 +69,7 @@ interface Queries {
 
 function sqlQueries(db: SqlDatabase): Queries {
   return {
-    credential: (hash: TokenHash): Fails<Option.Option<Identity>> =>
-      Effect.map(Effect.flatMap(db.get(FIND_CREDENTIAL, hash), identityRow), Option.map(toIdentity)),
+    credential: credentialIn(db),
     liveByCode: (userCode: string, now: IsoTime): Fails<Option.Option<RequestRowType>> =>
       Effect.flatMap(db.get(FIND_LIVE_BY_CODE, userCode, now), requestRow),
   };
@@ -100,7 +86,7 @@ function addIn(db: SqlDatabase): LoginRequestsSection["addLoginRequest"] {
           return "code_taken" as const;
         }
         const { createdAt, expiresAt, host, requestHash, userCode } = request;
-        yield* db.run(INSERT_REQUEST, requestHash, userCode, host, createdAt, expiresAt);
+        yield* db.run(INSERT_REQUEST, requestHash, userCode, host, createdAt, expiresAt, ...originColumns(request));
         return "added" as const;
       }),
     );
@@ -200,75 +186,6 @@ function issueStraightIn(db: SqlDatabase): LoginRequestsSection["issueLoginCrede
     );
 }
 
-interface FoundCredential {
-  readonly identity: Identity;
-  readonly lastUsedAt: IsoTime;
-}
-
-function foundCredential(db: SqlDatabase, hash: TokenHash): Fails<Option.Option<FoundCredential>> {
-  return Effect.gen(function* findCredential() {
-    const row = yield* db.get(LOOK_UP_CREDENTIAL, hash);
-    const identity = yield* identityRow(row);
-    const used = yield* lastUsedRow(row);
-    return Option.zipWith(identity, used, (found, { last_used_at: lastUsedAt }) => ({
-      identity: toIdentity(found),
-      lastUsedAt,
-    }));
-  });
-}
-
-interface SqlLookUp {
-  readonly db: SqlDatabase;
-  readonly renew: boolean;
-  readonly use: UseLoginCredential;
-}
-
-function expiredIn({ db, renew, use }: SqlLookUp): Fails<LoginCredentialLookup> {
-  const forget = Effect.andThen(
-    db.run("DELETE FROM login_credentials WHERE hash = ?", use.hash),
-    lineageIn(db).markEnded({ hash: use.hash, now: use.now, why: "expired" }),
-  );
-  return Effect.as(Effect.when(forget, Effect.succeed(renew)), EXPIRED);
-}
-
-function activeIn(
-  { db, renew, use }: SqlLookUp,
-  { identity, lastUsedAt: usedBefore }: FoundCredential,
-): Fails<LoginCredentialLookup> {
-  if (!renew) {
-    return Effect.succeed({
-      expiresAt: loginCredentialExpiry(usedBefore),
-      identity,
-      lastUsedAt: usedBefore,
-      status: "active",
-    });
-  }
-  const expiresAt = loginCredentialExpiry(use.now);
-  const renewing = "UPDATE login_credentials SET last_used_at = ?, expires_at = ? WHERE hash = ?";
-  return Effect.as(db.run(renewing, use.now, expiresAt, use.hash), {
-    expiresAt,
-    identity,
-    lastUsedAt: use.now,
-    status: "active",
-  } as const);
-}
-
-function lookUpIn(db: SqlDatabase, renew: boolean) {
-  return (use: UseLoginCredential): Fails<LoginCredentialLookup> =>
-    db.transaction(
-      Effect.gen(function* lookUpCredential() {
-        const found = yield* foundCredential(db, use.hash);
-        if (Option.isNone(found)) {
-          return UNKNOWN;
-        }
-        if (use.now >= loginCredentialExpiry(found.value.lastUsedAt)) {
-          return yield* expiredIn({ db, renew, use });
-        }
-        return yield* activeIn({ db, renew, use }, found.value);
-      }),
-    );
-}
-
 function revokeIn(db: SqlDatabase): LoginRequestsSection["revokeLoginCredential"] {
   return (hash, now) =>
     db.transaction(
@@ -286,14 +203,14 @@ function sqlLoginRequests(db: SqlDatabase): LoginRequestsSection {
   return {
     addLoginRequest: addIn(db),
     approveLoginRequest: approveIn(db),
-    checkLoginCredential: lookUpIn(db, false),
+    checkLoginCredential: lookUpIn({ db, renew: false }),
     collectLoginRequest: collectIn(db),
     findLoginCredential: (hash) => Effect.map(credential(hash), Option.getOrUndefined),
     findLoginRequest: (userCode, now) =>
       Effect.map(liveByCode(userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
     issueLoginCredential: issueStraightIn(db),
     revokeLoginCredential: revokeIn(db),
-    useLoginCredential: lookUpIn(db, true),
+    useLoginCredential: lookUpIn({ db, renew: true }),
   };
 }
 

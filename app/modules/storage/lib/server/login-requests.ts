@@ -2,10 +2,11 @@ import type { Identity, IdentityName, TokenHash } from "../../../identities/inde
 import { DateTime } from "effect";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
+import type { RequestOrigin } from "./request-origins.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { loginCredentialIdleSeconds } from "../../../logins/index.ts";
 
-interface NewLoginRequest {
+interface NewLoginRequest extends RequestOrigin {
   readonly requestHash: TokenHash;
   readonly userCode: string;
   readonly host: string;
@@ -13,9 +14,10 @@ interface NewLoginRequest {
   readonly expiresAt: IsoTime;
 }
 
-interface LoginRequest {
+interface LoginRequest extends RequestOrigin {
   readonly userCode: string;
   readonly host: string;
+  readonly createdAt: IsoTime;
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
 }
@@ -104,3 +106,4 @@ export {
   PENDING,
   collected,
 };
+export { originColumns, originOf } from "./request-origins.ts";

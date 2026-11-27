@@ -29,6 +29,8 @@ const BEFORE_SECRETS_KEY = [
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
+  "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
+  "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "DROP TABLE secrets_key",
 ];
 const BEFORE_SEARCH = [
@@ -57,7 +59,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 3",
+  "UPDATE schema_version SET version = version - 4",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
@@ -131,9 +133,7 @@ it.effect("two stores opened on the same empty database at once apply each migra
   Effect.scoped(
     Effect.gen(function* together() {
       const url = yield* emptyPostgresDatabase;
-      const [first, second] = yield* Effect.all([opened(url), opened(url)], {
-        concurrency: "unbounded",
-      });
+      const [first, second] = yield* Effect.all([opened(url), opened(url)], { concurrency: "unbounded" });
       yield* first.storage.createIdentity(matt, hashA);
       const identities = yield* second.storage.listIdentities();
       yield* Effect.andThen(first.close, second.close);

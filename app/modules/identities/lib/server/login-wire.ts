@@ -49,7 +49,15 @@ const LoginCollectedResponseSchema = matchesWire<LoginCollectedResponse>()(
   Schema.Union([PendingSchema, ApprovedSchema]),
 );
 
+const approvalRequestDetailsFields = {
+  clientIp: Schema.optionalKey(Schema.String),
+  createdAt: IsoTimeSchema,
+  kind: Schema.Literals(["browser", "terminal", "agent_join"]),
+  where: Schema.String,
+};
+
 const LoginRequestViewSchema = Schema.Struct({
+  ...approvalRequestDetailsFields,
   approved: Schema.Boolean,
   expiresAt: IsoTimeSchema,
   host: Schema.String,
@@ -89,6 +97,7 @@ const ListSessionsResponseSchema = matchesWire<ListSessionsResponse>()(
 const RevokeSessionResponseSchema = matchesWire<RevokeSessionResponse>()(Schema.Struct({ ended: Schema.Int }));
 
 export {
+  approvalRequestDetailsFields,
   CollectLoginRequestSchema,
   ListSessionsResponseSchema,
   RevokeSessionResponseSchema,

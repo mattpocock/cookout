@@ -202,6 +202,15 @@ export const openIdentityRoutes: typeof openLoginRoutes = openLoginRoutes;
  */
 export { AddressLimit } from "./lib/server/routes.ts";
 
+/**
+ * The client IP and User-Agent (its first 500 characters) a Login or agent join request starts from, to store with
+ * it (#905), from the request's client address and headers.
+ */
+export { requestOriginOf } from "./lib/server/login-support.ts";
+
+/** The wire fields of what a person sees about a Login or agent join request before Approve (#905). */
+export { approvalRequestDetailsFields } from "./lib/server/login-wire.ts";
+
 /** `PUT /v1/identities/:name/owner`, an admin transferring an agent to another human. It needs `Caller`. */
 export { transferRoutes } from "./lib/server/transfer.ts";
 

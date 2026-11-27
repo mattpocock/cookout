@@ -1,9 +1,11 @@
 import {
+  ADMIN_SETTING_MIGRATION,
   ATTACHMENTS_MIGRATION,
   ATTACHMENT_SIZES_MIGRATION,
   CALL_TIMES_MIGRATION,
   CREDENTIAL_LINEAGE_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
+  REQUEST_ORIGINS_MIGRATION,
   SEARCH_MIGRATION,
   SECRETS_KEY_MIGRATION,
   TRIGGERS_MIGRATION,
@@ -11,15 +13,15 @@ import {
   TRIGGER_SKIPPED_MIGRATION,
 } from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
-import { Effect, FileSystem, Schema } from "effect";
-import { ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
+import { Effect, Schema } from "effect";
+import type { FileSystem, Scope } from "effect";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
-import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
+import { createOwnerOnly } from "./owner-only-file.ts";
 import { openSqlite } from "./adapters/sqlite.ts";
 
 const migrations: readonly string[] = [
@@ -251,6 +253,7 @@ const migrations: readonly string[] = [
   CALL_TIMES_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
   SECRETS_KEY_MIGRATION,
+  REQUEST_ORIGINS_MIGRATION,
   CREDENTIAL_LINEAGE_MIGRATION,
 ];
 
@@ -281,15 +284,6 @@ const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
       }
     }
   });
-
-const OWNER_ONLY = 0o600;
-
-function createOwnerOnly(path: string): Effect.Effect<void, StorageUnavailable, FileSystem.FileSystem> {
-  return Effect.gen(function* createDatabaseFile() {
-    const fs = yield* FileSystem.FileSystem;
-    yield* Effect.scoped(fs.open(path, { flag: "a", mode: OWNER_ONLY }));
-  }).pipe(Effect.mapError(({ message }: { readonly message: string }) => StorageUnavailable.make({ message })));
-}
 
 export function openMigrated(
   path: string,
