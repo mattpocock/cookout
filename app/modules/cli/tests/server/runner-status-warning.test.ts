@@ -4,6 +4,7 @@ import {
   claudeCodeHome,
   commandLineServices,
   joinWaking,
+  registerAs,
   runCookout,
   testCookout,
   wakeBoard,
@@ -21,6 +22,7 @@ interface Status {
 }
 
 const BRIGID = "brigid";
+const CLAUDE_CODE = "claude-code";
 const EXITED_PID = 4_194_305;
 const EXIT_SUCCESS = 0;
 const LAUNCH_LINE = `claude --settings '{"crossSessionInbound":"accept"}'`;
@@ -28,11 +30,12 @@ const ACCEPT_JSON = '{"crossSessionInbound":"accept"}';
 const BYPASS = "bypassPermissions";
 const SKIP_PERMISSIONS = "--dangerously-skip-permissions";
 
-function statusWith(session: Session): Effect.Effect<Status, never, Needs> {
+function statusWith(session: Session, harness = CLAUDE_CODE): Effect.Effect<Status, never, Needs> {
   return Effect.gen(function* statusOfOpenSession() {
     const path = yield* Path.Path;
     const on = yield* wakeBoard;
     const brigid = yield* joinWaking({ name: BRIGID, on, settings: { log: path.join(on.folder, "wake.log") } });
+    yield* Effect.when(registerAs({ harness, stateFolder: on.folder }), Effect.succeed(harness !== CLAUDE_CODE));
     const home = yield* claudeCodeHome({ ...session, harnessSession: brigid.harnessSession });
     const env = { CLAUDE_CONFIG_DIR: home.folder, COOKOUT_STATE_DIR: on.folder };
     const text = yield* runCookout({ args: ["runner", "status"], env });
@@ -80,9 +83,10 @@ it.effect.each([
       const { json, text, textExit } = yield* statusWith(session);
 
       expect(textExit).toBe(EXIT_SUCCESS);
-      expect(text).toContain(`would ${value} runner messages`);
+      expect(text).toContain(`brigid's Claude Code session would ${value} runner messages`);
       expect(text).toContain(LAUNCH_LINE);
       expect(json).toContain(`"crossSessionInbound": "${value}"`);
+      expect(json).toContain(`"harness": "${CLAUDE_CODE}"`);
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
@@ -134,5 +138,15 @@ it.effect("runner status gives no warning when there is no Claude Code folder to
     expect(json.exitCode).toBe(EXIT_SUCCESS);
     expect(json.stdout).toContain(BRIGID);
     expect(json.stdout).not.toContain("crossSessionInbound");
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("runner status gives no warning for a registration from another harness", () =>
+  Effect.gen(function* notWarnedForCodex() {
+    const { json, text, textExit } = yield* statusWith({ userSettings: { crossSessionInbound: "hold" } }, "codex");
+
+    expect(textExit).toBe(EXIT_SUCCESS);
+    expect(text).not.toContain("runner messages");
+    expect(json).not.toContain("liveDelivery");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

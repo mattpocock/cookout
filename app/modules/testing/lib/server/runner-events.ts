@@ -16,6 +16,7 @@ type Needs = CommandLineNeeds | TestCookout | Scope.Scope;
 const RunnerEventSchema = Schema.Struct({
   agent: Schema.String,
   at: Schema.String,
+  harness: Schema.optionalKey(Schema.String),
   messages: Schema.optionalKey(Schema.Array(Schema.Int)),
   output: Schema.optionalKey(Schema.String),
   reason: Schema.optionalKey(Schema.String),

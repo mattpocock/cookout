@@ -1,10 +1,8 @@
 import { Array as Arr, Effect, FileSystem, Function, Option, Path, Schema, String as Str } from "effect";
 import { claudeConfigDir, home } from "../../../config/server.ts";
 import type { Registration } from "./registrations.ts";
+import { isAlive } from "./process-alive.ts";
 import { stateJson } from "./agent-session-state.ts";
-
-const CLAUDE_CODE = "claude-code";
-const SIGNAL_CHECK = 0;
 
 const SessionFileSchema = Schema.Struct({
   cwd: Schema.optionalKey(Schema.String),
@@ -23,10 +21,6 @@ interface Lookup {
 
 const decodeSessionFile = stateJson(SessionFileSchema);
 const nothingToLookUp: Lookup = { folder: Option.none(), open: Option.none() };
-
-function isAlive(pid: number): Effect.Effect<boolean> {
-  return Effect.isSuccess(Effect.try({ catch: Function.constant(pid), try: () => process.kill(pid, SIGNAL_CHECK) }));
-}
 
 const claudeHome: Effect.Effect<Option.Option<string>, never, Path.Path> = Effect.gen(function* claudeConfigFolder() {
   const path = yield* Path.Path;
@@ -56,9 +50,7 @@ function sessionFilesIn(
 }
 
 function registeredSession(registration: Registration): Option.Option<string> {
-  return Option.filter(Option.fromUndefinedOr(registration.sessionId), () =>
-    Str.startsWith(CLAUDE_CODE)(registration.harness),
-  );
+  return Option.fromUndefinedOr(registration.sessionId);
 }
 
 function openAmong(files: readonly SessionFile[], registered: string): Effect.Effect<Option.Option<SessionFile>> {
@@ -82,4 +74,4 @@ function lookUp(registration: Registration): Effect.Effect<Lookup, never, FileSy
   });
 }
 
-export { type Lookup, type SessionFile, isAlive, lookUp };
+export { type Lookup, type SessionFile, lookUp };
