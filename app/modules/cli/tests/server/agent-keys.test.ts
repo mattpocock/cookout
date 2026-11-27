@@ -29,8 +29,11 @@ it.effect("cookout agent-key create, list and revoke work, and COOKOUT_TOKEN set
   Effect.gen(function* keyVerbs() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const asAda = { COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
+    yield* runCookout({
+      args: ["identity", "create", "release-bot", "--kind", "agent", "--display-name", "Release bot"],
+      env: asAda,
+    });
     const created = yield* runCookout({
       args: ["agent-key", "create", "release-bot", "ci", "--expires", "30d"],
       env: asAda,

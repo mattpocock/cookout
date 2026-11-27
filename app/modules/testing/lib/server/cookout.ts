@@ -1,3 +1,4 @@
+import type { AdminNameIsAgent, Identities } from "../../../identities/server.ts";
 import {
   Array as Arr,
   ConfigProvider,
@@ -5,7 +6,6 @@ import {
   Effect,
   Exit,
   Layer,
-  Option,
   Predicate,
   Record as Rec,
   Ref,
@@ -13,14 +13,18 @@ import {
 } from "effect";
 import type { Booted, HeldAssets, LastEnd, LoggedLine } from "./booted.ts";
 import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
+import type { IdentityFixtureOptions, SeededCredential } from "./identities.ts";
 import type { NewMessage, StorageUnavailable, StoredDelivery, StoredWebhookCommand } from "../../../storage/server.ts";
 import { agedStorageFor, backingServices, newToken, scriptedTriggersIn } from "./backing.ts";
 import { booted, capturedLogs, heldAssetsOn, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
-import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
-import type { AdminNameIsAgent } from "../../../identities/server.ts";
-import { Identities } from "../../../identities/server.ts";
-import type { IdentityFixtureOptions } from "./identities.ts";
+import {
+  identityFixture,
+  identityName,
+  ownedByAdminUnlessNamed,
+  seededIdentity,
+  testCookoutAdminName,
+} from "./identities.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageKind } from "./backing.ts";
 import { WebhookFake } from "../../../webhook-fake/server.ts";
@@ -37,7 +41,10 @@ export type TestIdentity = {
   readonly client: CookoutClient;
 };
 
-export type CreateTestIdentityOptions = IdentityFixtureOptions & { readonly createdAt?: Identity["createdAt"] };
+export type CreateTestIdentityOptions = IdentityFixtureOptions & {
+  readonly createdAt?: Identity["createdAt"];
+  readonly credential?: SeededCredential;
+};
 
 export type BootedServer = {
   readonly url: string;
@@ -138,9 +145,8 @@ function seedMissingOwner(identity: Identity): Effect.Effect<void, StorageUnavai
     if (Predicate.isNotUndefined(found)) {
       return;
     }
-    const { hash } = yield* Effect.flatMap(Identities, (identities) => identities.issueToken);
     const owner = identityFixture(identity.owner, { kind: "human" });
-    yield* storage.createIdentity({ ...owner, createdAt: identity.createdAt }, hash);
+    yield* storage.createIdentity({ ...owner, createdAt: identity.createdAt });
   });
 }
 
@@ -148,15 +154,11 @@ const seedIdentity =
   (url: string) =>
   (name: string, options: CreateTestIdentityOptions = {}): Effect.Effect<TestIdentity, never, Storage | Identities> =>
     Effect.gen(function* seedTestIdentity() {
-      const storage = yield* Storage;
-      const identities = yield* Identities;
-      const { createdAt: seededAt, ...kind } = options;
+      const { createdAt: seededAt, credential = "session or agent key", ...kind } = options;
       const createdAt = seededAt ?? (yield* currentTime);
       const identity: Identity = { ...identityFixture(name, ownedByAdminUnlessNamed(kind)), createdAt };
       yield* seedMissingOwner(identity);
-      const { token, hash } = yield* identities.issueToken;
-      const created = yield* storage.createIdentity(identity, hash);
-      yield* Effect.orDie(Effect.fromOption(Option.liftPredicate(created, (result) => result === "created")));
+      const token = yield* seededIdentity({ credential, identity });
       return { client: clientAt(url)(token), identity, token };
     }).pipe(Effect.orDie);
 

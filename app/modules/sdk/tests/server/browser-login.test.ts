@@ -93,7 +93,7 @@ it.effect("two Login credentials work beside the identity's token, and logout re
 it.effect("logging out with a token that isn't a Login credential revokes nothing", () =>
   Effect.gen(function* notALogin() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const revoked = yield* answer(ada.client.revokeLogin);
     const stillIn = yield* answer(ada.client.whoami);
 

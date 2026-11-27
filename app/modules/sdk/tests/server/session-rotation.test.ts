@@ -129,7 +129,7 @@ function agentSessionWatch(cookout: TestCookoutService, owner: TestIdentity): Ef
 it.effect("rotating the human's token ends the login approved with it and the web session made with that login", () =>
   Effect.gen(function* belowTokenEnds() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const credential = yield* loginCredential(cookout, ada);
     const cookie = yield* sessionCookie(cookout.url, credential);
     yield* answer(() => ada.client.rotateToken("ada"));
@@ -150,7 +150,7 @@ it.effect("rotating the human's token ends the login approved with it and the we
 it.effect("rotating the human's token closes the event streams of every session below it", () =>
   Effect.gen(function* rotatedStreamCloses() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const { made, other } = yield* twoWebStreams(cookout, ada);
     yield* answer(() => ada.client.rotateToken("ada"));
     const ended = yield* Effect.forEach([made, other], (frames) => eventsUntilEnd(frames), { concurrency: 1 });
@@ -173,7 +173,7 @@ it.effect("rotating the human's token closes the event streams of every session 
 it.effect("rotating the human's token closes a web stream whose cookie holds that token itself", () =>
   Effect.gen(function* legacyCookieCloses() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const stream = yield* webStream(cookout.url, `${sessionCookieName}=${ada.token}`);
     yield* answer(() => ada.client.rotateToken("ada"));
     const ended = yield* eventsUntilEnd(stream);

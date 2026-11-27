@@ -121,7 +121,7 @@ it.effect(
 it.effect("a session cookie stops working when the human's token is rotated", () =>
   Effect.gen(function* rotatedCookie() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const cookie = yield* sessionCookie(cookout.url, ada.token);
     yield* answer(() => ada.client.rotateToken("ada"));
     const response = yield* withCookie(cookout.url, cookie)({ method: "GET", path: whoamiPath });

@@ -100,7 +100,7 @@ it.effect("a deactivated identity can't be mentioned, and the identity list hide
 it.effect("reactivating answers a fresh token while the old tokens stay dead", () =>
   Effect.gen(function* reactivate() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", HUMAN);
+    const ada = yield* cookout.createIdentity("ada", { ...HUMAN, credential: "identity token" });
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const reactivated = yield* answer(() => cookout.client.reactivateIdentity("ada"));
     const old = yield* refusal(ada.client.whoami);
