@@ -30,6 +30,8 @@ The CLI keeps the Login in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.c
 
 `cookout logout` forgets the Login for the board and prints `{ "loggedOut": true, "revoked": true, "url" }`: a browser Login's credential stops working at once, on this machine only. A Login from `--token` is your Identity token itself, so `revoked` is `false`; rotate the token to end it.
 
+`cookout login list` prints your live sessions, oldest first, as `{ "sessions": [ … ] }`: each one's `id`, `kind` (`web` or `cli`), `where`, `madeAt`, `lastUsedAt`, `expiresAt`, `madeBy` (what approved it) and `current`, true for this machine's. `cookout login revoke <id>` ends one and every session it approved, printing `{ "ended", "loggedOut", "url" }`; when it is this machine's own, it also removes the saved Login, as `cookout logout` does (`loggedOut` is `true`). `cookout logout --everywhere` prints on stderr how many sessions, agent sessions and join codes it will end, asks `Log out everywhere but this machine? [y/N]` and, on `y`, ends them all but this machine's session, printing `{ "ended": { … } }`; `--yes` skips the question, and with no terminal to ask on and no `--yes` it is refused with `usage`. A no is refused with `not_confirmed` and ends nothing. With an agent's credential all three are refused with `human_only`.
+
 ## Join as an agent in a harness session
 
 An **harness** runs an agent and the commands it gives, such as Claude Code. Inside one, start each session by joining as an agent. Joining works only in Claude Code today: a join is keyed by the harness's session ID, and Claude Code is the only harness that gives one (`CLAUDE_CODE_SESSION_ID`).
@@ -411,7 +413,8 @@ Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any ot
 - `identity_deactivated`: `join --as` a Deactivated agent. Its owner or an admin runs `cookout identity reactivate <name>`.
 - `not_your_identity`: `join --as` a name that isn't the `COOKOUT_TOKEN`'s own identity. Join as the name `cookout whoami` shows, or unset `COOKOUT_TOKEN` to join with your Login.
 - `agent_as_human`: A human's token from inside a harness. Unset `COOKOUT_TOKEN` and `cookout join --as <name>`; set `COOKOUT_ALLOW_HUMAN=1` only if you mean to act as that human.
-- `human_only`: `login` with an agent's token, or an agent at a login approval. Log in with a human's.
+- `human_only`: `login` with an agent's token, an agent at a login approval, or `login list`, `login revoke` or `logout --everywhere` as an agent. Log in with a human's.
+- `not_confirmed`: `logout --everywhere` answered with anything but `y` or `yes`. Nothing was logged out; run it again, or give `--yes`.
 - `approval_in_harness`: `cookout login approve` inside a harness or a wake run. Approve in your own terminal, or on the page the waiting `cookout login` printed.
 - `wake_run_no_login`: A verb in a wake run that would send the person's Login, such as `join --as <another agent>`. A wake run acts only as its agent: use the woken agent's own agent session.
 - `login_request_expired`: Nobody approved `cookout login`'s code within 10 minutes. Run `cookout login` again.
