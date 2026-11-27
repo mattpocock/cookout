@@ -18,7 +18,7 @@ interface AgentKeysSnapshot {
   readonly expiresIn: string;
   readonly making: KeyStep;
   readonly made: MadeKey | null;
-  readonly madeForgotten: boolean;
+  readonly forgotten: string | null;
   readonly asked: AgentKeyView | null;
   readonly revoking: KeyStep;
 }
@@ -48,11 +48,11 @@ const SENDING: KeyStep = { status: "sending" };
 const START: AgentKeysSnapshot = {
   asked: null,
   expiresIn: "",
+  forgotten: null,
   keyName: "",
   keys: null,
   listing: IDLE,
   made: null,
-  madeForgotten: false,
   making: IDLE,
   revoking: IDLE,
 };
@@ -112,8 +112,8 @@ function stepsOf({ list, name }: AgentKeysOptions, { current, publish }: Held): 
       publish({ revoking: SENDING });
       try {
         await calls.revokeKey(name, asked.id);
-        publish({ asked: null, revoking: IDLE });
         await load();
+        publish({ asked: null, revoking: IDLE });
       } catch (error: unknown) {
         publish({ revoking: failed(error) });
       }
@@ -146,7 +146,7 @@ function storeOf(): Store {
     },
     current: () => current,
     publish: (next) => {
-      const changed = { ...current, madeForgotten: false, ...next };
+      const changed = { ...current, forgotten: null, ...next };
       if (sameSnapshot({ after: changed, before: current })) {
         return;
       }
@@ -157,6 +157,13 @@ function storeOf(): Store {
     },
     readers: () => listeners.size,
   };
+}
+
+function nameOf(made: MadeKey | null): string | null {
+  if (made === null) {
+    return null;
+  }
+  return made.name;
 }
 
 type Edits = Pick<AgentKeys, "askRevoke" | "cancel" | "editExpiry" | "editName" | "forget">;
@@ -178,7 +185,7 @@ function editsOf({ current, publish }: Held): Edits {
       publish({ keyName });
     },
     forget: () => {
-      publish({ made: null, madeForgotten: current().made !== null });
+      publish({ forgotten: nameOf(current().made), made: null });
     },
   };
 }

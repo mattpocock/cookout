@@ -24,7 +24,7 @@ export function KeysSection(props: KeysSectionProps): ReactNode {
   return (
     <ProfileSection label={TEXT.section}>
       {(state.keys ?? []).map((key) => (
-        <KeyRow agentKey={key} key={key.id} keys={keys} />
+        <KeyRow agentKey={key} focused={state.forgotten === key.name} key={key.id} keys={keys} />
       ))}
       {failed !== null && <Alert>{failed}</Alert>}
       <KeyShown keys={keys} />

@@ -11,6 +11,7 @@ const TEXT = { revoke: "Revoke" } as const;
 interface KeyRowProps {
   readonly agentKey: AgentKeyView;
   readonly keys: AgentKeys;
+  readonly focused: boolean;
 }
 
 export function KeyRow(props: KeyRowProps): ReactNode {
@@ -21,7 +22,9 @@ export function KeyRow(props: KeyRowProps): ReactNode {
   return (
     <ActionGroup label={agentKey.name}>
       <Muted>{keyDetail(agentKey)}</Muted>
-      <Button onClick={handleRevoke}>{TEXT.revoke}</Button>
+      <Button focused={props.focused} onClick={handleRevoke}>
+        {TEXT.revoke}
+      </Button>
     </ActionGroup>
   );
 }
