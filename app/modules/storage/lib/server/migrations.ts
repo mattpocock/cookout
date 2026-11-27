@@ -5,6 +5,7 @@ import {
   CREDENTIAL_LINEAGE_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
   SEARCH_MIGRATION,
+  SECRETS_KEY_MIGRATION,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
   TRIGGER_SKIPPED_MIGRATION,
@@ -249,6 +250,7 @@ const migrations: readonly string[] = [
    ALTER TABLE messages ADD COLUMN title_set_at TEXT;`,
   CALL_TIMES_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
+  SECRETS_KEY_MIGRATION,
   CREDENTIAL_LINEAGE_MIGRATION,
 ];
 
@@ -282,15 +284,11 @@ const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
 
 const OWNER_ONLY = 0o600;
 
-function unavailable({ message }: { readonly message: string }): StorageUnavailable {
-  return StorageUnavailable.make({ message });
-}
-
 function createOwnerOnly(path: string): Effect.Effect<void, StorageUnavailable, FileSystem.FileSystem> {
   return Effect.gen(function* createDatabaseFile() {
     const fs = yield* FileSystem.FileSystem;
     yield* Effect.scoped(fs.open(path, { flag: "a", mode: OWNER_ONLY }));
-  }).pipe(Effect.mapError(unavailable));
+  }).pipe(Effect.mapError(({ message }: { readonly message: string }) => StorageUnavailable.make({ message })));
 }
 
 export function openMigrated(

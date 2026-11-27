@@ -67,13 +67,11 @@ it("in a thread's reply box, / lists the Webhook commands with their description
   expect([
     callForms("web-reply-list-deploy"),
     all.filter((option) => String(option).startsWith("/web-reply-list")),
-    all.some((option) => String(option).startsWith("/schedule")),
     narrowed,
     await threadTexts(parent),
   ]).toStrictEqual([
     ONE_FORM,
     ["/web-reply-list-deployShip a branch", "/web-reply-list-undoUndo it"],
-    false,
     ["/web-reply-list-deployShip a branch"],
     [],
   ]);

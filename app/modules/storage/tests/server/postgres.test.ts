@@ -9,6 +9,7 @@ import {
   newMessageFixture,
   onPostgresDatabase,
   openStore,
+  testSecretsCipher,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Redacted } from "effect";
@@ -21,17 +22,17 @@ const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const hashC = tokenHash(Str.repeat(HASH_LENGTH)("c"));
 const matt = identityFixture("matt", { kind: "human" });
 const ada = identityFixture("ada", { kind: "human" });
-
 const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH ROW EXECUTE FUNCTION fault()";
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
-const BEFORE_LINEAGE = [
+const BEFORE_SECRETS_KEY = [
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
+  "DROP TABLE secrets_key",
 ];
 const BEFORE_SEARCH = [
-  ...BEFORE_LINEAGE,
+  ...BEFORE_SECRETS_KEY,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
   "ALTER TABLE deliveries DROP COLUMN called_at",
   "ALTER TABLE messages DROP COLUMN title, DROP COLUMN title_set_by, DROP COLUMN title_set_at",
@@ -53,10 +54,10 @@ const BEFORE_SEARCH = [
   "UPDATE schema_version SET version = 3",
 ];
 const BEFORE_LOGIN_EXPIRY = [
-  ...BEFORE_LINEAGE,
+  ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 2",
+  "UPDATE schema_version SET version = version - 3",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
@@ -83,7 +84,7 @@ function failInsertsWith(
 }
 
 function opened(url: Redacted.Redacted): ReturnType<typeof openStore<StorageUnavailable, never>> {
-  return url.pipe(postgresStorage, openStore);
+  return openStore(postgresStorage({ cipher: testSecretsCipher, url }));
 }
 
 function openAndClose(url: Redacted.Redacted): Effect.Effect<void, StorageUnavailable> {
@@ -265,12 +266,10 @@ function loginStoredBefore(host: string, statements: readonly string[]): typeof 
   });
 }
 
-const loginStoredBeforeExpiry = loginStoredBefore("ada-laptop", BEFORE_LOGIN_EXPIRY);
-
 it.live("a Login credential stored before login expiry authenticates after the upgrade, last used at the upgrade", () =>
   Effect.scoped(
     Effect.gen(function* upgradeLogins() {
-      const url = yield* loginStoredBeforeExpiry;
+      const url = yield* loginStoredBefore("ada-laptop", BEFORE_LOGIN_EXPIRY);
       const before = yield* wallClock;
       const second = yield* opened(url);
       const after = yield* wallClock;

@@ -1,7 +1,7 @@
 import { DateTime, Effect, FileSystem, Path } from "effect";
 import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
-import { freshDatabasePath, identityFixture, openStore } from "../../../testing/server.ts";
+import { freshDatabasePath, identityFixture, openStore, testSecretsCipher } from "../../../testing/server.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { NodeServices } from "@effect/platform-node";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -64,7 +64,7 @@ it.live(
     Effect.gen(function* upgradeSqlite() {
       const path = yield* copiedDatabase;
       const before = yield* now;
-      const { storage } = yield* openStore(sqliteStorage(path));
+      const { storage } = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path }));
       const after = yield* now;
       const answers = yield* upgradedAt(storage, { after, before });
 

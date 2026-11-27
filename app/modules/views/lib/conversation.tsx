@@ -63,6 +63,7 @@ export function ConversationView(props: ConversationProps): ReactNode {
         keymap={props.keymap}
         channel={channel}
         replied={null}
+        scheduling={props.scheduling}
         state={state}
         thread={thread}
       />

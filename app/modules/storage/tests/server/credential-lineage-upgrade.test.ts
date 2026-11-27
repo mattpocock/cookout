@@ -1,6 +1,6 @@
 import { Array as Arr, DateTime, Effect, FileSystem, Path } from "effect";
 import { expect, it } from "@effect/vitest";
-import { freshDatabasePath, identityName, openStore } from "../../../testing/server.ts";
+import { freshDatabasePath, identityName, openStore, testSecretsCipher } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { isoTimeOf } from "../../../time/server.ts";
 import { sqliteStorage } from "../../server.ts";
@@ -33,7 +33,9 @@ it.live(
   "a Login credential stored on SQLite before lineage is a session made by its Identity token, which rotating revokes",
   () =>
     Effect.gen(function* upgradeSqlite() {
-      const { storage } = yield* Effect.flatMap(copiedDatabase, (path) => openStore(sqliteStorage(path)));
+      const { storage } = yield* Effect.flatMap(copiedDatabase, (path) =>
+        openStore(sqliteStorage({ cipher: testSecretsCipher, path })),
+      );
       const today = yield* DateTime.now;
       const now = isoTimeOf(DateTime.add(today, { days: ONE_DAY }));
       const listed = yield* storage.listSessions({ current: stored, identity: ada, now });

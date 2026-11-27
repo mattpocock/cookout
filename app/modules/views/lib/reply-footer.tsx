@@ -1,10 +1,11 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import type { Scheduling, ThreadMessagesState } from "../../board/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { MessageBox } from "./message-box.tsx";
 import type { ReactNode } from "react";
-import type { ThreadMessagesState } from "../../board/index.ts";
+import { ReplySchedule } from "./reply-schedule.tsx";
 import { WebhookCommandPrompt } from "./webhook-command-prompt.tsx";
 import { useReplyCommand } from "./use-reply-command.ts";
 
@@ -18,13 +19,14 @@ interface ReplyFooterProps {
   readonly thread: MessageId;
   readonly keymap: Keymap;
   readonly replied: (() => void) | null;
+  readonly scheduling: Scheduling;
   readonly state: ThreadMessagesState;
 }
 
 export function ReplyFooter(props: ReplyFooterProps): ReactNode {
-  const { channel, draft, field, state, thread } = props;
+  const { channel, draft, field, scheduling, state, thread } = props;
   const { returned, webhookCommand: command } = useSyncExternalStore(draft.subscribe, draft.snapshot);
-  const handlers = useReplyCommand({ channel, draft, form: REPLY_BOX.form, replied: props.replied, thread });
+  const handlers = useReplyCommand({ ...props, form: REPLY_BOX.form });
   const handleReply = handlers.post;
   const handleSaved = handlers.saved;
   const handleBack = draft.unpickWebhookCommand;
@@ -55,6 +57,13 @@ export function ReplyFooter(props: ReplyFooterProps): ReactNode {
           webhookCommand={command}
         />
       )}
+      <ReplySchedule
+        channel={channel}
+        form={REPLY_BOX.form}
+        onSaved={handleSaved}
+        scheduling={scheduling}
+        thread={thread}
+      />
     </>
   );
 }
