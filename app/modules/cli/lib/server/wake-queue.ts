@@ -2,7 +2,7 @@ import { Array as Arr, Deferred, Effect, Fiber, Option, Order, Queue, Ref } from
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { InboxItem, MessageId } from "../../../sdk/index.ts";
 import type { ChildProcessSpawner } from "effect/process";
-import type { ClaudeCodeInboxNeeds } from "./claude-code-inbox.ts";
+import type { LiveDeliveryNeeds } from "./live-delivery-seam.ts";
 import type { Registration } from "./registrations.ts";
 import type { RunPlace } from "./wake-run.ts";
 import type { Scope } from "effect";
@@ -16,7 +16,7 @@ const RUNS_PER_MENTION = 2;
 const NONE = 0;
 const ONE = 1;
 
-type Spawner = ChildProcessSpawner.ChildProcessSpawner | ClaudeCodeInboxNeeds;
+type Spawner = ChildProcessSpawner.ChildProcessSpawner | LiveDeliveryNeeds;
 
 interface During {
   readonly started: Effect.Effect<void>;

@@ -4,12 +4,12 @@ import { DROPPED_SUFFIX, RUNNER_SUFFIX, forgetRegistration, registeredSessions }
 import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
 import { lastRuns, runnerEvents } from "./runner-log.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
-import type { InboundWarning } from "./claude-code-inbound.ts";
 import type { LastRun } from "./runner-log.ts";
+import type { LiveDeliveryWarning } from "./live-delivery-seam.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import { filesBeside } from "./agent-session-state.ts";
-import { inboundWarning } from "./claude-code-inbound.ts";
-import { isAlive } from "./claude-code-sessions.ts";
+import { isAlive } from "./process-alive.ts";
+import { liveDeliveryFor } from "./live-delivery-harnesses.ts";
 
 const PRETTY = 2;
 
@@ -49,7 +49,7 @@ interface RegistrationStatus {
   readonly directory: string;
   readonly error?: LastError;
   readonly lastRun?: LastRun;
-  readonly liveDelivery?: InboundWarning;
+  readonly liveDelivery?: LiveDeliveryWarning & { readonly harness: string };
   readonly state: State;
 }
 
@@ -140,7 +140,7 @@ function statusOf(runs: ReadonlyMap<string, LastRun>) {
   }: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure, AgentSessionStateNeeds> =>
     Effect.gen(function* statusOfRegistration() {
       const known = yield* stateOf(file);
-      const warning = yield* inboundWarning(registration);
+      const warning = yield* liveDeliveryFor(registration).inboundWarning(registration);
       const status: RegistrationStatus = { agent: registration.agent, directory: registration.directory, ...known };
       const withRun = Option.match(Option.fromNullishOr(runs.get(registration.agent)), {
         onNone: (): RegistrationStatus => status,
@@ -148,7 +148,7 @@ function statusOf(runs: ReadonlyMap<string, LastRun>) {
       });
       return Option.match(warning, {
         onNone: () => withRun,
-        onSome: (liveDelivery) => ({ ...withRun, liveDelivery }),
+        onSome: (found) => ({ ...withRun, liveDelivery: { harness: registration.harness, ...found } }),
       });
     });
 }
@@ -232,19 +232,16 @@ function lastRunText(lastRun: LastRun | undefined): string {
   });
 }
 
-function warningLines(agent: string, warning: InboundWarning | undefined): readonly string[] {
-  return Option.match(Option.fromNullishOr(warning), {
+function warningLines(liveDelivery: RegistrationStatus["liveDelivery"]): readonly string[] {
+  return Option.match(Option.fromNullishOr(liveDelivery), {
     onNone: Arr.empty,
-    onSome: ({ crossSessionInbound, fix }) => [
-      `  warning: ${agent}'s session would ${crossSessionInbound} runner messages (crossSessionInbound), so a ` +
-        `mention waits for a wake run while it is open. Launch it with: ${fix}`,
-    ],
+    onSome: ({ warning }) => [`  warning: ${warning}`],
   });
 }
 
 function registrationLines(status: RegistrationStatus): readonly string[] {
   const { agent, directory, lastRun, liveDelivery } = status;
-  return [`${agent}  ${stateLine(status)}  ${directory}${lastRunText(lastRun)}`, ...warningLines(agent, liveDelivery)];
+  return [`${agent}  ${stateLine(status)}  ${directory}${lastRunText(lastRun)}`, ...warningLines(liveDelivery)];
 }
 
 function statusLines({ dropped, registrations }: RunnerStatus): readonly string[] {

@@ -145,6 +145,23 @@ function registrationIn(stateFolder: string): Effect.Effect<RegistrationFile, ne
   }).pipe(Effect.orDie);
 }
 
+const HARNESS_FIELD = /"harness": "[^"]*"/u;
+
+function registerAs({
+  harness,
+  stateFolder,
+}: {
+  readonly harness: string;
+  readonly stateFolder: string;
+}): Effect.Effect<void, never, Files> {
+  return Effect.gen(function* rewriteHarness() {
+    const fs = yield* FileSystem.FileSystem;
+    const [file = ""] = yield* filesIn(stateFolder, true);
+    const text = yield* fs.readFileString(file);
+    yield* fs.writeFileString(file, Str.replace(HARNESS_FIELD, `"harness": "${harness}"`)(text));
+  }).pipe(Effect.orDie);
+}
+
 function agentSessionTokenIn(stateFolder: string): Effect.Effect<Option.Option<string>, never, Files> {
   return Effect.gen(function* readAgentSessionToken() {
     const fs = yield* FileSystem.FileSystem;
@@ -206,6 +223,7 @@ export {
   cookoutRunsIn,
   agentSessionTokenIn,
   agentSessionTokensIn,
+  registerAs,
   registeredAgentsIn,
   registrationIn,
   runnerWritten,

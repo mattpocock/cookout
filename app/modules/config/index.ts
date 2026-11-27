@@ -145,7 +145,10 @@ export function harnessIn(env: Environment): { readonly harness?: string } {
   return aiHarnessIn(env);
 }
 
-/** The ID a harness gives its session, shared by the session's subagents, such as `CLAUDE_CODE_SESSION_ID`. */
+/**
+ * The ID a harness gives its session, such as Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share.
+ * Only Claude Code gives one today, so only a Claude Code session can join.
+ */
 export type HarnessSessionId = string & { readonly [brand]: "HarnessSessionId" };
 
 /** A harness session: the tool that runs the process, and its session ID if the tool gives one. */
