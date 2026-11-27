@@ -7,6 +7,7 @@ import { createTestAgent } from "../../../testing/index.ts";
 import { isOfflineAlert } from "../../../inbox/index.ts";
 
 const FORBIDDEN = 403;
+const NOT_FOUND = 404;
 const HUMAN = { kind: "human" } as const;
 const ADMIN = { admin: true, kind: "human" } as const;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -205,5 +206,33 @@ it.effect("an admin can't rotate another identity's token, and a person still ro
       ],
       whoami: "ada",
     });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("an admin's person sessions are 404 for an unknown name, 403 for an agent, and 404 once revoked", () =>
+  Effect.gen(function* overseenRefusals() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", ADMIN);
+    const ada = yield* cookout.createIdentity("ada", HUMAN);
+    yield* cookout.createIdentity(AGENT, { owner: "ada" });
+    yield* cliSession(cookout, ada.client, "ada-laptop");
+    const { id } = yield* sessionAt(matt.client, "ada", "ada-laptop");
+    yield* answer(() => matt.client.revokeIdentitySession("ada", id));
+    const refused = yield* Effect.all(
+      [
+        refusal(() => matt.client.listIdentitySessions("nobody")),
+        refusal(() => matt.client.listIdentitySessions("Not A Name")),
+        refusal(() => matt.client.listIdentitySessions(AGENT)),
+        refusal(() => matt.client.revokeIdentitySession("ada", id)),
+      ],
+      ONE_AT_A_TIME,
+    );
+
+    expect(refused).toMatchObject([
+      { code: "identity_not_found", status: NOT_FOUND },
+      { code: "identity_not_found", status: NOT_FOUND },
+      { code: "human_only", status: FORBIDDEN },
+      { code: "session_not_found", status: NOT_FOUND },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
