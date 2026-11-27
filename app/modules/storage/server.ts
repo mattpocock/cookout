@@ -79,7 +79,7 @@ export class Storage extends Context.Service<Storage, FullStorage>()("@ai-hero/c
  * is released. A new file is created readable by its owner only, and so are
  * its WAL and shared-memory files, since they hold token hashes and messages.
  * Trigger tokens, trigger header values and Webhook command secrets are sealed with `cipher` before they are written
- * and opened as they are read (ADR 0149).
+ * and opened as they are read (ADR 0150).
  * @param opening The SQLite file, created if missing, and the cipher made from `COOKOUT_SECRETS_KEY`.
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */
@@ -205,7 +205,7 @@ export function storageLayer({
 export { SecretsKeyMismatch } from "./lib/server/sealed-secrets.ts";
 
 /**
- * Seals the store's secrets when it is built (ADR 0149). The first boot with `COOKOUT_SECRETS_KEY` seals every trigger
+ * Seals the store's secrets when it is built (ADR 0150). The first boot with `COOKOUT_SECRETS_KEY` seals every trigger
  * token, trigger header value and Webhook command secret stored in plaintext before, and records which key sealed
  * them, in one transaction. A later boot with the same key changes nothing; one with another key fails with
  * `SecretsKeyMismatch`, since the store's secrets can't be opened with it.

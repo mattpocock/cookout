@@ -13,7 +13,7 @@ import type { Effect } from "effect";
 import { liveSecrets } from "./lib/server/live.ts";
 
 /**
- * The cipher for the secrets the server must send on, kept encrypted at rest (ADR 0149): trigger tokens, trigger
+ * The cipher for the secrets the server must send on, kept encrypted at rest (ADR 0150): trigger tokens, trigger
  * header values and Webhook command secrets. `secretsCipher` makes one from `COOKOUT_SECRETS_KEY`; `isSecretsKey`
  * says whether a value can be that key, and `newSecretsKey` makes one.
  */
