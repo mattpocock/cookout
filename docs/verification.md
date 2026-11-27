@@ -1085,7 +1085,7 @@ git branch -D changeset-dry-run
 
 `pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json`, the new CHANGELOG.md and the consumed changesets (the dry run's and the first-release changeset), so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
 
-The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step runs only when no changesets are left, and has no npm token: it publishes by trusted publishing. `npm pack --dry-run` after `pnpm build` lists what would ship: `dist`, `docs/agents.md`, `skills`, README.md and package.json.
+The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step runs whenever the chosen commit's version isn't on npm yet, even with changesets pending (`scripts/release-publish.ts`, docs/adr/0151), and has no npm token: it publishes by trusted publishing. `npm pack --dry-run` after `pnpm build` lists what would ship: `dist`, `docs/agents.md`, `skills`, README.md and package.json.
 
 ## Reply as the handler with the Webhook command token
 
