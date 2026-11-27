@@ -25,6 +25,10 @@ export function descriptionEditableBy(viewing: Viewing): boolean {
   return viewing.identity.kind === "agent" && (ownsAgent(viewing) || isAdmin(viewing));
 }
 
+export function keysMadeBy(seen: Seen): boolean {
+  return ownsAgent(seen);
+}
+
 export function triggerEditableBy(seen: Seen): boolean {
   return ownsAgent(seen);
 }

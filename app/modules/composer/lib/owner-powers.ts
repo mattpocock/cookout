@@ -1,13 +1,16 @@
-import type { IdentityName, Token } from "../../sdk/index.ts";
 import type { AgentCreation } from "./agent-creation.ts";
+import type { AgentKeys } from "./agent-keys.ts";
 import type { IdentityActions } from "./identity-actions.ts";
 import type { IdentityList } from "./identity-list.ts";
+import type { IdentityName } from "../../sdk/index.ts";
 import { createAgentCreation } from "./agent-creation.ts";
+import { createAgentKeys } from "./agent-keys.ts";
 import { createIdentityActions } from "./identity-actions.ts";
 
 interface OwnerPowers {
   readonly actions: (name: IdentityName) => IdentityActions;
   readonly creation: AgentCreation;
+  readonly keys: (name: IdentityName) => AgentKeys;
 }
 
 function ownerPowersOf(list: IdentityList): OwnerPowers {
@@ -17,12 +20,16 @@ function ownerPowersOf(list: IdentityList): OwnerPowers {
     stores.set(name, store);
     return store;
   }
-  function created(name: IdentityName, token: Token): void {
-    actions(name).showToken(token);
+  const keyStores = new Map<string, AgentKeys>();
+  function keys(name: IdentityName): AgentKeys {
+    const store = keyStores.get(name) ?? createAgentKeys({ list, name });
+    keyStores.set(name, store);
+    return store;
   }
-  return { actions, creation: createAgentCreation({ created, list }) };
+  return { actions, creation: createAgentCreation({ list }), keys };
 }
 
 export type { AgentCreation } from "./agent-creation.ts";
+export type { AgentKeys, AgentKeysSnapshot } from "./agent-keys.ts";
 export type { IdentityActions } from "./identity-actions.ts";
 export { ownerPowersOf };

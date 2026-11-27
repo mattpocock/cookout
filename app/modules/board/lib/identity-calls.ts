@@ -1,3 +1,4 @@
+import type { AgentKeyView, CreateAgentKeyResponse } from "../../logins/index.ts";
 import type { CookoutClient, Identity, IdentityName, SetTriggerRequest, Token, Trigger } from "../../sdk/index.ts";
 import type { Identities, IdentityChange } from "./identities-slice.ts";
 import type { Part } from "./slice.ts";
@@ -28,12 +29,11 @@ type IdentityCallsClient = Pick<
   | "transferAgent"
 >;
 
-type LoginLinkResponse = Awaited<ReturnType<CookoutClient["createLoginLink"]>>;
+const KEY_ARGUMENT = 1;
 
-interface Created {
-  readonly name: IdentityName;
-  readonly token: Token;
-}
+type CreateAgentKeyRequest = Parameters<CookoutClient["createAgentKey"]>[typeof KEY_ARGUMENT];
+
+type LoginLinkResponse = Awaited<ReturnType<CookoutClient["createLoginLink"]>>;
 
 interface NewAgent {
   readonly name: string;
@@ -46,7 +46,10 @@ interface IdentityCalls {
   readonly setDisplayName: (name: IdentityName, text: string | null) => Promise<void>;
   readonly setDescription: (name: IdentityName, text: string | null) => Promise<void>;
   readonly setAvatar: (name: IdentityName, png: Uint8Array) => Promise<void>;
-  readonly createAgent: (agent: NewAgent) => Promise<Created>;
+  readonly createAgent: (agent: NewAgent) => Promise<IdentityName>;
+  readonly listKeys: (name: IdentityName) => Promise<readonly AgentKeyView[]>;
+  readonly makeKey: (name: IdentityName, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
+  readonly revokeKey: (name: IdentityName, key: AgentKeyView["id"]) => Promise<void>;
   readonly rotateToken: (name: IdentityName) => Promise<Token>;
   readonly sendLoginLink: (name: IdentityName) => Promise<LoginLinkResponse>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
@@ -158,6 +161,22 @@ function triggerCalls({
   };
 }
 
+function keyCalls({ client }: IdentityCallsOptions): Pick<IdentityCalls, "listKeys" | "makeKey" | "revokeKey"> {
+  return {
+    listKeys: async (name) => {
+      const { agentKeys } = await client.listAgentKeys(name);
+      return agentKeys;
+    },
+    makeKey: async (name, key) => {
+      const made = await client.createAgentKey(name, key);
+      return made;
+    },
+    revokeKey: async (name, key) => {
+      await client.revokeAgentKey(name, key);
+    },
+  };
+}
+
 const WEB_KEY = "web";
 
 async function newWebKey(client: IdentityCallsClient, name: IdentityName): Promise<Token> {
@@ -180,6 +199,7 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
     ...textCalls(options, put),
     ...lifeCalls(options, put),
     ...triggerCalls(options),
+    ...keyCalls(options),
     countMessages: async (name) => {
       const { messages } = await client.countMessagesBy(name);
       return messages;
@@ -187,8 +207,7 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
     createAgent: async ({ displayName, name }) => {
       const { identity } = await client.createIdentity({ displayName, kind: "agent", name });
       put(identity);
-      const { token } = await client.createAgentKey(identity.name, { name: WEB_KEY });
-      return { name: identity.name, token };
+      return identity.name;
     },
     revokeSession: async (name) => {
       await client.revokeAgentSession(name);

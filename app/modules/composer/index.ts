@@ -52,8 +52,7 @@
  * snapshot until `forgetToken` (`copyToken` puts it on the clipboard).
  * `sendLoginLink` makes a person's one-time login link (#969): the snapshot's `loginLink`, with its expiry, or the
  * refusal, until `forgetLoginLink` (`copyLoginLink` puts it on the clipboard).
- * `identities.creation` creates an agent the caller owns, whose token then
- * shows in that agent's `actions`.
+ * `identities.creation` creates an agent the caller owns, with no secret (`created` names it); `identities.keys(name)` lists its keys while read (#911): `make` shows a secret in `made` until `forget` or no reader is left, and `askRevoke` then `confirm` revoke one.
  * `channelDraft(channel)`, a channel's box, also suggests, when the whole text is `/` and a prefix, the Commands with names starting with it (only `/schedule`), then the registered Webhook commands that do (from the board store's list, read once the identities load), less any named like a Command.
  * Choosing a Command completes the box to `/name `, and so does choosing an inline Webhook command, one whose form `inlineField` reads as exactly one text field (#872); `commandRun(text)` says when sending `/name`, or `/name ` and a text, runs a Command, calls an inline Webhook command with that text, or opens a Webhook command's form, instead of posting.
  * Choosing any other Webhook command, or `openWebhookCommand`, makes it the draft's `webhookCommand`, whose data the box prompts
@@ -68,7 +67,7 @@
  * one over 10 MB and stopping at the 11th with the server's own refusal wording, `remove` takes one out, and `clear`
  * on the draft empties them with its text. An image among them has an object URL for its thumbnail until it leaves.
  */
-import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
+import type { AgentCreation, AgentKeys, IdentityActions } from "./lib/owner-powers.ts";
 import type { AvatarChoice, AvatarCrop, DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { BrowserStorage, CommandRun, DraftSnapshot, KeptText, Sources, WebhookCommand } from "./lib/snapshot.ts";
 import {
@@ -221,6 +220,7 @@ export interface Identities extends AdminChanges {
   readonly actions: (name: IdentityName) => IdentityActions;
   /** Creating an agent the caller owns. */
   readonly creation: AgentCreation;
+  readonly keys: (name: IdentityName) => AgentKeys;
   /**
    * The identity just deleted elsewhere whose open profile closed, for a notice, until `dismiss`: `null` if none.
    * With `live`, an identity deleted elsewhere leaves the list at once, and a profile open on it closes.
@@ -295,6 +295,6 @@ export type { Command, CommandRun } from "./lib/snapshot.ts";
 export { type Prompt, type PromptField, fieldsOf, promptOf } from "./lib/schema-fields.ts";
 export { canvasAvatarCrop } from "./lib/canvas-crop.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
-export type { AgentCreation } from "./lib/agent-creation.ts";
+export type { AgentCreation, AgentKeys, AgentKeysSnapshot } from "./lib/owner-powers.ts";
 export type { PendingAttachment, PendingAttachments } from "./lib/pending-attachments.ts";
 export type { IdentityAction, IdentityActions, MessageCount } from "./lib/identity-actions.ts";
