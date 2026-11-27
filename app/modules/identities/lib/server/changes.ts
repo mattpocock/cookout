@@ -226,7 +226,6 @@ function credentialsEnded(revoke: CredentialsEnded): Effect.Effect<void, never, 
 
 export {
   type AdminActed,
-  adminActed,
   adminActedOn,
   type EndedTokens,
   IdentityChanges,

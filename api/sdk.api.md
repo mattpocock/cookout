@@ -559,10 +559,30 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
+declare const brand$4: unique symbol;
+type PublicId = string & {
+  readonly [brand$4]: "PublicId";
+};
+interface AgentKeyView {
+  readonly id: PublicId;
+  readonly name: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt?: IsoTime;
+}
+interface CreateAgentKeyResponse {
+  readonly agentKey: AgentKeyView;
+  readonly token: Token;
+}
+interface ListAgentKeysResponse {
+  readonly agentKeys: readonly AgentKeyView[];
+}
+interface RevokeAgentKeyResponse {
+  readonly ended: number;
+}
 interface StartLoginRequest {
   readonly host: string;
 }
-declare const brand$4: unique symbol;
 interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
   readonly where?: string;
@@ -600,10 +620,6 @@ interface LoginRequestView extends ApprovalRequestDetails {
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
 }
-/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
-type PublicId = string & {
-  readonly [brand$4]: "PublicId";
-};
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 interface LoginRequestStartedResponse {
   readonly userCode: string;
@@ -727,27 +743,6 @@ interface LoginCalls$1 {
    * client's session and what it made, whose open event streams close, and answers what ended by kind.
    */
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
-}
-/** An agent key as listed: never its secret. */
-interface AgentKeyView {
-  readonly id: PublicId;
-  readonly name: string;
-  readonly madeAt: IsoTime;
-  readonly lastUsedAt?: IsoTime;
-  readonly expiresAt?: IsoTime;
-}
-/** The answer to making an agent key: the key, and its secret, shown only here. */
-interface CreateAgentKeyResponse {
-  readonly agentKey: AgentKeyView;
-  readonly token: Token;
-}
-/** The answer to `GET /v1/identities/:name/agent-keys`, oldest first. */
-interface ListAgentKeysResponse {
-  readonly agentKeys: readonly AgentKeyView[];
-}
-/** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
-interface RevokeAgentKeyResponse {
-  readonly ended: number;
 }
 declare const brand$3: unique symbol;
 /**
