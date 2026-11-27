@@ -1,4 +1,5 @@
 import { Cause, Effect } from "effect";
+import type { IdentityResponse, IdentityWithTokenResponse, Token } from "../../../sdk/index.ts";
 import { CookoutError } from "../../../sdk/index.ts";
 
 function isCookoutError(error: unknown): error is CookoutError {
@@ -19,4 +20,16 @@ function refusal(call: () => Promise<unknown>): Effect.Effect<CookoutError> {
   );
 }
 
-export { answer, refusal };
+function withToken(answered: IdentityResponse | IdentityWithTokenResponse): answered is IdentityWithTokenResponse {
+  return "token" in answered;
+}
+
+function freshToken(answered: IdentityResponse | IdentityWithTokenResponse): Effect.Effect<Token> {
+  return Effect.succeed(answered).pipe(
+    Effect.filterOrFail(withToken),
+    Effect.map(({ token }) => token),
+    Effect.orDie,
+  );
+}
+
+export { answer, freshToken, refusal };

@@ -49,7 +49,7 @@ const QUESTIONS: Readonly<Record<IdentityAction, (name: string, to: string) => Q
     title: `Delete @${name}?`,
   }),
   reactivate: (name) => ({
-    body: "It can post again with a new identity token, shown once here. Its old tokens stay revoked.",
+    body: "It can post again; its old tokens stay revoked. A person gets a new identity token, shown once here; an agent gets none, so its owner makes it an agent key.",
     confirm: `Reactivate @${name}`,
     destructive: false,
     title: `Reactivate @${name}?`,

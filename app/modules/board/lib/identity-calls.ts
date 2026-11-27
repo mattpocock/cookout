@@ -44,7 +44,7 @@ interface IdentityCalls {
   readonly rotateToken: (name: IdentityName) => Promise<Token>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
   readonly deactivate: (name: IdentityName) => Promise<void>;
-  readonly reactivate: (name: IdentityName) => Promise<Token>;
+  readonly reactivate: (name: IdentityName) => Promise<Token | null>;
   readonly delete: (name: IdentityName) => Promise<void>;
   readonly transfer: (name: IdentityName, to: string) => Promise<void>;
   readonly countMessages: (name: IdentityName) => Promise<number>;
@@ -112,9 +112,12 @@ function lifeCalls(
       sessions.put(name, []);
     },
     reactivate: async (name) => {
-      const { identity, token } = await client.reactivateIdentity(name);
-      put(identity);
-      return token;
+      const reactivated = await client.reactivateIdentity(name);
+      put(reactivated.identity);
+      if ("token" in reactivated) {
+        return reactivated.token;
+      }
+      return null;
     },
   };
 }

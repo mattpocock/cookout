@@ -118,7 +118,7 @@ const identityReactivateCommand = Command.make("reactivate", { name: identityNam
   answer((client) => client.reactivateIdentity(name)),
 ).pipe(
   Command.withDescription(
-    "Reactivate a deactivated identity (admin, or a human for their own agents). A fresh token is shown this once.",
+    "Reactivate a deactivated identity (admin, or a human for their own agents). A person's fresh token is shown this once; an agent gets none, so make it a key with cookout agent-key create.",
   ),
 );
 

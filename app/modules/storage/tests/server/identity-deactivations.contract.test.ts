@@ -159,6 +159,44 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): an agent created with no token is stored and found by name, and holds no token",
+  ({ layer }) =>
+    Effect.gen(function* createdTokenless() {
+      const { storage } = yield* openStore(layer);
+      const created = yield* storage.createIdentity(identity("release-bot"));
+      const again = yield* storage.createIdentity(identity("release-bot"), hashA);
+      const found = yield* storage.findIdentityByName(nameOf("release-bot"));
+      const token = yield* storage.findIdentityByTokenHash(hashA);
+
+      expect([created, again, found, token]).toStrictEqual([
+        "created",
+        "name_taken",
+        identity("release-bot"),
+        { status: "unknown" },
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): reactivating with no token brings the identity back holding none, its old token still revoked",
+  ({ layer }) =>
+    Effect.gen(function* reactivateTokenless() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createIdentity(identity("release-bot"), hashA);
+      yield* storage.deactivateIdentity(nameOf("release-bot"));
+      const reactivated = yield* storage.reactivateIdentity(nameOf("release-bot"));
+      const found = yield* storage.findIdentityByName(nameOf("release-bot"));
+      const token = yield* storage.findIdentityByTokenHash(hashA);
+
+      expect([reactivated, found, token]).toStrictEqual([
+        { identity: identity("release-bot"), status: "reactivated" },
+        identity("release-bot"),
+        { status: "revoked" },
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): a deactivated identity's messages keep it as their author, and it can't be mentioned",
   ({ layer }) =>
     Effect.gen(function* history() {
