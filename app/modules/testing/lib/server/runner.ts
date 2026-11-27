@@ -15,6 +15,10 @@ interface FakeWakeSettings {
   readonly print?: string;
   readonly succeedAfter?: string;
   readonly reply?: string;
+  readonly runs?: readonly {
+    readonly args: readonly string[];
+    readonly env: Readonly<Record<string, string>>;
+  }[];
   readonly sdkReply?: string;
   readonly tokenFile?: string;
   readonly touch?: string;
