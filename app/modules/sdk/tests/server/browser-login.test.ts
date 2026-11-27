@@ -150,7 +150,7 @@ it.effect("starting and collecting login requests is rate limited per address", 
     const limited = yield* refusal(() => anonymous.collectLogin(any));
 
     expect(limited).toMatchObject({ code: "rate_limited", status: TOO_MANY });
-  }).pipe(Effect.provide(testCookout({ requestsPerMinute: 2 }))),
+  }).pipe(Effect.provide(testCookout({ noTokenRequestsPerMinute: 2 }))),
 );
 
 it.effect("a login request names a host of 1-100 characters", () =>
