@@ -84,8 +84,8 @@ function stayOnline(who: TestIdentity): Effect.Effect<EventStream, never, Scope.
 
 const adminsAndBob = Effect.gen(function* openBoard() {
   const cookout = yield* TestCookout;
-  const ada = yield* cookout.createIdentity("ada", ADMIN);
-  const bob = yield* cookout.createIdentity("bob", HUMAN);
+  const ada = yield* cookout.createIdentity("ada", { ...ADMIN, credential: "identity token" });
+  const bob = yield* cookout.createIdentity("bob", { ...HUMAN, credential: "identity token" });
   yield* answer(() => ada.client.createChannel({ name: "grill" }));
   return { ada, bob, cookout };
 });
@@ -189,7 +189,7 @@ it.effect("one admin's Keep clears the offer about a person for every admin", ()
 it.effect("no offer is raised about the last active admin; once a second admin exists, one is", () =>
   Effect.gen(function* lastAdmin() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", HUMAN);
+    const ada = yield* cookout.createIdentity("ada", { ...HUMAN, credential: "identity token" });
     const alone = yield* Effect.andThen(quietFor("40 days"), offersOnceThere(cookout.client, ONE));
     yield* answer(() => cookout.client.makeAdmin("ada"));
     const adas = yield* Effect.andThen(settled, offersOnceThere(ada.client, ONE));

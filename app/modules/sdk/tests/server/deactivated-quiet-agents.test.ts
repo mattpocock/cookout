@@ -28,7 +28,7 @@ const TEXT = "@ada/scout was deactivated after 90 days with no activity.";
 
 const board = Effect.gen(function* openBoard() {
   const cookout = yield* TestCookout;
-  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  const ada = yield* cookout.createIdentity("ada", { ...HUMAN, credential: "identity token" });
   const scout = yield* cookout.createIdentity("ada/scout", { owner: "ada" });
   yield* answer(() => ada.client.createChannel({ name: "grill" }));
   return { ada, cookout, scout };
@@ -145,7 +145,7 @@ it.effect("a person with no activity for 90 days or more is never deactivated", 
 it.effect("the entry goes to every active admin when the owner is Deactivated, and Mark read reads it for all", () =>
   Effect.gen(function* toAdmins() {
     const { cookout } = yield* board;
-    const bob = yield* cookout.createIdentity("bob", ADMIN);
+    const bob = yield* cookout.createIdentity("bob", { ...ADMIN, credential: "identity token" });
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(bob.client));
     const theirs = yield* entriesOnceThere(cookout.client);
