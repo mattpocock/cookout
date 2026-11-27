@@ -103,7 +103,7 @@ interface CreateAgentKeyRequest {
   readonly name: string;
   readonly expiresIn?: string;
 }
-/** The SDK's calls for an agent's keys (ADR 0155), with the answers and the key's public `Id` they carry. */
+/** The SDK's calls for an agent's keys (ADR 0156), with the answers and the key's public `Id` they carry. */
 interface AgentKeyCalls$1<Made, Listed, Revoked, Id> {
   /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
   readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<Made>;
@@ -1985,7 +1985,7 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
   readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0155). */
+  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0156). */
   readonly createIdentity: CreateIdentityCall;
   /** A human's new token (403 `not_owner` unless an admin or themself); an agent is 409 `agent_keys_instead`. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;

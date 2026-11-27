@@ -108,7 +108,7 @@ export type CookoutClient = CallGroups &
     readonly logout: () => Promise<IdentityResponse>;
     /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
     readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-    /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0155). */
+    /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0156). */
     readonly createIdentity: CreateIdentityCall;
     /** A human's new token (403 `not_owner` unless an admin or themself); an agent is 409 `agent_keys_instead`. */
     readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;

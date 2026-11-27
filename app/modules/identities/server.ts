@@ -178,7 +178,7 @@ export function adminTokenSet(
 
 /**
  * The identity routes: whoami, web login and logout, create, list and rotate, admins, a person's sessions (ADR 0153)
- * and an agent's keys (ADR 0155). They need `Caller`, which `requireToken` provides.
+ * and an agent's keys (ADR 0156). They need `Caller`, which `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   ...callerRoutes,
