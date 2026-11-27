@@ -1,4 +1,4 @@
-import { Effect, Option } from "effect";
+import { Effect, Option, pipe } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { LoginLinkRedemption, LoginLinksSection, NewLoginLink, RedeemLoginLink } from "./login-links.ts";
 import { linkGone, linkRedeemed } from "./login-links.ts";
@@ -23,15 +23,17 @@ interface MemoryLoginLinks extends LoginLinksSection {
 }
 
 function enderOf(links: Links): Ender {
-  return (hash, now) =>
-    Option.flatMap(Option.fromUndefinedOr(links.get(hash)), (link) => {
+  return {
+    end: (hash) => {
       links.delete(hash);
-      const ended: EndedCredential = { hash, identity: link.identity, kind: "login link" };
-      return Option.as(
-        Option.liftPredicate(link, () => now < link.expiresAt),
-        ended,
-      );
-    });
+    },
+    live: (hash, now) =>
+      pipe(
+        Option.fromUndefinedOr(links.get(hash)),
+        Option.filter((link) => now < link.expiresAt),
+        Option.map((link): EndedCredential => ({ hash, identity: link.identity, kind: "login link" })),
+      ),
+  };
 }
 
 function personIn(findIdentity: FindIdentity, name: IdentityName): Option.Option<Identity> {

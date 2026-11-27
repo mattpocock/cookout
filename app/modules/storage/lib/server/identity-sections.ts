@@ -10,6 +10,36 @@ import { memoryReach } from "./reach-sections.ts";
 
 type MemoryIdentitySections = ReturnType<typeof memoryIdentities> & SectionsBesideIdentities;
 
+type LineageCalls = Pick<
+  MemoryIdentitySections,
+  "endCredentialsOf" | "logOutEverywhere" | "previewLogOutEverywhere" | "revokeBelowRevokedTokens"
+>;
+
+function memoryLineageCalls(state: MemoryState): LineageCalls {
+  return {
+    endCredentialsOf: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
+      ),
+    logOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.logOutEverywhere(request)),
+      ),
+    previewLogOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.previewLogOutEverywhere(request)),
+      ),
+    revokeBelowRevokedTokens: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.revokeBelowRevokedTokens(name, now)),
+      ),
+  };
+}
+
 function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   const identities = memoryIdentities(state);
   const { dropLoginCredentials, ...loginRequests } = memoryLoginRequests({
@@ -30,17 +60,13 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
     ...loginLinks,
     ...presence,
     ...offlineAlerts,
+    ...memoryLineageCalls(state),
     deactivateIdentity: (name) =>
       Effect.tap(identities.deactivateIdentity(name), ({ status }) =>
         Effect.when(
           Effect.andThen(dropLoginCredentials(name), dropLoginLinks(name)),
           Effect.succeed(status === "deactivated"),
         ),
-      ),
-    endCredentialsOf: (name, now) =>
-      Effect.andThen(
-        state.ensureOpen,
-        Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
       ),
     removeIdentity: (name, messages) =>
       Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
@@ -51,11 +77,6 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
           }),
           Effect.succeed(status === "deleted"),
         ),
-      ),
-    revokeBelowRevokedTokens: (name, now) =>
-      Effect.andThen(
-        state.ensureOpen,
-        Effect.sync(() => state.lineage.revokeBelowRevokedTokens(name, now)),
       ),
   };
 }

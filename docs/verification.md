@@ -531,6 +531,18 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Content-Type: applica
 
 The cookie answers `whoami` as `grace`; the second redeem, one after 15 minutes and an unknown secret are 404 `login_link_not_found`. A link for an agent is 403 `human_only`, one made with a non-admin's token 403 `admin_only`, and one for an unknown name 404 `identity_not_found`. Creating a person (`POST /v1/identities` with `kind: "human"`) answers a `loginLink` beside the token, the same one-time link; creating an agent answers none.
 
+## Log out everywhere
+
+`previewLogOutEverywhere()` (`GET /v1/sessions/log-out-everywhere`) answers what Log out everywhere would end, as `{ willEnd: { sessions, agentSessions, joinCodes } }`, and ends nothing; `logOutEverywhere()` (`POST` to the same path) ends them and answers `{ ended: { … } }` with the same counts. It ends every credential below the caller's own tokens and own sessions except the session it was sent from and what that session made, and that session becomes a root: it no longer lists `madeBy`. Identity tokens stay. With `grace` logged in on two CLI sessions, the second approved by the first, preview and log out from the second:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const client = createCookoutClient(); console.log(await client.previewLogOutEverywhere()); console.log(await client.logOutEverywhere()); console.log((await client.listSessions()).sessions);'
+```
+
+The two counts match, the first session's next request is 401 `token_unknown`, an agent session below it is 401 `agent_session_revoked`, and the list shows only the session it was sent from, `current: true`. With an agent's token both calls are 403 `human_only`.
+
+In the web UI, Settings → Sessions (`#/settings/session`) lists your sessions, each a group named by where it is, with `Terminal` or `Browser`, when it was made, when it was last used and, when one of your sessions made it, `approved by <where>`; the one in use is tagged `This browser`. Revoke on another session asks `Revoke <where>?` first, then ends it and everything it approved; on This browser it logs out. `Log out everywhere` asks first, saying what will end (`2 sessions and 1 agent session will end. This browser stays logged in.`), and after confirming only This browser is listed.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:

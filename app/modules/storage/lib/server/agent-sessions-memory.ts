@@ -73,15 +73,18 @@ function unrevoked(sessions: Sessions, hash: TokenHash): Option.Option<Kept> {
 }
 
 function enderOf(sessions: Sessions): Ender {
-  return (hash, now) =>
-    Option.flatMap(unrevoked(sessions, hash), (kept) => {
-      revoke(sessions, kept);
-      const ended: EndedCredential = { hash, identity: kept.identity, kind: "agent session" };
-      return Option.as(
-        Option.liftPredicate(kept, () => now < kept.expiresAt),
-        ended,
-      );
-    });
+  return {
+    end: (hash) => {
+      for (const kept of Option.toArray(unrevoked(sessions, hash))) {
+        revoke(sessions, kept);
+      }
+    },
+    live: (hash, now) =>
+      Option.map(
+        Option.filter(unrevoked(sessions, hash), (kept) => now < kept.expiresAt),
+        (kept): EndedCredential => ({ hash, identity: kept.identity, kind: "agent session" }),
+      ),
+  };
 }
 
 function listed({ expiresAt, host, issuedAt, lastUsedAt, sessionUrl }: Kept): LiveAgentSession {

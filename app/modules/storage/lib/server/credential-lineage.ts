@@ -55,6 +55,12 @@ interface RevokeSession {
   readonly now: IsoTime;
 }
 
+interface LogOutEverywhere {
+  readonly identity: IdentityName;
+  readonly current: TokenHash | undefined;
+  readonly now: IsoTime;
+}
+
 type RevokeSessionResult =
   | { readonly status: "not_found" }
   | { readonly status: "revoked"; readonly ended: readonly EndedCredential[] };
@@ -64,6 +70,8 @@ interface LineageSection {
   readonly revokeSession: (revoke: RevokeSession) => Fails<RevokeSessionResult>;
   readonly revokeBelowRevokedTokens: (identity: IdentityName, now: IsoTime) => Fails<readonly EndedCredential[]>;
   readonly endCredentialsOf: (identity: IdentityName, now: IsoTime) => Fails<readonly EndedCredential[]>;
+  readonly previewLogOutEverywhere: (request: LogOutEverywhere) => Fails<readonly EndedCredential[]>;
+  readonly logOutEverywhere: (request: LogOutEverywhere) => Fails<readonly EndedCredential[]>;
 }
 
 const PUBLIC_ID_DIGITS = 16;
@@ -126,6 +134,7 @@ export {
   type EndedWhy,
   type LineageSection,
   type ListSessions,
+  type LogOutEverywhere,
   type ListedSession,
   type NewLineage,
   type RevokeSession,

@@ -1,5 +1,6 @@
 import {
   collectLoginRequestPath,
+  logOutEverywherePath,
   loginLinkPath,
   loginPath,
   loginRequestApprovalPath,
@@ -12,6 +13,8 @@ import {
 import {
   isIdentityResponse,
   isListSessionsResponse,
+  isLogOutEverywherePreview,
+  isLogOutEverywhereResponse,
   isLoginCollectedResponse,
   isLoginLinkResponse,
   isLoginRequestResponse,
@@ -24,11 +27,29 @@ import type { ClientConnection } from "./request.ts";
 import type { LoginCalls } from "../../logins/index.ts";
 import { send } from "./request.ts";
 
-function sessionCalls(server: ClientConnection): Pick<LoginCalls, "listSessions" | "revokeSession"> {
+type SessionCalls = Pick<LoginCalls, "listSessions" | "revokeSession" | "previewLogOutEverywhere" | "logOutEverywhere">;
+
+function sessionCalls(server: ClientConnection): SessionCalls {
   return {
     listSessions: async () => {
       const listed = await send(server, { isExpected: isListSessionsResponse, method: "GET", path: sessionsPath });
       return listed;
+    },
+    logOutEverywhere: async () => {
+      const ended = await send(server, {
+        isExpected: isLogOutEverywhereResponse,
+        method: "POST",
+        path: logOutEverywherePath,
+      });
+      return ended;
+    },
+    previewLogOutEverywhere: async () => {
+      const preview = await send(server, {
+        isExpected: isLogOutEverywherePreview,
+        method: "GET",
+        path: logOutEverywherePath,
+      });
+      return preview;
     },
     revokeSession: async (id) => {
       const params = { id };

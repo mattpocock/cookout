@@ -20,7 +20,8 @@ interface SessionMadeByView {
   readonly where?: string;
 }
 
-interface SessionView {
+/** One of a person's live sessions, as `GET /v1/sessions` lists it. */
+export interface SessionView {
   readonly id: PublicId;
   readonly kind: "web" | "cli";
   readonly where: string;
@@ -179,6 +180,29 @@ export const loginLinkWebPath = "/#/login-link/";
 /** The refusal code for a login link that was used, expired or never made. */
 export const loginLinkNotFound = "login_link_not_found";
 
+/**
+ * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in
+ * the caller's lineage ends except the session the request was sent with and what it made, which becomes a root.
+ */
+export const logOutEverywherePath = "/v1/sessions/log-out-everywhere";
+
+/** The live credentials Log out everywhere ends, counted by kind. */
+export interface LogOutEverywhereCounts {
+  readonly sessions: number;
+  readonly agentSessions: number;
+  readonly joinCodes: number;
+}
+
+/** The answer to `GET /v1/sessions/log-out-everywhere`: what Log out everywhere would end now. */
+export interface LogOutEverywherePreview {
+  readonly willEnd: LogOutEverywhereCounts;
+}
+
+/** The answer to `POST /v1/sessions/log-out-everywhere`: what it ended. */
+export interface LogOutEverywhereResponse {
+  readonly ended: LogOutEverywhereCounts;
+}
+
 /** The answer to `GET /v1/sessions`, oldest first. */
 export interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -235,4 +259,11 @@ export interface LoginCalls {
    * the session cookie. A used, expired or unknown link is 404 `login_link_not_found`.
    */
   readonly redeemLoginLink: (secret: Token) => Promise<IdentityResponse>;
+  /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
+  readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
+  /**
+   * `POST /v1/sessions/log-out-everywhere` (a human): ends every credential in the caller's lineage except this
+   * client's session and what it made, whose open event streams close, and answers what ended by kind.
+   */
+  readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }

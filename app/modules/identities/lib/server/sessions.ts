@@ -1,11 +1,17 @@
+import { Array as Arr, Effect, Option } from "effect";
 import { Caller, CredentialSent, credentialsEnded } from "./auth.ts";
-import { Effect, Option } from "effect";
 import type { HumanIdentity, Identity } from "../../index.ts";
-import { ListSessionsResponseSchema, RevokeSessionResponseSchema } from "./login-wire.ts";
-import { isPublicId, sessionByIdPath, sessionsPath } from "../../../logins/index.ts";
+import {
+  ListSessionsResponseSchema,
+  LogOutEverywherePreviewSchema,
+  LogOutEverywhereResponseSchema,
+  RevokeSessionResponseSchema,
+} from "./login-wire.ts";
+import type { LogOutEverywhereCounts, PublicId } from "../../../logins/index.ts";
+import { isPublicId, logOutEverywherePath, sessionByIdPath, sessionsPath } from "../../../logins/index.ts";
+import type { EndedCredential } from "../../../storage/server.ts";
 import { HttpServerResponse } from "effect/http";
 import type { IdentityChanges } from "./auth.ts";
-import type { PublicId } from "../../../logins/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -72,4 +78,53 @@ const revokeRoute: Route<Caller | Storage | IdentityChanges> = {
   path: sessionByIdPath,
 };
 
-export const sessionRoutes: readonly Route<Caller | Storage | IdentityChanges>[] = [listRoute, revokeRoute];
+function countOf(ended: readonly EndedCredential[], kind: EndedCredential["kind"]): number {
+  return Arr.filter(ended, (each) => each.kind === kind).length;
+}
+
+function countsOf(ended: readonly EndedCredential[]): LogOutEverywhereCounts {
+  return {
+    agentSessions: countOf(ended, "agent session"),
+    joinCodes: countOf(ended, "join code"),
+    sessions: countOf(ended, "session"),
+  };
+}
+
+const everywhere = Effect.gen(function* everywhereButThisSession() {
+  const caller = yield* human;
+  const current = yield* CredentialSent;
+  const at = yield* now;
+  return { current: Option.getOrUndefined(current), identity: caller.name, now: at };
+});
+
+const previewRoute: Route<Caller | Storage> = {
+  handle: () =>
+    Effect.gen(function* previewLogOutEverywhereRoute() {
+      const storage = yield* Storage;
+      const request = yield* everywhere;
+      const ending = yield* storage.previewLogOutEverywhere(request);
+      return yield* HttpServerResponse.schemaJson(LogOutEverywherePreviewSchema)({ willEnd: countsOf(ending) });
+    }),
+  method: "GET",
+  path: logOutEverywherePath,
+};
+
+const logOutEverywhereRoute: Route<Caller | Storage | IdentityChanges> = {
+  handle: () =>
+    Effect.gen(function* logOutEverywhereRouteHandler() {
+      const storage = yield* Storage;
+      const request = yield* everywhere;
+      const ended = yield* storage.logOutEverywhere(request);
+      yield* credentialsEnded({ by: request.identity, ended });
+      return yield* HttpServerResponse.schemaJson(LogOutEverywhereResponseSchema)({ ended: countsOf(ended) });
+    }),
+  method: "POST",
+  path: logOutEverywherePath,
+};
+
+export const sessionRoutes: readonly Route<Caller | Storage | IdentityChanges>[] = [
+  listRoute,
+  revokeRoute,
+  previewRoute,
+  logOutEverywhereRoute,
+];
