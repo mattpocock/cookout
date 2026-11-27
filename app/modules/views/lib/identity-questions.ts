@@ -16,10 +16,12 @@ const NONE: Question = { body: "", confirm: "", destructive: false, title: "" };
 const VERBS: Readonly<Record<IdentityAction, string>> = {
   deactivate: "deactivate",
   delete: "delete",
+  feed: "make it a feeder",
   reactivate: "reactivate",
   revoke: "revoke the session",
   rotate: "rotate the token",
   transfer: "transfer",
+  unfeed: "make it an agent again",
 };
 
 function noWarning(): string {
@@ -29,10 +31,12 @@ function noWarning(): string {
 const WARNINGS: Readonly<Record<IdentityAction, (identity: Identity) => string>> = {
   deactivate: deactivationWarning,
   delete: deletionWarning,
+  feed: noWarning,
   reactivate: noWarning,
   revoke: noWarning,
   rotate: noWarning,
   transfer: noWarning,
+  unfeed: noWarning,
 };
 
 const QUESTIONS: Readonly<Record<IdentityAction, (name: string, to: string) => Question>> = {
@@ -47,6 +51,12 @@ const QUESTIONS: Readonly<Record<IdentityAction, (name: string, to: string) => Q
     confirm: `Delete @${name}`,
     destructive: true,
     title: `Delete @${name}?`,
+  }),
+  feed: (name) => ({
+    body: "It only posts from now on: a typed @name of it mentions no one, reaches no inbox and calls no trigger URL, and it can't watch, read an inbox or join.",
+    confirm: `Make @${name} a feeder`,
+    destructive: false,
+    title: `Make @${name} a feeder?`,
   }),
   reactivate: (name) => ({
     body: "It can post again with a new identity token, shown once here. Its old tokens stay revoked.",
@@ -71,6 +81,12 @@ const QUESTIONS: Readonly<Record<IdentityAction, (name: string, to: string) => Q
     confirm: `Transfer to @${to}`,
     destructive: false,
     title: `Transfer @${name} to @${to}?`,
+  }),
+  unfeed: (name) => ({
+    body: "A typed @name of it mentions it again, reaching its inbox and trigger URL, and it can watch and join.",
+    confirm: `Make @${name} an agent`,
+    destructive: false,
+    title: `Make @${name} an agent again?`,
   }),
 };
 

@@ -8,16 +8,20 @@ const PLACES = {
   inline: "size-2 self-center",
 } as const;
 
-type Shown = "online" | "offline" | "unreachable" | "warning";
+type Shown = "feeder" | "online" | "offline" | "unreachable" | "warning";
 
 const LOOKS: Readonly<Record<Shown, string>> = {
+  feeder: "fill-feeder",
   offline: "fill-background stroke-muted-foreground",
   online: "fill-online",
   unreachable: "fill-destructive",
   warning: "fill-background stroke-mention-bar",
 };
 
-function presenceOf({ online, unreachable, warning }: PresenceDotParts): Shown {
+function presenceOf({ feeder, online, unreachable, warning }: PresenceDotParts): Shown {
+  if (feeder) {
+    return "feeder";
+  }
   if (online) {
     return "online";
   }

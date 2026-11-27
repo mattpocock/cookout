@@ -35,6 +35,7 @@ interface PlainNode {
 
 interface MentionsShown {
   readonly mentions: readonly string[];
+  readonly feeders?: readonly string[];
   readonly me: string;
   readonly inLink?: boolean;
 }
@@ -43,7 +44,14 @@ function textNode(value: string): MarkdownNode {
   return { type: "text", value };
 }
 
+function isFeederIn(name: string, shown: MentionsShown): boolean {
+  return (shown.feeders ?? []).includes(name);
+}
+
 function whoseMention(name: string, shown: MentionsShown): string {
+  if (isFeederIn(name, shown)) {
+    return "feeder";
+  }
   if (name === shown.me) {
     return "mine";
   }
@@ -71,7 +79,7 @@ function splitMentions(text: string, shown: MentionsShown): readonly MarkdownNod
   let kept = START;
   for (const found of text.matchAll(mentionPattern)) {
     const [name] = found;
-    if (shown.mentions.includes(name)) {
+    if (shown.mentions.includes(name) || isFeederIn(name, shown)) {
       const at = found.index - AT_SIGN;
       pieces.push(textNode(text.slice(kept, at)), mentionNode(name, shown));
       kept = found.index + name.length;

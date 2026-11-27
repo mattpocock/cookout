@@ -3,6 +3,7 @@ import type { Command } from "./commands.ts";
 import type { KeptText } from "./kept-text.ts";
 import type { WebhookCommand } from "../../webhook-commands/index.ts";
 import { inlineField } from "./schema-fields.ts";
+import { isFeeder } from "../../identities/feeders.ts";
 import { sameSnapshot } from "../../board/index.ts";
 import { startingTyped } from "./commands.ts";
 
@@ -24,6 +25,10 @@ function startsWithTyped(identity: Identity, prefix: string): boolean {
   return identity.name.startsWith(prefix) || displayName.toLowerCase().startsWith(prefix);
 }
 
+function unmentionable(identity: Identity): boolean {
+  return identity.deactivated === true || isFeeder(identity);
+}
+
 function suggestionsFor(sources: Sources, text: string, caret: number): readonly Identity[] {
   const found = typedMention.exec(text.slice(NOTHING, caret));
   if (found === null) {
@@ -33,7 +38,7 @@ function suggestionsFor(sources: Sources, text: string, caret: number): readonly
   const prefix = mention.slice(AT_SIGN).trimStart().toLowerCase();
   const matches = sources
     .identities()
-    .filter((identity) => identity.deactivated !== true && startsWithTyped(identity, prefix));
+    .filter((identity) => !unmentionable(identity) && startsWithTyped(identity, prefix));
   return membersFirst(matches, sources.members());
 }
 
@@ -95,7 +100,7 @@ function mentions(text: string, name: string): boolean {
 }
 
 function repliedTo(sources: Sources, snapshot: DraftSnapshot, name: string | null): DraftSnapshot {
-  const deactivated = sources.identities().some((identity) => identity.name === name && identity.deactivated === true);
+  const deactivated = sources.identities().some((identity) => identity.name === name && unmentionable(identity));
   let { text } = snapshot;
   if (name !== null && !deactivated && !mentions(text, name)) {
     text = `@${name} ${text}`;

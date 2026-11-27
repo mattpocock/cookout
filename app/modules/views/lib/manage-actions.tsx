@@ -1,4 +1,5 @@
 import { ButtonRow } from "../../design-system/controls.tsx";
+import { FeederButton } from "./feeder-button.tsx";
 import type { Identity } from "../../sdk/index.ts";
 import type { IdentityActions } from "../../composer/index.ts";
 import { IdentityConfirm } from "./identity-confirm.tsx";
@@ -18,10 +19,12 @@ interface ManageActionsProps {
 export function ManageActions(props: ManageActionsProps): ReactNode {
   const { actions, identity } = props;
   const active = identity.deactivated !== true;
+  const agent = active && identity.kind === "agent";
   return (
     <>
       <ButtonRow>
-        {active && identity.kind === "agent" && <RotateButton actions={actions} />}
+        {agent && <RotateButton actions={actions} />}
+        {agent && <FeederButton actions={actions} agent={identity} />}
         <RemovalButton actions={actions} active={active} deletable={props.deletable} />
       </ButtonRow>
       <IdentityConfirm actions={actions} identity={identity} />

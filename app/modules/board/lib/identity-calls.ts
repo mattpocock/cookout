@@ -14,8 +14,10 @@ type IdentityCallsClient = Pick<
   | "getTrigger"
   | "listAgentKeys"
   | "makeAdmin"
+  | "makeFeeder"
   | "reactivateIdentity"
   | "removeAdmin"
+  | "removeFeeder"
   | "revokeAgentKey"
   | "revokeAgentSession"
   | "setAvatar"
@@ -37,6 +39,7 @@ interface NewAgent {
 
 interface IdentityCalls {
   readonly setAdmin: (name: IdentityName, admin: boolean) => Promise<void>;
+  readonly setFeeder: (name: IdentityName, feeder: boolean) => Promise<void>;
   readonly setDisplayName: (name: IdentityName, text: string | null) => Promise<void>;
   readonly setDescription: (name: IdentityName, text: string | null) => Promise<void>;
   readonly setAvatar: (name: IdentityName, png: Uint8Array) => Promise<void>;
@@ -95,10 +98,17 @@ function textCalls(
   };
 }
 
+function feederCall(client: IdentityCallsClient, feeder: boolean): IdentityCallsClient["makeFeeder"] {
+  if (feeder) {
+    return client.makeFeeder;
+  }
+  return client.removeFeeder;
+}
+
 function lifeCalls(
   options: IdentityCallsOptions,
   put: (identity: Identity) => void,
-): Pick<IdentityCalls, "deactivate" | "delete" | "reactivate"> {
+): Pick<IdentityCalls, "deactivate" | "delete" | "reactivate" | "setFeeder"> {
   const { client, identities, sessions } = options;
   return {
     deactivate: async (name) => {
@@ -115,6 +125,10 @@ function lifeCalls(
       const { identity, token } = await client.reactivateIdentity(name);
       put(identity);
       return token;
+    },
+    setFeeder: async (name, feeder) => {
+      const { identity } = await feederCall(client, feeder)(name);
+      put(identity);
     },
   };
 }

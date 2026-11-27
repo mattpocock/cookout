@@ -4,7 +4,7 @@ import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
-type IdentityAction = "deactivate" | "delete" | "reactivate" | "revoke" | "rotate" | "transfer";
+type IdentityAction = "deactivate" | "delete" | "feed" | "reactivate" | "revoke" | "rotate" | "transfer" | "unfeed";
 
 type ActionState =
   | { readonly status: "idle" }
@@ -70,6 +70,10 @@ function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => stri
       await calls.delete(name);
       return { token: null };
     },
+    feed: async () => {
+      await calls.setFeeder(name, true);
+      return {};
+    },
     reactivate: async () => ({ token: await calls.reactivate(name) }),
     revoke: async () => {
       await calls.revokeSession(name);
@@ -79,6 +83,10 @@ function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => stri
     transfer: async () => {
       await calls.transfer(name, transferTo().trim());
       return { transferTo: "" };
+    },
+    unfeed: async () => {
+      await calls.setFeeder(name, false);
+      return {};
     },
   };
 }
@@ -110,10 +118,12 @@ function asksOf(publish: Publish): IdentityActions["ask"] {
   return {
     deactivate: askTo("deactivate"),
     delete: askTo("delete"),
+    feed: askTo("feed"),
     reactivate: askTo("reactivate"),
     revoke: askTo("revoke"),
     rotate: askTo("rotate"),
     transfer: askTo("transfer"),
+    unfeed: askTo("unfeed"),
   };
 }
 

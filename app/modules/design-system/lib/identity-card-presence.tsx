@@ -11,6 +11,7 @@ export function IdentityCardPresence(parts: IdentityCardShownParts): ReactNode {
     <p className="flex items-start gap-2 text-[13px] leading-5 text-foreground">
       <span className="flex h-5 items-center">
         <PresenceDot
+          feeder={presence.feeder}
           label={presence.label}
           name={name}
           online={presence.online}

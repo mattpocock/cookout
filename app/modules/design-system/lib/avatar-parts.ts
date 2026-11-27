@@ -1,4 +1,5 @@
 interface PresenceShown {
+  readonly feeder: boolean;
   readonly online: boolean;
   readonly warning: boolean;
   readonly unreachable: boolean;
