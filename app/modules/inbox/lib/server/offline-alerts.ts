@@ -1,8 +1,8 @@
+import type { AdminActed, SessionMade, TokensEnded } from "../../../identities/server.ts";
 import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { InboxAlert, LoginAlert } from "../../index.ts";
 import type { OfflineAlertId, OfflineReason, Presence } from "../../../presence/index.ts";
-import type { SessionMade, TokensEnded } from "../../../identities/server.ts";
 import type { StorageUnavailable, StoredInboxAlert, StoredLoginAlert } from "../../../storage/server.ts";
 import { isOfflineAlertId, offlineAlertNotFound } from "../../../presence/index.ts";
 import { IdentityChanges } from "../../../identities/server.ts";
@@ -196,6 +196,18 @@ function raisedLogin(on: On, made: SessionMade): Effect.Effect<void> {
   }).pipe(Effect.ignore);
 }
 
+function raisedAdminAct(on: On, { identity, ...act }: AdminActed): Effect.Effect<void> {
+  return Effect.gen(function* raiseAdminActAlert() {
+    const raisedAt = yield* now;
+    const alert = yield* on.storage.recordLoginAlert({
+      login: { ...act, kind: "admin act" },
+      owner: identity,
+      raisedAt,
+    });
+    yield* shownThenPublished(on, identity, [alert]);
+  }).pipe(Effect.ignore);
+}
+
 function isEndedSession(alert: InboxAlert): alert is LoginAlert {
   return !isOfflineAlert(alert) && alert.login.kind === "new session" && alert.login.ended;
 }
@@ -216,6 +228,7 @@ const offlineAlertsLayer: Layer.Layer<OfflineAlerts, never, Storage | IdentityCh
     const hub = yield* PubSub.unbounded<OwnedAlert>();
     const on: On = { publish: publisher((owned) => PubSub.publish(hub, owned)), shows: showsBy(storage), storage };
     yield* changes.onSessionMade((made) => raisedLogin(on, made));
+    yield* changes.onAdminActed((acted) => raisedAdminAct(on, acted));
     yield* changes.onTokensEnded((ended) => republishedEnded(on, ended));
     return {
       backOnline: (agent) => wasBack(on, agent, storage.markBackOnline),

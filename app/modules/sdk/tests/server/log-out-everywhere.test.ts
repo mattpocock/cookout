@@ -1,7 +1,8 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { loginLinkWebPath, redeemLoginLinkPath } from "../../../logins/index.ts";
 import { request } from "../../../http/client.ts";
 import { whoamiPath } from "../../../identities/index.ts";
 
@@ -99,5 +100,40 @@ it.effect("an agent can't log out everywhere or preview it: it is 403 human_only
       { code: "human_only", status: FORBIDDEN },
       { code: "human_only", status: FORBIDDEN },
     ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+function loginLinkSession(cookout: TestCookoutService, name: string): Effect.Effect<string> {
+  return Effect.gen(function* redeemLoginLink() {
+    const { link } = yield* answer(() => cookout.client.createLoginLink(name));
+    const [, secret = ""] = Str.split(loginLinkWebPath)(link);
+    const redeemed = yield* answer(() =>
+      request({ baseUrl: cookout.url, body: { secret }, method: "POST", path: redeemLoginLinkPath }),
+    );
+    const [cookie = ""] = redeemed.headers.getSetCookie();
+    const [pair] = Str.split("; ")(cookie);
+    return pair;
+  });
+}
+
+it.effect("Log out everywhere counts and ends the sessions redeemed from login links", () =>
+  Effect.gen(function* loginLinkSessionsCounted() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const cookie = yield* loginLinkSession(cookout, "ada");
+    const phone = yield* cliSession(cookout, ada.client, "ada-phone");
+    const fromPhone = cookout.clientFor(phone);
+    const preview = yield* answer(() => fromPhone.previewLogOutEverywhere());
+    const answered = yield* answer(() => fromPhone.logOutEverywhere());
+    const after = yield* Effect.map(
+      answer(() => request({ baseUrl: cookout.url, headers: { cookie }, method: "GET", path: whoamiPath })),
+      ({ status }) => status,
+    );
+
+    expect({ after, answered, preview }).toStrictEqual({
+      after: UNAUTHORIZED,
+      answered: { ended: { agentSessions: 0, joinCodes: 0, sessions: 1 } },
+      preview: { willEnd: { agentSessions: 0, joinCodes: 0, sessions: 1 } },
+    });
   }).pipe(Effect.provide(testCookout())),
 );

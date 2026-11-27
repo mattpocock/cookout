@@ -92,6 +92,7 @@ function memoryLoginLinks(options: MemoryLoginLinksOptions): MemoryLoginLinks {
             links.set(link.linkHash, { ...link });
             const { createdAt, identity, linkHash, parent } = link;
             state.lineage.record({ hash: linkHash, identity, kind: "login link", madeAt: createdAt, parent, publicId });
+            return publicId;
           }),
         ),
       ),

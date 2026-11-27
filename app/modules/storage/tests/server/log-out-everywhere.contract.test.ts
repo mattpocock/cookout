@@ -8,6 +8,7 @@ import {
   hashesOf,
   later,
   liveOf,
+  made,
   withPeople,
   workerSession,
 } from "./lineage-seeds.ts";
@@ -90,5 +91,41 @@ it.effect.each(storageLayers)(
 
       expect(live).toStrictEqual([true, true, true, true, true, true]);
       expect(hashesOf(preview)).toStrictEqual(hashesOf(ended));
+    }),
+);
+
+const [adaLink, linkSession] = [tokenHash("hash:link-for-ada"), tokenHash("hash:session-from-link")];
+
+function linkSessionBesideA(storage: Store): Fails<void> {
+  return Effect.gen(function* seedLinkSession() {
+    yield* withPeople(storage);
+    yield* approvedSession({ approvedWith: adaToken, hash: sessionA, storage });
+    const link = { createdAt: made, expiresAt: later, identity: ada.name, linkHash: adaLink };
+    yield* storage.addLoginLink({ ...link, parent: tokenHash("hash:bob") });
+    yield* storage.redeemLoginLink({
+      credentialHash: linkSession,
+      host: "Firefox on macOS",
+      linkHash: adaLink,
+      now: made,
+    });
+  });
+}
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): Log out everywhere counts and ends the session redeemed from a login link another person made",
+  ({ layer }) =>
+    Effect.gen(function* logOutEverywhereEndsLinkSession() {
+      const { storage } = yield* openStore(layer);
+      yield* linkSessionBesideA(storage);
+      const fromA = { current: sessionA, identity: ada.name, now: later };
+      const preview = yield* storage.previewLogOutEverywhere(fromA);
+      const ended = yield* storage.logOutEverywhere(fromA);
+      const live = yield* liveOf({ hashes: [sessionA, linkSession], storage });
+
+      expect([preview, ended]).toStrictEqual([
+        [{ hash: linkSession, identity: ada.name, kind: "session" }],
+        [{ hash: linkSession, identity: ada.name, kind: "session" }],
+      ]);
+      expect(live).toStrictEqual([true, false]);
     }),
 );
