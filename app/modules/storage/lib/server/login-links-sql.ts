@@ -1,7 +1,7 @@
 import { Effect, Option, Schema } from "effect";
-import { LINK_GONE, linkRedeemed } from "./login-links.ts";
 import type { LoginLinkRedemption, LoginLinksSection, RedeemLoginLink } from "./login-links.ts";
 import { credentialIn, rowOf } from "./login-credential-lookup-sqlite.ts";
+import { linkGone, linkRedeemed } from "./login-links.ts";
 import type { Fails } from "./errors.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
 import { isFalse } from "./adapters/sql-database.ts";
@@ -49,7 +49,7 @@ function issueFrom({ db, publicId, redeem }: Redeeming) {
         where: host,
       });
       const issued = yield* credentialIn(db)(credentialHash);
-      return Option.match(issued, { onNone: () => LINK_GONE, onSome: linkRedeemed });
+      return Option.match(issued, { onNone: linkGone, onSome: linkRedeemed });
     });
 }
 
@@ -71,7 +71,7 @@ function sqlLoginLinks(db: SqlDatabase): LoginLinksSection {
             yield* db.run("DELETE FROM login_links WHERE expires_at <= ?", redeem.now);
             const found = yield* Effect.flatMap(db.get(findLive(db), redeem.linkHash, redeem.now), linkRow);
             return yield* Option.match(found, {
-              onNone: () => Effect.succeed(LINK_GONE),
+              onNone: () => Effect.succeed(linkGone()),
               onSome: issueFrom({ db, publicId, redeem }),
             });
           }),

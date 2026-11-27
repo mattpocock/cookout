@@ -24,7 +24,9 @@ interface LoginLinksSection {
   readonly redeemLoginLink: (redeem: RedeemLoginLink) => Fails<LoginLinkRedemption>;
 }
 
-const LINK_GONE: LoginLinkRedemption = { status: "gone" };
+function linkGone(): LoginLinkRedemption {
+  return { status: "gone" };
+}
 
 function linkRedeemed(identity: Identity): LoginLinkRedemption {
   return { identity, status: "redeemed" };
@@ -49,9 +51,9 @@ const POSTGRES_LOGIN_LINKS_MIGRATION: readonly string[] = [
 ];
 
 export {
-  LINK_GONE,
   LOGIN_LINKS_MIGRATION,
   POSTGRES_LOGIN_LINKS_MIGRATION,
+  linkGone,
   linkRedeemed,
   type LoginLinkRedemption,
   type LoginLinksSection,

@@ -1,7 +1,7 @@
-import { Effect, Option, Predicate } from "effect";
-import type { IdentityName, TokenHash } from "../../../identities/index.ts";
-import { LINK_GONE, linkRedeemed } from "./login-links.ts";
+import { Effect, Option } from "effect";
+import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { LoginLinkRedemption, LoginLinksSection, NewLoginLink, RedeemLoginLink } from "./login-links.ts";
+import { linkGone, linkRedeemed } from "./login-links.ts";
 import type { EndedCredential } from "./credential-lineage.ts";
 import type { Ender } from "./credential-lineage-memory.ts";
 import type { Fails } from "./errors.ts";
@@ -34,27 +34,41 @@ function enderOf(links: Links): Ender {
     });
 }
 
-function isPersonIn(findIdentity: FindIdentity, name: IdentityName): boolean {
-  const found = findIdentity(name);
-  return Predicate.isNotUndefined(found) && found.kind === "human" && found.deactivated !== true;
+function personIn(findIdentity: FindIdentity, name: IdentityName): Option.Option<Identity> {
+  return Option.filter(
+    Option.fromUndefinedOr(findIdentity(name)),
+    (found) => found.kind === "human" && found.deactivated !== true,
+  );
+}
+
+interface Redeemable {
+  readonly link: NewLoginLink;
+  readonly person: Identity;
+}
+
+function redeemableIn(
+  options: MemoryLoginLinksOptions,
+  links: Links,
+  { linkHash, now }: RedeemLoginLink,
+): Option.Option<Redeemable> {
+  const live = Option.filter(Option.fromUndefinedOr(links.get(linkHash)), (link) => now < link.expiresAt);
+  return Option.flatMap(live, (link) =>
+    Option.map(personIn(options.findIdentity, link.identity), (person): Redeemable => ({ link, person })),
+  );
 }
 
 function redeemIn(options: MemoryLoginLinksOptions, links: Links) {
-  return ({ credentialHash, host, linkHash, now }: RedeemLoginLink): Fails<LoginLinkRedemption> => {
-    const link = links.get(linkHash);
-    if (Predicate.isUndefined(link) || now >= link.expiresAt || !isPersonIn(options.findIdentity, link.identity)) {
-      return Effect.succeed(LINK_GONE);
-    }
-    links.delete(linkHash);
-    options.state.lineage.markEnded({ hash: linkHash, now, why: "redeemed" });
-    const issue = { credentialHash, host, identity: link.identity, now, parent: linkHash };
-    return Effect.map(options.issueLoginCredential(issue), (issued) => {
-      if (Predicate.isUndefined(issued)) {
-        return LINK_GONE;
-      }
-      return linkRedeemed(issued);
+  return (redeem: RedeemLoginLink): Fails<LoginLinkRedemption> =>
+    Option.match(redeemableIn(options, links, redeem), {
+      onNone: () => Effect.succeed(linkGone()),
+      onSome: ({ link, person }) => {
+        const { credentialHash, host, linkHash, now } = redeem;
+        links.delete(linkHash);
+        options.state.lineage.markEnded({ hash: linkHash, now, why: "redeemed" });
+        const issue = { credentialHash, host, identity: link.identity, now, parent: linkHash };
+        return Effect.as(options.issueLoginCredential(issue), linkRedeemed(person));
+      },
     });
-  };
 }
 
 function memoryLoginLinks(options: MemoryLoginLinksOptions): MemoryLoginLinks {

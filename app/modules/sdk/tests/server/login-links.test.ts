@@ -2,7 +2,7 @@ import { Array as Arr, Duration, Effect, Option, String as Str } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { loginLinkWebPath, redeemLoginLinkPath } from "../../../logins/index.ts";
+import { loginLinkPath, loginLinkWebPath, redeemLoginLinkPath } from "../../../logins/index.ts";
 import { token, whoamiPath } from "../../../identities/index.ts";
 import type { HttpResponse } from "../../../http/client.ts";
 import { TestClock } from "effect/testing";
@@ -14,6 +14,7 @@ const UNAUTHORIZED = 401;
 const FORBIDDEN = 403;
 const NOT_FOUND = 404;
 const LINK_MINUTES = 15;
+const LAST_MINUTE = 1;
 const FIREFOX_MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:132.0) Gecko/20100101 Firefox/132.0";
 const NO_COOKIE = "";
 
@@ -102,11 +103,17 @@ it.effect("a login link redeemed at 15 minutes, or never made, finds nothing", (
   Effect.gen(function* expired() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
-    const made = yield* answer(() => cookout.client.createLoginLink("ada"));
+    const [made, other] = yield* Effect.all(
+      [answer(() => cookout.client.createLoginLink("ada")), answer(() => cookout.client.createLoginLink("ada"))],
+      { concurrency: 1 },
+    );
     const unknown = yield* refusal(() => cookout.clientFor().redeemLoginLink(token("cookout_not-a-link")));
-    yield* TestClock.adjust(Duration.minutes(LINK_MINUTES));
+    yield* TestClock.adjust(Duration.minutes(LINK_MINUTES - LAST_MINUTE));
+    const inTime = yield* answer(() => cookout.clientFor().redeemLoginLink(token(secretOf(other.link))));
+    yield* TestClock.adjust(Duration.minutes(LAST_MINUTE));
     const late = yield* refusal(() => cookout.clientFor().redeemLoginLink(token(secretOf(made.link))));
 
+    expect(inTime.identity.name).toBe("ada");
     expect([unknown, late]).toMatchObject([
       { code: "login_link_not_found", status: NOT_FOUND },
       { code: "login_link_not_found", status: NOT_FOUND },
@@ -123,10 +130,12 @@ it.effect("only an admin makes a login link, and only for a person", () =>
     const byPerson = yield* refusal(() => ada.client.createLoginLink("bob"));
     const forAgent = yield* refusal(() => cookout.client.createLoginLink("triage-agent"));
     const forNobody = yield* refusal(() => cookout.client.createLoginLink("nobody"));
+    const forNoName = yield* refusal(() => cookout.client.createLoginLink("Not A Name"));
 
-    expect([byPerson, forAgent, forNobody]).toMatchObject([
+    expect([byPerson, forAgent, forNobody, forNoName]).toMatchObject([
       { code: "admin_only", status: FORBIDDEN },
       { code: "human_only", status: FORBIDDEN },
+      { code: "identity_not_found", status: NOT_FOUND },
       { code: "identity_not_found", status: NOT_FOUND },
     ]);
   }).pipe(Effect.provide(testCookout())),
@@ -163,4 +172,24 @@ it.effect("creating a person answers a login link that logs them in", () =>
     expect(loggedIn).toBe(OK);
     expect(agent).not.toHaveProperty("loginLink");
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a login link made over HTTPS on Fly links to the board over HTTPS", () =>
+  Effect.gen(function* overHttps() {
+    const cookout = yield* TestCookout;
+    yield* cookout.createIdentity("ada", { kind: "human" });
+    const response = yield* answer(() =>
+      request({
+        baseUrl: cookout.url,
+        headers: { authorization: `Bearer ${cookout.adminToken}`, "x-forwarded-proto": "https" },
+        method: "POST",
+        params: { name: "ada" },
+        path: loginLinkPath,
+      }),
+    );
+    const { host } = new URL(cookout.url);
+    const overHttpsLink: unknown = expect.stringContaining(`https://${host}/#/login-link/cookout_`);
+
+    expect(response.json).toMatchObject({ link: overHttpsLink });
+  }).pipe(Effect.provide(testCookout({ flyAppName: "cookout-test" }))),
 );

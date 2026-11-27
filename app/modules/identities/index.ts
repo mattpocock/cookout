@@ -246,13 +246,20 @@ export const identityDisplayNamePath = "/v1/identities/:name/display-name";
 export const sessionPath = "/v1/session";
 
 /**
- * The harness running a client's process (`Harness`), such as `claude-code`: 1–40 lowercase letters, digits or `-`
- * (`harnessPattern`, `isHarness`). The CLI and the SDK send it in `harnessHeader` (`cookout-harness`) when the
- * process's environment shows such a tool runs it. A human identity's token sent with it is refused with 403
- * `agent_as_human`, to catch an agent that inherited a person's token by accident; it is not a security boundary
- * (ADR 0038). A message posted with it records the tool as `harness`.
+ * The harness running a client's process (`Harness`), such as `claude-code`: 1–40 of `a-z`, `0-9` or `-` (`isHarness`).
+ * The CLI and the SDK send it in `harnessHeader` when such a tool runs the process. A human's token sent with it is
+ * 403 `agent_as_human`, to catch an agent that inherited a person's token; not a security boundary (ADR 0038).
+ * A message posted with it records the tool as `harness`.
  */
-export { type Harness, harnessHeader, harnessPattern, isHarness } from "./lib/harness.ts";
+export type Harness = Brand<"Harness">;
+
+export const harnessPattern = /^[a-z0-9-]{1,40}$/u;
+
+export function isHarness(value: string): value is Harness {
+  return harnessPattern.test(value);
+}
+
+export const harnessHeader = "cookout-harness";
 
 /** The HttpOnly, SameSite=Strict cookie the web UI's requests carry instead of the bearer header. */
 export const sessionCookieName = "cookout_session";

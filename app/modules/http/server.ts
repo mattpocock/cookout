@@ -295,5 +295,5 @@ export const siteCookieOptions = Effect.map(requestOverHttps, (secure) => ({ ...
 export const requestOrigin: Effect.Effect<string, never, HttpServerRequest.HttpServerRequest> = Effect.zipWith(
   Effect.map(requestOverHttps, (secure) => Bool.match(secure, { onFalse: () => "http", onTrue: () => "https" })),
   HttpServerRequest.HttpServerRequest,
-  (scheme, { headers }) => `${scheme}://${headers["host"] ?? ""}`,
+  (scheme, { headers }) => `${scheme}://${String(headers["host"])}`,
 );
