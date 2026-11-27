@@ -21,6 +21,7 @@ import {
   adminNameRule,
   adminToken,
   adminTokenRule,
+  behindFly,
   databasePath,
   host,
   port,
@@ -161,9 +162,16 @@ const startOn = Effect.fnUntraced(function* startOnStorage(
 ) {
   const admin = yield* adminTokenOrRefuse;
   const name = yield* adminNameOrRefuse;
+  const onFly = yield* behindFly;
   const assets = yield* chosenAssetStore(path);
   const stores = Layer.merge(layers.storage(served.setting), assets);
-  const server = cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin });
+  const server = cookoutServer({
+    ...listen,
+    ...webFolderOf(layers),
+    adminName: name,
+    adminToken: admin,
+    behindFly: onFly,
+  });
   const services = yield* Layer.build(Layer.provide(server, stores).pipe(Layer.provide(triggerCallerLive))).pipe(
     Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable(served.redact) }),
   );
