@@ -31,8 +31,8 @@ function withAdaLoggedIn(storage: Store, hash: TokenHash): Effect.Effect<void, S
       credentialHash: hash,
       host: "web",
       identity: ada.name,
-      madeWith: adaToken,
       now: issued,
+      parent: adaToken,
     });
   });
 }

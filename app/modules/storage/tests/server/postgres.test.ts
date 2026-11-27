@@ -19,16 +19,22 @@ import { tokenHash } from "../../../identities/index.ts";
 const HASH_LENGTH = 64;
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
+const hashC = tokenHash(Str.repeat(HASH_LENGTH)("c"));
 const matt = identityFixture("matt", { kind: "human" });
 const ada = identityFixture("ada", { kind: "human" });
-
 const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH ROW EXECUTE FUNCTION fault()";
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
-const BEFORE_SEARCH = [
-  "DROP TABLE secrets_key",
+const BEFORE_SECRETS_KEY = [
+  "DROP TABLE credential_lineage",
+  "ALTER TABLE login_requests DROP COLUMN approved_with",
+  "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
+  "DROP TABLE secrets_key",
+];
+const BEFORE_SEARCH = [
+  ...BEFORE_SECRETS_KEY,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
   "ALTER TABLE deliveries DROP COLUMN called_at",
   "ALTER TABLE messages DROP COLUMN title, DROP COLUMN title_set_by, DROP COLUMN title_set_at",
@@ -50,11 +56,10 @@ const BEFORE_SEARCH = [
   "UPDATE schema_version SET version = 3",
 ];
 const BEFORE_LOGIN_EXPIRY = [
-  "DROP TABLE secrets_key",
-  "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
-  "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
+  ...BEFORE_SECRETS_KEY,
+  `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 3",
+  "UPDATE schema_version SET version = version - 4",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
@@ -128,9 +133,7 @@ it.effect("two stores opened on the same empty database at once apply each migra
   Effect.scoped(
     Effect.gen(function* together() {
       const url = yield* emptyPostgresDatabase;
-      const [first, second] = yield* Effect.all([opened(url), opened(url)], {
-        concurrency: "unbounded",
-      });
+      const [first, second] = yield* Effect.all([opened(url), opened(url)], { concurrency: "unbounded" });
       yield* first.storage.createIdentity(matt, hashA);
       const identities = yield* second.storage.listIdentities();
       yield* Effect.andThen(first.close, second.close);
@@ -248,21 +251,25 @@ function daysUnused(at: ReturnType<typeof isoTimeOf>, seconds: number): ReturnTy
   return isoTimeOf(DateTime.add(DateTime.makeUnsafe(at), { days: DAYS_UNUSED, seconds }));
 }
 
-const loginStoredBeforeExpiry = Effect.gen(function* storeLoginBeforeExpiry() {
-  const url = yield* emptyPostgresDatabase;
-  const first = yield* opened(url);
-  yield* first.storage.createIdentity(ada, hashA);
-  const issued = { credentialHash: hashB, host: "ada-laptop", identity: ada.name, madeWith: hashA };
-  yield* first.storage.issueLoginCredential({ ...issued, now: isoTime("2026-01-01T00:00:00.000Z") });
-  yield* first.close;
-  yield* onPostgresDatabase({ statements: BEFORE_LOGIN_EXPIRY, url });
-  return url;
-});
+const [madeAt, dayAfter] = [isoTime("2026-01-01T00:00:00.000Z"), isoTime("2026-01-02T00:00:00.000Z")];
+
+function loginStoredBefore(host: string, statements: readonly string[]): typeof emptyPostgresDatabase {
+  return Effect.gen(function* storeLoginThenDowngrade() {
+    const url = yield* emptyPostgresDatabase;
+    const first = yield* opened(url);
+    yield* first.storage.createIdentity(ada, hashA);
+    const login = { credentialHash: hashB, host, identity: ada.name, now: madeAt, parent: hashA };
+    yield* first.storage.issueLoginCredential(login);
+    yield* first.close;
+    yield* onPostgresDatabase({ statements, url });
+    return url;
+  });
+}
 
 it.live("a Login credential stored before login expiry authenticates after the upgrade, last used at the upgrade", () =>
   Effect.scoped(
     Effect.gen(function* upgradeLogins() {
-      const url = yield* loginStoredBeforeExpiry;
+      const url = yield* loginStoredBefore("ada-laptop", BEFORE_LOGIN_EXPIRY);
       const before = yield* wallClock;
       const second = yield* opened(url);
       const after = yield* wallClock;
@@ -272,6 +279,21 @@ it.live("a Login credential stored before login expiry authenticates after the u
 
       expect(late).toStrictEqual({ status: "expired" });
       expect(used).toMatchObject({ identity: { name: ada.name }, status: "active" });
+    }),
+  ),
+);
+
+it.effect("a web session stored on Postgres before lineage is made by its Identity token, which rotating revokes", () =>
+  Effect.scoped(
+    Effect.gen(function* upgradeLineage() {
+      const second = yield* Effect.flatMap(loginStoredBefore("web UI", BEFORE_LOGIN_EXPIRY), opened);
+      const listed = yield* second.storage.listSessions({ current: hashC, identity: ada.name, now: dayAfter });
+      yield* second.storage.replaceToken(ada.name, hashC);
+      const revoked = yield* second.storage.revokeBelowRevokedTokens(ada.name, dayAfter);
+      yield* second.close;
+
+      expect(listed).toMatchObject([{ kind: "web", madeAt, madeBy: { kind: "identity token" }, where: "web browser" }]);
+      expect(revoked).toStrictEqual([{ hash: hashB, identity: ada.name, kind: "session" }]);
     }),
   ),
 );

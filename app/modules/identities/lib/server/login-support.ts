@@ -1,9 +1,10 @@
 import type { ApprovalRequestDetails, ApprovalRequestKind } from "../../../logins/index.ts";
-import { Array as Arr, Context, DateTime, Effect, Option, Predicate, String as Str } from "effect";
+import { Context, DateTime, Effect, Predicate, String as Str } from "effect";
 import { Caller } from "./auth.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { RequestOrigin } from "../../../storage/server.ts";
+import { browserOn } from "./user-agent.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 const FORBIDDEN = 403;
@@ -54,42 +55,6 @@ const USER_AGENT_LIMIT = 500;
 const START = 0;
 const BROWSER = "Mozilla/";
 
-interface Named {
-  readonly name: string;
-  readonly marks: readonly string[];
-}
-
-const BROWSERS: readonly Named[] = [
-  { marks: ["Edg/", "EdgA/", "EdgiOS/", "Edge/"], name: "Edge" },
-  { marks: ["OPR/"], name: "Opera" },
-  { marks: ["Firefox/", "FxiOS/"], name: "Firefox" },
-  { marks: ["Chrome/", "CriOS/"], name: "Chrome" },
-  { marks: ["Safari/"], name: "Safari" },
-];
-
-const SYSTEMS: readonly Named[] = [
-  { marks: ["iPhone", "iPad", "iPod"], name: "iOS" },
-  { marks: ["Android"], name: "Android" },
-  { marks: ["CrOS"], name: "ChromeOS" },
-  { marks: ["Windows"], name: "Windows" },
-  { marks: ["Mac OS X", "Macintosh"], name: "macOS" },
-  { marks: ["Linux"], name: "Linux" },
-];
-
-interface Found {
-  readonly named: readonly Named[];
-  readonly userAgent: string;
-  readonly otherwise: string;
-}
-
-function nameIn({ named, otherwise, userAgent }: Found): string {
-  const found = Arr.findFirst(named, ({ marks }) => Arr.some(marks, (mark) => Str.includes(mark)(userAgent)));
-  return Option.getOrElse(
-    Option.map(found, ({ name }) => name),
-    () => otherwise,
-  );
-}
-
 interface Sent {
   readonly clientIp: string;
   readonly headers: Readonly<Record<string, string | undefined>>;
@@ -119,8 +84,7 @@ function whereOf({ host, userAgent }: Started): string {
   if (Predicate.isUndefined(userAgent) || kindOf(userAgent) === "terminal") {
     return host;
   }
-  const browser = nameIn({ named: BROWSERS, otherwise: "A browser", userAgent });
-  return `${browser} on ${nameIn({ named: SYSTEMS, otherwise: "an unknown OS", userAgent })}`;
+  return browserOn(userAgent);
 }
 
 function loginRequestDetails(started: Started): ApprovalRequestDetails {
@@ -133,3 +97,4 @@ function loginRequestDetails(started: Started): ApprovalRequestDetails {
 }
 
 export { AddressLimit, lifetimeOf, loginRequestDetails, loginRequestNotFound, now, requestOriginOf, requireHuman };
+export { webSessionWhere } from "./user-agent.ts";

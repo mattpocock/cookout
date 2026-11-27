@@ -11,6 +11,26 @@ interface StartLoginRequest {
   readonly host: string;
 }
 
+declare const brand: unique symbol;
+
+const publicIdPattern = /^[0-9a-f]{16}$/u;
+
+interface SessionMadeByView {
+  readonly kind: "web" | "cli" | "identity token";
+  readonly where?: string;
+}
+
+interface SessionView {
+  readonly id: PublicId;
+  readonly kind: "web" | "cli";
+  readonly where: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly current: boolean;
+  readonly madeBy?: SessionMadeByView;
+}
+
 /** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
 export type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
 
@@ -34,6 +54,18 @@ export interface LoginRequestView extends ApprovalRequestDetails {
   readonly host: string;
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
+}
+
+/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
+export type PublicId = string & { readonly [brand]: "PublicId" };
+
+/**
+ * Whether `value` follows the public ID rule.
+ * @param value The text to check.
+ * @returns Whether it is a public ID.
+ */
+export function isPublicId(value: string): value is PublicId {
+  return publicIdPattern.test(value);
 }
 
 /** A login request's user code, which a person types into the approval page from the terminal: `WDJB-MJHT`. */
@@ -107,6 +139,27 @@ export const loginPath = "/v1/login";
  */
 export const approvalPath = "/#/approve";
 
+/**
+ * `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0153).
+ */
+export const sessionsPath = "/v1/sessions";
+
+/**
+ * `DELETE /v1/sessions/:id` (a human): revokes one of the caller's live sessions by its public ID, with everything
+ * below it. Another person's ID or an unknown one is 404 `session_not_found`.
+ */
+export const sessionByIdPath = "/v1/sessions/:id";
+
+/** The answer to `GET /v1/sessions`, oldest first. */
+export interface ListSessionsResponse {
+  readonly sessions: readonly SessionView[];
+}
+
+/** The answer to `DELETE /v1/sessions/:id`: how many live credentials it ended, the session and those below it. */
+export interface RevokeSessionResponse {
+  readonly ended: number;
+}
+
 /** The SDK's calls for logging a machine in by browser approval. */
 export interface LoginCalls {
   /**
@@ -125,4 +178,11 @@ export interface LoginCalls {
   readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
   /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
   readonly revokeLogin: () => Promise<LogoutResponse>;
+  /** `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions, oldest first. */
+  readonly listSessions: () => Promise<ListSessionsResponse>;
+  /**
+   * `DELETE /v1/sessions/:id` (a human): revokes the caller's session with that public ID and everything below it,
+   * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
+   */
+  readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
 }

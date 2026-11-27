@@ -7,6 +7,7 @@
 import {
   AgentSessionSent,
   Caller,
+  CredentialSent,
   HarnessSent,
   LoginCredentialSent,
   WebhookCommandThread,
@@ -20,7 +21,15 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { Credentials, IdentityChanges, IssuedToken, Principal } from "./lib/server/auth.ts";
 import type { Gate, Route } from "../http/server.ts";
 import type { IdentityName, Token } from "./index.ts";
-import { humanAdmin, identityAdminRoutes, loginRoutes, openLoginRoutes, responseSchemas } from "./lib/server/routes.ts";
+import {
+  humanAdmin,
+  identityAdminRoutes,
+  loginRoutes,
+  now,
+  openLoginRoutes,
+  responseSchemas,
+  sessionRoutes,
+} from "./lib/server/routes.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Refusal } from "../http/index.ts";
 import { Secrets } from "../secrets/server.ts";
@@ -37,6 +46,11 @@ export { AgentSessionSent } from "./lib/server/auth.ts";
 
 /** The hash of the Login credential the request was sent with, if it was: a web session's cookie holds one (ADR 0103). */
 export { LoginCredentialSent } from "./lib/server/auth.ts";
+/**
+ * The hash of the credential the request was sent with, whatever its kind (Identity token, session, agent session):
+ * what the request makes (a session, an agent session, a join code, an approval) records it as its parent (ADR 0153).
+ */
+export { CredentialSent } from "./lib/server/auth.ts";
 /**
  * Ends with `login_expired` once the request's Login credential has gone 90 days unused, for an open stream to end
  * with; never for any other token.
@@ -99,9 +113,8 @@ export const requireToken: Gate<
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const { agentSession, identity, loginCredential, webhookCommandThread } = yield* identities.authenticate(
-      credentialsOf(request),
-    );
+    const { agentSession, credential, identity, loginCredential, webhookCommandThread } =
+      yield* identities.authenticate(credentialsOf(request));
     const harness = yield* harnessOf({ headers: request.headers, identity, target: request });
     if (Option.isSome(webhookCommandThread)) {
       yield* requireWebhookCommandRoute(request);
@@ -112,6 +125,7 @@ export const requireToken: Gate<
       Effect.provideService(HarnessSent, harness),
       Effect.provideService(AgentSessionSent, agentSession),
       Effect.provideService(LoginCredentialSent, loginCredential),
+      Effect.provideService(CredentialSent, Option.fromUndefinedOr(credential)),
     );
   });
 
@@ -132,7 +146,7 @@ export interface AdminSettings {
  * applied, and makes it an admin: it creates a human admin on a store without one, and gives it back its admin flag
  * if another admin removed it. `cookout serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` and
  * `COOKOUT_ADMIN_NAME` (Matt, 2026-11-23, mattpocock/cookout#85 and #107), so a token lost or leaked stops working,
- * with the web sessions made with it, once the setting changes and the server restarts. With the setting unchanged, a
+ * with every session below it (ADR 0153), once the setting changes and the server restarts. With the setting unchanged, a
  * token rotated since and its web sessions survive any number of restarts (ADR 0130). A new name leaves the identity
  * the token belonged to in place, still an admin, with no working token.
  *
@@ -155,7 +169,7 @@ export function adminTokenSet(
       const admin = yield* humanAdmin(adminName);
       const applied = yield* storage.applyAdminSetting(admin, hash);
       yield* Effect.when(
-        storage.revokeLoginCredentialsMadeWithRevokedTokens(admin.name),
+        Effect.flatMap(now, (at) => storage.revokeBelowRevokedTokens(admin.name, at)),
         Effect.succeed(applied === "applied"),
       );
       return yield* storage.setAdmin(admin.name, true);
@@ -165,13 +179,15 @@ export function adminTokenSet(
 
 /**
  * The identity routes, for the server's route list: whoami, logging the web
- * UI in and out, create, list and rotate, and making and removing admins. They need `Caller`, which
+ * UI in and out, create, list and rotate, making and removing admins, and listing and revoking a person's sessions
+ * (ADR 0153). They need `Caller`, which
  * `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   ...callerRoutes,
   ...identityAdminRoutes,
   ...loginRoutes,
+  ...sessionRoutes,
 ];
 
 /**
@@ -261,7 +277,12 @@ export { avatarRoutes } from "./lib/server/avatars.ts";
  * `identity` event. Deleting an identity publishes it on its own hub, which the live stream sends on as an
  * `identity-deleted` event.
  */
-export { IdentityChanges, THE_COOKOUT, identityChangesLayer } from "./lib/server/changes.ts";
+export {
+  IdentityChanges,
+  THE_COOKOUT,
+  endingsOf,
+  identityChangesLayer,
+} from "./lib/server/changes.ts";
 
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the

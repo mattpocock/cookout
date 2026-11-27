@@ -1,10 +1,12 @@
 import type {
+  ListSessionsResponse,
   LoginCollectedResponse,
   LoginRequestResponse,
   LoginRequestStartedResponse,
   LogoutResponse,
+  RevokeSessionResponse,
 } from "../../../logins/index.ts";
-import { hostMaximumLength, userCodePattern } from "../../../logins/index.ts";
+import { hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
 import { IdentitySchema } from "./wire.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -68,9 +70,37 @@ const LoginRequestResponseSchema = matchesWire<LoginRequestResponse>()(
 
 const LogoutResponseSchema = matchesWire<LogoutResponse>()(Schema.Struct({ revoked: Schema.Boolean }));
 
+const SessionKindSchema = Schema.Literals(["web", "cli"]);
+
+const PublicIdSchema = Schema.String.pipe(Schema.refine(isPublicId, { identifier: "PublicId" }));
+
+const MadeBySchema = Schema.Struct({
+  kind: Schema.Literals(["web", "cli", "identity token"]),
+  where: Schema.optionalKey(Schema.String),
+});
+
+const SessionViewSchema = Schema.Struct({
+  current: Schema.Boolean,
+  expiresAt: IsoTimeSchema,
+  id: PublicIdSchema,
+  kind: SessionKindSchema,
+  lastUsedAt: IsoTimeSchema,
+  madeAt: IsoTimeSchema,
+  madeBy: Schema.optionalKey(MadeBySchema),
+  where: Schema.String,
+});
+
+const ListSessionsResponseSchema = matchesWire<ListSessionsResponse>()(
+  Schema.Struct({ sessions: Schema.Array(SessionViewSchema) }),
+);
+
+const RevokeSessionResponseSchema = matchesWire<RevokeSessionResponse>()(Schema.Struct({ ended: Schema.Int }));
+
 export {
   approvalRequestDetailsFields,
   CollectLoginRequestSchema,
+  ListSessionsResponseSchema,
+  RevokeSessionResponseSchema,
   LoginCollectedResponseSchema,
   LoginRequestResponseSchema,
   LoginRequestStartedResponseSchema,

@@ -26,7 +26,11 @@ it.effect(
       const { storage } = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path }));
       const login = yield* storage.findLoginRequest("WDJB-MJHT", now);
       const join = yield* storage.findAgentJoinRequest("JOIN-CODE", now);
-      const approved = yield* storage.approveLoginRequest("WDJB-MJHT", identityName("ada"), now);
+      const approved = yield* storage.approveLoginRequest({
+        approver: identityName("ada"),
+        now,
+        userCode: "WDJB-MJHT",
+      });
 
       expect([login, join, approved]).toStrictEqual([
         { approved: false, createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" },
