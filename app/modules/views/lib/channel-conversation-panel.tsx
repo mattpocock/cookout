@@ -1,10 +1,10 @@
 import type { ChannelName, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type { ComponentProps, ReactNode } from "react";
 import { ConversationPanel, ScrollArea } from "../../design-system/layout.tsx";
 import type { MessageMenu, Reader, Selection } from "../../unread/index.ts";
 import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/layout.tsx";
 import { ChannelConversationBody } from "./channel-conversation-body.tsx";
 import type { Composer } from "./use-channel-reply.ts";
-import type { ReactNode } from "react";
 import { ReadNote } from "./read-note.tsx";
 import { ReplyFooter } from "./reply-footer.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
@@ -26,6 +26,7 @@ interface ChannelConversationPanelProps {
   readonly newest: TopLevelMessage;
   readonly posts: readonly TopLevelMessage[];
   readonly me: string;
+  readonly keymap: ComponentProps<typeof ReplyFooter>["keymap"];
   readonly menu: MessageMenu;
   readonly reader: Reader;
   readonly actions: readonly PanelAction[];
@@ -57,7 +58,6 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
     replied: reader.markRead,
     selection: props.selection,
   });
-  const thread = repliesOf(reply.state);
   const handleFiles = reply.draft.attachments.attach;
   return (
     <ConversationPanel
@@ -78,9 +78,9 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
           menu={props.menu}
           post={reply.post}
           posts={posts}
-          replies={thread.replies}
+          replies={repliesOf(reply.state).replies}
           reply={reply.onReply}
-          replyReceipts={thread.receipts}
+          replyReceipts={repliesOf(reply.state).receipts}
           state={reply.before}
         />
       </ScrollArea>
@@ -88,6 +88,7 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
         draft={reply.draft}
         field={reply.field}
         focused={false}
+        keymap={props.keymap}
         channel={channel}
         replied={reply.replied}
         state={reply.state}

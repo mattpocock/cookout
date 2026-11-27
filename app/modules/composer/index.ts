@@ -55,8 +55,8 @@
  * `channelDraft(channel)`, a channel's box, also suggests, when the whole text is `/` and a prefix, the Commands with names starting with it (only `/schedule`), then the registered Webhook commands that do (from the board store's list, read once the identities load), less any named like a Command.
  * Choosing a Command completes the box to `/name `, and so does choosing an inline Webhook command, one whose form `inlineField` reads as exactly one text field (#872); `commandRun(text)` says when sending `/name`, or `/name ` and a text, runs a Command, calls an inline Webhook command with that text, or opens a Webhook command's form, instead of posting.
  * Choosing any other Webhook command, or `openWebhookCommand`, makes it the draft's `webhookCommand`, whose data the box prompts
- * for, until `clear`, or `unpickWebhookCommand`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
- * thread's reply box suggests neither, since both act at the top level.
+ * for, until `clear`, or `unpickWebhookCommand`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit.
+ * `draft(key)`, a thread's reply box, suggests and runs the same Webhook commands but no Commands (#873): its calls are made as replies in the thread.
  * Each box's text, unsent, is kept in the browser's storage (`options.storage`, under the browser-storage module's
  * `keptTextKey`) for the identity logged in when the box is first drawn, so it shows only in its own box and only to
  * that identity, and comes back, with the caret at its end, when the page opens again (#600); while nobody is logged in it is kept
@@ -91,8 +91,6 @@ import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
 import { ownerPowersOf } from "./lib/owner-powers.ts";
 import { profileStoresOf } from "./lib/profile-stores.ts";
-
-const NO_WEBHOOK_COMMANDS: readonly WebhookCommand[] = [];
 
 function createDraft(list: IdentityList, sources: Sources, kept: KeptText): Omit<Draft, "attachments"> {
   const listeners = listenersOf(list.show);
@@ -231,7 +229,7 @@ export interface Identities extends AdminChanges {
 /** The composer store: a draft for each message box (and each identity typing in it), and for each display name being edited. */
 export interface Composer {
   /**
-   * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests no Commands and no Webhook commands.
+   * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests the Webhook commands, as a channel's box does, but no Commands.
    * `members`, read at each edit, names the identities to suggest ahead of the other matches, in its order (a thread's members, most recent poster first); the first call for a key sets it.
    */
   readonly draft: (key: string, members: () => readonly IdentityName[]) => Draft;
@@ -251,7 +249,7 @@ export interface Composer {
   readonly trigger: (name: IdentityName) => TriggerSettings;
 }
 
-/** What the composer store needs: the board store, which holds the identities and the Webhook commands a channel's box suggests, and makes the identities' changes on the server. */
+/** What the composer store needs: the board store, which holds the identities and the Webhook commands the boxes suggest, and makes the identities' changes on the server. */
 export interface ComposerOptions {
   readonly boardStore: IdentityStore;
   /** Where each box's unsent text is kept: the browser's local storage on the page. */
@@ -285,7 +283,7 @@ export function createComposer(options: ComposerOptions): Composer {
     channelDraft: (channel) =>
       keptDraft(channel, { commands: COMMANDS, members: () => list.posters(channel), webhookCommands }),
     channelPosters: list.posters,
-    draft: (key, members) => keptDraft(key, { commands: [], members, webhookCommands: () => NO_WEBHOOK_COMMANDS }),
+    draft: (key, members) => keptDraft(key, { commands: [], members, webhookCommands }),
     identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }

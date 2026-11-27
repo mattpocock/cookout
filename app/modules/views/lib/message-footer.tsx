@@ -51,10 +51,11 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
         <WebhookCommandPrompt
           call={state.call}
           callData={state.callData}
-          channel={channel}
+          calls={handlers.calls}
           webhookCommand={command}
           keymap={props.keymap}
           onBack={handleBack}
+          onCancel={handleSaved}
           onDone={handleSaved}
         />
       )}

@@ -203,7 +203,7 @@ it("text starting with a /word that names no Command, such as /schedules, posts 
   close();
 });
 
-it("no message box has a Post later button, and a thread's reply box lists no Commands after /", {
+it("no message box has a Post later button, and a thread's reply box lists no Command after /", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -218,7 +218,7 @@ it("no message box has a Post later button, and a thread's reply box lists no Co
   expect([
     inPane().queryByRole("button", { name: "Post later" }),
     inThread().queryByRole("button", { name: "Post later" }),
-    inThread().queryByRole("listbox", COMMANDS),
+    inThread().queryByRole("option", { name: /^\/schedule/u }),
   ]).toStrictEqual([null, null, null]);
 
   close();
