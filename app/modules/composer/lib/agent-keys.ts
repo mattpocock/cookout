@@ -2,7 +2,6 @@ import type { IdentityName, Refusal, Token } from "../../sdk/index.ts";
 import type { AgentKeyView } from "../../logins/index.ts";
 import type { IdentityList } from "./identity-list.ts";
 import { refusalOf } from "../../sdk/index.ts";
-import { sameSnapshot } from "../../board/index.ts";
 
 type KeyStep = { readonly status: "idle" } | { readonly status: "sending" } | (Refusal & { readonly status: "failed" });
 
@@ -146,24 +145,13 @@ function storeOf(): Store {
     },
     current: () => current,
     publish: (next) => {
-      const changed = { ...current, forgotten: null, ...next };
-      if (sameSnapshot({ after: changed, before: current })) {
-        return;
-      }
-      current = changed;
+      current = { ...current, forgotten: null, ...next };
       for (const listener of listeners) {
         listener();
       }
     },
     readers: () => listeners.size,
   };
-}
-
-function nameOf(made: MadeKey | null): string | null {
-  if (made === null) {
-    return null;
-  }
-  return made.name;
 }
 
 type Edits = Pick<AgentKeys, "askRevoke" | "cancel" | "editExpiry" | "editName" | "forget">;
@@ -185,7 +173,8 @@ function editsOf({ current, publish }: Held): Edits {
       publish({ keyName });
     },
     forget: () => {
-      publish({ forgotten: nameOf(current().made), made: null });
+      const { name } = current().made ?? { name: null };
+      publish({ forgotten: name, made: null });
     },
   };
 }
