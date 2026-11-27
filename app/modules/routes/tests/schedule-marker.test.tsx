@@ -1,5 +1,5 @@
 import type { Message, ScheduledMessage } from "../../sdk/index.ts";
-import { channelMade, linesOf, listDialog, rowOf } from "./schedule-lists.ts";
+import { channelMade, linesOf, rowOf } from "./schedule-lists.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { adminClient } from "./identities.ts";
@@ -65,17 +65,19 @@ async function markerOpened({ page, posted, schedule }: Opening): Promise<readon
   const marker = await inPane().findByRole("button", { name: "Scheduled" });
   fireEvent.click(marker);
   const row = await rowOf(posted.text);
-  const opened = [row.getAttribute("aria-current"), await linesOf(posted.text)];
+  const opened = [globalThis.location.hash, row.getAttribute("aria-current"), await linesOf(posted.text)];
   page.send("scheduled-message", {
     deleted: false,
     scheduledMessage: { ...schedule, nextRuns: [], status: "finished" },
   });
   const finished = await finishedLines(posted.text);
-  fireEvent.keyDown(listDialog(), { key: "Escape" });
+  globalThis.location.hash = `#/channels/${schedule.channel}`;
+  page.send("message", { message: await postedBy(schedule) });
+  await inPane().findByRole("button", { name: "Scheduled" });
   return [...opened, finished];
 }
 
-it("a scheduled post's Scheduled marker opens its schedule in the list, and deleting it elsewhere marks the post Schedule deleted", {
+it("a scheduled post's Scheduled marker opens its schedule on the channel's Scheduled messages page, and deleting it elsewhere marks the post Schedule deleted", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -89,6 +91,7 @@ it("a scheduled post's Scheduled marker opens its schedule in the list, and dele
   const said = await inPane().findByText("Schedule deleted");
 
   expect([...opened, said.closest("button"), inPane().queryByRole("button", { name: "Scheduled" })]).toStrictEqual([
+    `#/channels/${schedule.channel}/schedules/${schedule.id}`,
     "true",
     ["Once · Mon, 1 Jun 2099, 09:30", "Lunch", "Next Mon 1 Jun, 09:30 UTC · by @admin"],
     ["Finished · Once · Mon, 1 Jun 2099, 09:30", "Lunch", "No next run · UTC · by @admin"],

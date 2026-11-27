@@ -5,6 +5,7 @@ import { PagePanes } from "./page-panes.tsx";
 import { PeoplePanes } from "./people-panes.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
+import { SchedulesPanes } from "./schedules-panes.tsx";
 import type { Stores } from "./stores.ts";
 
 const TEXT = { missing: "No page has this address.", nothing: "Nothing here" } as const;
@@ -48,6 +49,9 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
         route={route}
       />
     );
+  }
+  if (route.name === "schedules") {
+    return <SchedulesPanes route={route} stores={stores} />;
   }
   if (isChannel(route)) {
     return (
