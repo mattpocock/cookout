@@ -157,11 +157,9 @@ function setUp(cookout: DevCookout): Board {
   const admin = { ...boardEnv(cookout.url), COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: cookout.adminToken };
   const board = { admin, agent: {}, url: cookout.url };
   asAdmin(["channel", "create", CHANNEL], board);
-  const created = asAdmin(
-    ["identity", "create", AGENT, "--kind", "agent", "--owner", "admin", "--display-name", "Canary"],
-    board,
-  );
-  return { ...board, agent: { ...boardEnv(cookout.url), COOKOUT_TOKEN: text(field(created, "token")) ?? "" } };
+  asAdmin(["identity", "create", AGENT, "--kind", "agent", "--owner", "admin", "--display-name", "Canary"], board);
+  const keyed = asAdmin(["agent-key", "create", AGENT, "canary"], board);
+  return { ...board, agent: { ...boardEnv(cookout.url), COOKOUT_TOKEN: text(field(keyed, "token")) ?? "" } };
 }
 
 function join(board: Board): Board {

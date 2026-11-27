@@ -2,6 +2,7 @@ import type { AgentCreationCalls, DescriptionCalls } from "../../identities/clie
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
+  IdentityKind,
   IdentityResponse,
   IdentityWithTokenResponse,
   ListIdentitiesQuery,
@@ -40,13 +41,19 @@ import { healthPath } from "../../http/index.ts";
 import { loginCalls } from "./logins.ts";
 import { triggerCalls } from "./triggers.ts";
 
+type CreatedIdentity<Kind extends IdentityKind> = Kind extends "agent" ? IdentityResponse : IdentityWithTokenResponse;
+
+type CreateIdentityCall = <Kind extends IdentityKind>(
+  request: CreateIdentityRequest & { readonly kind: Kind },
+) => Promise<CreatedIdentity<Kind>>;
+
 interface IdentityCalls {
   readonly health: () => Promise<HealthResponse>;
   readonly whoami: () => Promise<IdentityResponse>;
   readonly login: () => Promise<IdentityResponse>;
   readonly logout: () => Promise<IdentityResponse>;
   readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-  readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
+  readonly createIdentity: CreateIdentityCall;
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
   readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
@@ -54,6 +61,27 @@ interface IdentityCalls {
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
   readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
+}
+
+function isCreated<Kind extends IdentityKind>(kind: Kind) {
+  return (answer: unknown): answer is CreatedIdentity<Kind> => {
+    if (kind === "agent") {
+      return isIdentityResponse(answer);
+    }
+    return isIdentityWithTokenResponse(answer);
+  };
+}
+
+function createIdentityCall(server: ClientConnection): CreateIdentityCall {
+  return async (body) => {
+    const created = await send(server, {
+      body,
+      isExpected: isCreated(body.kind),
+      method: "POST",
+      path: identitiesPath,
+    });
+    return created;
+  };
 }
 
 function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
@@ -183,15 +211,7 @@ function deletionCalls(server: ClientConnection): IdentityDeletionCalls {
 
 function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDeletionCalls {
   return {
-    createIdentity: async (body) => {
-      const created = await send(server, {
-        body,
-        isExpected: isIdentityWithTokenResponse,
-        method: "POST",
-        path: identitiesPath,
-      });
-      return created;
-    },
+    createIdentity: createIdentityCall(server),
     ...deactivationCalls(server),
     ...deletionCalls(server),
     health: async () => {
@@ -249,4 +269,5 @@ function identityCalls(
 }
 
 export { identityCalls };
+export type { CreateIdentityCall };
 export type { CallGroups } from "./call-groups.ts";

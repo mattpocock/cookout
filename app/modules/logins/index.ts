@@ -186,3 +186,69 @@ export interface LoginCalls {
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
 }
+
+/**
+ * `POST /v1/identities/:name/agent-keys` (the agent's owner only: an agent is 403 `human_only`, anyone else 403
+ * `not_owner`, an admin included) makes an agent key, answering its secret this once; `GET` (the owner or an admin)
+ * lists the agent's live keys, never a secret (ADR 0154).
+ */
+export const agentKeysPath = "/v1/identities/:name/agent-keys";
+
+/**
+ * `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the agent's live key with that public
+ * ID, with the agent session joined with it. An unknown ID is 404 `agent_key_not_found`.
+ */
+export const agentKeyPath = "/v1/identities/:name/agent-keys/:id";
+
+/** The 401 a request sent with an agent key past its expiry gets. */
+export const agentKeyExpired = "agent_key_expired";
+
+/** A key's name: 1-40 lowercase letters, digits, `.`, `_` or `-`, starting with a letter or digit, unique among the agent's live keys. */
+export const agentKeyNamePattern = /^[a-z0-9][a-z0-9._-]{0,39}$/u;
+
+/** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
+export interface CreateAgentKeyRequest {
+  readonly name: string;
+  readonly expiresIn?: string;
+}
+
+/** An agent key as listed: never its secret. */
+export interface AgentKeyView {
+  readonly id: PublicId;
+  readonly name: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt?: IsoTime;
+}
+
+/** The answer to making an agent key: the key, and its secret, shown only here. */
+export interface CreateAgentKeyResponse {
+  readonly agentKey: AgentKeyView;
+  readonly token: Token;
+}
+
+/** The answer to `GET /v1/identities/:name/agent-keys`, oldest first. */
+export interface ListAgentKeysResponse {
+  readonly agentKeys: readonly AgentKeyView[];
+}
+
+/** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
+export interface RevokeAgentKeyResponse {
+  readonly ended: number;
+}
+
+/** The SDK's calls for an agent's keys (ADR 0154). */
+export interface AgentKeyCalls {
+  /**
+   * `POST /v1/identities/:name/agent-keys` (the agent's owner): makes a key, answering its secret this once. Set it as
+   * the agent's `COOKOUT_TOKEN` (in CI, a secret). A name one of its live keys has is 409 `agent_key_name_taken`.
+   */
+  readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
+  /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
+  readonly listAgentKeys: (agent: string) => Promise<ListAgentKeysResponse>;
+  /**
+   * `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key, with the agent session
+   * joined with it, whose open event streams close. An unknown ID is 404 `agent_key_not_found`.
+   */
+  readonly revokeAgentKey: (agent: string, id: PublicId) => Promise<RevokeAgentKeyResponse>;
+}

@@ -1,6 +1,6 @@
 import { Argument, Command, Flag } from "effect/cli";
+import { agentKeyCommand, avatarCommand, identityCommand, keepCommand } from "./identity.ts";
 import { approveJoinCommand, denyJoinCommand, joinCommand, leaveCommand, runnerCommand } from "./join-command.ts";
-import { avatarCommand, identityCommand, keepCommand } from "./identity.ts";
 import {
   beforeFlag,
   channelArgument,
@@ -135,6 +135,7 @@ const unsubscribeCommand = Command.make("unsubscribe", { channel: channelArgumen
 
 export const verbCommands = [
   identityCommand,
+  agentKeyCommand,
   channelCommand,
   messageCommand,
   assetCommand,

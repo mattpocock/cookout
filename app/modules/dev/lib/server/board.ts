@@ -1,7 +1,6 @@
 import { Array as Arr, Effect, Function } from "effect";
 import type {
   CookoutClient,
-  CreateIdentityRequest,
   IdentityWithTokenResponse,
   Message,
   MessageId,
@@ -58,7 +57,6 @@ interface Cast {
   readonly triageAgent: SeededIdentity;
 }
 
-const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const rollbackSchema = { properties: { version: { type: "string" } }, required: ["version"], type: "object" } as const;
 const unreachableHandler = "http://127.0.0.1:9/rollback";
 const channelNames = ["deploys", "general"] as const;
@@ -85,38 +83,42 @@ function post(author: SeededIdentity, request: PostMessageRequest): Effect.Effec
   );
 }
 
-function createIdentity(
-  url: string,
-  admin: CookoutClient,
-  request: CreateIdentityRequest,
-): Effect.Effect<SeededIdentity, SeedFailure> {
+interface Seeding {
+  readonly admin: CookoutClient;
+  readonly url: string;
+}
+
+function createHuman({ admin, url }: Seeding, name: string): Effect.Effect<SeededIdentity, SeedFailure> {
   return Effect.map(
-    call(() => admin.createIdentity(request)),
+    call(() => admin.createIdentity({ kind: "human", name })),
     (created) => ({ client: clientAt(url, created.token), created }),
   );
 }
 
+function createAgent(
+  { admin, url }: Seeding,
+  owner: SeededIdentity,
+  name: string,
+): Effect.Effect<SeededIdentity, SeedFailure> {
+  return Effect.gen(function* keyedAgent() {
+    const ownerName = owner.created.identity.name;
+    const { identity } = yield* call(() =>
+      admin.createIdentity({ displayName: name, kind: "agent", name, owner: ownerName }),
+    );
+    const { token } = yield* call(() => owner.client.createAgentKey(name, { name: "seed" }));
+    return { client: clientAt(url, token), created: { identity, token } };
+  });
+}
+
 function createCast({ token, url }: BoardConnection): Effect.Effect<Cast, SeedFailure> {
-  const admin = clientAt(url, token);
-  return Effect.all(
-    {
-      ada: createIdentity(url, admin, { kind: "human", name: "ada" }),
-      grace: createIdentity(url, admin, { kind: "human", name: "grace" }),
-      releaseBot: createIdentity(url, admin, {
-        displayName: "release-bot",
-        kind: "agent",
-        name: "release-bot",
-        owner: "ada",
-      }),
-      triageAgent: createIdentity(url, admin, {
-        displayName: "triage-agent",
-        kind: "agent",
-        name: "triage-agent",
-        owner: "grace",
-      }),
-    },
-    ONE_AT_A_TIME,
-  );
+  const seeding = { admin: clientAt(url, token), url };
+  return Effect.gen(function* cast() {
+    const ada = yield* createHuman(seeding, "ada");
+    const grace = yield* createHuman(seeding, "grace");
+    const releaseBot = yield* createAgent(seeding, ada, "release-bot");
+    const triageAgent = yield* createAgent(seeding, grace, "triage-agent");
+    return { ada, grace, releaseBot, triageAgent };
+  });
 }
 
 function createChannels(cast: Cast): Effect.Effect<void, SeedFailure> {
@@ -176,12 +178,7 @@ function callWebhookCommand(
 ): Effect.Effect<Pick<SeededMessages, "rollbackCall" | "rollbackResult">, SeedFailure> {
   return Effect.gen(function* rollback() {
     const admin = clientAt(url, token);
-    const handler = yield* createIdentity(url, admin, {
-      displayName: "rollback",
-      kind: "agent",
-      name: "rollback",
-      owner: "ada",
-    });
+    const handler = yield* createAgent({ admin, url }, cast.ada, "rollback");
     yield* call(() =>
       admin.addCommand({
         description: "Roll back to a version",
@@ -241,12 +238,7 @@ function postLast(
 ): Effect.Effect<Pick<SeededMessages, "mentionOfGrace" | "oldBotPost">, SeedFailure> {
   return Effect.gen(function* last() {
     const admin = clientAt(url, token);
-    const oldBot = yield* createIdentity(url, admin, {
-      displayName: "old-deploy-bot",
-      kind: "agent",
-      name: "old-deploy-bot",
-      owner: "ada",
-    });
+    const oldBot = yield* createAgent({ admin, url }, cast.ada, "old-deploy-bot");
     const oldBotPost = yield* post(oldBot, { channel: "deploys", text: "Deployed 1.4.0." });
     yield* call(() => admin.deactivateIdentity("old-deploy-bot"));
     const mention = yield* post(cast.ada, {

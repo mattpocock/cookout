@@ -10,12 +10,12 @@ import {
   ListIdentitiesResponseSchema,
 } from "./wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Identity, IdentityName, ListIdentitiesQuery } from "../../index.ts";
+import type { Identity, IdentityName, IdentityWithTokenResponse, ListIdentitiesQuery } from "../../index.ts";
 import type { IdentityChanges, Secrets } from "./auth.ts";
+import type { SetAdminResult, StorageUnavailable } from "../../../storage/server.ts";
 import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
-import type { SetAdminResult } from "../../../storage/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { echoed } from "../../../http/index.ts";
 import { endBelowRotated } from "./cascade.ts";
@@ -54,6 +54,37 @@ function shownFor(query: ListIdentitiesQuery, stored: readonly Identity[]): read
 
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
 
+const withoutToken = HttpServerResponse.schemaJson(IdentityResponseSchema);
+
+function agentKeysInstead(name: IdentityName): Refusal {
+  return {
+    code: "agent_keys_instead",
+    message: `${name} is an agent: it has agent keys, not a token to rotate. Make a new key with cookout agent-key create ${name} <key-name>, then revoke the old one.`,
+    status: CONFLICT,
+  };
+}
+
+function answeredCreated(created: IdentityWithTokenResponse): ReturnType<typeof withToken> {
+  if (created.identity.kind === "agent") {
+    return withoutToken({ identity: created.identity }, { status: CREATED });
+  }
+  return withToken(created, { status: CREATED });
+}
+
+function isAgent(found: Identity | undefined): boolean {
+  return Predicate.isNotUndefined(found) && found.kind === "agent";
+}
+
+function refusedIfAgent(name: IdentityName): Effect.Effect<void, Refusal | StorageUnavailable, Storage> {
+  return Effect.flatMap(Storage, (storage) => storage.findIdentityByName(name)).pipe(
+    Effect.filterOrFail(
+      (found) => !isAgent(found),
+      () => agentKeysInstead(name),
+    ),
+    Effect.asVoid,
+  );
+}
+
 const createRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: () =>
     Effect.gen(function* createIdentityRoute() {
@@ -62,11 +93,11 @@ const createRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
       if (caller.kind === "agent") {
         const brought = yield* createAgentByAgent({ body, caller });
         yield* announced(brought.identity);
-        return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)(brought, { status: CREATED });
+        return yield* withoutToken(brought, { status: CREATED });
       }
       const created = yield* createIdentity({ body, caller });
       yield* announced(created.identity);
-      return yield* withToken(created, { status: CREATED });
+      return yield* answeredCreated(created);
     }),
   method: "POST",
   path: identitiesPath,
@@ -113,8 +144,9 @@ const rotateRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
     Effect.gen(function* rotateTokenRoute() {
       const name = yield* nameParam(params);
       yield* requireOwnerOrAdmin(name);
-      const { token, hash } = yield* issueToken;
+      yield* refusedIfAgent(name);
       const storage = yield* Storage;
+      const { token, hash } = yield* issueToken;
       const result = yield* storage.replaceToken(name, hash);
       if (result.status === "not_found") {
         return yield* Effect.fail(identityNotFound(name));
@@ -190,4 +222,5 @@ export { humanAdmin } from "./create.ts";
 
 export { loginResponseSchemas, loginRoutes, openLoginRoutes } from "./logins.ts";
 export { sessionRoutes } from "./sessions.ts";
+export { agentKeyRoutes } from "./agent-keys.ts";
 export { AddressLimit, now } from "./login-support.ts";

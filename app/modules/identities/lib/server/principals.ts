@@ -6,10 +6,10 @@ import type {
   StorageUnavailable,
   WebhookCommandTokenGrant,
 } from "../../../storage/server.ts";
+import { agentKeyExpired, loginExpired } from "../../../logins/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-import { loginExpired } from "../../../logins/index.ts";
 
 const tokenUnknown: Refusal = {
   code: "token_unknown",
@@ -91,4 +91,30 @@ function webhookCommandTokenPrincipal(lookup: LoginLookup) {
   };
 }
 
-export { type Principal, loginEnded, webhookCommandTokenPrincipal };
+const agentKeyExpiredRefusal: Refusal = {
+  code: agentKeyExpired,
+  message: "This agent key passed its expiry. Ask the agent's owner for a new one: cookout agent-key create.",
+  status: 401,
+};
+
+interface TokenUse extends LoginLookup {
+  readonly identity: Identity;
+}
+
+function tokenPrincipal({ hash, identity, storage }: TokenUse): Effect.Effect<Principal, Refusal | StorageUnavailable> {
+  return Effect.gen(function* useIdentityToken() {
+    if (identity.kind === "agent") {
+      const now = yield* DateTime.now;
+      const used = yield* storage.useAgentKey({ hash, now: isoTimeOf(now) });
+      yield* Effect.when(Effect.fail(agentKeyExpiredRefusal), Effect.succeed(used === "expired"));
+    }
+    return {
+      agentSession: Option.none(),
+      identity,
+      loginCredential: Option.none(),
+      webhookCommandThread: Option.none(),
+    };
+  });
+}
+
+export { type Principal, loginEnded, tokenPrincipal, webhookCommandTokenPrincipal };

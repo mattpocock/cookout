@@ -10,11 +10,14 @@ import {
 import { Caller, CredentialSent, credentialsOf, sentToken } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
+  CreateAgentKeyResponseSchema,
+  ListAgentKeysResponseSchema,
   ListSessionsResponseSchema,
   LoginCollectedResponseSchema,
   LoginRequestResponseSchema,
   LoginRequestStartedResponseSchema,
   LogoutResponseSchema,
+  RevokeAgentKeyResponseSchema,
   RevokeSessionResponseSchema,
   StartLoginRequestSchema,
 } from "./login-wire.ts";
@@ -213,10 +216,13 @@ export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit>[]
 export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRoute, approveRoute, logoutRoute];
 
 export const loginResponseSchemas = {
+  CreateAgentKeyResponse: CreateAgentKeyResponseSchema,
+  ListAgentKeysResponse: ListAgentKeysResponseSchema,
   ListSessionsResponse: ListSessionsResponseSchema,
   LoginCollectedResponse: LoginCollectedResponseSchema,
   LoginRequestResponse: LoginRequestResponseSchema,
   LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
   LogoutResponse: LogoutResponseSchema,
+  RevokeAgentKeyResponse: RevokeAgentKeyResponseSchema,
   RevokeSessionResponse: RevokeSessionResponseSchema,
 };

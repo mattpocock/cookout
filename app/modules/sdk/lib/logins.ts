@@ -1,4 +1,7 @@
+import type { AgentKeyCalls, LoginCalls as SessionLoginCalls } from "../../logins/index.ts";
 import {
+  agentKeyPath,
+  agentKeysPath,
   collectLoginRequestPath,
   loginPath,
   loginRequestApprovalPath,
@@ -8,18 +11,57 @@ import {
   sessionsPath,
 } from "../../logins/index.ts";
 import {
+  isCreateAgentKeyResponse,
+  isListAgentKeysResponse,
   isListSessionsResponse,
   isLoginCollectedResponse,
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
   isLogoutResponse,
+  isRevokeAgentKeyResponse,
   isRevokeSessionResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { LoginCalls } from "../../logins/index.ts";
 import { send } from "./request.ts";
 
-function sessionCalls(server: ClientConnection): Pick<LoginCalls, "listSessions" | "revokeSession"> {
+type LoginCalls = SessionLoginCalls & AgentKeyCalls;
+
+function agentKeyCalls(server: ClientConnection): AgentKeyCalls {
+  return {
+    createAgentKey: async (name, body) => {
+      const made = await send(server, {
+        body,
+        isExpected: isCreateAgentKeyResponse,
+        method: "POST",
+        params: { name },
+        path: agentKeysPath,
+      });
+      return made;
+    },
+    listAgentKeys: async (name) => {
+      const params = { name };
+      const listed = await send(server, {
+        isExpected: isListAgentKeysResponse,
+        method: "GET",
+        params,
+        path: agentKeysPath,
+      });
+      return listed;
+    },
+    revokeAgentKey: async (name, id) => {
+      const params = { id, name };
+      const revoked = await send(server, {
+        isExpected: isRevokeAgentKeyResponse,
+        method: "DELETE",
+        params,
+        path: agentKeyPath,
+      });
+      return revoked;
+    },
+  };
+}
+
+function sessionCalls(server: ClientConnection): Pick<SessionLoginCalls, "listSessions" | "revokeSession"> {
   return {
     listSessions: async () => {
       const listed = await send(server, { isExpected: isListSessionsResponse, method: "GET", path: sessionsPath });
@@ -41,6 +83,7 @@ function sessionCalls(server: ClientConnection): Pick<LoginCalls, "listSessions"
 function loginCalls(server: ClientConnection): LoginCalls {
   return {
     ...sessionCalls(server),
+    ...agentKeyCalls(server),
     approveLogin: async (userCode) => {
       const params = { code: userCode };
       const approved = await send(server, {
@@ -88,4 +131,4 @@ function loginCalls(server: ClientConnection): LoginCalls {
 }
 
 export { loginCalls };
-export type { LoginCalls } from "../../logins/index.ts";
+export type { LoginCalls };

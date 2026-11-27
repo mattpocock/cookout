@@ -1,12 +1,5 @@
 import { Array as Arr, Effect, Option } from "effect";
-import type {
-  CreateAgentKeyResult,
-  EndedCredential,
-  NewAgentKey,
-  RevokeSessionResult,
-  StorageUnavailable,
-  UseAgentKeyResult,
-} from "../../server.ts";
+import type { EndedCredential, NewAgentKey, StorageUnavailable } from "../../server.ts";
 import {
   ONE_AT_A_TIME,
   UNKNOWN_ID,
@@ -28,6 +21,9 @@ import type { TokenHash } from "../../../identities/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+type CreateAgentKeyResult = Effect.Success<ReturnType<Store["createAgentKey"]>>;
+type UseAgentKeyResult = Effect.Success<ReturnType<Store["useAgentKey"]>>;
+type RevokeSessionResult = Effect.Success<ReturnType<Store["revokeAgentKey"]>>;
 
 const [ciKey, deployKey, joinedWithCi, newCiKey] = [
   tokenHash("hash:ci-key"),

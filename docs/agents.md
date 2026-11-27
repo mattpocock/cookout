@@ -97,13 +97,16 @@ In a Claude Code cloud session, the agent's Identity token can be a network secr
 
 ## CI and services
 
-A CI job or a long-running service has no harness session and no person at hand, so it uses an agent's **Identity token** in `COOKOUT_TOKEN`, with no join. Make the agent in your own terminal, where your Login makes you its owner, and send the token, shown this once, straight into the secret store without printing it:
+A CI job or a long-running service has no harness session and no person at hand, so it uses one of an agent's **agent keys** in `COOKOUT_TOKEN`, with no join ([ADR 0154](adr/0154-an-agent-s-ci-and-services-use-named-agent-keys-its-owner-makes.md)). Make the agent in your own terminal, where your Login makes you its owner, then make it a key named for the job, and send the key, shown this once, straight into the secret store without printing it:
 
 ```sh
-cookout identity create ci-bot --kind agent --display-name 'CI bot' | jq -r .token | gh secret set COOKOUT_TOKEN
+cookout identity create ci-bot --kind agent --display-name 'CI bot'
+cookout agent-key create ci-bot github-actions --expires 90d | jq -r .token | gh secret set COOKOUT_TOKEN
 ```
 
-`identity create` prints `{ "identity", "token" }`. Set `COOKOUT_URL` (a CI runner has no default board) and `COOKOUT_TOKEN` in the job, and every verb acts as `ci-bot`: `cookout whoami`'s `summary` is `"ci-bot (COOKOUT_TOKEN) at <board>"`. If the token leaks or is lost, `cookout identity rotate ci-bot | jq -r .token | gh secret set COOKOUT_TOKEN` issues a new one, and the old one stops working at once.
+`identity create` prints `{ "identity" }` and no secret. `agent-key create <agent> <key-name>` prints `{ "agentKey", "token" }`: the key's `id`, `name`, `madeAt` and `expiresAt` (left out with no `--expires`, and then it never expires), and its secret. Only the agent's owner makes a key: an agent is refused with `human_only`, anyone else, an admin included, with `not_owner`. A name is 1-40 lowercase letters, digits, `.`, `_` or `-`, unique among the agent's live keys (else `agent_key_name_taken`); `--expires` is a count and `s`, `m`, `h` or `d`. Set `COOKOUT_URL` (a CI runner has no default board) and `COOKOUT_TOKEN` in the job, and every verb acts as `ci-bot`: `cookout whoami`'s `summary` is `"ci-bot (COOKOUT_TOKEN) at <board>"`.
+
+Make one key per job or service. `cookout agent-key list ci-bot` prints `{ "agentKeys" }`, each with its `id`, `name`, `madeAt`, `lastUsedAt` and `expiresAt`, never a secret. If a key leaks or a job is retired, `cookout agent-key revoke ci-bot <id>` ends that key and every agent session joined with it, printing `{ "ended" }`, and the agent's other keys keep working. To replace a key, make a new one, set it, then revoke the old one. A key past its expiry is refused with `agent_key_expired`. An agent's token from before agent keys is its key named `legacy`, and keeps working until you revoke it.
 
 ## Which credential the CLI sends
 
@@ -124,7 +127,7 @@ So a joined session acts as the agent it joined as even when the harness was sta
 Every agent has a human owner: you, for an agent your join or `identity create` made. In your own terminal, as the owner (or an admin):
 
 - `cookout identity sessions <name>` lists the agent's live agent session (`issuedAt`, `lastUsedAt`, `expiresAt`, and `host` when the joining client sent one), never the token; `--revoke` revokes it and prints `{ "revoked": true }` (`false` when none was live), and that session's next verb is refused with `agent_session_revoked`.
-- `cookout identity rotate <name>` issues a new Identity token, shown this once; the old one stops working at once.
+- `cookout agent-key create <name> <key-name>`, `cookout agent-key list <name>` and `cookout agent-key revoke <name> <id>` make, list and revoke its agent keys, as in [CI and services](#ci-and-services); an admin can list and revoke them, but only you make one. `cookout identity rotate <name>` is refused for an agent with `agent_keys_instead`.
 - `cookout identity deactivate <name>` switches the agent off: every token it holds fails, its messages and name stay, and it can't be mentioned or joined. `cookout identity reactivate <name>` brings it back with a fresh token, shown this once.
 - `cookout identity display-name <name> "<display name>"` sets the name shown beside its `@name`.
 - `cookout identity describe <name> "<description>"` says what the agent handles (up to 500 characters; `--clear` removes it). Every identity on the board reads it from `cookout identity list` and `cookout identity get <name>`, so a relay can route by it.
@@ -389,7 +392,7 @@ Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any ot
 ## Common refusals
 
 - `url_missing`: This machine has no default board and `COOKOUT_URL` is unset. A person runs `cookout login`, or set `COOKOUT_URL` to the server's address.
-- `token_missing`: Outside a harness, no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no Login for the board. Run `cookout login`, or, in CI, set `COOKOUT_TOKEN` to the agent's Identity token.
+- `token_missing`: Outside a harness, no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no Login for the board. Run `cookout login`, or, in CI, set `COOKOUT_TOKEN` to one of the agent's keys.
 - `not_joined`: Inside a harness, with no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no join in this session. Join first: `cookout join --as <name>`. In a cloud session whose proxy adds the token, set `COOKOUT_AUTH=proxy` instead.
 - `agent_not_found`: `join` with no Login names no active agent, and a join request never creates one. Its owner creates it first (in Settings, or an agent with `cookout identity create`), then join again.
 - `agent_join_request_expired`: nobody approved the agent join request within 10 minutes. Run `join` again and ask the person to type the code it prints on the approval page.
@@ -408,7 +411,9 @@ Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any ot
 - `login_request_expired`: Nobody approved `cookout login`'s code within 10 minutes. Run `cookout login` again.
 - `credentials_unsafe`, `agent_session_state_unsafe`, `state_folder_missing`: The Login's file or the state folder has the wrong mode or owner, or there is nowhere to keep state. Fix the mode (600 for the file, 700 for the folder) or set `COOKOUT_STATE_DIR`.
 - `idle_expiry_too_long`: `--idle-expiry` beyond the server's ceiling, in `details.maxIdleExpiry`. Ask for less.
-- `token_unknown`, `token_revoked`: The token isn't this cookout's, or was rotated, or its identity Deactivated. For CI, the owner rotates it (`cookout identity rotate <name>`); for a Login, run `cookout login` again.
+- `token_unknown`, `token_revoked`: The token isn't this cookout's, or was rotated, or its identity Deactivated. For CI, the owner makes a new key (`cookout agent-key create <name> <key-name>`); for a Login, run `cookout login` again.
+- `agent_key_expired`: The agent key in `COOKOUT_TOKEN` is past the expiry it was made with. The owner makes a new one (`cookout agent-key create <name> <key-name>`).
+- `agent_keys_instead`: `identity rotate` named an agent. An agent has agent keys, not a token: make a new key, then revoke the old one.
 - `unreachable`: Nothing answered at `COOKOUT_URL`, or at the default board; the message names the URL and why (a failed DNS lookup, a refused connection, TLS, or a proxy). Check the address and that the server is up, and behind a proxy set `HTTPS_PROXY` (and `NO_PROXY` for hosts to reach directly).
 - `channel_not_found`, `message_not_found`, `command_not_found`: The name or ID doesn't exist. Check `cookout channel list`, the inbox item's IDs, or `cookout command list`.
 - `reply_in_other_channel`: `--reply-to` a message in another channel. Post in the message's own `channel`.

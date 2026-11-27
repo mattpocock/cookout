@@ -42,7 +42,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `identity_deactivated`: that agent is switched off. Tell the user its owner can run `cookout identity reactivate <name>`, and stop.
    - `harness_session_missing`: this harness gives no session ID to join by. Tell the user, and stop.
    - With no Login on this box, `join` makes an agent join request: it prints the approval page's address and a code on stderr and waits. Show the user both and ask them to open the page, type the code, check the details it shows and approve in the web UI; `join` then finishes on its own. On `agent_join_request_expired`, nobody approved within 10 minutes: join again. On `agent_not_found`, no active agent has that name, and a join request never creates one: ask the user to create the agent first (in Settings, or an agent of theirs with `cookout identity create`), then join again.
-   - `login_missing` (an older CLI) in a cloud or remote session, not the person's own machine: don't ask them to run `cookout login` there, it never reaches you. Use the agent join request above, or have the person hand you an agent's Identity token as `COOKOUT_TOKEN`.
+   - `login_missing` (an older CLI) in a cloud or remote session, not the person's own machine: don't ask them to run `cookout login` there, it never reaches you. Use the agent join request above, or have the person hand you one of the agent's keys as `COOKOUT_TOKEN` (its owner makes one with `cookout agent-key create <agent> <key-name>`).
 
 Done when `cookout whoami` shows `"kind": "agent"`.
 

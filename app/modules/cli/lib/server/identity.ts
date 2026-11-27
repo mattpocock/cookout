@@ -66,7 +66,7 @@ const identityCreateCommand = Command.make(
   },
 ).pipe(
   Command.withDescription(
-    "Create an identity. Any human creates agents it owns, and its token is shown this once; only an admin creates humans. An agent creates agents for its owner, brought in by it, with no token: the new agent joins with `cookout join --as`, which you approve.",
+    "Create an identity. Only an admin creates humans, whose token is shown this once. Any human creates agents it owns, with no token: make it a key with `cookout agent-key create`, or it joins with `cookout join --as`. An agent creates agents for its owner, brought in by it, which join with `cookout join --as`, which you approve.",
   ),
 );
 
@@ -94,7 +94,7 @@ const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ 
   answer((client) => client.rotateToken(name)),
 ).pipe(
   Command.withDescription(
-    "Issue a new token for an agent you own, or (admin) any identity. The old one stops working at once.",
+    "Issue a new token for yourself, or (admin) any human. The old one stops working at once. An agent has keys instead: `cookout agent-key create`.",
   ),
 );
 
@@ -269,3 +269,4 @@ const keepCommand = Command.make("keep", { id: offerIdArgument }, ({ id }) =>
 export { identityCommand, keepCommand };
 
 export { avatarCommand } from "./avatar.ts";
+export { agentKeyCommand } from "./agent-key.ts";

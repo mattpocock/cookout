@@ -1,15 +1,19 @@
 import type {
+  CreateAgentKeyResponse,
+  ListAgentKeysResponse,
   ListSessionsResponse,
   LoginCollectedResponse,
   LoginRequestResponse,
   LoginRequestStartedResponse,
   LogoutResponse,
+  RevokeAgentKeyResponse,
   RevokeSessionResponse,
 } from "../../../logins/index.ts";
-import { hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
+import { agentKeyNamePattern, hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
 import { IdentitySchema } from "./wire.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
+import { idleExpiryPattern } from "../../../agent-sessions/index.ts";
 import { isToken } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
@@ -96,8 +100,45 @@ const ListSessionsResponseSchema = matchesWire<ListSessionsResponse>()(
 
 const RevokeSessionResponseSchema = matchesWire<RevokeSessionResponse>()(Schema.Struct({ ended: Schema.Int }));
 
+const CreateAgentKeyRequestSchema = Schema.Struct({
+  expiresIn: Schema.optionalKey(Schema.String),
+  name: Schema.String,
+});
+
+const AgentKeyViewSchema = Schema.Struct({
+  expiresAt: Schema.optionalKey(IsoTimeSchema),
+  id: PublicIdSchema,
+  lastUsedAt: Schema.optionalKey(IsoTimeSchema),
+  madeAt: IsoTimeSchema,
+  name: Schema.String,
+});
+
+const CreateAgentKeyResponseSchema = matchesWire<CreateAgentKeyResponse>()(
+  Schema.Struct({ agentKey: AgentKeyViewSchema, token: TokenSchema }),
+);
+
+const ListAgentKeysResponseSchema = matchesWire<ListAgentKeysResponse>()(
+  Schema.Struct({ agentKeys: Schema.Array(AgentKeyViewSchema) }),
+);
+
+const RevokeAgentKeyResponseSchema = matchesWire<RevokeAgentKeyResponse>()(Schema.Struct({ ended: Schema.Int }));
+
+function isAgentKeyName(name: string): boolean {
+  return agentKeyNamePattern.test(name);
+}
+
+function isExpiresIn(expiresIn: string): boolean {
+  return idleExpiryPattern.test(expiresIn);
+}
+
 export {
   approvalRequestDetailsFields,
+  CreateAgentKeyRequestSchema,
+  CreateAgentKeyResponseSchema,
+  isAgentKeyName,
+  isExpiresIn,
+  ListAgentKeysResponseSchema,
+  RevokeAgentKeyResponseSchema,
   CollectLoginRequestSchema,
   ListSessionsResponseSchema,
   RevokeSessionResponseSchema,

@@ -203,15 +203,16 @@ it.effect("an agent session expiring on the test clock makes the watching agent 
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("rotating the Identity token a watch was sent with makes the agent offline at once, with token rotated", () =>
-  Effect.gen(function* rotated() {
+it.effect("revoking the agent key a watch was sent with makes the agent offline at once, as session revoked", () =>
+  Effect.gen(function* keyRevoked() {
     const watched = yield* board;
-    yield* answer(() => watched.agent.client.watch());
-    yield* answer(() => watched.matt.client.rotateToken(AGENT));
+    const made = yield* answer(() => watched.matt.client.createAgentKey(AGENT, { name: "ci" }));
+    yield* answer(() => watched.cookout.clientFor(made.token).watch());
+    yield* answer(() => watched.matt.client.revokeAgentKey(AGENT, made.agentKey.id));
     const { end, presence } = yield* endedAtOnce(watched, AGENT);
 
-    expect(presence).toStrictEqual(offline("token rotated"));
-    expect(end).toStrictEqual({ endedUnexpectedly: false, offlineReason: "token rotated" });
+    expect(presence).toStrictEqual(offline("session revoked"));
+    expect(end).toStrictEqual({ endedUnexpectedly: false, offlineReason: "session revoked" });
   }).pipe(Effect.provide(testCookout())),
 );
 
