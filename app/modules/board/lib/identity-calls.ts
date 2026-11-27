@@ -8,6 +8,7 @@ type IdentityCallsClient = Pick<
   | "clearTrigger"
   | "countMessagesBy"
   | "createIdentity"
+  | "createLoginLink"
   | "deactivateIdentity"
   | "deleteIdentity"
   | "getTrigger"
@@ -22,6 +23,8 @@ type IdentityCallsClient = Pick<
   | "setTrigger"
   | "transferAgent"
 >;
+
+type LoginLinkResponse = Awaited<ReturnType<CookoutClient["createLoginLink"]>>;
 
 interface Created {
   readonly name: IdentityName;
@@ -40,6 +43,7 @@ interface IdentityCalls {
   readonly setAvatar: (name: IdentityName, png: Uint8Array) => Promise<void>;
   readonly createAgent: (agent: NewAgent) => Promise<Created>;
   readonly rotateToken: (name: IdentityName) => Promise<Token>;
+  readonly sendLoginLink: (name: IdentityName) => Promise<LoginLinkResponse>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
   readonly deactivate: (name: IdentityName) => Promise<void>;
   readonly reactivate: (name: IdentityName) => Promise<Token>;
@@ -161,6 +165,10 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
       const { identity, token } = await client.rotateToken(name);
       put(identity);
       return token;
+    },
+    sendLoginLink: async (name) => {
+      const made = await client.createLoginLink(name);
+      return made;
     },
     transfer: async (name, to) => {
       const { identity } = await client.transferAgent(name, to);

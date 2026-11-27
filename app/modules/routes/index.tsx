@@ -17,7 +17,9 @@
  * logged out): it opens with an empty code field, and typing the code the new
  * device shows finds its request and shows the details to check before
  * Approve. `#/approve/<anything>` and `#/approve-join/<anything>` open the same
- * empty field, so a link can't choose the request. Any
+ * empty field, so a link can't choose the request. `#/login-link/<secret>`,
+ * the page a login link opens, is a page of its own too, logged in or not: it
+ * logs in as the link's person and opens the inbox. Any
  * workspace route's hash can end in `?profile=<name>`, which opens that
  * identity's profile panel beside it (replacing a thread's panel); Escape or
  * its close link closes it. Clicking a name, a message's author or an

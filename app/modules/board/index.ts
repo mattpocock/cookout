@@ -124,6 +124,10 @@
  * (`collectWebLogin`), passing over a rate limit or an unreachable server. An approved collect has set the session
  * cookie, so the session is logged in as the approver at once, without a reload; a request the server no longer has
  * has expired. The request ID lives only in memory: `back`, or the last reader leaving, drops it.
+ * `session.loginLink` logs in by a one-time login link (#969): `redeem(secret)` redeems it once (`redeemLoginLink`,
+ * which sets the session cookie), so the session is logged in as its person at once; a link the server doesn't have
+ * (used, expired or never made) is `gone`, and any other refusal is kept to show. Asking again for the same secret
+ * does nothing.
  *
  * `createApprovalCode` makes the approval page's code field store: the code a person types (trimmed, upper-cased, its
  * dash put back), or that what they typed isn't a code; it starts empty and empties again when the page closes, so no
@@ -191,7 +195,7 @@ export {
   reactionRefusal,
   reactionsOf,
 } from "./lib/part-selectors.ts";
-export type { BoardState, SessionState, WebLoginState } from "./lib/board-store.ts";
+export type { BoardState, LoginLinkState, SessionState, WebLoginState } from "./lib/board-store.ts";
 export type { MarkAllState, MarkChannelRefusal } from "./lib/inbox-calls.ts";
 export {
   type AlertsShown,

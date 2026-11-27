@@ -11,7 +11,8 @@
  * `#/channels/<name>/threads/<id>`, `#/channels/<name>/threads/<id>/messages/<message id>`
  * the same thread scrolled to that message and highlighted (the thread's own ID for its
  * top-level message), and `#/approve` the approval page for a login request or an agent join
- * request, as are `#/approve/<anything>` and `#/approve-join/<anything>`, which carry no code to it); a channel name
+ * request, as are `#/approve/<anything>` and `#/approve-join/<anything>`, which carry no code to it, and
+ * `#/login-link/<secret>` the page a login link opens, carrying its secret); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
  * a thread ID that isn't a message ID, or a section the settings page doesn't
  * have is `missing`; `#/threads` and `#/threads/all`, where the removed Open
@@ -48,6 +49,7 @@ type Route =
   | { readonly name: "channel"; readonly channel: ChannelName }
   | ThreadRoute
   | { readonly name: "approve" }
+  | { readonly name: "login-link"; readonly secret: string }
   | { readonly name: "missing" };
 
 type LinkedRoute = Extract<
@@ -71,6 +73,7 @@ const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const PROFILE_QUERY = /\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
 const WITH_PROFILE = /^.*\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
 const APPROVE = /^#\/approve(?:-join)?(?:\/[^/]*)?$/u;
+const LOGIN_LINK = /^#\/login-link\/(?<secret>[^/?]+)$/u;
 const MISSING: Route = { name: "missing" };
 
 function channelRoute(channel: string): Route {
@@ -132,6 +135,7 @@ const matchers: readonly Matcher[] = [
   (hash) => OLD_OPEN_THREADS.test(hash) && { name: "inbox", selected: null },
   (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => APPROVE.test(hash) && { name: "approve" },
+  (hash) => LOGIN_LINK.test(hash) && { name: "login-link", secret: hash.replace(LOGIN_LINK, "$<secret>") },
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   threadMatch,
 ];
@@ -186,7 +190,7 @@ function besideProfile(route: Route, profile: IdentityName): Place {
 }
 
 function isLinked(route: Route): route is LinkedRoute {
-  return route.name !== "login" && route.name !== "approve" && route.name !== "missing";
+  return route.name !== "login" && route.name !== "approve" && route.name !== "login-link" && route.name !== "missing";
 }
 
 function routeOf(hash: string): Route {
