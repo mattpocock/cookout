@@ -24,6 +24,15 @@ export const userCodePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/u;
 /** How long a login request lasts before it is gone, approved or not. */
 export const loginRequestSeconds = 600;
 
+/**
+ * How long a Login credential lasts unused: 90 days (Matt, 2026-11-27, board thread 7142, msg 7159). Each use moves
+ * its expiry on to 90 days after it; an Identity token never expires.
+ */
+export const loginCredentialIdleSeconds = 7_776_000;
+
+/** The refusal code for a Login credential that ended after 90 days unused (proposed, awaiting Matt). */
+export const loginExpired = "login_expired";
+
 /** The longest machine name a login request may give. */
 export const hostMaximumLength = 100;
 

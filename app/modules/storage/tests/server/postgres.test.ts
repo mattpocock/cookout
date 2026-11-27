@@ -1,16 +1,18 @@
-import { Array as Arr, Effect, String as Str } from "effect";
+import { Array as Arr, DateTime, Effect, String as Str } from "effect";
 import { StorageUnavailable, postgresStorage } from "../../server.ts";
 import {
   appendTo,
   channelFixture,
   emptyPostgresDatabase,
   identityFixture,
+  isoTime,
   newMessageFixture,
   onPostgresDatabase,
   openStore,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Redacted } from "effect";
+import { isoTimeOf } from "../../../time/server.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
@@ -23,6 +25,7 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
   "ALTER TABLE deliveries DROP COLUMN called_at",
   "ALTER TABLE messages DROP COLUMN title, DROP COLUMN title_set_by, DROP COLUMN title_set_at",
   "DROP TABLE avatars_to_remove",
@@ -42,6 +45,13 @@ const BEFORE_SEARCH = [
   "DROP FUNCTION message_search_words",
   "UPDATE schema_version SET version = 3",
 ];
+const BEFORE_LOGIN_EXPIRY = [
+  "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
+  "UPDATE schema_version SET version = version - 1",
+];
+const DAYS_UNUSED = 90;
+const JUST_BEFORE = -1;
+const AT_EXPIRY = 0;
 const FAIL_ONCE = "IF nextval('fault_attempts') <= 1 THEN RAISE EXCEPTION 'conflict' USING ERRCODE = '40001'; END IF;";
 
 function failInsertsWith(
@@ -221,6 +231,40 @@ it.effect("the search migration finds every message stored before search existed
       yield* second.close;
 
       expect(Arr.map(results, ({ message }) => message.id)).toStrictEqual([said.id]);
+    }),
+  ),
+);
+
+const wallClock = Effect.map(DateTime.now, isoTimeOf);
+
+function daysUnused(at: ReturnType<typeof isoTimeOf>, seconds: number): ReturnType<typeof isoTimeOf> {
+  return isoTimeOf(DateTime.add(DateTime.makeUnsafe(at), { days: DAYS_UNUSED, seconds }));
+}
+
+const loginStoredBeforeExpiry = Effect.gen(function* storeLoginBeforeExpiry() {
+  const url = yield* emptyPostgresDatabase;
+  const first = yield* opened(url);
+  yield* first.storage.createIdentity(ada, hashA);
+  const issued = { credentialHash: hashB, host: "ada-laptop", identity: ada.name, madeWith: hashA };
+  yield* first.storage.issueLoginCredential({ ...issued, now: isoTime("2026-01-01T00:00:00.000Z") });
+  yield* first.close;
+  yield* onPostgresDatabase({ statements: BEFORE_LOGIN_EXPIRY, url });
+  return url;
+});
+
+it.live("a Login credential stored before login expiry authenticates after the upgrade, last used at the upgrade", () =>
+  Effect.scoped(
+    Effect.gen(function* upgradeLogins() {
+      const url = yield* loginStoredBeforeExpiry;
+      const before = yield* wallClock;
+      const second = yield* opened(url);
+      const after = yield* wallClock;
+      const late = yield* second.storage.checkLoginCredential({ hash: hashB, now: daysUnused(after, AT_EXPIRY) });
+      const used = yield* second.storage.useLoginCredential({ hash: hashB, now: daysUnused(before, JUST_BEFORE) });
+      yield* second.close;
+
+      expect(late).toStrictEqual({ status: "expired" });
+      expect(used).toMatchObject({ identity: { name: ada.name }, status: "active" });
     }),
   ),
 );
