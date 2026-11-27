@@ -559,21 +559,6 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
-/** What redeeming a setup link sends: its secret, and the first admin's name and optional display name. */
-interface RedeemSetupLinkRequest {
-  readonly secret: Token;
-  readonly name: string;
-  readonly displayName?: string;
-}
-/** The SDK's call for setting up a cookout's first admin. */
-interface SetupLinkCalls {
-  /**
-   * `POST /v1/setup-links/redeem` (no token): redeems the setup link `cookout serve` printed into the first admin,
-   * named as sent, with a web session set as the session cookie (#913). A used, expired, replaced or unknown link, or
-   * one sent once an admin exists, is 404 `setup_link_not_found`; a taken name is 409 `identity_exists`.
-   */
-  readonly redeemSetupLink: (request: RedeemSetupLinkRequest) => Promise<IdentityResponse>;
-}
 interface StartLoginRequest {
   readonly host: string;
 }
@@ -1977,6 +1962,21 @@ interface EventCalls {
   readonly startWakeRun: () => Promise<WakeRunResponse>;
   readonly endWakeRun: () => Promise<WakeRunResponse>;
   readonly failWakeRun: (failure: WakeRunFailure) => Promise<WakeRunResponse>;
+}
+/** What redeeming a setup link sends: its secret, and the first admin's name and optional display name. */
+interface RedeemSetupLinkRequest {
+  readonly secret: Token;
+  readonly name: string;
+  readonly displayName?: string;
+}
+/** The SDK's call for setting up a cookout's first admin. */
+interface SetupLinkCalls {
+  /**
+   * `POST /v1/setup-links/redeem` (no token): redeems the setup link `cookout serve` printed into the first admin,
+   * named as sent, with a web session set as the session cookie (#913). A used, expired, replaced or unknown link, or
+   * one sent once an admin exists, is 404 `setup_link_not_found`; a taken name is 409 `identity_exists`.
+   */
+  readonly redeemSetupLink: (request: RedeemSetupLinkRequest) => Promise<IdentityResponse>;
 }
 type AgentKeyCalls = AgentKeyCalls$1<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
 type LoginCalls = LoginCalls$1 & AgentKeyCalls & SetupLinkCalls;
