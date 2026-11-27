@@ -1,7 +1,8 @@
-import { addWebhookCommand, channelWithWebhookCommand } from "./webhook-commands.ts";
+import { channelWithWebhookCommand, withStoredWebhookCommand } from "./webhook-commands.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
+import type { CookoutClient } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
 import { openAt } from "./render.tsx";
 
@@ -9,9 +10,9 @@ const TITLE = "Schedule a message";
 const COMMANDS = { name: "Command suggestions" };
 const FIRST = 0;
 
-async function openChannel(channel: string): Promise<() => void> {
+async function openChannel(channel: string, client: CookoutClient = adminClient()): Promise<() => void> {
   await adminClient().createChannel({ name: channel });
-  const close = openAt({ client: adminClient(), hash: `#/channels/${channel}` });
+  const close = openAt({ client, hash: `#/channels/${channel}` });
   await screen.findByLabelText("Message");
   return close;
 }
@@ -83,7 +84,7 @@ async function cancelled(): Promise<void> {
   });
 }
 
-it("typing / lists /schedule with its description, first and highlighted, then the registered Webhook commands", {
+it("typing / lists /schedule once, as the Command, first and highlighted, beside a Webhook command stored as schedule", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -92,8 +93,10 @@ it("typing / lists /schedule with its description, first and highlighted, then t
     channel: "web-slash-list",
     webhookCommand: { description: "Ship a branch", name: "web-slash-deploy" },
   });
-  await addWebhookCommand({ description: "Not this one", name: "schedule" });
-  const close = await openChannel("web-slash-list-box");
+  const close = await openChannel(
+    "web-slash-list-box",
+    withStoredWebhookCommand({ client: adminClient(), name: "schedule" }),
+  );
 
   const all = await listedFor("/");
   const narrowed = await listedFor("/sc");
