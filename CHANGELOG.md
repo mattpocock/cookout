@@ -1,5 +1,16 @@
 # @ai-hero/cookout
 
+## 0.12.0
+
+### Minor Changes
+
+- 327142f: Web UI: a thread's reply box lists and calls Webhook commands, as a channel's message box does. Typing `/` in it shows the registered Webhook commands, and a call made from it is posted as a reply in that thread, where the Handler's result reply shows too.
+
+### Patch Changes
+
+- e7e75c6: `cookout serve` hardens its HTTP. A request over HTTPS (on Fly, one whose `X-Forwarded-Proto` is `https`) gets `Strict-Transport-Security: max-age=31536000` and a `Secure` session cookie; a board over plain HTTP works as before, with neither. On Fly (`FLY_APP_NAME` set) a request's client address is its `Fly-Client-IP`; elsewhere that header is ignored. The routes that need no token (starting and collecting Login requests and agent join requests, and redeeming a join code) now allow `COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE` (default 30) a minute per client address instead of `COOKOUT_REQUESTS_PER_MINUTE`, and `cookout login` and `cookout join` wait out a `rate_limited` collect instead of failing.
+- 29974d4: A wake run never uses the person's Login: the runner sets `COOKOUT_WAKE_RUN=1` in its environment, and there a verb that would fall back to the Login under `HOME`, such as `cookout join --as <another agent>`, exits 1 with `wake_run_no_login`. Verbs sent with the woken agent's own agent session work as before. `cookout login approve` inside a harness or a wake run exits 1 with `approval_in_harness`, even with `COOKOUT_ALLOW_HUMAN=1`. `cookout join` with your Login in an interactive harness is unchanged.
+
 ## 0.11.0
 
 ### Minor Changes
