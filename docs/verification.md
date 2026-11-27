@@ -559,7 +559,7 @@ node_modules/.bin/vitest run --project s3
 ```sh
 pnpm build
 mkdir -p /tmp/cookout-e2e && echo "COOKOUT_E2E_URL=http://127.0.0.1:3100 COOKOUT_E2E_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-e2e.env
-env $(cat /tmp/cookout-e2e.env) sh -c 'COOKOUT_ADMIN_TOKEN=$COOKOUT_E2E_ADMIN_TOKEN COOKOUT_DB=/tmp/cookout-e2e/cookout.db COOKOUT_HOST=127.0.0.1 PORT=3100 node dist/main.js serve' > /tmp/cookout-e2e/serve.log 2>&1
+env $(cat /tmp/cookout-e2e.env) sh -c 'COOKOUT_ADMIN_TOKEN=$COOKOUT_E2E_ADMIN_TOKEN COOKOUT_SECRETS_KEY=$(openssl rand -hex 32) COOKOUT_DB=/tmp/cookout-e2e/cookout.db COOKOUT_HOST=127.0.0.1 PORT=3100 node dist/main.js serve' > /tmp/cookout-e2e/serve.log 2>&1
 env $(cat /tmp/cookout-e2e.env) pnpm --filter ./packages/e2e test
 env $(cat /tmp/cookout-e2e.env) sh -c 'curl -s -H "Authorization: Bearer $COOKOUT_E2E_ADMIN_TOKEN" $COOKOUT_E2E_URL/v1/identities' | jq -c '[.identities[].name]'
 ```
@@ -580,7 +580,7 @@ To run the suite against the Docker image instead, in one command:
 pnpm e2e:docker
 ```
 
-`scripts/e2e-docker.sh` builds the image and runs the suite against it twice, once per store. The SQLite leg makes a `COOKOUT_ADMIN_TOKEN`, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token, and fails if any channel whose name starts with `e2e-` remains after it. The Postgres leg does the same with a throwaway `postgres:18-alpine` container beside the cookout's, on a Docker network of their own, and `DATABASE_URL` pointing at it with a password made for the run; it also checks that the logs don't show that password and that the startup line names `postgres://<container>:5432/cookout`. It removes every container, volume, network and image it made again, also when a test fails or on Ctrl-C. It exits with the first failing suite's code. It adds `COOKOUT_PUBLIC_URL`, which fly.toml leaves unset, as the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, on each leg, once the cookout listens, adds the Webhook command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch` from [packages/handler-example/command.schema.json](../packages/handler-example/command.schema.json), which `scripts/handler-provision.sh` also reads) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler containers and image with the rest. Passing it, on both legs, is required before any `fly deploy`.
+`scripts/e2e-docker.sh` builds the image and runs the suite against it twice, once per store. The SQLite leg makes a `COOKOUT_ADMIN_TOKEN` and a `COOKOUT_SECRETS_KEY`, runs the image with them on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs show neither, runs the suite against it with that token, and fails if any channel whose name starts with `e2e-` remains after it. The Postgres leg does the same with a throwaway `postgres:18-alpine` container beside the cookout's, on a Docker network of their own, and `DATABASE_URL` pointing at it with a password made for the run; it also checks that the logs don't show that password and that the startup line names `postgres://<container>:5432/cookout`. It removes every container, volume, network and image it made again, also when a test fails or on Ctrl-C. It exits with the first failing suite's code. It adds `COOKOUT_PUBLIC_URL`, which fly.toml leaves unset, as the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, on each leg, once the cookout listens, adds the Webhook command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch` from [packages/handler-example/command.schema.json](../packages/handler-example/command.schema.json), which `scripts/handler-provision.sh` also reads) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler containers and image with the rest. Passing it, on both legs, is required before any `fly deploy`.
 
 ## Reproduce a web test's missing wait
 
@@ -628,12 +628,13 @@ The brackets stop the pattern matching the shell that runs `pkill` itself. It st
 
 ## Run it in Docker
 
-The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. `COOKOUT_ADMIN_TOKEN` is required: without it, or with one shorter than 32 characters, the container exits 1 with `admin_token_invalid` and never shows the value. The first boot with a new value makes it the `admin` identity's only token, or that of the human named by `COOKOUT_ADMIN_NAME` if set; a token rotated since keeps working across restarts until the setting changes ([ADR 0130](adr/0130-boot-applies-the-admin-token-only-when-the-setting-changes.md)). Set any other variable from `.env.example` with `-e`. Make a token into an env file, build the image and start it on the named volume `cookout-data`:
+The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. `COOKOUT_ADMIN_TOKEN` is required: without it, or with one shorter than 32 characters, the container exits 1 with `admin_token_invalid` and never shows the value. The first boot with a new value makes it the `admin` identity's only token, or that of the human named by `COOKOUT_ADMIN_NAME` if set; a token rotated since keeps working across restarts until the setting changes ([ADR 0130](adr/0130-boot-applies-the-admin-token-only-when-the-setting-changes.md)). `COOKOUT_SECRETS_KEY` is required too: 32 random bytes as hex or base64, which encrypt trigger tokens, trigger header values and Webhook command secrets in the store. Without it, or with one that isn't 32 bytes, the container exits 1 with `secrets_key_invalid`; on a store whose secrets another key sealed, it exits 1 with `secrets_key_mismatch` ([ADR 0150](adr/0150-trigger-tokens-and-webhook-command-secrets-are-encrypted-at-rest.md)). Neither message shows the value. Set any other variable from `.env.example` with `-e`. Make a token and a key into env files, build the image and start it on the named volume `cookout-data`:
 
 ```sh
 echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-docker-admin.env
+echo "COOKOUT_SECRETS_KEY=$(openssl rand -hex 32)" > /tmp/cookout-docker-key.env
 docker build -t cookout .
-docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env cookout
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env --env-file /tmp/cookout-docker-key.env cookout
 ```
 
 If port 8080 is taken on your machine, map another one (`-p 18080:8080`) and use it in the commands below. Check that it is up and healthy, and that it doesn't run as root:
@@ -653,11 +654,11 @@ echo "COOKOUT_URL=http://127.0.0.1:8080 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout
 env $(cat /tmp/cookout-docker.env) node app/main.ts identity create ada
 ```
 
-The SQLite file lives on the volume, so the board outlives the container. Stop it and start it again on the same volume with the same env file, and `ada` is still there and the token still works. A different `COOKOUT_ADMIN_TOKEN` on a restart replaces the admin's token: the old one then gets 401.
+The SQLite file lives on the volume, so the board outlives the container. Stop it and start it again on the same volume with the same env files, and `ada` is still there and the token still works. A different `COOKOUT_ADMIN_TOKEN` on a restart replaces the admin's token: the old one then gets 401. A different `COOKOUT_SECRETS_KEY` on a restart exits 1 with `secrets_key_mismatch`.
 
 ```sh
 docker stop cookout
-docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env cookout
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env --env-file /tmp/cookout-docker-key.env cookout
 env $(cat /tmp/cookout-docker.env) node app/main.ts identity list
 ```
 
@@ -695,6 +696,14 @@ openssl rand -hex 32 | tr -d '\n' | sed 's/^/COOKOUT_ADMIN_TOKEN=/' | fly secret
 ```
 
 `fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin. Setting the secret restarts the machine, and because the setting changed, that boot makes the new value the admin's only token: every other token of the admin is revoked, and the web sessions made with them end. A boot whose setting is unchanged leaves the admin's tokens alone ([ADR 0130](adr/0130-boot-applies-the-admin-token-only-when-the-setting-changes.md)). So after `cookout identity rotate admin`, the rotated token is the one that works, across any number of deploys and restarts, and the secret's value, which the rotate revoked, stays revoked. To make the secret's token apply again, set a new value with the command above; a value the setting held before counts as a change too, but one equal to the current setting doesn't. To replace a lost or leaked token, rotate it or set a new value: the old token gets 401 at once after a rotate, and once the machine has restarted after a new value. To have the token belong to a human named other than `admin`, also import `COOKOUT_ADMIN_NAME=<name>` the same way, which changes the setting too; the old `admin` stays, still an admin, with no working token.
+
+The key that encrypts trigger tokens, trigger header values and Webhook command secrets is the Fly secret `COOKOUT_SECRETS_KEY`; it is never in the repo. **Set it before the first deploy of a cookout that needs it** (the release with [ADR 0150](adr/0150-trigger-tokens-and-webhook-command-secrets-are-encrypted-at-rest.md)): without it the new machine exits 1 with `secrets_key_invalid`, its health check fails and the deploy fails. Make one and set it without printing it:
+
+```sh
+openssl rand -hex 32 | tr -d '\n' | sed 's/^/COOKOUT_SECRETS_KEY=/' | fly secrets import -a cookout
+```
+
+The first boot with it encrypts every trigger token, header value and Webhook command secret still in plaintext, in one transaction, and stores a check of the key. Never change it: a boot with a different key exits 1 with `secrets_key_mismatch`, naming the setting and not the value, and the sealed values can't be opened without the old key. Keep a copy with the database's backups.
 
 CI doesn't hold the admin's token. The GitHub Actions secret `COOKOUT_E2E_ADMIN_TOKEN` (`gh secret list -R mattpocock/cookout`), which every job in deploy.yml that calls the deployed cookout uses, is the token of a human admin identity of its own, `ci` (Matt, 2026-11-26, board msg 6180), so neither a rotate of the admin's token nor a new `COOKOUT_ADMIN_TOKEN` breaks Release's deploy. An admin made it, and set the secret without printing the token:
 
@@ -764,8 +773,9 @@ It prints `handler-check: thread <id> got ["/example is done.",{"received":{"bra
 
 ```sh
 echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-handler-admin.env
+echo "COOKOUT_SECRETS_KEY=$(openssl rand -hex 32)" > /tmp/cookout-handler-key.env
 echo "COOKOUT_URL=http://127.0.0.1:48775 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-handler-admin.env)" > /tmp/cookout-handler.env
-env $(cat /tmp/cookout-handler-admin.env) node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
+env $(cat /tmp/cookout-handler-admin.env /tmp/cookout-handler-key.env) node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
 printf '{"type":"object"}' > /tmp/cookout-handler.schema.json
 env $(cat /tmp/cookout-handler.env) node app/main.ts command add example --url http://127.0.0.1:48776/webhook --schema /tmp/cookout-handler.schema.json | jq -r '"COOKOUT_COMMAND_SECRET=\(.secret)"' > /tmp/cookout-handler-secret.env
 docker run -d --rm --name cookout-handler -p 48776:8787 --add-host host.docker.internal:host-gateway --env-file /tmp/cookout-handler-secret.env -e COOKOUT_URL=http://host.docker.internal:48775 cookout-handler
@@ -793,7 +803,8 @@ To see the built UI as `cookout serve` serves it, build and serve the built bina
 ```sh
 pnpm build
 echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-built-admin.env
-env $(cat /tmp/cookout-built-admin.env) node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
+echo "COOKOUT_SECRETS_KEY=$(openssl rand -hex 32)" > /tmp/cookout-built-key.env
+env $(cat /tmp/cookout-built-admin.env /tmp/cookout-built-key.env) node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
 ```
 
 To have the admin token belong to a human named `matt`, add `COOKOUT_ADMIN_NAME=matt` to that command's `env`. Then `COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-built-admin.env) node app/main.ts whoami` prints `matt`, a human admin, and there is no `admin` identity on a fresh database. Restart on the same database without it and `identity list` shows both, each an admin; the token now belongs to `admin` again and `matt` has no working token. `COOKOUT_ADMIN_NAME=Not_A_Name` exits 1 with `admin_name_invalid`, and the name of an agent on the board exits 1 with `admin_name_agent`.
@@ -1044,10 +1055,10 @@ The Release workflow, the gate, runs every browser test exactly once on the comm
 
 ## Other checks
 
-- `pnpm pack:smoke` proves the published package works (the Release workflow runs it as its `pack smoke` gate job, before it publishes or deploys): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its refusal without `COOKOUT_ADMIN_TOKEN`, its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
+- `pnpm pack:smoke` proves the published package works (the Release workflow runs it as its `pack smoke` gate job, before it publishes or deploys): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its refusals without `COOKOUT_ADMIN_TOKEN` and without `COOKOUT_SECRETS_KEY`, its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
 - `pnpm published-client` proves the newest published client still works against this commit's server (the Release workflow runs it as its `published client` job, before it publishes), so removing a response field too early fails ([ADR 0076](adr/0076-removing-a-response-field-takes-two-releases.md)). It installs `@ai-hero/cookout` at the version `npm view @ai-hero/cookout version` prints into a temp directory (the tarball is cached by version, in published-client under node_modules' cache directory), starts `app/dev.ts start`, and points the published `cookout` at it with `COOKOUT_URL`, with no harness variables and no Login. Through it, an agent joins (`join --print-env`), posts, is replied to, reads its inbox, acks, and watches for one mention; the admin adds and calls a Webhook command, then deactivates and reactivates the agent. Any non-zero exit fails it, including a `bad_response` from the published client's response validator. Last, its canary deactivates an agent with the field `identity` dropped from the answer (`scripts/drop-deactivate-identity.ts`, preloaded into the published CLI) and fails unless the published client refuses it. A change that has to break old clients on purpose adds a reviewed opt-out to `scripts/published-client-opt-outs.json`: `{ "step": "deactivate", "version": "0.2.1", "date": "YYYY-MM-DD", "reason": "why, with the ticket" }`. That step then runs with this commit's `cookout` instead. An opt-out holds only for the published version it names: once a newer version is published, the check refuses it until it is removed.
 - The SDK's public surface is pinned by `api/sdk.api.md`. After a deliberate change to it, run `pnpm api:write` and commit the report.
-- To run the server alone on a file you keep: `COOKOUT_ADMIN_TOKEN=<at least 32 characters> node app/main.ts serve --port 3000 --db cookout.db`. The first boot with that value makes it the admin's token; it prints nothing about it.
+- To run the server alone on a file you keep: `COOKOUT_ADMIN_TOKEN=<at least 32 characters> COOKOUT_SECRETS_KEY=<32 bytes as hex> node app/main.ts serve --port 3000 --db cookout.db`, with the same key on every start. The first boot with that value makes it the admin's token; it prints nothing about it.
 
 ## Deliver a call to the example handler
 
@@ -1085,7 +1096,7 @@ git branch -D changeset-dry-run
 
 `pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json`, the new CHANGELOG.md and the consumed changesets (the dry run's and the first-release changeset), so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
 
-The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step runs only when no changesets are left, and has no npm token: it publishes by trusted publishing. `npm pack --dry-run` after `pnpm build` lists what would ship: `dist`, `docs/agents.md`, `skills`, README.md and package.json.
+The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step runs whenever the chosen commit's version isn't on npm yet, even with changesets pending (`scripts/release-publish.ts`, docs/adr/0151), and has no npm token: it publishes by trusted publishing. `npm pack --dry-run` after `pnpm build` lists what would ship: `dist`, `docs/agents.md`, `skills`, README.md and package.json.
 
 ## Reply as the handler with the Webhook command token
 

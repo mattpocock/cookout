@@ -4,6 +4,7 @@ import {
   CALL_TIMES_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
   SEARCH_MIGRATION,
+  SECRETS_KEY_MIGRATION,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
   TRIGGER_SKIPPED_MIGRATION,
@@ -248,6 +249,7 @@ const migrations: readonly string[] = [
    ALTER TABLE messages ADD COLUMN title_set_at TEXT;`,
   CALL_TIMES_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
+  SECRETS_KEY_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

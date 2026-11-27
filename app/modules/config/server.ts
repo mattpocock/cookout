@@ -94,6 +94,14 @@ export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken)
 );
 
 /**
+ * `COOKOUT_SECRETS_KEY`: the key, 32 bytes as hex or base64, that trigger tokens, trigger header values and Webhook
+ * command secrets are encrypted with at rest, required by `cookout serve` (Matt, 2026-11-27, board thread 7142, msg
+ * 7440, ADR 0150). Unset, empty or not 32 bytes, serve refuses to start, and the message never shows the value; the
+ * rule says why and how to make one.
+ */
+export { secretsKey, secretsKeyRule } from "./lib/server/secrets-key.ts";
+
+/**
  * `COOKOUT_ADMIN_NAME`: the name of the identity `COOKOUT_ADMIN_TOKEN` belongs to, `admin` unless set (Matt,
  * 2026-11-23, mattpocock/cookout#107, ADR 0039). Empty counts as unset. Not an identity name, serve refuses to start.
  */
