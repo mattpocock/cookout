@@ -1,4 +1,4 @@
-import { Context, Effect, Exit, FileSystem, Layer, Path, Scope } from "effect";
+import { Context, Effect, Exit, FileSystem, Layer, Option, Path, Scope } from "effect";
 import type { QueryPlan, ScheduledRun } from "../../../storage/server.ts";
 import {
   Storage,
@@ -26,11 +26,15 @@ interface OpenStore {
   readonly storage: Storage["Service"];
 }
 
+const MEMORY_FOLDER = "/dev/shm";
+
 const freshDatabasePath: Effect.Effect<string, never, FileSystem.FileSystem | Path.Path | Scope.Scope> = Effect.gen(
   function* makeDatabasePath() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const folder = yield* fs.makeTempDirectoryScoped({ prefix: "cookout-sqlite-" });
+    const inMemory = yield* fs.exists(MEMORY_FOLDER);
+    const directory = Option.getOrUndefined(Option.liftPredicate(MEMORY_FOLDER, () => inMemory));
+    const folder = yield* fs.makeTempDirectoryScoped({ directory, prefix: "cookout-sqlite-" });
     return path.join(folder, "cookout.db");
   },
 ).pipe(Effect.orDie);
