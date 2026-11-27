@@ -173,6 +173,14 @@ function opened({ file, registration }: RegisteredSession): Effect.Effect<Client
   });
 }
 
+function latestRegistration({ file, registration }: RegisteredSession): Effect.Effect<Registration> {
+  const read = Effect.orElseSucceed(file.beside(REGISTRATION_SUFFIX).read(RegistrationSchema), Option.none);
+  return Effect.map(
+    read,
+    Option.getOrElse(() => registration),
+  );
+}
+
 const registeredSessions: Effect.Effect<
   readonly RegisteredSession[],
   AgentSessionStateFailure,
@@ -202,6 +210,7 @@ export {
   SESSION_ID_PLACEHOLDER,
   TIMEOUT_DESCRIPTION,
   forgetRegistration,
+  latestRegistration,
   opened,
   register,
   registerHere,
