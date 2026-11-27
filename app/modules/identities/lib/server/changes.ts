@@ -95,7 +95,7 @@ interface CredentialsEnded {
   readonly by: TokensEnded["by"];
 }
 
-type Streamed = Exclude<EndedCredential["kind"], "join code">;
+type Streamed = Exclude<EndedCredential["kind"], "join code" | "login link">;
 
 const CAUSE_OF: Readonly<Record<Streamed, TokensEnded["cause"]>> = {
   "agent session": "revoked",
@@ -107,7 +107,7 @@ function sameHolder(one: EndedCredential, other: EndedCredential): boolean {
 }
 
 function isStreamed(credential: EndedCredential): credential is EndedCredential & { readonly kind: Streamed } {
-  return credential.kind !== "join code";
+  return credential.kind !== "join code" && credential.kind !== "login link";
 }
 
 function endingsOf({ by, ended }: CredentialsEnded): readonly TokensEnded[] {
