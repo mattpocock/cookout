@@ -99,14 +99,14 @@ test("every sidebar link, the new channel form and the sidebar's edge work by ke
   await expect(form).toBeHidden();
 });
 
-test("every channel row action works by keys alone, and its menu and dialog give focus back", async ({
+test("every channel row action works by keys alone, its menu gives focus back and Shift+S lands on the Scheduled messages page", async ({
   ownCookout,
   page,
 }) => {
   const channel = await signedIn({ name: "kbwalk-row", ownCookout, page });
   const row = sidebarLink({ label: `#${channel}`, page });
   const menu = page.getByRole("menu", { exact: true, name: `#${channel} actions` });
-  const schedules = page.getByRole("dialog", { exact: true, name: "Scheduled messages" });
+  const schedules = page.getByRole("heading", { exact: true, level: 1, name: `Scheduled messages in #${channel}` });
   await walk({
     page,
     steps: [
@@ -135,10 +135,9 @@ test("every channel row action works by keys alone, and its menu and dialog give
       async (): Promise<void> => {
         await expect(said({ page, text: "Subscribed" })).toBeAttached();
       },
-      ["Shift+S", schedules.getByRole("button", { exact: true, name: "Close" })],
-      ["Escape", row],
+      ["Shift+S", schedules],
     ],
   });
 
-  await expect(schedules).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`#/channels/${channel}/schedules$`, "u"));
 });

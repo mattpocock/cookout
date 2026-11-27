@@ -2,7 +2,7 @@
  * The page's title: the one owner of `document.title`, so no view sets it.
  * `usePageTitle` sets it for the page being drawn: what the page is, then
  * `· cookout` ("Inbox · cookout", "#general · cookout", "Thread in #general ·
- * cookout", "@ada · cookout"), led by how many unread messages are *For you*
+ * cookout", "Scheduled messages in #general · cookout", "@ada · cookout"), led by how many unread messages are *For you*
  * when there are any ("(3) Inbox · cookout"): those that mention whoever is
  * logged in or reply to their own message, as the sidebar's strong badges
  * count them, a closed thread's included as the Inbox includes them, with the unread notices beside them. It holds no
@@ -18,7 +18,7 @@ import type { Route } from "../paths/index.ts";
 const APP = "cookout";
 const NONE = 0;
 
-const FIXED: Readonly<Record<Exclude<Route["name"], "channel" | "profile" | "thread">, string>> = {
+const FIXED: Readonly<Record<Exclude<Route["name"], "channel" | "profile" | "schedules" | "thread">, string>> = {
   approve: "Approve a device",
   inbox: "Inbox",
   login: "Logged in",
@@ -40,6 +40,9 @@ function routeName(route: Route): string {
   }
   if (route.name === "profile") {
     return `@${route.identity}`;
+  }
+  if (route.name === "schedules") {
+    return `Scheduled messages in #${route.channel}`;
   }
   return FIXED[route.name];
 }

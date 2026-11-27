@@ -5,7 +5,6 @@ import { useContext, useEffect, useMemo } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { LandingContext } from "../../landing/index.ts";
-import type { ScheduleList } from "../../board/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { channelOrder } from "./channel-order.ts";
 import { useSidebarCounts } from "./use-unread-levels.ts";
@@ -13,12 +12,11 @@ import { useSidebarCounts } from "./use-unread-levels.ts";
 interface SidebarKeys {
   readonly keymap: Keymap;
   readonly me: string;
-  readonly scheduleList: ScheduleList;
   readonly unread: Unread;
 }
 
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
-  const { scheduleList, unread } = props;
+  const { unread } = props;
   const store = useBoardStore();
   const channels = useChannels();
   const counts = useSidebarCounts({ me: props.me }).channels;
@@ -29,11 +27,10 @@ function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): C
       counts,
       land,
       order: channelOrder(channels),
-      scheduleList,
       store,
       unread,
     }),
-    [announce, channels, counts, land, scheduleList, store, unread],
+    [announce, channels, counts, land, store, unread],
   );
 }
 

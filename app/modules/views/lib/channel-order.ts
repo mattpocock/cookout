@@ -23,7 +23,7 @@ function channelOrder(channels: ChannelsState): readonly ChannelName[] {
 }
 
 function openChannel(route: Route): ChannelName | null {
-  if (route.name === "channel" || route.name === "thread") {
+  if (route.name === "channel" || route.name === "thread" || route.name === "schedules") {
     return route.channel;
   }
   return null;
