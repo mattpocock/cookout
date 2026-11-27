@@ -46,7 +46,7 @@ it.effect("changing COOKOUT_ADMIN_NAME moves the token to the new name and leave
 it.effect("COOKOUT_ADMIN_NAME naming an existing human makes it an admin with the admin token as its only token", () =>
   Effect.gen(function* promotesHuman() {
     const cookout = yield* TestCookout;
-    const matt = yield* cookout.createIdentity("matt", { kind: "human" });
+    const matt = yield* cookout.createIdentity("matt", { credential: "identity token", kind: "human" });
     const second = yield* cookout.startSecondServerAs("matt");
     const whoami = yield* answer(createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).whoami);
     const old = yield* refusal(createCookoutClient({ env: {}, token: matt.token, url: second.url }).whoami);

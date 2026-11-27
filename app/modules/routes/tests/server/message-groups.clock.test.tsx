@@ -53,6 +53,7 @@ function threadOf(parent: Message): string {
 
 const minuteLater = TestClock.adjust("1 minute");
 const ONE_DAY = 86_400_000;
+const HALF_A_DAY = 43_200_000;
 
 it.effect(
   "messages from one author within 5 minutes sit under one name, and another author or a gap starts a group",
@@ -121,8 +122,9 @@ it.effect("the thread panel doesn't repeat the parent's day for replies on it, a
 it.effect("messages from yesterday and today are split by Yesterday and Today", () =>
   Effect.gen(function* yesterdayAndToday() {
     const cookout = yield* TestCookout;
-    const { ada, grace } = yield* people(cookout, "recent");
     const now = DateTime.toEpochMillis(DateTime.nowUnsafe());
+    yield* TestClock.setTime(now - ONE_DAY - HALF_A_DAY);
+    const { ada, grace } = yield* people(cookout, "recent");
     yield* Effect.andThen(TestClock.setTime(now - ONE_DAY), post(ada, "recent", "before"));
     yield* Effect.andThen(TestClock.setTime(now), post(ada, "recent", "after"));
 

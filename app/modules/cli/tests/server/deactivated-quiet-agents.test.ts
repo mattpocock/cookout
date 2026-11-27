@@ -31,7 +31,7 @@ const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 const adaOwnsAQuietAgent: Effect.Effect<Board, never, TestCookout | CommandLineNeeds | Scope.Scope> = Effect.gen(
   function* adaOwnsAnAgent() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     yield* cookout.createIdentity("ada/scout", { owner: "ada" });
     const folder = yield* freshStateFolder;
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };

@@ -100,7 +100,7 @@ it.effect("a web session made with POST /v1/session ends with login_expired afte
 it.effect("an Identity token still works after 91 days unused", () =>
   Effect.gen(function* identityTokenLasts() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     yield* after(PAST);
     const me = yield* answer(() => ada.client.whoami());
     const cookie = yield* sessionCookie(cookout.url, ada.token);
