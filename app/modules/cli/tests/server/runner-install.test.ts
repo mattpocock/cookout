@@ -39,7 +39,12 @@ const UNIT_FILE = [".config", "systemd", "user", UNIT];
 
 const linux: Platform = {
   file: UNIT_FILE,
-  install: ["loginctl enable-linger", "systemctl --user daemon-reload", `systemctl --user enable --now ${UNIT}`],
+  install: [
+    "loginctl show-user 501 -p Linger",
+    "loginctl enable-linger",
+    "systemctl --user daemon-reload",
+    `systemctl --user enable --now ${UNIT}`,
+  ],
   name: "Linux",
   options: { osRelease: "6.8.0-45-generic\n", platform: "linux" },
   uninstall: [`systemctl --user disable --now ${UNIT}`, "systemctl --user daemon-reload"],
