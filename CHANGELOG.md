@@ -1,5 +1,11 @@
 # @ai-hero/cookout
 
+## 0.10.0
+
+### Minor Changes
+
+- 1759da3: The SDK's `callCommand(name, { channel, data, replyTo })` takes an optional `replyTo` message ID, which makes the Webhook command call a reply in that message's thread; the handler's replies land in that thread.
+
 ## 0.9.2
 
 ### Patch Changes
