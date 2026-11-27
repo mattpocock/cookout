@@ -26,9 +26,10 @@ const backAt = isoTime("2026-01-01T00:05:00.000Z");
 const HASH_LENGTH = 64;
 const SECOND = 2;
 
-const MIGRATIONS_SINCE = 4;
+const MIGRATIONS_SINCE = 5;
 
 const DOWNGRADE_POSTGRES = [
+  "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys",
   "ALTER TABLE offline_alerts DROP COLUMN made_via",
   "ALTER TABLE offline_alerts DROP CONSTRAINT offline_alerts_one_kind",
