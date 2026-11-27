@@ -4,7 +4,7 @@
  * `cookout login` starts a login request, a human approves it in the web UI by typing its user code, and the CLI collects
  * the Login's own credential with the secret request ID.
  */
-import type { Identity, Token } from "../identities/index.ts";
+import type { Identity, IdentityResponse, LoginLinkResponse, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 interface StartLoginRequest {
@@ -150,6 +150,27 @@ export const sessionsPath = "/v1/sessions";
  */
 export const sessionByIdPath = "/v1/sessions/:id";
 
+/** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
+export const loginLinkSeconds = 900;
+
+/**
+ * `POST /v1/identities/:name/login-link` (an admin; 403 `admin_only` otherwise): a one-time login link for the person
+ * named, answered once. An agent is 403 `human_only`; an unknown name is 404 `identity_not_found`.
+ */
+export const loginLinkPath = "/v1/identities/:name/login-link";
+
+/**
+ * `POST /v1/login-links/redeem` (no token): redeems a login link's secret, setting the session cookie and answering its
+ * person. A used, expired or unknown link is 404 `login_link_not_found`.
+ */
+export const redeemLoginLinkPath = "/v1/login-links/redeem";
+
+/** The web UI's path a login link opens, before its secret: `<board>/#/login-link/<secret>`. */
+export const loginLinkWebPath = "/#/login-link/";
+
+/** The refusal code for a login link that was used, expired or never made. */
+export const loginLinkNotFound = "login_link_not_found";
+
 /** The answer to `GET /v1/sessions`, oldest first. */
 export interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -185,4 +206,14 @@ export interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /**
+   * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
+   * within 15 minutes. An agent is 403 `human_only`.
+   */
+  readonly createLoginLink: (name: string) => Promise<LoginLinkResponse>;
+  /**
+   * `POST /v1/login-links/redeem` (no token): redeems a login link's secret into a web session for its person, set as
+   * the session cookie. A used, expired or unknown link is 404 `login_link_not_found`.
+   */
+  readonly redeemLoginLink: (secret: Token) => Promise<IdentityResponse>;
 }

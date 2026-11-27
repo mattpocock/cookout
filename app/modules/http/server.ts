@@ -7,6 +7,7 @@
  * `/` and the build's files under `/assets/`, with no token.
  */
 import {
+  Boolean as Bool,
   ByteSize,
   DateTime,
   Effect,
@@ -244,21 +245,17 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
 }
 
 /**
- * Serves `/v1/health` and the given routes on `listen` until the Layer is
- * released. A route's `segments` give the pattern each named `:param`
- * segment must match; a path that breaks one is no route's (404
- * `not_found`). Every request to a path one of `routes` serves goes through
- * `gate` first, before a wrong method is refused with 405; `/v1/health` and
- * unknown paths (404) never do. The `HttpServer` it provides says which
- * address it took: port 0 picks a free one. With a `webFolder`, `/` answers
- * with its `index.html` and `/assets/<file>` with its `assets/<file>`, also
- * without the gate; a file the folder lacks is 404 `not_found`. With a
- * `publicUrl` too, the page's `og:image` and `og:url` paths are made absolute
- * against it, since link-preview services can't follow a relative one. Every request
- * goes through the web guards first: a `Host` that isn't the server's own
- * (or the host of `publicUrl`) is refused with 421 `foreign_host`, except at `GET /v1/health`, which shows no
- * data and answers any `Host` so a platform's probe needs none (mattpocock/cookout#489), a write from another site's `Origin` with
- * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing, and over HTTPS HSTS too.
+ * Serves `/v1/health` and the given routes on `listen` until the Layer is released. A route's `segments` give the
+ * pattern each named `:param` segment must match; a path that breaks one is no route's (404 `not_found`). Every request
+ * to a path one of `routes` serves goes through `gate` first, before a wrong method is refused with 405; `/v1/health`
+ * and unknown paths (404) never do. The `HttpServer` it provides says which address it took: port 0 picks a free one.
+ * With a `webFolder`, `/` answers with its `index.html` and `/assets/<file>` with its `assets/<file>`, also without the
+ * gate; a file the folder lacks is 404 `not_found`. With a `publicUrl` too, the page's `og:image` and `og:url` paths
+ * are made absolute against it, since link-preview services can't follow a relative one. Every request goes through the
+ * web guards first: a `Host` that isn't the server's own (or the host of `publicUrl`) is refused with 421
+ * `foreign_host`, except at `GET /v1/health`, which shows no data and answers any `Host` so a platform's probe needs
+ * none (mattpocock/cookout#489), a write from another site's `Origin` with 403 `foreign_origin`, and every response
+ * carries a strict CSP and refuses framing, and over HTTPS HSTS too.
  * @param serving The port and host to listen on, the folder of the built web UI if it serves one, and the public URL if it has one.
  * @param routes Every route but `/v1/health`: the `gated` ones, and the `open` ones that need no token and never go through `gate`.
  * @param gate What every request to one of the `gated` routes goes through first.
@@ -293,3 +290,10 @@ export const clientAddress = requestClientAddress;
 
 /** Whether the request came over HTTPS (ADR 0148): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
 export const overHttps = requestOverHttps;
+
+/** The origin the request came to: `https://` or `http://` by `overHttps`, then its `Host`, which the guards checked. */
+export const requestOrigin: Effect.Effect<string, never, HttpServerRequest.HttpServerRequest> = Effect.zipWith(
+  Effect.map(requestOverHttps, (secure) => Bool.match(secure, { onFalse: () => "http", onTrue: () => "https" })),
+  HttpServerRequest.HttpServerRequest,
+  (scheme, { headers }) => `${scheme}://${headers["host"] ?? ""}`,
+);

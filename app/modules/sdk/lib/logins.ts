@@ -1,15 +1,19 @@
 import {
   collectLoginRequestPath,
+  loginLinkPath,
   loginPath,
   loginRequestApprovalPath,
   loginRequestPath,
   loginRequestsPath,
+  redeemLoginLinkPath,
   sessionByIdPath,
   sessionsPath,
 } from "../../logins/index.ts";
 import {
+  isIdentityResponse,
   isListSessionsResponse,
   isLoginCollectedResponse,
+  isLoginLinkResponse,
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
   isLogoutResponse,
@@ -38,9 +42,30 @@ function sessionCalls(server: ClientConnection): Pick<LoginCalls, "listSessions"
   };
 }
 
+function loginLinkCalls(server: ClientConnection): Pick<LoginCalls, "createLoginLink" | "redeemLoginLink"> {
+  return {
+    createLoginLink: async (name) => {
+      const params = { name };
+      const made = await send(server, { isExpected: isLoginLinkResponse, method: "POST", params, path: loginLinkPath });
+      return made;
+    },
+    redeemLoginLink: async (secret) => {
+      const body = { secret };
+      const redeemed = await send(server, {
+        body,
+        isExpected: isIdentityResponse,
+        method: "POST",
+        path: redeemLoginLinkPath,
+      });
+      return redeemed;
+    },
+  };
+}
+
 function loginCalls(server: ClientConnection): LoginCalls {
   return {
     ...sessionCalls(server),
+    ...loginLinkCalls(server),
     approveLogin: async (userCode) => {
       const params = { code: userCode };
       const approved = await send(server, {
