@@ -4,7 +4,7 @@ import type { SectionsBesideIdentities } from "./identity-section-types.ts";
 import { memoryAdminSetting } from "./admin-setting.ts";
 import { memoryAgentKeys } from "./agent-keys-memory.ts";
 import { memoryIdentities } from "./identities.ts";
-import { memoryLoginLinks } from "./login-links-memory.ts";
+import { memoryLoginLinks } from "./links-memory.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
 import { memoryOfflineAlerts } from "./offline-alerts.ts";
 import { memoryReach } from "./reach-sections.ts";
@@ -48,8 +48,10 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
     state,
   });
   const { dropLoginLinks, ...loginLinks } = memoryLoginLinks({
+    createIdentity: identities.createIdentity,
     findIdentity: identities.findIdentity,
     issueLoginCredential: loginRequests.issueLoginCredential,
+    listIdentities: identities.listIdentities,
     state,
   });
   const { dropPresence, ...presence } = memoryReach(state);

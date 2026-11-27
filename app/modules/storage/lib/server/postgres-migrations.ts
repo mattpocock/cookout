@@ -20,6 +20,7 @@ import {
 } from "./feature-migrations.ts";
 import type { Effect } from "effect";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
+import { POSTGRES_SETUP_LINKS_MIGRATION } from "./setup-links.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { migrateInOrder } from "./postgres-schema-version.ts";
@@ -288,6 +289,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   POSTGRES_LOGIN_ALERT_VIA_MIGRATION,
   POSTGRES_AGENT_KEYS_MIGRATION,
   ["ALTER TABLE identities ADD COLUMN feeder boolean NOT NULL DEFAULT FALSE"],
+  POSTGRES_SETUP_LINKS_MIGRATION,
 ];
 
 function migratePostgres(db: PostgresDatabase): Effect.Effect<void, StorageUnavailable> {
