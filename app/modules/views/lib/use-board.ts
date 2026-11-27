@@ -66,7 +66,7 @@ interface Replying {
   readonly replied: (() => void) | null;
 }
 
-interface ChannelCalls {
+interface WebhookCommandCalls {
   readonly call: (request: CallRequest) => void;
   readonly editCallData: (data: string) => void;
 }
@@ -142,7 +142,7 @@ function useChannelPage(name: ChannelName): ChannelMessagesState {
   return useRead(read);
 }
 
-function useChannelCalls(channel: ChannelName): ChannelCalls {
+function useChannelCalls(channel: ChannelName): WebhookCommandCalls {
   const { channelPages } = useBoardStore();
   return useMemo(
     () => ({
@@ -154,6 +154,21 @@ function useChannelCalls(channel: ChannelName): ChannelCalls {
       },
     }),
     [channel, channelPages],
+  );
+}
+
+function useThreadCalls({ channel, id }: ThreadPlace): WebhookCommandCalls {
+  const { threads } = useBoardStore();
+  return useMemo(
+    () => ({
+      call: (request: CallRequest) => {
+        threads.call({ channel, id }, request);
+      },
+      editCallData: (data: string) => {
+        threads.editCallData({ channel, id }, data);
+      },
+    }),
+    [channel, id, threads],
   );
 }
 
@@ -215,5 +230,7 @@ export {
   useSearchResults,
   useShownThread,
   useSubscriptions,
+  useThreadCalls,
   useThreadRead,
+  type WebhookCommandCalls,
 };

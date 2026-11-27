@@ -162,5 +162,6 @@ export {
   pretty,
   suggestedFor,
   type,
+  type InChannel,
   withStoredWebhookCommand,
 };
