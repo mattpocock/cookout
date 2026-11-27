@@ -2,6 +2,8 @@
 
 Superseded in part on 2026-11-26 by [ADR 0130](0130-boot-applies-the-admin-token-only-when-the-setting-changes.md): boot applies the token only when the setting changes.
 
+Superseded in part on 2026-11-27 by [ADR 0162](0162-the-first-admin-comes-from-a-setup-link-and-the-admin-token-is-optional.md): the token is optional, and a cookout without one sets up its first admin from a setup link.
+
 2026-11-23 (mattpocock/cookout#85). Matt, 2026-11-23: "Yes, I think probably the board should take its admin token from a secret set." Then, the same day: "I think the cookout admin token should be a required token. We shouldn't have our existing behavior."
 
 ## Context

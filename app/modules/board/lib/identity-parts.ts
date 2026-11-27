@@ -3,6 +3,7 @@ import type { IdentityCalls, IdentityCallsClient } from "./identity-calls.ts";
 import type { LoginLink, LoginLinkClient } from "./login-link-part.ts";
 import type { SessionClient, SessionPart } from "./session-part.ts";
 import type { SessionsClient, SessionsPart } from "./agent-sessions-part.ts";
+import type { SetupLink, SetupLinkClient } from "./setup-link-part.ts";
 import type { WebLogin, WebLoginClient } from "./web-login-part.ts";
 import type { Part } from "./slice.ts";
 import { createIdentityCalls } from "./identity-calls.ts";
@@ -10,12 +11,14 @@ import { createLoginLink } from "./login-link-part.ts";
 import { createPart } from "./slice.ts";
 import { createSessionPart } from "./session-part.ts";
 import { createSessionsPart } from "./agent-sessions-part.ts";
+import { createSetupLink } from "./setup-link-part.ts";
 import { createWebLogin } from "./web-login-part.ts";
 import { identitiesSlice } from "./identities-slice.ts";
 
 type IdentityPartsClient = IdentitiesClient &
   IdentityCallsClient &
   LoginLinkClient &
+  SetupLinkClient &
   SessionClient &
   SessionsClient &
   WebLoginClient;
@@ -27,6 +30,7 @@ interface IdentityParts {
   readonly identityCalls: IdentityCalls;
   readonly webLogin: WebLogin;
   readonly loginLink: LoginLink;
+  readonly setupLink: SetupLink;
 }
 
 interface IdentityPartsOptions {
@@ -45,6 +49,7 @@ function identityPartsOf({ changed, client, url }: IdentityPartsOptions): Identi
     loginLink: createLoginLink({ client, loggedIn: session.loggedIn }),
     session,
     sessions,
+    setupLink: createSetupLink({ client, loggedIn: session.loggedIn }),
     webLogin: createWebLogin({ client, loggedIn: session.loggedIn, url }),
   };
 }
@@ -54,5 +59,6 @@ export type { Identities } from "./identities-slice.ts";
 export type { IdentityCalls } from "./identity-calls.ts";
 export type { SessionState } from "./session-part.ts";
 export type { LoginLink, LoginLinkState } from "./login-link-part.ts";
+export type { SetupLink, SetupLinkState } from "./setup-link-part.ts";
 export type { WebLogin, WebLoginState } from "./web-login-part.ts";
 export { type IdentityParts, type IdentityPartsClient, identityPartsOf };

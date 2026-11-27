@@ -13,7 +13,7 @@ import {
 } from "effect";
 import { BoardUrl, boardUrlLayer, domainLayers, openRoutes, routes, triggerCallerLive } from "./route-list.ts";
 import { Command, Flag } from "effect/cli";
-import { CommandFailed, printLine, refused } from "./output.ts";
+import { CommandFailed, refused } from "./output.ts";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import type { ServeLayers, ServedStorage } from "./serve-stores.ts";
 import {
@@ -27,6 +27,7 @@ import {
   port,
   publicUrl,
 } from "../../../config/server.ts";
+import { adminNameIsAgent, adminTokenLayer, announced, storageUnavailable } from "./serve-boot.ts";
 import {
   chosenAssetStore,
   otherSecretsKey,
@@ -35,11 +36,9 @@ import {
   servedStorage,
 } from "./serve-stores.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
-import { httpServer, serverUrl } from "../../../http/server.ts";
 
-import type { AdminNameIsAgent } from "../../../identities/server.ts";
+import { httpServer, serverUrl } from "../../../http/server.ts";
 import type { Serving } from "../../../http/server.ts";
-import { adminTokenSet } from "../../../identities/server.ts";
 import { requireTokenWithinLimit } from "./gate.ts";
 
 export type { ServeLayers } from "./serve-stores.ts";
@@ -56,12 +55,12 @@ export const cookoutServer = ({
   adminName: name = firstAdminName,
   adminToken: admin,
   ...serving
-}: Serving & { readonly adminToken: Token; readonly adminName?: IdentityName }) =>
+}: Serving & { readonly adminToken?: Token; readonly adminName?: IdentityName }) =>
   Layer.provideMerge(
     boardUrlServed,
     httpServer(serving, { gated: routes, open: openRoutes }, requireTokenWithinLimit),
   ).pipe(
-    Layer.provideMerge(adminTokenSet({ adminName: name, adminToken: admin })),
+    Layer.provideMerge(adminTokenLayer({ admin: Option.fromUndefinedOr(admin), adminName: name })),
     Layer.provideMerge(domainLayers),
     Layer.provideMerge(boardUrlLayer(serving.publicUrl ?? "")),
     Layer.provideMerge(secretsSealed),
@@ -78,31 +77,16 @@ const invalidAdminToken = { code: "admin_token_invalid", message: adminTokenRule
 
 const adminTokenOrRefuse = Effect.gen(function* readAdminToken() {
   const value = yield* adminToken;
-  return token(Redacted.value(value));
+  return Option.map(value, (set) => token(Redacted.value(set)));
 }).pipe(Effect.catchTag("ConfigError", () => refused(invalidAdminToken)));
+
+function adminTokenOf(admin: Option.Option<Token>): { readonly adminToken?: Token } {
+  return Option.match(admin, { onNone: () => ({}), onSome: (set) => ({ adminToken: set }) });
+}
 
 const invalidAdminName = { code: "admin_name_invalid", message: adminNameRule };
 
 const adminNameOrRefuse = adminName.pipe(Effect.catchTag("ConfigError", () => refused(invalidAdminName)));
-
-function adminNameIsAgent({
-  adminName: name,
-}: Pick<AdminNameIsAgent, "adminName">): Effect.Effect<never, CommandFailed> {
-  const agentName = {
-    code: "admin_name_agent",
-    message: `COOKOUT_ADMIN_NAME is ${name}, an agent on this board, and only a human can be an admin. Choose another name.`,
-  };
-  return refused(agentName);
-}
-
-function storageUnavailable(
-  redact: (text: string) => string,
-): (failure: { readonly message: string }) => Effect.Effect<never, CommandFailed> {
-  return ({ message }) => {
-    const unavailable = { code: "storage_unavailable", message: redact(message) };
-    return refused(unavailable);
-  };
-}
 
 const isCommandFailed = Schema.is(CommandFailed);
 const lineBreaks = /\s*\n\s*/gv;
@@ -176,19 +160,18 @@ const startOn = Effect.fnUntraced(function* startOnStorage(
   const server = cookoutServer({
     ...listen,
     ...webFolderOf(layers),
+    ...adminTokenOf(admin),
     adminName: name,
-    adminToken: admin,
     behindFly: onFly,
   });
-  const services = yield* Layer.build(Layer.provide(server, stores).pipe(Layer.provide(triggerCallerLive))).pipe(
+  const services = yield* Layer.build(Layer.provideMerge(server, stores).pipe(Layer.provide(triggerCallerLive))).pipe(
     Effect.catchTags({
       AdminNameIsAgent: adminNameIsAgent,
       SecretsKeyMismatch: () => otherSecretsKey,
       StorageUnavailable: storageUnavailable(served.redact),
     }),
   );
-  const url = yield* serverUrl.pipe(Effect.provideContext(services));
-  yield* printLine({ database: served.database, listening: url });
+  yield* Effect.provideContext(announced({ publicUrl: listen.publicUrl, served }), services);
 });
 
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, path: string) =>

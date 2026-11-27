@@ -17,7 +17,12 @@ COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) COOKOUT_SECRETS_KEY=$(openssl rand -
 
 `npm i -g @ai-hero/cookout` installs the `cookout` binary for good.
 
-It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it. Keep `COOKOUT_SECRETS_KEY` with the store: it encrypts trigger tokens and Webhook command secrets there, and the server refuses to start on that store with any other key.
+It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it. Without `COOKOUT_ADMIN_TOKEN`, the first boot prints a setup link instead, a JSON line `{"expiresAt", "setupLink"}`: open it, name yourself, and you are the first admin, logged in. On the server's own machine, with no running server needed:
+
+- `cookout admin setup-link` prints a fresh setup link while there is no admin.
+- `cookout admin login-link <name>` prints a 15-minute one-time login link for that human. They get a Login alert naming the server console.
+
+Both read the same database settings as `serve`. Keep `COOKOUT_SECRETS_KEY` with the store: it encrypts trigger tokens and Webhook command secrets there, and the server refuses to start on that store with any other key.
 
 ## Deploy your own on Fly
 
@@ -71,7 +76,7 @@ Every setting is an environment variable; [.env.example](.env.example) lists the
 
 The server, `cookout serve`:
 
-- `COOKOUT_ADMIN_TOKEN` (required): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. A boot after the setting changes makes it the admin's only token; a token rotated since survives restarts while the setting stays the same. Unset or shorter, `serve` refuses to start.
+- `COOKOUT_ADMIN_TOKEN` (optional): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. A boot after the setting changes makes it the admin's only token; a token rotated since survives restarts while the setting stays the same. Shorter, `serve` refuses to start. Unset, the server console is the way in: while the store has no admin, each boot prints a one-time setup link (24 hours, replacing any earlier one) whose page makes the person who opens it the first admin, and `cookout admin login-link <name>` logs a human in ([ADR 0162](docs/adr/0162-the-first-admin-comes-from-a-setup-link-and-the-admin-token-is-optional.md)).
 - `COOKOUT_SECRETS_KEY` (required): 32 random bytes as 64 hex characters or base64, such as one made by `openssl rand -hex 32`. It encrypts each trigger's token and header values and each Webhook command's secret in the store (AES-256-GCM), and they are opened only to send. The first boot with a key encrypts any left in plaintext by an older cookout and keeps a check of the key; a later boot with a different key refuses to start with `secrets_key_mismatch`, and unset or not 32 bytes, `serve` refuses with `secrets_key_invalid`. Keep it with the database: without it the stored trigger tokens and command secrets can't be read ([ADR 0150](docs/adr/0150-trigger-tokens-and-webhook-command-secrets-are-encrypted-at-rest.md)).
 - `COOKOUT_ADMIN_NAME` (default `admin`): The name of the human admin identity `COOKOUT_ADMIN_TOKEN` belongs to, such as `matt`. A boot creates it, or makes an existing human of that name an admin; an agent of that name, or a name that breaks the identity-name rule, makes `serve` refuse to start. Changing it moves the token to the new name and leaves the old identity in place, still an admin, with no working token ([ADR 0039](docs/adr/0039-cookout-admin-name-names-the-admin-token-identity.md)).
 - `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.

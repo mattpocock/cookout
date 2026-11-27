@@ -6,6 +6,7 @@ const TEXT = {
   adminActed: "An admin acted on your credentials: ",
   backOnline: "Back online ",
   cli: "cookout CLI on ",
+  consoleActed: "The server console acted on your credentials: ",
   ended: "Session ended",
   live: "Session live",
   newLinkLogin: "New login from a login link: ",
@@ -83,6 +84,9 @@ function actTextOf({ act, agent }: AdminActEvent): string {
 function loginTextOf({ login, raisedAt }: LoginAlert): string {
   const at = timeOf(raisedAt).short;
   if (login.kind === "admin act") {
+    if (!("admin" in login)) {
+      return `${TEXT.consoleActed}${actTextOf(login)}, ${at}`;
+    }
     return `${TEXT.adminActed}@${login.admin} ${actTextOf(login)}, ${at}`;
   }
   const where = whereOf(login.sessionKind, login.where);

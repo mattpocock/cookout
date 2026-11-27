@@ -108,16 +108,6 @@ it.effect("the database never holds a token itself", () =>
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
-it.effect("cookout serve refuses to start without COOKOUT_ADMIN_TOKEN and says how to set it", () =>
-  Effect.gen(function* refusesWithoutAdminToken() {
-    const refused = yield* runCookout({ args: ["serve", "--port", "0", "--host", "127.0.0.1"], env: {} });
-
-    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
-    expect(refused.stderr).toContain("COOKOUT_ADMIN_TOKEN must be set");
-    expect(refused.stderr).toContain("openssl rand -hex 32");
-  }).pipe(Effect.provide(commandLineServices)),
-);
-
 it.effect("cookout serve refuses a COOKOUT_ADMIN_TOKEN too short to be a token without showing it", () =>
   Effect.gen(function* refusesShortAdminToken() {
     const refused = yield* runCookout({
@@ -127,6 +117,7 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_TOKEN too short to be a token w
 
     expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
     expect(refused.stderr).toContain("at least 32 characters");
+    expect(refused.stderr).toContain("openssl rand -hex 32");
     expect(refused.stderr).not.toContain(SHORT_ADMIN_TOKEN);
   }).pipe(Effect.provide(commandLineServices)),
 );

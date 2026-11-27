@@ -24,6 +24,7 @@ import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
+import { SETUP_LINKS_MIGRATION } from "./setup-links.ts";
 
 const migrations: readonly string[] = [
   `CREATE TABLE message_id_sequence (
@@ -264,6 +265,7 @@ const migrations: readonly string[] = [
   AGENT_KEYS_MIGRATION,
   "ALTER TABLE identities ADD COLUMN feeder INTEGER NOT NULL DEFAULT 0 CHECK (feeder IN (0, 1));",
   LOGIN_ALERT_AGENT_MIGRATION,
+  SETUP_LINKS_MIGRATION,
 ];
 
 export { migrations };

@@ -192,7 +192,8 @@ export const adminActs = [
 /**
  * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
  * made it, and whether it has ended), or an admin acting on the person's credentials (ADR 0161): the admin, what they
- * did, the credential when the act names one, and the agent when it was one of the person's agents.
+ * did, the credential when the act names one, and the agent when it was one of the person's agents. An admin act with
+ * no `admin` was done from the server console, as `cookout admin login-link` does (#913, ADR 0162).
  */
 export type LoginAlertEvent =
   | {
@@ -206,7 +207,7 @@ export type LoginAlertEvent =
     }
   | {
       readonly kind: "admin act";
-      readonly admin: IdentityName;
+      readonly admin?: IdentityName;
       readonly act: AdminAct;
       readonly credential?: PublicId;
       readonly agent?: IdentityName;

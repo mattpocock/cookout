@@ -161,7 +161,7 @@ const NewSessionSchema = Schema.Struct({
 
 const AdminActSchema = Schema.Struct({
   act: Schema.Literals(adminActs),
-  admin: IdentityNameSchema,
+  admin: Schema.optionalKey(IdentityNameSchema),
   agent: Schema.optionalKey(IdentityNameSchema),
   credential: Schema.optionalKey(PublicIdSchema),
   kind: Schema.Literal("admin act"),

@@ -6,12 +6,14 @@ import type { LoginLinksSection } from "./login-links.ts";
 import type { LoginRequestsSection } from "./login-requests.ts";
 import type { OfflineAlertsSection } from "./offline-alerts.ts";
 import type { PresenceSection } from "./presence.ts";
+import type { SetupLinksSection } from "./setup-links.ts";
 import type { TriggersSection } from "./triggers.ts";
 
 export type SectionsBesideIdentities = AdminSettingSection &
   AgentKeysSection &
   LoginRequestsSection &
   LoginLinksSection &
+  SetupLinksSection &
   LineageSection &
   PresenceSection &
   OfflineAlertsSection &

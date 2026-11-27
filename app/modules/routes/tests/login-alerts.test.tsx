@@ -165,3 +165,39 @@ it("a Login alert for a session a login link made says it came from a login link
     ONE,
   ]);
 });
+
+function asConsoleAct(alert: InboxAlert): InboxAlert {
+  if (!("login" in alert) || alert.login.kind !== "new session") {
+    return alert;
+  }
+  return { ...alert, login: { act: "sent a login link", credential: alert.login.session, kind: "admin act" } };
+}
+
+async function consoleActShown(owner: CookoutClient): Promise<HTMLElement> {
+  const { live, stream } = watched(owner);
+  const client: CookoutClient = {
+    ...owner,
+    inbox: async () => {
+      const inbox = await owner.inbox();
+      return { ...inbox, alerts: inbox.alerts.map(asConsoleAct) };
+    },
+  };
+  const unmount = openAt({ client, hash: "#/inbox", live });
+  const events = await stream;
+  const shown = await within(inPane().element()).findByText(
+    /^The server console acted on your credentials: sent a login link, /u,
+  );
+  await closed(unmount, events);
+  return shown;
+}
+
+it("a Login alert for an act from the server console names the server console, not an admin", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const owner = await newIdentity({ kind: "human", name: "web-login-console" });
+  await cliSession(owner.client, "web-login-console");
+
+  await expect(consoleActShown(owner.client)).resolves.toBeInstanceOf(HTMLElement);
+});

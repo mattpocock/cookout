@@ -43,8 +43,8 @@ type LoginColumnValues = readonly [
 type AdminActEvent = Extract<StoredLoginEvent, { readonly kind: "admin act" }>;
 
 function adminActValues(login: AdminActEvent): LoginColumnValues {
-  const { agent = null, credential = null } = login;
-  return [login.kind, credential, null, null, null, login.admin, login.act, null, agent];
+  const { admin = null, agent = null, credential = null } = login;
+  return [login.kind, credential, null, null, null, admin, login.act, null, agent];
 }
 
 function loginColumnValues(login: StoredLoginEvent): LoginColumnValues {
@@ -69,14 +69,20 @@ function agentOf(row: LoginRowType): Pick<AdminActEvent, "agent"> {
   return { agent: row.acted_on_agent };
 }
 
-function actedOnOf(row: LoginRowType): Pick<AdminActEvent, "agent" | "credential"> {
-  return { ...credentialOf(row), ...agentOf(row) };
+function actingAdminOf(row: LoginRowType): Pick<AdminActEvent, "admin"> {
+  if (Predicate.isNull(row.admin_name)) {
+    return {};
+  }
+  return { admin: row.admin_name };
+}
+
+function actedOnOf(row: LoginRowType): Pick<AdminActEvent, "admin" | "agent" | "credential"> {
+  return { ...actingAdminOf(row), ...credentialOf(row), ...agentOf(row) };
 }
 
 function adminActOf(row: LoginRowType): Option.Option<StoredLoginEvent> {
   return Option.all({
     act: Option.fromNullOr(row.admin_act),
-    admin: Option.fromNullOr(row.admin_name),
   }).pipe(Option.map((act) => ({ ...act, ...actedOnOf(row), kind: "admin act" as const })));
 }
 
