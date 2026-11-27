@@ -170,6 +170,7 @@ export {
   first,
   hashesOf,
   idOf,
+  publicIdOf,
   later,
   liveOf,
   longUnused,

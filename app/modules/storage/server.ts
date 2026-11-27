@@ -70,7 +70,8 @@ export type {
   LoginRequest,
   NewLoginRequest,
 } from "./lib/server/login-requests.ts";
-export type { EndedCredential } from "./lib/server/credential-lineage.ts";
+export type { EndedCredential, RevokeSessionResult } from "./lib/server/credential-lineage.ts";
+export type { CreateAgentKeyResult, NewAgentKey, UseAgentKeyResult } from "./lib/server/agent-keys.ts";
 export type {
   AgentJoinApproval,
   AgentJoinCollection,

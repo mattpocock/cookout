@@ -1,5 +1,6 @@
 import {
   ADMIN_SETTING_MIGRATION,
+  AGENT_KEYS_MIGRATION,
   ATTACHMENTS_MIGRATION,
   ATTACHMENT_SIZES_MIGRATION,
   CALL_TIMES_MIGRATION,
@@ -255,6 +256,7 @@ const migrations: readonly string[] = [
   SECRETS_KEY_MIGRATION,
   REQUEST_ORIGINS_MIGRATION,
   CREDENTIAL_LINEAGE_MIGRATION,
+  AGENT_KEYS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

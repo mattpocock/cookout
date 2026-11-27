@@ -18,12 +18,13 @@ const triage = identityFixture("triage-agent", { kind: "agent", owner: "ada" });
 const created = isoTime("2026-01-01T00:00:00.000Z");
 const expiresAt = isoTime("2999-01-01T00:00:00.000Z");
 const BEFORE_REQUEST_ORIGINS = [
+  "DROP TABLE agent_keys",
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
-  "UPDATE schema_version SET version = version - 2",
+  "UPDATE schema_version SET version = version - 3",
 ];
 
 const login = { createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" };

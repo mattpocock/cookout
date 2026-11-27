@@ -20,13 +20,14 @@ import { tokenHash } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
 const BEFORE_SECRETS_KEY = [
+  "DROP TABLE agent_keys",
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "DROP TABLE secrets_key",
-  "UPDATE schema_version SET version = version - 3",
+  "UPDATE schema_version SET version = version - 4",
 ];
 const TRIGGER_TOKEN = triggerToken("routine-token-5d2a");
 const HEADERS = [{ name: "x-routine-key", value: "header-secret-7e10" }];

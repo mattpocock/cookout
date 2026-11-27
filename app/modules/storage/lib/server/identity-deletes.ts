@@ -66,6 +66,7 @@ const DROP_ROWS = [
   "DELETE FROM commands WHERE handler_name = ?",
   "DELETE FROM command_tokens WHERE handler_name = ?",
   "DELETE FROM scheduled_messages WHERE creator = ?",
+  "DELETE FROM agent_keys WHERE identity_name = ?",
   "DELETE FROM tokens WHERE identity_name = ?",
   "DELETE FROM agent_session_tokens WHERE identity_name = ?",
   "DELETE FROM login_credentials WHERE identity_name = ?",
