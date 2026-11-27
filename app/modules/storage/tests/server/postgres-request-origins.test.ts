@@ -1,6 +1,8 @@
 import { Array as Arr, Effect, Option, Order } from "effect";
 import type { Storage, StorageUnavailable } from "../../server.ts";
 import {
+  channelFixture,
+  channelName,
   emptyPostgresDatabase,
   identityFixture,
   isoTime,
@@ -26,7 +28,7 @@ const BEFORE_REQUEST_ORIGINS = [
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
-  "UPDATE schema_version SET version = version - 4",
+  "UPDATE schema_version SET version = version - 5",
 ];
 
 const login = { createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" };
@@ -75,7 +77,7 @@ it.live("a Login request and an agent join request stored before request origins
   ),
 );
 
-const BEFORE_LOGIN_LINKS = ["DROP TABLE login_links", "UPDATE schema_version SET version = version - 1"];
+const BEFORE_LOGIN_LINKS = ["DROP TABLE login_links", "UPDATE schema_version SET version = version - 2"];
 const [session, linkHash, redeemed] = [tokenHash("hash:session"), tokenHash("hash:link"), tokenHash("hash:redeemed")];
 const linkMadeAt = isoTime("2026-01-01T00:05:00.000Z");
 const linkExpires = isoTime("2026-01-01T00:20:00.000Z");
@@ -142,7 +144,7 @@ it.live(
 const BEFORE_REQUEST_KINDS = [
   "DROP TABLE login_links",
   "ALTER TABLE login_requests DROP COLUMN kind",
-  "UPDATE schema_version SET version = version - 2",
+  "UPDATE schema_version SET version = version - 3",
 ];
 
 const requestStoredBeforeKinds = Effect.gen(function* storeRequestBeforeKinds() {
@@ -173,6 +175,37 @@ it.live("a Login request stored on Postgres before request kinds collects as CLI
       yield* close;
 
       expect([asWeb, asCli]).toMatchObject([{ status: "gone" }, { identity: { name: "ada" }, status: "collected" }]);
+    }),
+  ),
+);
+
+const grill = channelName("grill");
+
+const agentSubscribedBeforeTheUpgrade = Effect.gen(function* storeAgentSubscription() {
+  const url = yield* emptyPostgresDatabase;
+  const { close, storage } = yield* opened(url);
+  yield* storage.createIdentity(ada, tokenHash("hash:ada"));
+  yield* storage.createIdentity(triage, tokenHash("hash:triage"));
+  yield* storage.createChannel(channelFixture("grill"));
+  yield* storage.subscribeChannel(ada.name, grill);
+  yield* storage.subscribeChannel(triage.name, grill);
+  yield* close;
+  yield* onPostgresDatabase({ statements: ["UPDATE schema_version SET version = version - 1"], url });
+  return url;
+});
+
+it.live("upgrading Postgres removes every agent's subscription and keeps every person's", () =>
+  Effect.scoped(
+    Effect.gen(function* upgradeAgentSubscriptions() {
+      const url = yield* agentSubscribedBeforeTheUpgrade;
+      const { close, storage } = yield* opened(url);
+      const listed = yield* Effect.all(
+        { ada: storage.listSubscribedChannels(ada.name), triage: storage.listSubscribedChannels(triage.name) },
+        { concurrency: 1 },
+      );
+      yield* close;
+
+      expect(listed).toMatchObject({ ada: [{ name: "grill" }], triage: [] });
     }),
   ),
 );

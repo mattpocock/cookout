@@ -60,7 +60,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 6",
+  "UPDATE schema_version SET version = version - 7",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;

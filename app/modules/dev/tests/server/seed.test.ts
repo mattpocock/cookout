@@ -154,9 +154,6 @@ it.effect("the seed leaves a mention, a followed thread, a subscribed channel an
           [onIt, ["followed-thread"]],
           [question, ["followed-thread"]],
           [thanks, ["followed-thread"]],
-          ["/rollback", ["subscribed-channel"]],
-          ["Picked up the 1.4.1 build.", ["subscribed-channel"]],
-          [retired, ["subscribed-channel"]],
         ],
       ],
       [

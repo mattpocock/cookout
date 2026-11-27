@@ -45,8 +45,8 @@ function watching(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEve
 it.effect("marking a message unread moves the read position back to just before it", () =>
   Effect.gen(function* markUnread() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { first, second, third } = yield* postToBob(ann.client, bob.client);
 
     const { readPosition } = yield* answer(() => bob.client.markUnread(second.id));
@@ -62,8 +62,8 @@ it.effect("marking a message unread moves the read position back to just before 
 it.effect("an ack after marking a message unread moves the read position forward again", () =>
   Effect.gen(function* ackAgain() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { second, third } = yield* postToBob(ann.client, bob.client);
     yield* answer(() => bob.client.markUnread(second.id));
 
@@ -80,8 +80,8 @@ it.effect("an ack after marking a message unread moves the read position forward
 it.effect("marking a message unread reaches the identity's open stream as a read-position-moved-back event", () =>
   Effect.gen(function* reachesStream() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { second } = yield* postToBob(ann.client, bob.client);
     const events = yield* watching(bob.client);
 

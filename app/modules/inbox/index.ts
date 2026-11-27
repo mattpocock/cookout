@@ -89,7 +89,7 @@ export const nudgeErrorCodes = ["nudge_not_found"] as const;
 
 /**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
+ * identity's reaction on the identity's own message, or a top-level message in a channel a person subscribes to.
  */
 export type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
 

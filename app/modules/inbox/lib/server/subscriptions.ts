@@ -5,11 +5,14 @@ import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import { Effect } from "effect";
 import type { MessageId } from "../../../messages/index.ts";
+import type { Refusal } from "../../../http/index.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
 import { messageNotFound } from "../../../messages/server.ts";
 import { orMessageNotFound } from "./acks.ts";
+
+const FORBIDDEN = 403;
 
 type FollowChange = Storage["Service"]["followThread"];
 
@@ -26,6 +29,14 @@ interface SubscriptionChanging {
   readonly hub: Hub<SubscriptionChanged>;
 }
 
+function agentCantSubscribe(caller: Identity): Refusal {
+  return {
+    code: "identity_kind",
+    message: `${caller.name} is an agent; only people can subscribe to channels.`,
+    status: FORBIDDEN,
+  };
+}
+
 function subscription({
   change,
   hub,
@@ -33,6 +44,9 @@ function subscription({
 }: SubscriptionChanging): (caller: Identity, channel: string) => Fails<SubscriptionResponse> {
   return (caller: Identity, channel: string): Fails<SubscriptionResponse> =>
     Effect.gen(function* changeSubscription() {
+      if (subscribed && caller.kind === "agent") {
+        return yield* Effect.fail(agentCantSubscribe(caller));
+      }
       if (!isChannelName(channel)) {
         return yield* Effect.fail(channelNotFound(channel));
       }
