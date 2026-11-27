@@ -13,6 +13,8 @@ import type {
   InboxHistoryResponse,
   InboxItem,
   InboxResponse,
+  LoginAlert,
+  LoginAlertEvent,
   MarkUnreadResponse,
   MovedBackReadPosition,
   Nudge,
@@ -26,11 +28,19 @@ import type {
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
-import { inboxReasons, isDeactivatedQuietAgentId, isDeactivationOfferId, isNudgeId, nudgeKinds } from "../../index.ts";
+import {
+  adminActs,
+  inboxReasons,
+  isDeactivatedQuietAgentId,
+  isDeactivationOfferId,
+  isNudgeId,
+  nudgeKinds,
+} from "../../index.ts";
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import type { TriggerFailure } from "../../../triggers/index.ts";
+import { isPublicId } from "../../../logins/index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);
@@ -125,7 +135,7 @@ const TriggerFailureSchema = matchesWire<TriggerFailure>()(
   }),
 );
 
-export const OfflineAlertSchema = matchesWire<OfflineAlert>()(
+const OfflineAlertSchema = matchesWire<OfflineAlert>()(
   Schema.Struct({
     agent: IdentityNameSchema,
     backOnlineAt: Schema.optionalKey(IsoTimeSchema),
@@ -137,8 +147,39 @@ export const OfflineAlertSchema = matchesWire<OfflineAlert>()(
   }),
 );
 
+const PublicIdSchema = Schema.String.pipe(Schema.refine(isPublicId, { identifier: "PublicId" }));
+
+const NewSessionSchema = Schema.Struct({
+  clientIp: Schema.optionalKey(Schema.String),
+  ended: Schema.Boolean,
+  kind: Schema.Literal("new session"),
+  session: PublicIdSchema,
+  sessionKind: Schema.Literals(["web", "cli"]),
+  where: Schema.String,
+});
+
+const AdminActSchema = Schema.Struct({
+  act: Schema.Literals(adminActs),
+  admin: IdentityNameSchema,
+  credential: PublicIdSchema,
+  kind: Schema.Literal("admin act"),
+});
+
+const LoginAlertEventSchema = matchesWire<LoginAlertEvent>()(Schema.Union([NewSessionSchema, AdminActSchema]));
+
+const LoginAlertSchema = matchesWire<LoginAlert>()(
+  Schema.Struct({
+    id: OfflineAlertIdSchema,
+    login: LoginAlertEventSchema,
+    raisedAt: IsoTimeSchema,
+    read: Schema.Boolean,
+  }),
+);
+
+export const InboxAlertSchema = Schema.Union([OfflineAlertSchema, LoginAlertSchema]);
+
 export const OfflineAlertResponseSchema = matchesWire<OfflineAlertResponse>()(
-  Schema.Struct({ alert: OfflineAlertSchema }),
+  Schema.Struct({ alert: InboxAlertSchema }),
 );
 
 export const ReadPositionSchema = matchesWire<ReadPosition>()(
@@ -167,7 +208,7 @@ export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemF
 
 export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
   Schema.Struct({
-    alerts: Schema.Array(OfflineAlertSchema),
+    alerts: Schema.Array(InboxAlertSchema),
     deactivatedQuietAgents: Schema.Array(DeactivatedQuietAgentSchema),
     deactivationOffers: Schema.Array(DeactivationOfferSchema),
     hasMore: Schema.Boolean,
@@ -189,13 +230,13 @@ export const AckAllRequestSchema = matchesWire<AckAllRequest>()(
 );
 
 export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
-  Schema.Struct({ alerts: Schema.Array(OfflineAlertSchema), readPositions: Schema.Array(ReadPositionSchema) }),
+  Schema.Struct({ alerts: Schema.Array(InboxAlertSchema), readPositions: Schema.Array(ReadPositionSchema) }),
 );
 
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
   Schema.Struct({
     agentJoinRequests: Schema.Array(InboxAgentJoinRequestSchema),
-    alerts: Schema.Array(OfflineAlertSchema),
+    alerts: Schema.Array(InboxAlertSchema),
     deactivatedQuietAgents: Schema.Array(DeactivatedQuietAgentSchema),
     deactivationOffers: Schema.Array(DeactivationOfferSchema),
     items: Schema.Array(InboxItemSchema),

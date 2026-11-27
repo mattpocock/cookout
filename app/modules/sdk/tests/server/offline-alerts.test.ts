@@ -1,10 +1,11 @@
+import { Array as Arr, Effect, Fiber } from "effect";
 import type { CookoutClient, CookoutEvent, EventStream, JoinRequest, OfflineAlert } from "../../index.ts";
-import { Effect, Fiber } from "effect";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
+import { isOfflineAlert } from "../../../inbox/index.ts";
 
 const AGENT = "triage";
 const HUMAN = { kind: "human" } as const;
@@ -80,7 +81,7 @@ function nextAlertEvent(feed: Feed): Effect.Effect<CookoutEvent | null> {
 function alertsOf(client: CookoutClient): Effect.Effect<readonly OfflineAlert[]> {
   return Effect.map(
     answer(() => client.inbox()),
-    ({ alerts }) => alerts,
+    ({ alerts }) => Arr.filter(alerts, isOfflineAlert),
   );
 }
 

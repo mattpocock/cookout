@@ -6,6 +6,7 @@ import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import { createCookoutClient } from "../../index.ts";
+import { isOfflineAlert } from "../../../inbox/index.ts";
 import { request } from "../../../http/client.ts";
 
 const AGENT = "triage";
@@ -64,14 +65,14 @@ function droppedTwice(watched: Board): Effect.Effect<void, never, Scope.Scope> {
 function unreadAlerts(client: CookoutClient): Effect.Effect<readonly OfflineAlert[]> {
   return Effect.map(
     answer(() => client.inbox()),
-    ({ alerts }) => alerts,
+    ({ alerts }) => Arr.filter(alerts, isOfflineAlert),
   );
 }
 
 function historyAlerts(client: CookoutClient): Effect.Effect<readonly OfflineAlert[]> {
   return Effect.map(
     answer(() => client.inboxHistory()),
-    ({ alerts }) => alerts,
+    ({ alerts }) => Arr.filter(alerts, isOfflineAlert),
   );
 }
 

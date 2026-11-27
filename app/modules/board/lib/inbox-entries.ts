@@ -6,12 +6,12 @@ import type {
   DeactivationOffer,
   DeactivationOfferId,
   InboxAgentJoinRequest,
+  InboxAlert,
   InboxHistoryItem,
   InboxHistoryNudge,
   InboxItem,
   MessageId,
   NudgeId,
-  OfflineAlert,
   OfflineAlertId,
   ReadPosition,
   Refusal,
@@ -42,7 +42,7 @@ interface InboxEntries {
   readonly inbox: Loaded;
   readonly history: Loaded;
   readonly items: ReadonlyMap<MessageId, InboxEntry>;
-  readonly alerts: ReadonlyMap<OfflineAlertId, OfflineAlert>;
+  readonly alerts: ReadonlyMap<OfflineAlertId, InboxAlert>;
   readonly nudges: ReadonlyMap<NudgeId, InboxHistoryNudge>;
   readonly deactivationOffers: ReadonlyMap<DeactivationOfferId, DeactivationOffer>;
   readonly deactivatedQuietAgents: ReadonlyMap<DeactivatedQuietAgentId, DeactivatedQuietAgent>;
@@ -64,7 +64,7 @@ type InboxChange =
       readonly type: "inbox-acked-all";
       readonly request: AckAllRequest;
       readonly readPositions: readonly ReadPosition[];
-      readonly alerts: readonly OfflineAlert[];
+      readonly alerts: readonly InboxAlert[];
     }
   | { readonly type: "quiet-agent-held"; readonly id: DeactivatedQuietAgentId; readonly held: boolean }
   | { readonly type: "agent-join-answered"; readonly userCode: string; readonly refusal: Refusal | null }

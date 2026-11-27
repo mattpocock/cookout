@@ -1,6 +1,7 @@
 import { Array as Arr, Context, Effect, Layer, PubSub, Ref } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../index.ts";
 import type { EndedCredential } from "../../../storage/server.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { Scope } from "effect";
 
 type EndedTokens =
@@ -21,6 +22,16 @@ type TokensEndedHandler = (ended: TokensEnded) => Effect.Effect<void>;
 
 type ReactivatedHandler = (identity: Identity) => Effect.Effect<void>;
 
+interface SessionMade {
+  readonly identity: IdentityName;
+  readonly session: PublicId;
+  readonly sessionKind: "web" | "cli";
+  readonly where: string;
+  readonly clientIp?: string;
+}
+
+type SessionMadeHandler = (made: SessionMade) => Effect.Effect<void>;
+
 const THE_COOKOUT = "the cookout";
 
 interface IdentityChangesService {
@@ -32,6 +43,8 @@ interface IdentityChangesService {
   readonly onTokensEnded: (handler: TokensEndedHandler) => Effect.Effect<void, never, Scope.Scope>;
   readonly reactivated: (identity: Identity) => Effect.Effect<void>;
   readonly onReactivated: (handler: ReactivatedHandler) => Effect.Effect<void, never, Scope.Scope>;
+  readonly sessionMade: (made: SessionMade) => Effect.Effect<void>;
+  readonly onSessionMade: (handler: SessionMadeHandler) => Effect.Effect<void, never, Scope.Scope>;
 }
 
 class IdentityChanges extends Context.Service<IdentityChanges, IdentityChangesService>()(
@@ -40,6 +53,27 @@ class IdentityChanges extends Context.Service<IdentityChanges, IdentityChangesSe
 
 const EACH_IN_TURN = { concurrency: 1, discard: true } as const;
 
+interface Handlers<Event> {
+  readonly add: (handler: (event: Event) => Effect.Effect<void>) => Effect.Effect<void, never, Scope.Scope>;
+  readonly tell: (event: Event) => Effect.Effect<void>;
+}
+
+function handlersOf<Event>(): Effect.Effect<Handlers<Event>> {
+  return Effect.gen(function* heldHandlers() {
+    const held = yield* Ref.make<ReadonlySet<(event: Event) => Effect.Effect<void>>>(new Set());
+    const handlers: Handlers<Event> = {
+      add: (handler) =>
+        Effect.acquireRelease(
+          Ref.update(held, (each) => new Set([...each, handler])),
+          () => Ref.update(held, (each) => new Set(Arr.filter([...each], (one) => one !== handler))),
+        ),
+      tell: (event) =>
+        Effect.flatMap(Ref.get(held), (each) => Effect.forEach([...each], (handler) => handler(event), EACH_IN_TURN)),
+    };
+    return handlers;
+  });
+}
+
 const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
   IdentityChanges,
   Effect.gen(function* identityChangesHub() {
@@ -47,6 +81,7 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
     const deletedHub = yield* PubSub.unbounded<Identity>();
     const handlers = yield* Ref.make<ReadonlySet<TokensEndedHandler>>(new Set());
     const onReactivation = yield* Ref.make<ReadonlySet<ReactivatedHandler>>(new Set());
+    const sessions = yield* handlersOf<SessionMade>();
     return {
       changed: PubSub.subscribe(changedHub),
       deleted: PubSub.subscribe(deletedHub),
@@ -59,6 +94,7 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
           Ref.update(onReactivation, (held) => new Set([...held, handler])),
           () => Ref.update(onReactivation, (held) => new Set(Arr.filter([...held], (each) => each !== handler))),
         ),
+      onSessionMade: sessions.add,
       onTokensEnded: (handler) =>
         Effect.acquireRelease(
           Ref.update(handlers, (held) => new Set([...held, handler])),
@@ -70,6 +106,7 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
         Effect.flatMap(Ref.get(onReactivation), (held) =>
           Effect.forEach([...held], (handler) => handler(identity), EACH_IN_TURN),
         ),
+      sessionMade: sessions.tell,
     };
   }),
 );
@@ -121,6 +158,10 @@ function endingsOf({ by, ended }: CredentialsEnded): readonly TokensEnded[] {
   });
 }
 
+function sessionMade(made: SessionMade): Effect.Effect<void, never, IdentityChanges> {
+  return Effect.flatMap(IdentityChanges, (changes) => changes.sessionMade(made));
+}
+
 function credentialsEnded(revoke: CredentialsEnded): Effect.Effect<void, never, IdentityChanges> {
   return Effect.forEach(endingsOf(revoke), tokensEnded, EACH_IN_TURN);
 }
@@ -136,5 +177,7 @@ export {
   endingsOf,
   identityChangesLayer,
   reactivated,
+  type SessionMade,
+  sessionMade,
   tokensEnded,
 };

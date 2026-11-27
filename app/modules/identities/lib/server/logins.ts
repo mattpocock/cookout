@@ -8,7 +8,7 @@ import {
   requireHuman,
   webSessionWhere,
 } from "./login-support.ts";
-import { Caller, CredentialSent, credentialsOf, sentToken } from "./auth.ts";
+import { Caller, CredentialSent, credentialsOf, sentToken, sessionMade } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
   ListSessionsResponseSchema,
@@ -45,6 +45,7 @@ import {
 } from "../../../logins/index.ts";
 import { clientAddress, siteCookieOptions } from "../../../http/server.ts";
 import { sessionCookieName, token } from "../../index.ts";
+import type { IdentityChanges } from "./auth.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -167,7 +168,19 @@ function collectionAnswer(
   return approvedAnswer(collection.identity, collected);
 }
 
-const collectRoute: Route<Storage | Secrets | AddressLimit> = {
+function announcedSession({
+  collection,
+  kind,
+}: Omit<Collected, "issued">): Effect.Effect<void, never, IdentityChanges> {
+  if (collection.status !== "collected") {
+    return Effect.void;
+  }
+  const { identity, session } = collection;
+  const { id, ...seen } = session;
+  return sessionMade({ ...seen, identity: identity.name, session: id, sessionKind: kind });
+}
+
+const collectRoute: Route<Storage | Secrets | AddressLimit | IdentityChanges> = {
   handle: () =>
     withinAddressLimit(
       Effect.gen(function* collectLoginRequest() {
@@ -179,6 +192,7 @@ const collectRoute: Route<Storage | Secrets | AddressLimit> = {
         const credentialHash = yield* secrets.hashToken(issued);
         const at = yield* now;
         const collection = yield* storage.collectLoginRequest({ credentialHash, kind, now: at, requestHash });
+        yield* announcedSession({ collection, kind });
         return yield* collectionAnswer({ collection, issued, kind });
       }),
     ),
@@ -255,7 +269,10 @@ const logoutRoute: Route<Storage | Secrets> = {
   path: loginPath,
 };
 
-export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit>[] = [startRoute, collectRoute];
+export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit | IdentityChanges>[] = [
+  startRoute,
+  collectRoute,
+];
 
 export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRoute, approveRoute, logoutRoute];
 

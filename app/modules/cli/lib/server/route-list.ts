@@ -102,14 +102,13 @@ export const domainLayers = Layer.mergeAll(
   presenceLayer,
   scheduledMessagesLayer,
 ).pipe(
-  Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer, deactivationOffersLayer)),
+  Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer, deactivationOffersLayer, offlineAlertsLayer)),
   Layer.provideMerge(
     Layer.mergeAll(
       identityChangesLayer,
       webhookCommandChangesLayer,
       readReceiptsLayer,
       reactionsLayer,
-      offlineAlertsLayer,
       triggerChangesLayer,
     ),
   ),

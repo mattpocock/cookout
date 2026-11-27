@@ -4,8 +4,8 @@ import type {
   AckResponse,
   DeactivatedQuietAgentId,
   DeactivationOfferId,
+  InboxAlert,
   NudgeId,
-  OfflineAlert,
   ReadPosition,
 } from "../../index.ts";
 import type { AckedMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
@@ -57,7 +57,7 @@ interface AckCalls {
 }
 
 const NO_POSITIONS: readonly ReadPosition[] = [];
-const NO_ALERTS: readonly OfflineAlert[] = [];
+const NO_ALERTS: readonly InboxAlert[] = [];
 
 function orMessageNotFound<Value>(asked: string): (value: Value | undefined) => Fails<Value> {
   return (value) => {

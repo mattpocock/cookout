@@ -1,17 +1,17 @@
-import { Caller, CredentialSent, issueToken } from "./auth.ts";
+import { Caller, CredentialSent, issueToken, sessionMade } from "./auth.ts";
 import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, Token } from "../../index.ts";
+import type { IdentityChanges, IssuedToken } from "./auth.ts";
+import type { IssuedLoginCredential, StorageUnavailable } from "../../../storage/server.ts";
+import { clientAddress, siteCookieOptions } from "../../../http/server.ts";
 import { now, webSessionWhere } from "./login-support.ts";
 import { sessionCookieName, sessionPath, token, whoamiPath } from "../../index.ts";
 import { IdentityResponseSchema } from "./wire.ts";
-import type { IssuedToken } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import type { StorageUnavailable } from "../../../storage/server.ts";
-import { siteCookieOptions } from "../../../http/server.ts";
 
 const FORBIDDEN = 403;
 
@@ -37,22 +37,40 @@ const whoamiRoute: Route<Caller> = {
   path: whoamiPath,
 };
 
+type WebSessionNeeds = HttpServerRequest.HttpServerRequest | Secrets | Storage | IdentityChanges;
+
+function announcedWebSession(
+  made: IssuedLoginCredential | undefined,
+  where: string,
+): Effect.Effect<void, never, HttpServerRequest.HttpServerRequest | IdentityChanges> {
+  return Effect.forEach(
+    Option.toArray(Option.fromUndefinedOr(made)),
+    ({ identity, session }) =>
+      Effect.flatMap(clientAddress, (clientIp) =>
+        sessionMade({ clientIp, identity: identity.name, session, sessionKind: "web", where }),
+      ),
+    { concurrency: 1, discard: true },
+  );
+}
+
 function issueWebSession(
   identity: Identity,
-): Effect.Effect<IssuedToken, Refusal | StorageUnavailable, HttpServerRequest.HttpServerRequest | Secrets | Storage> {
+): Effect.Effect<IssuedToken, Refusal | StorageUnavailable, WebSessionNeeds> {
   return Effect.gen(function* issueWebSessionCredential() {
     const storage = yield* Storage;
     const request = yield* HttpServerRequest.HttpServerRequest;
     const sent = yield* CredentialSent;
     const issued = yield* issueToken;
     const at = yield* now;
-    yield* storage.issueLoginCredential({
+    const where = webSessionWhere(request.headers["user-agent"]);
+    const made = yield* storage.issueLoginCredential({
       credentialHash: issued.hash,
-      host: webSessionWhere(request.headers["user-agent"]),
+      host: where,
       identity: identity.name,
       now: at,
       parent: Option.getOrUndefined(sent),
     });
+    yield* announcedWebSession(made, where);
     return issued;
   });
 }
@@ -84,7 +102,7 @@ function signedInRoute<Needs, Failure>({ method, path, signIn }: SignInRoute<Nee
   };
 }
 
-const loginRoute: Route<Caller | Storage | Secrets> = signedInRoute({
+const loginRoute: Route<Caller | Storage | Secrets | IdentityChanges> = signedInRoute({
   method: "POST",
   path: sessionPath,
   signIn: Effect.gen(function* logIn() {
@@ -121,6 +139,10 @@ const logoutRoute: Route<Caller | Storage | Secrets> = {
   path: sessionPath,
 };
 
-export const callerRoutes: readonly Route<Caller | Storage | Secrets>[] = [whoamiRoute, loginRoute, logoutRoute];
+export const callerRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
+  whoamiRoute,
+  loginRoute,
+  logoutRoute,
+];
 
 export { signedInRoute };

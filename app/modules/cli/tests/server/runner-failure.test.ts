@@ -36,6 +36,7 @@ import type { MessageId } from "../../../messages/index.ts";
 import type { Presence } from "../../../sdk/index.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
+import { isOfflineAlert } from "../../../inbox/index.ts";
 
 interface Woken {
   readonly folder: string;
@@ -156,7 +157,7 @@ function alertsOf(on: WakeBoard): Effect.Effect<readonly { readonly back: boolea
   return Effect.map(
     answer(() => on.ada.client.inbox()),
     ({ alerts }) =>
-      Arr.map(alerts, ({ backOnlineAt, offlineReason }) => ({
+      Arr.map(Arr.filter(alerts, isOfflineAlert), ({ backOnlineAt, offlineReason }) => ({
         back: Predicate.isNotUndefined(backOnlineAt),
         reason: offlineReason,
       })),

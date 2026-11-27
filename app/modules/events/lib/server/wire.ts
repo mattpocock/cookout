@@ -29,11 +29,11 @@ import {
   DeactivatedQuietAgentSchema,
   DeactivationOfferSchema,
   InboxAgentJoinRequestSchema,
+  InboxAlertSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
   NudgeIdSchema,
   NudgeSchema,
-  OfflineAlertSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
@@ -165,7 +165,7 @@ export const PresenceEventSchema = matchesWire<PresenceEvent>()(
 );
 
 export const OfflineAlertEventSchema = matchesWire<OfflineAlertEvent>()(
-  Schema.Struct({ alert: OfflineAlertSchema, type: Schema.Literal("offline-alert") }),
+  Schema.Struct({ alert: InboxAlertSchema, type: Schema.Literal("offline-alert") }),
 );
 
 export { PresenceResponseSchema, WakeRunResponseSchema } from "../../../presence/server.ts";
