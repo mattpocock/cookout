@@ -5,7 +5,6 @@ import { joinCommandRun, leave } from "./join-and-leave.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
-import { TIMEOUT_DESCRIPTION } from "./registrations.ts";
 import { answered } from "./output.ts";
 
 const identityNameFlag = Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(
@@ -65,8 +64,6 @@ const wakeFlag = Flag.Boolean("wake").pipe(
   ),
 );
 
-const timeoutFlag = Flag.Int("timeout").pipe(Flag.optional, Flag.withDescription(TIMEOUT_DESCRIPTION));
-
 const wakeCommandArgument = Argument.String("wake-command").pipe(
   Argument.variadic(),
   Argument.withDescription("With --wake, the wake command's argv, after --."),
@@ -84,7 +81,6 @@ interface JoinInput {
   readonly idleExpiry: Option.Option<string>;
   readonly printEnv: Option.Option<boolean>;
   readonly sessionUrl: Option.Option<string>;
-  readonly timeout: Option.Option<number>;
   readonly wake: Option.Option<boolean>;
   readonly wakeCommand: readonly string[];
 }
@@ -101,11 +97,10 @@ const joinCommand: JoinCommand = Command.make(
     idleExpiry: idleExpiryFlag,
     printEnv: printEnvFlag,
     sessionUrl: sessionUrlFlag,
-    timeout: timeoutFlag,
     wake: wakeFlag,
     wakeCommand: wakeCommandArgument,
   },
-  ({ as, code, displayName, force, idleExpiry, printEnv, sessionUrl, timeout, wake, wakeCommand }) =>
+  ({ as, code, displayName, force, idleExpiry, printEnv, sessionUrl, wake, wakeCommand }) =>
     joinCommandRun({
       as,
       code,
@@ -114,7 +109,7 @@ const joinCommand: JoinCommand = Command.make(
       idleExpiry,
       printEnv: Option.getOrElse(printEnv, notForced),
       sessionUrl,
-      wake: { asked: Option.getOrElse(wake, notForced), command: wakeCommand, timeoutMinutes: timeout },
+      wake: { asked: Option.getOrElse(wake, notForced), command: wakeCommand },
     }),
 ).pipe(
   Command.withDescription(
@@ -127,7 +122,7 @@ const joinCommand: JoinCommand = Command.make(
       "sends it, even with COOKOUT_TOKEN set (only COOKOUT_SESSION comes first), which moves its expiry on. Prints the agent, whether it was created, the expiry and the credential " +
       "used. A session joins once; outside a harness, join only with --print-env. An agent has one live agent " +
       "session token: a second join is refused unless --force. With --wake -- <wake command…>, join also registers " +
-      "the session with the runner (cookout runner register), with --timeout <minutes> for its wake runs.",
+      "the session with the runner (cookout runner register). A wake run has no timeout: it runs until its process exits.",
   ),
 );
 

@@ -103,13 +103,11 @@ it.effect("an agent stays Unreachable through a retry until a wake run ends 0", 
       answer(() => runner.agent.client.startWakeRun()),
       runner.brigidNow,
     );
-    const timedOut = yield* runner.failing({ timedOutAfterMinutes: 10 });
+    const again = yield* runner.failing({ exitCode: 1 });
     const back = yield* runner.ending;
 
     expect(retrying).toMatchObject(Option.some({ online: false, unreachable: { error: "wake run exited 3" } }));
-    expect(timedOut).toMatchObject(
-      Option.some({ online: false, unreachable: { error: "wake run timed out after 10 min" } }),
-    );
+    expect(again).toMatchObject(Option.some({ online: false, unreachable: { error: "wake run exited 1" } }));
     expect(back).toMatchObject(Option.some({ online: true, wakesOnMention: true }));
     expect(Option.getOrThrow(back)).not.toHaveProperty("unreachable");
   }).pipe(Effect.provide(testCookout())),
