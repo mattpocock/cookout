@@ -187,13 +187,14 @@ it.effect("reacting to your own message notifies no one", () =>
 
 it.effect("reacting to a deactivated author's message notifies no one, though the author comes back", () =>
   Effect.gen(function* deactivatedAuthor() {
-    const { ann, bob, cookout } = yield* annPosts;
-    yield* answer(() => bob.client.createChannel({ name: "bobs" }));
-    const { message } = yield* answer(() => bob.client.createMessage({ channel: "bobs", text: "mine" }));
-    yield* answer(() => cookout.client.deactivateIdentity("bob"));
+    const { ann, cookout } = yield* annPosts;
+    const dan = yield* cookout.createIdentity("dan", { kind: "human" });
+    yield* answer(() => dan.client.createChannel({ name: "dans" }));
+    const { message } = yield* answer(() => dan.client.createMessage({ channel: "dans", text: "mine" }));
+    yield* answer(() => cookout.client.deactivateIdentity("dan"));
     yield* answer(() => ann.client.react(message.id, "thumbs_up"));
     const token = yield* Effect.flatMap(
-      answer(() => cookout.client.reactivateIdentity("bob")),
+      answer(() => cookout.client.reactivateIdentity("dan")),
       freshToken,
     );
     const { items } = yield* answer(() => cookout.clientFor(token).inbox());
