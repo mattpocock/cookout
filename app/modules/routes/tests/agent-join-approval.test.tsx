@@ -215,3 +215,19 @@ it("a Dismiss of a request approved meanwhile says why, and the page stays open"
 
   expect(refused.textContent).toMatch(/\(agent_join_request_not_found\)/u);
 });
+
+it("a join request for another person's agent says why it can't be shown, and shows no Approve", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await ownerOf("web-join-owner", "web-join-owned-agent");
+  const stranger = await newIdentity({ kind: "human", name: "web-join-stranger" });
+  const opened = await openedFor(stranger, { as: "web-join-owned-agent", host: "build-box" });
+  const alert = await alertSaying("Couldn't show this agent join request");
+
+  expect(inPane().queryByRole("button", { name: "Approve" })).toBeNull();
+  expect(alert.textContent).toMatch(/^Couldn't show this agent join request \(\w+\)/u);
+
+  opened.close();
+});

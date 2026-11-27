@@ -162,3 +162,27 @@ it("text that isn't a code says what a code looks like, and shows no Approve", {
 
   close();
 });
+
+async function openedAsAgent(): Promise<OpenedLogin> {
+  await newIdentity({ kind: "human", name: "web-approve-owner" });
+  const agent = await newIdentity({ kind: "agent", name: "web-approve-agent", owner: "web-approve-owner" });
+  const started = await anonymousClient().startLogin(host);
+  const close = openAt({ client: agent.client, hash: "#/approve", loginApprovals: createLoginApprovals(agent.client) });
+  return { close, started };
+}
+
+it("for an agent, the approval page says it can't show a login request, and shows no Approve", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, started } = await openedAsAgent();
+  await emptyCodeField();
+  typeCode(started.userCode);
+  const alert = await alertSaying("Couldn't show this login");
+
+  expect(alert.textContent).toMatch(/^Couldn't show this login \(human_only\)/u);
+  expect(inPane().queryByRole("button", { name: "Approve" })).toBeNull();
+
+  close();
+});

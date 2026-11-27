@@ -10,6 +10,7 @@ const onFly = { flyAppName: "cookout-test" };
 const startedAt = "2026-01-01T00:00:00.000Z";
 const firefoxOnMac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:132.0) Gecko/20100101 Firefox/132.0";
 const nodeFetch = "node";
+const unknownBrowser = "Mozilla/5.0 (PlayStation; PlayStation 5/2.26) AppleWebKit/605.1.15 (KHTML, like Gecko)";
 
 interface Start {
   readonly path: string;
@@ -98,5 +99,23 @@ it.effect("off Fly, a request's client IP is the socket's address and a Fly-Clie
     const shown = yield* answer(() => ada.client.getLoginRequest(userCode));
 
     expect(shown.loginRequest.clientIp).toMatch(/127\.0\.0\.1|::1/u);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a Login request from a browser it can't name says so, and one with no User-Agent is a terminal login", () =>
+  Effect.gen(function* unnamedOrigins() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const unnamed = yield* loginFrom(cookout, { "user-agent": unknownBrowser });
+    const unsent = yield* loginFrom(cookout, { "user-agent": "" });
+    const shown = yield* Effect.all(
+      [answer(() => ada.client.getLoginRequest(unnamed)), answer(() => ada.client.getLoginRequest(unsent))],
+      { concurrency: 1 },
+    );
+
+    expect(shown).toMatchObject([
+      { loginRequest: { kind: "browser", where: "A browser on an unknown OS" } },
+      { loginRequest: { kind: "terminal", where: "ada-laptop" } },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );

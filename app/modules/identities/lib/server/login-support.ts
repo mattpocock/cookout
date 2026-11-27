@@ -125,11 +125,11 @@ function whereOf({ host, userAgent }: Started): string {
 
 function loginRequestDetails(started: Started): ApprovalRequestDetails {
   const { clientIp, createdAt, userAgent } = started;
-  const shown = { createdAt, kind: kindOf(userAgent), where: whereOf(started) };
-  if (Predicate.isUndefined(clientIp)) {
-    return shown;
+  let shown: ApprovalRequestDetails = { createdAt, kind: kindOf(userAgent), where: whereOf(started) };
+  if (Predicate.isString(clientIp)) {
+    shown = { ...shown, clientIp };
   }
-  return { ...shown, clientIp };
+  return shown;
 }
 
 export { AddressLimit, lifetimeOf, loginRequestDetails, loginRequestNotFound, now, requestOriginOf, requireHuman };
