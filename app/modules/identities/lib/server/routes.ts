@@ -11,7 +11,13 @@ import {
   LoginLinkResponseSchema,
 } from "./wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Identity, IdentityName, IdentityWithTokenResponse, ListIdentitiesQuery } from "../../index.ts";
+import type {
+  Identity,
+  IdentityName,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesQuery,
+} from "../../index.ts";
 import type { IdentityChanges, Secrets } from "./auth.ts";
 import type { SetAdminResult, StorageUnavailable } from "../../../storage/server.ts";
 import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
@@ -66,11 +72,11 @@ function agentKeysInstead(name: IdentityName): Refusal {
   };
 }
 
-function answeredCreated(created: IdentityWithTokenResponse): ReturnType<typeof withToken> {
-  if (created.identity.kind === "agent") {
-    return withoutToken({ identity: created.identity }, { status: CREATED });
+function answeredCreated(created: IdentityResponse | IdentityWithTokenResponse): ReturnType<typeof withToken> {
+  if ("token" in created) {
+    return withToken(created, { status: CREATED });
   }
-  return withToken(created, { status: CREATED });
+  return withoutToken(created, { status: CREATED });
 }
 
 function isAgent(found: Identity | undefined): boolean {

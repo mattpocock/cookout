@@ -34,7 +34,7 @@ export type Described<Fields> = Fields & {
 
 /**
  * An agent identity's fields with its Feeder flag: present, and true, on an agent that only posts, which its owner
- * declares. A typed `@name` of it is no Mention, and it can't watch, read its inbox or join (ADR 0159).
+ * declares. A typed `@name` of it is no Mention, and it can't watch, read its inbox or join (ADR 0160).
  */
 export type Fed<Fields> = Fields & {
   readonly feeder?: true;
@@ -58,7 +58,7 @@ export interface DescriptionCalls<Answer> {
   readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
 }
 
-/** Making an agent a Feeder and an agent again (ADR 0159). `Answer` is the `IdentityResponse` both answer with. */
+/** Making an agent a Feeder and an agent again (ADR 0160). `Answer` is the `IdentityResponse` both answer with. */
 export interface FeederCalls<Answer> {
   /**
    * `PUT /v1/identities/:name/feeder`: the agent's owner or an admin makes it a Feeder, which only posts. A typed

@@ -87,11 +87,10 @@ function newAgentOf(asked: NewAgent, createdAt: AgentIdentity["createdAt"]): Eff
   return Effect.succeed({ ...agent, description });
 }
 
-function agentCreator({ publishIdentity, secrets, storage }: On) {
+function agentCreator({ publishIdentity, storage }: On) {
   return (agent: AgentIdentity): Fails<void> =>
     Effect.gen(function* createOwnedAgent() {
-      const identityHash = yield* Effect.flatMap(secrets.newToken, secrets.hashToken);
-      const created = yield* storage.createIdentity(agent, identityHash);
+      const created = yield* storage.createIdentity(agent);
       if (created !== "created") {
         return yield* Effect.fail(createRefusal(created, agent.name));
       }

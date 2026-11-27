@@ -206,8 +206,8 @@ export const identitiesPath = "/v1/identities";
 export const identityDeactivatePath = "/v1/identities/:name/deactivate";
 
 /**
- * `POST /v1/identities/:name/reactivate`: undoes deactivating, answering `IdentityWithTokenResponse` with a fresh
- * token; the old tokens stay dead. An admin may reactivate anyone, and a human their own agents (403 `admin_only` or
+ * `POST /v1/identities/:name/reactivate`: undoes deactivating. A person's answer is `IdentityWithTokenResponse` with a
+ * fresh token; an agent's is `IdentityResponse` with none, and its owner makes it an agent key. The old tokens stay dead. An admin may reactivate anyone, and a human their own agents (403 `admin_only` or
  * `not_owner` otherwise). An identity that isn't Deactivated is 409 `not_deactivated`. An agent whose owner is
  * Deactivated can be reactivated.
  */

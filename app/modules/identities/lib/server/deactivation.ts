@@ -7,8 +7,8 @@ import {
   requireOwnerBringerOrAdmin,
   tokensEnded,
 } from "./auth.ts";
-import type { DeactivateIdentityResponse, Identity, IdentityName } from "../../index.ts";
-import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
+import type { DeactivateIdentityResponse, Identity, IdentityName, TokenHash } from "../../index.ts";
+import { DeactivateIdentityResponseSchema, IdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
   DeactivateIdentityResult,
   ReactivateIdentityResult,
@@ -108,27 +108,43 @@ const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
   path: identityDeactivatePath,
 };
 
-function requireMayReactivate(name: IdentityName): Effect.Effect<void, Refusal | StorageUnavailable, Caller | Storage> {
+function requireMayReactivate(
+  name: IdentityName,
+): Effect.Effect<Identity | undefined, Refusal | StorageUnavailable, Caller | Storage> {
   return Effect.gen(function* mayReactivate() {
     const storage = yield* Storage;
     const target = yield* storage.findIdentityByName(name);
     if (Predicate.isNotUndefined(target) && target.kind === "human") {
-      return yield* requireAdmin;
+      yield* requireAdmin;
+      return target;
     }
-    return yield* requireAdminOrOwner(name);
+    yield* requireAdminOrOwner(name);
+    return target;
   });
+}
+
+function reactivatedWith(
+  name: IdentityName,
+  hash?: TokenHash,
+): Effect.Effect<Identity, Refusal | StorageUnavailable, Storage | IdentityChanges> {
+  return Effect.flatMap(Storage, (storage) => storage.reactivateIdentity(name, hash)).pipe(
+    Effect.flatMap((result) => reactivatedOrRefused(name, result)),
+    Effect.flatMap(announced),
+    Effect.flatMap(reactivated),
+  );
 }
 
 const reactivateRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* reactivateIdentityRoute() {
       const name = yield* nameParam(params);
-      yield* requireMayReactivate(name);
+      const target = yield* requireMayReactivate(name);
+      if (Predicate.isNotUndefined(target) && target.kind === "agent") {
+        const agent = yield* reactivatedWith(name);
+        return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity: agent });
+      }
       const { hash, token } = yield* issueToken;
-      const storage = yield* Storage;
-      const identity = yield* Effect.flatMap(storage.reactivateIdentity(name, hash), (result) =>
-        reactivatedOrRefused(name, result),
-      ).pipe(Effect.flatMap(announced), Effect.flatMap(reactivated));
+      const identity = yield* reactivatedWith(name, hash);
       return yield* HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema)({ identity, token });
     }),
   method: "POST",

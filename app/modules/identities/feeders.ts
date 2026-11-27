@@ -1,6 +1,6 @@
 /**
  * A Feeder: an agent that only posts into the board, such as GitHub notifications, and never reads or answers
- * mentions (Matt, 2026-11-27, board thread 8268, ADR 0159). Its route, the check for one, and the refusal it gets when
+ * mentions (Matt, 2026-11-27, board thread 8268, ADR 0160). Its route, the check for one, and the refusal it gets when
  * it would watch, read its inbox or join.
  */
 import type { Identity, IdentityName } from "./index.ts";

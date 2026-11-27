@@ -49,7 +49,7 @@ export type IdentitiesSection = DisplayNamesSection &
   AvatarRemovalsSection &
   ReturnType<typeof sqlTransfers> &
   ReturnType<typeof sqlDeactivations> & {
-    readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
+    readonly createIdentity: (identity: Identity, hash?: TokenHash) => Fails<"created" | CreateRefusal>;
     readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<void>;
     readonly listIdentities: () => Fails<readonly Identity[]>;
     readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
@@ -76,13 +76,15 @@ const revokeTokensOf = (data: MemoryIdentities, name: IdentityName) => {
   }
 };
 
-function createIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): "created" | CreateRefusal {
+function createIn(data: MemoryIdentities, identity: Identity, hash: TokenHash | undefined): "created" | CreateRefusal {
   const refusal = memoryCreateRefusal(data.identities)(identity);
   if (Option.isSome(refusal)) {
     return refusal.value;
   }
   data.identities.set(identity.name, { ...identity });
-  data.activeTokens.set(hash, identity.name);
+  if (Predicate.isNotUndefined(hash)) {
+    data.activeTokens.set(hash, identity.name);
+  }
   return "created";
 }
 
