@@ -20,11 +20,8 @@ const noRunner: Refusal = {
 
 type SayWakeRun = (identity: IdentityName, said: WakeRunSaid) => Effect.Effect<boolean>;
 
-function errorOf(failure: WakeRunFailure): string {
-  if ("exitCode" in failure) {
-    return `wake run exited ${String(failure.exitCode)}`;
-  }
-  return `wake run timed out after ${String(failure.timedOutAfterMinutes)} min`;
+function errorOf({ exitCode }: WakeRunFailure): string {
+  return `wake run exited ${String(exitCode)}`;
 }
 
 const failedAt = Effect.fnUntraced(function* failedRunResult(failure: WakeRunFailure) {

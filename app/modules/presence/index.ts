@@ -107,14 +107,16 @@ export const wakeRunPath = `${presencePath}/wake-run`;
 
 /**
  * `POST /v1/presence/wake-run/failure`, with a `WakeRunFailure`: a wake run of the caller's runner has ended with a
- * non-zero exit or was killed at its timeout. The agent is then Unreachable, and the first failure of a streak raises
+ * non-zero exit. The agent is then Unreachable, and the first failure of a streak raises
  * one `wake run failed` offline alert in its owner's Inbox; the next wake run that ends with exit 0 (`DELETE` at
  * `wakeRunPath`) clears both. Answers `WakeRunResponse`, or 404 `not_found` as `wakeRunPath` does.
  */
 export const wakeRunFailurePath = `${wakeRunPath}/failure`;
 
-/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
-export type WakeRunFailure = { readonly exitCode: number } | { readonly timedOutAfterMinutes: number };
+/** How a wake run failed: the non-zero exit code it ended with. Never any of its output. */
+export interface WakeRunFailure {
+  readonly exitCode: number;
+}
 
 /** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
 export interface WakeRunResponse {

@@ -24,7 +24,7 @@ import {
   commandLineServices,
   joinWaking,
   mention,
-  registrationIn,
+  registeredWithOldTimeout,
   repliesTo,
   startRunner,
   testCookout,
@@ -53,23 +53,21 @@ const POLL = Schedule.spaced("20 millis");
 const ONE_LINE = 1;
 const TWO_LINES = 2;
 const THREE_LINES = 3;
-const NO_PID = 0;
-const JUST_BEFORE_DEFAULT = 9;
+const LONG_RUN_MINUTES = 60;
+const OLD_TIMEOUT_MINUTES = 1;
 const SEQUENTIAL = { concurrency: 1 } as const;
 const encode = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 function brigidWaking({
   settings,
-  timeoutMinutes,
 }: {
   readonly settings: (folder: string) => Omit<FakeWakeSettings, "log">;
-  readonly timeoutMinutes?: number;
 }): Effect.Effect<Woken, never, Needs> {
   return Effect.gen(function* startBrigid() {
     const path = yield* Path.Path;
     const on = yield* wakeBoard;
     const log = path.join(on.folder, "wake.log");
-    const joined = yield* joinWaking({ name: AGENT, on, settings: { ...settings(on.folder), log }, timeoutMinutes });
+    const joined = yield* joinWaking({ name: AGENT, on, settings: { ...settings(on.folder), log } });
     const runner = yield* startRunner({ COOKOUT_STATE_DIR: on.folder });
     return { folder: on.folder, joined, on, runner };
   });
@@ -99,18 +97,6 @@ function onceFound<Found>(
   }).pipe(Effect.orDie);
 }
 
-function pidIn(file: string): Effect.Effect<Option.Option<number>, never, FileSystem.FileSystem> {
-  return Effect.gen(function* readPid() {
-    const fs = yield* FileSystem.FileSystem;
-    const text = yield* Effect.option(fs.readFileString(file));
-    return Option.filter(Option.map(text, Number), (pid) => Number.isInteger(pid) && pid > NO_PID);
-  });
-}
-
-function childPid(folder: string): Effect.Effect<number, never, FileSystem.FileSystem> {
-  return onceFound(folder, pidIn(`${folder}/child.pid`));
-}
-
 function runStarted(folder: string): Effect.Effect<void, never, FileSystem.FileSystem> {
   const log = `${folder}/wake.log`;
   const look = Effect.gen(function* startLogged() {
@@ -131,6 +117,27 @@ function oncePastMinutes(folder: string, minutes: number): Effect.Effect<void, n
 
 function fixed(folder: string): Effect.Effect<void, never, FileSystem.FileSystem> {
   return Effect.flatMap(FileSystem.FileSystem, (fs) => Effect.orDie(fs.writeFileString(`${folder}/fixed`, "yes")));
+}
+
+function finished(folder: string): Effect.Effect<void, never, FileSystem.FileSystem> {
+  return Effect.flatMap(FileSystem.FileSystem, (fs) => Effect.orDie(fs.writeFileString(`${folder}/finish`, "yes")));
+}
+
+function longRun(
+  folder: string,
+  runner: StartedRunner,
+): Effect.Effect<
+  { readonly during: readonly unknown[]; readonly lines: readonly unknown[] },
+  never,
+  FileSystem.FileSystem
+> {
+  return Effect.gen(function* runPastTheOldDefault() {
+    yield* oncePastMinutes(folder, LONG_RUN_MINUTES);
+    const during = yield* runner.stdoutNow;
+    yield* finished(folder);
+    const lines = yield* runner.stdoutLines(ONE_LINE);
+    return { during, lines };
+  });
 }
 
 function presenceNow(on: WakeBoard): Effect.Effect<Option.Option<Presence>> {
@@ -163,35 +170,6 @@ function alertsOf(on: WakeBoard): Effect.Effect<readonly { readonly back: boolea
       })),
   );
 }
-
-function isAlive(pid: number): Effect.Effect<boolean, never, FileSystem.FileSystem> {
-  return Effect.gen(function* checkProcess() {
-    const fs = yield* FileSystem.FileSystem;
-    const stat = yield* Effect.option(fs.readFileString(`/proc/${String(pid)}/stat`));
-    return Option.exists(stat, (text) => !/^\d+ \(.*\) Z /u.test(text));
-  });
-}
-
-it.effect("a run that outlives its timeout is killed with its children, and its thread hears that it timed out", () =>
-  Effect.gen(function* timesOut() {
-    const { folder, on, runner } = yield* brigidWaking({
-      settings: (dir) => ({ childPidFile: `${dir}/child.pid`, hang: true }),
-      timeoutMinutes: 2,
-    });
-    const first = yield* mention({ ada: on.ada, text: "@brigid hang" });
-    const pid = yield* childPid(folder);
-    const before = yield* isAlive(pid);
-    yield* TestClock.adjust("2 minutes");
-    const [lines, after, replies] = yield* Effect.all(
-      [runner.stdoutLines(ONE_LINE), isAlive(pid), repliesUntil(on, first, ONE_LINE)],
-      SEQUENTIAL,
-    );
-
-    expect({ after, before }).toStrictEqual({ after: false, before: true });
-    expect(lines).toStrictEqual([{ agent: AGENT, messages: [first], timedOutAfterMinutes: 2, type: "wake-run" }]);
-    expect(replies).toStrictEqual([`${AGENT}: My wake run timed out after 2 min.`]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
 
 it.effect("a run that exits 3 gets one reply naming exit 3, and nothing it printed reaches the board", () =>
   Effect.gen(function* exitsThree() {
@@ -256,27 +234,31 @@ it.effect("failed runs make the agent Unreachable with one offline alert, and th
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("a wake run's timeout is 10 minutes unless the registration gives its own", () =>
-  Effect.gen(function* defaultTimeout() {
-    const { folder, on, runner } = yield* brigidWaking({ settings: () => ({ ack: true, hang: true }) });
-    const first = yield* mention({ ada: on.ada, text: "@brigid hang a while" });
-    yield* oncePastMinutes(folder, JUST_BEFORE_DEFAULT);
-    const early = yield* runner.stdoutNow;
-    yield* TestClock.adjust("1 minute");
-    const lines = yield* runner.stdoutLines(ONE_LINE);
-    const registered = yield* registrationIn(folder);
+it.effect("a run longer than the old 10-minute default isn't killed, and ends when its process exits", () =>
+  Effect.gen(function* noTimeout() {
+    const { folder, on, runner } = yield* brigidWaking({
+      settings: (dir) => ({ ack: true, waitFor: `${dir}/finish` }),
+    });
+    const first = yield* mention({ ada: on.ada, text: "@brigid take your time" });
+    const { during, lines } = yield* longRun(folder, runner);
 
-    expect(early).toStrictEqual([]);
-    expect(lines).toMatchObject([{ messages: [first], timedOutAfterMinutes: 10 }]);
-    expect(registered.content).not.toHaveProperty("timeoutMinutes");
+    expect(during).toStrictEqual([]);
+    expect(lines).toStrictEqual([{ agent: AGENT, exitCode: 0, messages: [first], type: "wake-run" }]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("join --wake --timeout keeps the registration's own timeout", () =>
-  Effect.gen(function* ownTimeout() {
-    const { folder } = yield* brigidWaking({ settings: () => ({ ack: true }), timeoutMinutes: 45 });
-    const registered = yield* registrationIn(folder);
+it.effect("a registration an older CLI wrote with timeoutMinutes still loads, and the field is ignored", () =>
+  Effect.gen(function* olderRegistration() {
+    const on = yield* wakeBoard;
+    const { folder } = on;
+    const settings = { ack: true, log: `${folder}/wake.log`, waitFor: `${folder}/finish` };
+    yield* joinWaking({ name: AGENT, on, settings });
+    yield* registeredWithOldTimeout({ minutes: OLD_TIMEOUT_MINUTES, stateFolder: folder });
+    const runner = yield* startRunner({ COOKOUT_STATE_DIR: folder });
+    const first = yield* mention({ ada: on.ada, text: "@brigid old registration" });
+    const { during, lines } = yield* longRun(folder, runner);
 
-    expect(registered.content).toMatchObject({ timeoutMinutes: 45 });
+    expect(during).toStrictEqual([]);
+    expect(lines).toStrictEqual([{ agent: AGENT, exitCode: 0, messages: [first], type: "wake-run" }]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

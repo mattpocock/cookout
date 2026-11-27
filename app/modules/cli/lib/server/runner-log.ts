@@ -39,7 +39,6 @@ const RunnerEventSchema = Schema.Struct({
   messages: Schema.optionalKey(Schema.Array(Schema.Int)),
   output: Schema.optionalKey(Schema.String),
   reason: Schema.optionalKey(Schema.String),
-  timedOutAfterMinutes: Schema.optionalKey(Schema.Int),
   type: Schema.Literals([
     "runner-start",
     "connect",
@@ -49,7 +48,6 @@ const RunnerEventSchema = Schema.Struct({
     "woken",
     "wake-run-start",
     "exit",
-    "timeout",
     "wake-failed",
     "skip",
     "stand-down",
@@ -198,7 +196,7 @@ const runnerEvents: Effect.Effect<readonly RunnerEvent[], never, FileSystem.File
   },
 );
 
-const endings: ReadonlySet<RunnerEvent["type"]> = new Set(["exit", "timeout", "wake-failed"]);
+const endings: ReadonlySet<RunnerEvent["type"]> = new Set(["exit", "wake-failed"]);
 
 function endingOf(event: RunnerEvent): Ending {
   return Struct.omit(event, ["agent", "messages", "output"]);
