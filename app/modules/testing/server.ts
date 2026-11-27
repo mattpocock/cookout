@@ -29,7 +29,8 @@
  * nothing more and every later request waits for ever.
  * `pastOwnPresence` reads an all-channels feed past its own caller coming online, and `watchingAllChannels` opens one so.
  * `wakingAgents` joins agents with the fake wake command and starts a runner for them, and `runnerEventsIn` and
- * `untilRunnerEvents` read its event log through `cookout runner logs`.
+ * `untilRunnerEvents` read its event log through `cookout runner logs`. `claudeCodeHome` makes a fake Claude Code
+ * config folder: a session file and a real inbox socket the test reads from, and `sentLine` and `inboxJson` read a line it got.
  * `silentConnection` connects to a server and sends nothing. `cuttableRelay`,
  * from the http module, is a link a test can cut and restore, from another
  * process too, as the browser tests do.
@@ -92,6 +93,14 @@ export {
 } from "./lib/server/runner-events.ts";
 export { type BoardAgent, type WakeBoard, WAKE_CHANNEL, boardAgent, wakeBoard } from "./lib/server/wake-board.ts";
 export { joinWaking, mention, mentions, repliesTo, startsIn } from "./lib/server/wake-agents.ts";
+export {
+  type ClaudeCodeHome,
+  type FakeClaudeSession,
+  type SentLine,
+  claudeCodeHome,
+  inboxJson,
+  sentLine,
+} from "./lib/server/claude-code-home.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { cuttableRelay } from "../http/server.ts";

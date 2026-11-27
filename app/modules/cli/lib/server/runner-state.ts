@@ -1,15 +1,17 @@
 import type { AgentSessionStateFailure, AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
-import { Array as Arr, DateTime, Effect, Function, Option, Order, Predicate, Ref, Schema } from "effect";
+import { Array as Arr, DateTime, Effect, Option, Order, Predicate, Ref, Schema } from "effect";
 import { DROPPED_SUFFIX, RUNNER_SUFFIX, forgetRegistration, registeredSessions } from "./registrations.ts";
 import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
 import { lastRuns, runnerEvents } from "./runner-log.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
+import type { InboundWarning } from "./claude-code-inbound.ts";
 import type { LastRun } from "./runner-log.ts";
 import type { RegisteredSession } from "./registrations.ts";
 import { filesBeside } from "./agent-session-state.ts";
+import { inboundWarning } from "./claude-code-inbound.ts";
+import { isAlive } from "./claude-code-sessions.ts";
 
 const PRETTY = 2;
-const SIGNAL_CHECK = 0;
 
 type LiveState = "connected" | "connecting" | "running";
 type State = LiveState | "not-running";
@@ -33,6 +35,7 @@ interface RegistrationStatus {
   readonly agent: string;
   readonly directory: string;
   readonly lastRun?: LastRun;
+  readonly liveDelivery?: InboundWarning;
   readonly state: State;
 }
 
@@ -92,10 +95,6 @@ function dropRegistration({ failure, registered }: Dropping): Effect.Effect<void
   });
 }
 
-function isAlive(pid: number): Effect.Effect<boolean> {
-  return Effect.isSuccess(Effect.try({ catch: Function.constant(pid), try: () => process.kill(pid, SIGNAL_CHECK) }));
-}
-
 function stateOf(file: AgentSessionStateFile): Effect.Effect<State, AgentSessionStateFailure> {
   return Effect.gen(function* readRunnerState() {
     const decoded = yield* Effect.orElseSucceed(file.beside(RUNNER_SUFFIX).read(RunnerStateSchema), Option.none);
@@ -111,12 +110,21 @@ function stateOf(file: AgentSessionStateFile): Effect.Effect<State, AgentSession
 }
 
 function statusOf(runs: ReadonlyMap<string, LastRun>) {
-  return ({ file, registration }: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure> =>
-    Effect.map(stateOf(file), (state) => {
+  return ({
+    file,
+    registration,
+  }: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure, AgentSessionStateNeeds> =>
+    Effect.gen(function* statusOfRegistration() {
+      const state = yield* stateOf(file);
+      const warning = yield* inboundWarning(registration);
       const status = { agent: registration.agent, directory: registration.directory, state };
-      return Option.match(Option.fromNullishOr(runs.get(registration.agent)), {
-        onNone: () => status,
+      const withRun = Option.match(Option.fromNullishOr(runs.get(registration.agent)), {
+        onNone: (): RegistrationStatus => status,
         onSome: (lastRun) => ({ ...status, lastRun }),
+      });
+      return Option.match(warning, {
+        onNone: () => withRun,
+        onSome: (liveDelivery) => ({ ...withRun, liveDelivery }),
       });
     });
 }
@@ -174,11 +182,22 @@ function lastRunText(lastRun: LastRun | undefined): string {
   });
 }
 
+function warningLines(agent: string, warning: InboundWarning | undefined): readonly string[] {
+  return Option.match(Option.fromNullishOr(warning), {
+    onNone: Arr.empty,
+    onSome: ({ crossSessionInbound, fix }) => [
+      `  warning: ${agent}'s session would ${crossSessionInbound} runner messages (crossSessionInbound), so a ` +
+        `mention waits for a wake run while it is open. Launch it with: ${fix}`,
+    ],
+  });
+}
+
+function registrationLines({ agent, directory, lastRun, liveDelivery, state }: RegistrationStatus): readonly string[] {
+  return [`${agent}  ${stateText[state]}  ${directory}${lastRunText(lastRun)}`, ...warningLines(agent, liveDelivery)];
+}
+
 function statusLines({ dropped, registrations }: RunnerStatus): readonly string[] {
-  const held = Arr.map(
-    registrations,
-    ({ agent, directory, lastRun, state }) => `${agent}  ${stateText[state]}  ${directory}${lastRunText(lastRun)}`,
-  );
+  const held = Arr.flatMap(registrations, registrationLines);
   const gone = Arr.map(
     dropped,
     ({ agent, code, directory, droppedAt }) => `${agent}  dropped: ${code} at ${droppedAt}  ${directory}`,
