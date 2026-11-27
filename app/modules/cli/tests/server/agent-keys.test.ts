@@ -43,6 +43,7 @@ it.effect("cookout agent-key create, list and revoke work, and COOKOUT_TOKEN set
       { args: ["agent-key", "list", "release-bot"], env: asAda },
       { args: ["agent-key", "revoke", "release-bot", made.agentKey.id], env: asAda },
       { args: ["message", "post", "deploys", "Again."], env: asKey },
+      { args: ["agent-key", "create", "release-bot", "deploy"], env: asAda },
     ];
     const results = yield* Effect.forEach(steps, (step) => runCookout(step), ONE_AT_A_TIME);
 
@@ -56,6 +57,7 @@ it.effect("cookout agent-key create, list and revoke work, and COOKOUT_TOKEN set
       },
       { ...succeeded, stdoutJson: { ended: 1 } },
       { ...failed, stderrJson: { error: { code: "token_revoked" } } },
+      { ...succeeded, stdoutJson: { agentKey: { madeAt: BOOT, name: "deploy" } } },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

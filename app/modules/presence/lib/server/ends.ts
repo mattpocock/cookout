@@ -99,13 +99,13 @@ function credentialOf(sentWith: SentWith): Option.Option<TokenHash> {
 }
 
 function madeWithIdentityToken(sentWith: SentWith, loginCredentials: readonly TokenHash[]): boolean {
-  if (sentWith.kind === "agent session" || sentWith.kind === "agent key") {
-    return false;
-  }
-  return Option.match(sentWith.loginCredential, {
-    onNone: () => true,
-    onSome: (hash) => loginCredentials.includes(hash),
-  });
+  return (
+    "loginCredential" in sentWith &&
+    Option.match(sentWith.loginCredential, {
+      onNone: () => true,
+      onSome: (hash) => loginCredentials.includes(hash),
+    })
+  );
 }
 
 function sentWithEnded(tokens: EndedTokens): (connection: Connection) => boolean {

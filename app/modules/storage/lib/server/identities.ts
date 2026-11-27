@@ -133,7 +133,6 @@ function deactivationsOf(data: MemoryIdentities): ReturnType<typeof memoryDeacti
 interface MemoryIdentitiesSection extends Omit<IdentitiesSection, keyof IdentityDeletesSection> {
   readonly placeHandler: PlaceHandler;
   readonly findIdentity: FindIdentity;
-  readonly tokenRevoked: (hash: TokenHash) => boolean;
   readonly tokens: Pick<MemoryIdentities, "activeTokens" | "revokedTokens">;
   readonly removeIdentity: (name: IdentityName, messages: number) => Fails<DeleteIdentityResult>;
 }
@@ -177,7 +176,6 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
       open(() => {
         setOnlyTokenIn(data, identity, hash);
       }),
-    tokenRevoked: (hash) => data.revokedTokens.has(hash),
     tokens: data,
   };
 };

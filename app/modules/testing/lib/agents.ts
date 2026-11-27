@@ -4,7 +4,6 @@ import type {
   IdentityResponse,
   IdentityWithTokenResponse,
 } from "../../sdk/index.ts";
-import { CookoutError } from "../../sdk/index.ts";
 
 interface TestAgentRequest {
   readonly by: CookoutClient;
@@ -53,18 +52,17 @@ function keyedAsAsked<Request extends TestAgentRequest>(answer: IdentityResponse
   return "token" in answer;
 }
 
-function notTheOwner(error: unknown): boolean {
-  return error instanceof CookoutError && error.code === "not_owner";
-}
-
 type TestKey = IdentityWithTokenResponse["token"];
 
-async function takenOverToKey(request: TestAgentRequest, name: string): Promise<TestKey> {
-  const { by } = request;
+async function ownerKey({ by, owner }: TestAgentRequest, name: string): Promise<TestKey> {
   const { identity: creator } = await by.whoami();
+  if (typeof owner !== "string" || owner === creator.name) {
+    const { token } = await by.createAgentKey(name, { name: TEST_KEY });
+    return token;
+  }
   await by.transferAgent(name, creator.name);
   const { token } = await by.createAgentKey(name, { name: TEST_KEY });
-  await by.transferAgent(name, String(request.owner));
+  await by.transferAgent(name, owner);
   return token;
 }
 
@@ -73,15 +71,7 @@ async function testKeyFor(request: TestAgentRequest, name: string): Promise<Test
     const { token } = await request.keyBy.createAgentKey(name, { name: TEST_KEY });
     return token;
   }
-  try {
-    const { token } = await request.by.createAgentKey(name, { name: TEST_KEY });
-    return token;
-  } catch (error) {
-    if (!notTheOwner(error)) {
-      throw error;
-    }
-  }
-  const token = await takenOverToKey(request, name);
+  const token = await ownerKey(request, name);
   return token;
 }
 

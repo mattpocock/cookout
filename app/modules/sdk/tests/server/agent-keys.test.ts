@@ -161,6 +161,25 @@ it.effect("a key with an expiry works until it, then is refused with 401 agent_k
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("an expiry counts in seconds, minutes, hours or days", () =>
+  Effect.gen(function* units() {
+    const cookout = yield* TestCookout;
+    const { ada } = yield* seeded(cookout);
+    const made = yield* Effect.forEach(
+      ["90s", "5m", "2h", "3d"],
+      (expiresIn, at) => answer(() => ada.client.createAgentKey(AGENT, { expiresIn, name: `key-${String(at)}` })),
+      ONE_AT_A_TIME,
+    );
+
+    expect(Arr.map(made, ({ agentKey }) => agentKey.expiresAt)).toStrictEqual([
+      "2026-01-01T00:01:30.000Z",
+      "2026-01-01T00:05:00.000Z",
+      "2026-01-01T02:00:00.000Z",
+      "2026-01-04T00:00:00.000Z",
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("creating an agent answers no secret, and rotating its token is refused with agent_keys_instead", () =>
   Effect.gen(function* noAgentTokens() {
     const cookout = yield* TestCookout;

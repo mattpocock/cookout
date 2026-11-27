@@ -1,6 +1,5 @@
 import type { CookoutClient, Identity, IdentityName, SetTriggerRequest, Token, Trigger } from "../../sdk/index.ts";
 import type { Identities, IdentityChange } from "./identities-slice.ts";
-import { CookoutError } from "../../sdk/index.ts";
 import type { Part } from "./slice.ts";
 import type { SessionsPart } from "./agent-sessions-part.ts";
 
@@ -19,7 +18,6 @@ type IdentityCallsClient = Pick<
   | "removeAdmin"
   | "revokeAgentKey"
   | "revokeAgentSession"
-  | "rotateToken"
   | "setAvatar"
   | "setDescription"
   | "setDisplayName"
@@ -152,10 +150,6 @@ async function newWebKey(client: IdentityCallsClient, name: IdentityName): Promi
   return token;
 }
 
-function isAgentKeysInstead(error: unknown): boolean {
-  return error instanceof CookoutError && error.code === "agent_keys_instead";
-}
-
 function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
   const { client, identities, sessions } = options;
   function put(identity: Identity): void {
@@ -180,17 +174,8 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
       sessions.put(name, []);
     },
     rotateToken: async (name) => {
-      try {
-        const { identity, token } = await client.rotateToken(name);
-        put(identity);
-        return token;
-      } catch (error) {
-        if (isAgentKeysInstead(error)) {
-          const key = await newWebKey(client, name);
-          return key;
-        }
-        throw error;
-      }
+      const key = await newWebKey(client, name);
+      return key;
     },
     transfer: async (name, to) => {
       const { identity } = await client.transferAgent(name, to);

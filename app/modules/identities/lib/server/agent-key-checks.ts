@@ -23,12 +23,22 @@ const SECOND = 1;
 const MINUTE = 60;
 const HOUR = 3600;
 const DAY = 86_400;
-const SECONDS_IN: ReadonlyMap<string, number> = new Map([
-  ["d", DAY],
-  ["h", HOUR],
-  ["m", MINUTE],
-  ["s", SECOND],
-]);
+function secondsIn(unit: string): number {
+  switch (unit) {
+    case "d": {
+      return DAY;
+    }
+    case "h": {
+      return HOUR;
+    }
+    case "m": {
+      return MINUTE;
+    }
+    default: {
+      return SECOND;
+    }
+  }
+}
 
 type Params = Readonly<Record<string, string>>;
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable, Caller | Storage>;
@@ -125,8 +135,7 @@ function expiryOf({ expiresIn, now }: Expiring): Effect.Effect<Option.Option<Iso
     return Effect.fail(expiryInvalid);
   }
   const count = Number(Str.slice(START, -UNIT_LENGTH)(expiresIn));
-  const unit = SECONDS_IN.get(Str.slice(-UNIT_LENGTH)(expiresIn)) ?? SECOND;
-  const at = DateTime.add(now, { seconds: count * unit });
+  const at = DateTime.add(now, { seconds: count * secondsIn(Str.slice(-UNIT_LENGTH)(expiresIn)) });
   return Effect.succeedSome(isoTimeOf(at));
 }
 
