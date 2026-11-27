@@ -62,6 +62,10 @@ function rowOutsidePanel(selector: string): HTMLElement | null {
   return null;
 }
 
+function leftInConversation(box: unknown): boolean {
+  return focusedOn(newestNear(box)) || focusedOn(rowOutsidePanel(SELECTED_ROW) ?? rowOutsidePanel(ROW));
+}
+
 function leftOf(box: unknown): boolean {
   if (!(box instanceof Element)) {
     return false;
@@ -70,7 +74,7 @@ function leftOf(box: unknown): boolean {
     return focusedOnChannelMessage();
   }
   if (box.closest(PANEL) !== null) {
-    return focusedOn(rowOutsidePanel(SELECTED_ROW) ?? rowOutsidePanel(ROW));
+    return leftInConversation(box);
   }
   return focusedOn(globalThis.document.querySelector(OPEN_LINK));
 }
