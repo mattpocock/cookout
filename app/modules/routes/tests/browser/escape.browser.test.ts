@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import { inPane, inProfile, inSidebar, inThread, inTopBar, sidebarLink } from "./regions.ts";
+import { knownName } from "./ready.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -111,10 +112,10 @@ test("each Escape goes out one level: the menu, the reply box, the thread panel,
 
 test("Escape on an open identity card closes only the card", async ({ page }) => {
   const { channel } = await threadOpened(page, unique("browser-escape-card"));
-  const author = inThread(page)
-    .getByRole("article")
-    .filter({ hasText: "The reply." })
-    .getByRole("link", { exact: true, name: "admin" });
+  const author = await knownName({
+    name: "admin",
+    within: inThread(page).getByRole("article").filter({ hasText: "The reply." }),
+  });
   await author.focus();
   const card = page.getByRole("dialog", { exact: true, name: "admin" });
 

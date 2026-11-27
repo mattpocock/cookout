@@ -655,6 +655,13 @@ pnpm e2e:docker
 
 `pnpm browser:flaky <file> [N] [-g <title>]` runs one browser test file N times (25 by default), only its tests whose title matches `-g` when given, and prints each test's pass and fail counts, then a `RESULT:` line. Before it starts, it waits while the 1-minute load average is above 20 and prints that it is waiting, since at a high load every test times out a few percent of the time. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
 
+Most flakes that pass alone and fail under load are a test acting before the page holds what it acts on. Wait for that through the screen first:
+
+- A thread's menu, keys or reply box: a reply (or the top message) in `inThread(page)` is visible. The header shows `Thread` before the thread has loaded, with no menu yet.
+- A name you focus, hover or right-click: `knownName({ name, within })` from `app/modules/routes/tests/browser/ready.ts`, which returns the link once its `@<name> actions` button is in the page. Until the identities list arrives a name is a plain link; then its identity card and person menu wrap it, which remounts it and drops its focus.
+- A Nudge, offer or other notice a job raises after `daysPass`: poll the API until it is there. Moving the dev clock answers before the jobs it wakes have run.
+- A live event: log in with `logInWithStream`, so the stream has subscribed.
+
 Browser tests share one live board, and every page streams every channel's events, so a flake that disappears at `--workers=1` is likely other tests' live traffic, not CPU load. Reproduce it by posting replies into an unrelated thread while the test runs, never with a CPU-load generator.
 
 `COOKOUT_BROWSER_PROBE=1 node_modules/.bin/playwright test <file>` adds to each failed test's output, per open page, the live events it received by type, each store's publish count and the top-level views' render counts (the `probe` module); a browser test gets it with `base.extend(probeFixtures)` from `app/modules/routes/tests/browser/probe.ts`.

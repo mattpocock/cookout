@@ -12,6 +12,7 @@ const test = base.extend(probeFixtures).extend<ClockFixtures & ClockOptions>(clo
 
 const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const QUIET_DAYS = 3;
+const NONE = 0;
 
 interface Started {
   readonly starter: Person;
@@ -28,6 +29,15 @@ async function threadStarted(cookout: OwnCookout, channel: string): Promise<Star
   return { parent: message, starter };
 }
 
+async function nudgeRaised(starter: Person): Promise<void> {
+  await expect
+    .poll(async () => {
+      const { nudges } = await starter.client.inbox();
+      return nudges.length;
+    })
+    .toBeGreaterThan(NONE);
+}
+
 async function everyNudgeRead(starter: Person): Promise<void> {
   const { nudges } = await starter.client.inbox();
   await Promise.all(
@@ -40,6 +50,7 @@ async function everyNudgeRead(starter: Person): Promise<void> {
 test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
   const started = await threadStarted(ownCookout, unique("browser-nudges"));
   await ownCookout.daysPass(QUIET_DAYS);
+  await nudgeRaised(started.starter);
   await logIn({ page, token: started.starter.token, url: "/#/inbox" });
 
   await inPane(page)
@@ -57,6 +68,7 @@ test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
 test("closing a thread takes its read nudge out of Earlier, live", async ({ ownCookout, page }) => {
   const started = await threadStarted(ownCookout, unique("browser-nudges-closed"));
   await ownCookout.daysPass(QUIET_DAYS);
+  await nudgeRaised(started.starter);
   await everyNudgeRead(started.starter);
   await logInWithStream({ page, token: started.starter.token, url: "/#/inbox" });
   const earlier = inPane(page).getByRole("list", { exact: true, name: "Earlier nudges" });

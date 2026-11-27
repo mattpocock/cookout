@@ -4,6 +4,7 @@ import { test as base, expect } from "@playwright/test";
 import { inPane, inThread, sidebarLink } from "./regions.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
+import { knownName } from "./ready.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -67,6 +68,9 @@ test("every choice in a message's menu shows its key", async ({ page }) => {
 test("every choice in a thread header's menu shows its key", async ({ page }) => {
   const shown = await board(unique("browser-menu-keys-thread"));
   await opened(page, shown, `/#/channels/${shown.channel}/threads/${String(shown.parent)}`);
+
+  await expect(inThread(page).getByText("Anyone around?", { exact: true })).toBeVisible();
+
   await inThread(page).getByRole("heading", { exact: true, name: "Thread" }).click({ button: "right" });
 
   await everyChoiceKeyed(page.getByRole("menu", { exact: true, name: "Thread actions" }));
@@ -93,10 +97,11 @@ test("every choice in an Inbox row's menu shows its key", async ({ page }) => {
 test("every choice in a person's menu shows its key", async ({ page }) => {
   const shown = await board(unique("browser-menu-keys-person"));
   await opened(page, shown, `/#/channels/${shown.channel}`);
-  await page
-    .getByRole("feed", { exact: true, name: "Messages" })
-    .getByRole("link", { exact: true, name: shown.author })
-    .click({ button: "right" });
+  const author = await knownName({
+    name: shown.author,
+    within: page.getByRole("feed", { exact: true, name: "Messages" }),
+  });
+  await author.click({ button: "right" });
 
   await everyChoiceKeyed(page.getByRole("menu", { exact: true, name: `@${shown.author} actions` }));
 });
