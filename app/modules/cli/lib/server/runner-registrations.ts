@@ -1,4 +1,4 @@
-import { Array as Arr, Deferred, Effect, FileSystem, Function, Option, Path, Ref, Stream } from "effect";
+import { Array as Arr, Deferred, Effect, FileSystem, Function, Path, Ref, Stream } from "effect";
 import { REGISTRATION_SUFFIX, registeredSessions } from "./registrations.ts";
 import type { RegisteredSession, Registration } from "./registrations.ts";
 import { AGENT_SESSIONS } from "./state-folder.ts";
@@ -29,11 +29,7 @@ interface Holding {
 }
 
 function keyOf({ harness, sessionId, url }: Registration): string {
-  return Arr.join([harness, sessionId ?? "", url], "\n");
-}
-
-function fieldsOf({ agent, directory, path, timeoutMinutes, wakeCommand }: Registration): string {
-  return Arr.join([agent, directory, path, String(timeoutMinutes), ...wakeCommand], "\0");
+  return Arr.join([harness, String(sessionId), url], "\n");
 }
 
 function withHeld(key: string, held: readonly Held[]): (holding: HeldByKey) => HeldByKey {
@@ -71,13 +67,7 @@ function holdingOf(place: RunPlace): Effect.Effect<Holding> {
 }
 
 function isNew(held: HeldByKey) {
-  return ({ registration }: RegisteredSession): boolean => {
-    const found = Option.fromNullishOr(held.get(keyOf(registration)));
-    return Option.match(found, {
-      onNone: Function.constTrue,
-      onSome: (kept) => !kept.live && fieldsOf(kept.registration) !== fieldsOf(registration),
-    });
-  };
+  return ({ registration }: RegisteredSession): boolean => !held.has(keyOf(registration));
 }
 
 interface Opening {
