@@ -8,6 +8,7 @@ import type {
   LogoutResponse,
   RevokeAgentKeyResponse,
   RevokeSessionResponse,
+  WebLoginCollectedResponse,
 } from "../../../logins/index.ts";
 import { agentKeyNamePattern, hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
 import { IdentitySchema } from "./wire.ts";
@@ -23,14 +24,21 @@ const UserCodeSchema = Schema.String.check(Schema.isPattern(userCodePattern));
 
 const TokenSchema = Schema.String.pipe(Schema.refine(isToken, { identifier: "Token" }));
 
-const StartLoginRequestSchema = Schema.Struct({
+const StartCliLoginRequestSchema = Schema.Struct({
   host: Schema.String.check(
     Schema.isTrimmed({ message: "Use no space at either end." }),
     Schema.isBetweenLength(MINIMUM_HOST, hostMaximumLength, { message: "Use 1-100 characters." }),
   ),
 });
 
-const CollectLoginRequestSchema = Schema.Struct({ requestId: Schema.String });
+const StartWebLoginRequestSchema = Schema.Struct({ kind: Schema.Literal("web") });
+
+const StartLoginRequestSchema = Schema.Union([StartWebLoginRequestSchema, StartCliLoginRequestSchema]);
+
+const CollectLoginRequestSchema = Schema.Struct({
+  kind: Schema.optionalKey(Schema.Literals(["web", "cli"])),
+  requestId: Schema.String,
+});
 
 const LoginRequestStartedResponseSchema = matchesWire<LoginRequestStartedResponse>()(
   Schema.Struct({
@@ -51,6 +59,12 @@ const ApprovedSchema = Schema.Struct({
 
 const LoginCollectedResponseSchema = matchesWire<LoginCollectedResponse>()(
   Schema.Union([PendingSchema, ApprovedSchema]),
+);
+
+const WebApprovedSchema = Schema.Struct({ identity: IdentitySchema, status: Schema.Literal("approved") });
+
+const WebLoginCollectedResponseSchema = matchesWire<WebLoginCollectedResponse>()(
+  Schema.Union([PendingSchema, WebApprovedSchema]),
 );
 
 const approvalRequestDetailsFields = {
@@ -147,4 +161,5 @@ export {
   LoginRequestStartedResponseSchema,
   LogoutResponseSchema,
   StartLoginRequestSchema,
+  WebLoginCollectedResponseSchema,
 };

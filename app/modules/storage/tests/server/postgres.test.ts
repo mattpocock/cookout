@@ -28,7 +28,7 @@ const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DE
 const BEFORE_SECRETS_KEY = [
   "DROP TABLE agent_keys",
   "DROP TABLE credential_lineage",
-  "ALTER TABLE login_requests DROP COLUMN approved_with",
+  "ALTER TABLE login_requests DROP COLUMN kind, DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
@@ -60,7 +60,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 5",
+  "UPDATE schema_version SET version = version - 6",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
