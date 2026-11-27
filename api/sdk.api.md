@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$12: unique symbol;
+declare const brand$13: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$12]: "IsoTime";
+  readonly [brand$13]: "IsoTime";
 };
-declare const brand$11: unique symbol;
+declare const brand$12: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$11]: "ChannelName";
+  readonly [brand$12]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -49,13 +49,13 @@ interface ListChannelsResponse {
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$10: unique symbol;
+declare const brand$11: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$10]: "Description";
+  readonly [brand$11]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -107,10 +107,10 @@ interface AgentCreationCalls<Answer> {
  * that is exactly 256 by 256, judged by its signature and the width and height in its IHDR header, with no image
  * library. A CLI or SDK caller sends one already.
  */
-declare const brand$9: unique symbol;
+declare const brand$10: unique symbol;
 /** An avatar's ID: opaque and random, and new whenever an avatar is set, so its bytes never change under it. */
 type AvatarId = string & {
-  readonly [brand$9]: "AvatarId";
+  readonly [brand$10]: "AvatarId";
 };
 /** An identity's avatar, the picture shown beside its name, as every identity the API returns carries it. */
 interface Avatar {
@@ -133,6 +133,10 @@ interface AvatarCalls<Answer> {
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
+declare const brand$9: unique symbol;
+type Harness = string & {
+  readonly [brand$9]: "Harness";
+};
 declare const brand$8: unique symbol;
 type Brand$1<Name extends string> = string & {
   readonly [brand$8]: Name;
@@ -233,11 +237,6 @@ type CreateIdentityRequest = {
 interface SetDisplayNameRequest {
   readonly displayName: string | null;
 }
-/**
- * The harness running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
- * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
- */
-type Harness = Brand$1<"Harness">;
 declare const brand$7: unique symbol;
 type DeactivationOfferId = number & {
   readonly [brand$7]: "DeactivationOfferId";
