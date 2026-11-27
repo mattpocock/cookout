@@ -216,6 +216,20 @@ it.effect("logout --everywhere with no terminal to ask on and no --yes is refuse
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("logout --everywhere with --url is refused with usage, ending nothing", () =>
+  Effect.gen(function* everywhereWithUrl() {
+    const { cookout, desktop, laptop } = yield* twoMachines;
+
+    const refused = yield* run(laptop, "logout", "--everywhere", "--yes", "--url", cookout.url);
+    const stillIn = yield* run(desktop, "whoami");
+
+    expect([refused, stillIn]).toMatchObject([
+      { exitCode: 1, stderrJson: { error: { code: "usage" } } },
+      { exitCode: 0 },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
 it.effect("login list, login revoke and logout --everywhere with an agent's token are refused with human_only", () =>
   Effect.gen(function* agentRefused() {
     const cookout = yield* TestCookout;
