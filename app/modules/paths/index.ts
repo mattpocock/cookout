@@ -10,11 +10,12 @@
  * `theme`, `agents` or `session`), `#/channels/<name>`,
  * `#/channels/<name>/threads/<id>`, `#/channels/<name>/threads/<id>/messages/<message id>`
  * the same thread scrolled to that message and highlighted (the thread's own ID for its
- * top-level message), and `#/approve` the approval page for a login request or an agent join
+ * top-level message), `#/channels/<name>/schedules` the channel's Scheduled messages page and
+ * `#/channels/<name>/schedules/<scheduled message id>` the same with that schedule highlighted, and `#/approve` the approval page for a login request or an agent join
  * request, as are `#/approve/<anything>` and `#/approve-join/<anything>`, which carry no code to it, and
  * `#/login-link/<secret>` the page a login link opens, carrying its secret); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
- * a thread ID that isn't a message ID, or a section the settings page doesn't
+ * a thread ID that isn't a message ID, a schedule ID that isn't a `ScheduledMessageId`, or a section the settings page doesn't
  * have is `missing`; `#/threads` and `#/threads/all`, where the removed Open
  * threads page was, and any hash no page has open the inbox, the homepage.
  * `hrefOf(route)` builds the hash a link to a route
@@ -30,8 +31,10 @@
  */
 import type { ChannelName, IdentityName } from "../sdk/index.ts";
 import { inboxHref, messageIdOf, selectionOf } from "./lib/thread-selection.ts";
+import { schedulesHref, schedulesMatch } from "./lib/schedules-route.ts";
 import { threadHref, threadMatch } from "./lib/thread-route.ts";
 import type { InboxSelection } from "./lib/thread-selection.ts";
+import type { SchedulesRoute } from "./lib/schedules-route.ts";
 import type { ThreadRoute } from "./lib/thread-route.ts";
 import { isChannelName } from "../channels/index.ts";
 import { isIdentityName } from "../identities/index.ts";
@@ -48,13 +51,14 @@ type Route =
   | { readonly name: "inbox"; readonly selected: InboxSelection | null }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | ThreadRoute
+  | SchedulesRoute
   | { readonly name: "approve" }
   | { readonly name: "login-link"; readonly secret: string }
   | { readonly name: "missing" };
 
 type LinkedRoute = Extract<
   Route,
-  { readonly name: "inbox" | "people" | "profile" | "settings" | "channel" | "thread" }
+  { readonly name: "inbox" | "people" | "profile" | "settings" | "channel" | "thread" | "schedules" }
 >;
 
 type Matcher = (hash: string) => Route | false;
@@ -138,6 +142,7 @@ const matchers: readonly Matcher[] = [
   (hash) => LOGIN_LINK.test(hash) && { name: "login-link", secret: hash.replace(LOGIN_LINK, "$<secret>") },
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   threadMatch,
+  schedulesMatch,
 ];
 
 function settingsHref(section: SettingsSection | null): string {
@@ -154,9 +159,12 @@ function channelHref(route: Extract<Route, { readonly name: "channel" | "thread"
   return threadHref(route);
 }
 
-function pageHref(route: Extract<Route, { readonly name: "settings" | "channel" | "thread" }>): string {
+function pageHref(route: Extract<Route, { readonly name: "settings" | "channel" | "thread" | "schedules" }>): string {
   if (route.name === "settings") {
     return settingsHref(route.section);
+  }
+  if (route.name === "schedules") {
+    return schedulesHref(route);
   }
   return channelHref(route);
 }
@@ -262,4 +270,5 @@ export function closedHref(route: Route): string {
 }
 
 export type { LinkedRoute, Place, Route, SettingsSection };
+export type { SchedulesRoute } from "./lib/schedules-route.ts";
 export type { InboxSelection, InboxThreadSelection, ThreadSelection } from "./lib/thread-selection.ts";

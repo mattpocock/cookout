@@ -2,8 +2,8 @@ import {
   LIST,
   buttonsOf,
   channelMade,
-  listDialog,
   listOpened,
+  listPage,
   listedLines,
   made,
   pressedIn,
@@ -14,6 +14,8 @@ import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { createTestAgent } from "../../testing/index.ts";
+import { inPane } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 const EDIT = "Edit a scheduled message";
 const CONTROLS = ["Pause", "Edit", "Delete"] as const;
@@ -49,9 +51,17 @@ it("the channel menu's Scheduled messages lists the channel's schedules, soonest
   await fieldsBoard(channel);
   const close = await listOpened({ channel, client: adminClient() });
   await rowOf("Their standup");
-  const description = within(listDialog()).getByText(`Messages that post into #${channel} on a schedule.`);
+  const heading = screen.getByRole("heading", { level: 1 });
+  const description = screen.getByText(`Messages that post into #${channel} on a schedule.`);
 
-  expect([description.textContent, await listedLines(channel)]).toStrictEqual([
+  expect([
+    globalThis.location.hash,
+    heading.textContent,
+    description.textContent,
+    await listedLines(channel),
+  ]).toStrictEqual([
+    `#/channels/${channel}/schedules`,
+    `Scheduled messages in #${channel}`,
     `Messages that post into #${channel} on a schedule.`,
     [
       ["Weekdays · 09:00", "Standup", expect.stringMatching(/^Next \w{3} \d{1,2} \w{3}, 09:00 UTC · by @admin$/u)],
@@ -79,7 +89,7 @@ it("a schedule's text shows as a message does, clamped to two lines with the who
   const text = `Morning **all**, @admin: ${"the standup notes are in the doc. ".repeat(LONG).trimEnd()}`;
   await made({ by: adminClient(), channel, text });
   const close = await listOpened({ channel, client: adminClient() });
-  const shown = await within(listDialog()).findByTitle(text);
+  const shown = await within(listPage()).findByTitle(text);
 
   expect([
     shown.classList.contains("line-clamp-2"),
@@ -90,19 +100,40 @@ it("a schedule's text shows as a message does, clamped to two lines with the who
   close();
 });
 
-it("a channel with nothing scheduled says so, and Close shuts the list", { timeout: 10_000 }, async () => {
+it("a channel with nothing scheduled says so, and Back goes back to the channel", { timeout: 10_000 }, async () => {
   expect.hasAssertions();
 
   const channel = "web-schedule-list-empty";
   await channelMade(channel);
   const close = await listOpened({ channel, client: adminClient() });
-  const said = await within(listDialog()).findByText(`Nothing is scheduled in #${channel}.`);
-  fireEvent.click(within(listDialog()).getByRole("button", { name: "Close" }));
-  await waitFor(() => {
-    expect(screen.queryByRole("dialog", { name: LIST })).toBeNull();
-  });
+  const said = await within(listPage()).findByText(`Nothing is scheduled in #${channel}.`);
+  fireEvent.click(inPane().getByRole("link", { name: `Back to #${channel}` }));
+  await screen.findByRole("form", { name: "Post to the channel" });
 
-  expect(said.textContent).toBe(`Nothing is scheduled in #${channel}.`);
+  expect([
+    said.textContent,
+    globalThis.location.hash,
+    screen.queryByRole("region", { name: `${LIST} in #${channel}` }),
+  ]).toStrictEqual([`Nothing is scheduled in #${channel}.`, `#/channels/${channel}`, null]);
+
+  close();
+});
+
+it("the Scheduled messages page opens from its own address, as a shared or reloaded link does", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-address";
+  await channelMade(channel);
+  await made({ by: adminClient(), channel, text: "Standup" });
+  const close = openAt({ client: adminClient(), hash: `#/channels/${channel}/schedules` });
+  const row = await rowOf("Standup");
+
+  expect([screen.getByRole("heading", { level: 1 }).textContent, row.getAttribute("aria-current")]).toStrictEqual([
+    `Scheduled messages in #${channel}`,
+    "false",
+  ]);
 
   close();
 });
@@ -186,7 +217,7 @@ async function deleted(text: string, channel: string): Promise<string | null> {
   await pressedIn({ button: "Delete", text });
   const confirming = await screen.findByRole("alertdialog", { name: "Delete this scheduled message?" });
   fireEvent.click(within(confirming).getByRole("button", { name: "Delete" }));
-  const said = await waitFor(() => within(listDialog()).getByText(`Nothing is scheduled in #${channel}.`));
+  const said = await waitFor(() => within(listPage()).getByText(`Nothing is scheduled in #${channel}.`));
   return said.textContent;
 }
 

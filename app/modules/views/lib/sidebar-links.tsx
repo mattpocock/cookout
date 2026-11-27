@@ -1,5 +1,5 @@
-import type { ChannelCreation, ScheduleList } from "../../board/index.ts";
 import { NavHeading, NavLink, NavList } from "../../design-system/layout.tsx";
+import type { ChannelCreation } from "../../board/index.ts";
 import { ChannelRows } from "./channel-rows.tsx";
 import { InboxLink } from "./inbox-link.tsx";
 import type { Keymap } from "../../keymap/index.ts";
@@ -22,7 +22,6 @@ interface SidebarLinksProps {
   readonly creation: ChannelCreation;
   readonly keymap: Keymap;
   readonly route: Route;
-  readonly scheduleList: ScheduleList;
   readonly unread: Looking["unread"];
   readonly me: string;
 }
@@ -32,10 +31,7 @@ export type { SidebarLinksProps };
 export function SidebarLinks(props: SidebarLinksProps): ReactNode {
   const { route } = props;
   const counts = useSidebarCounts({ me: props.me });
-  const actions = useMemo(
-    () => ({ keymap: props.keymap, scheduleList: props.scheduleList, unread: props.unread }),
-    [props.keymap, props.scheduleList, props.unread],
-  );
+  const actions = useMemo(() => ({ keymap: props.keymap, unread: props.unread }), [props.keymap, props.unread]);
   return (
     <>
       <NavList label={TEXT.views}>

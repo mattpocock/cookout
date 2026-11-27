@@ -210,10 +210,13 @@ it("shift+S on a channel row opens its scheduled messages", { timeout: 5000 }, a
   const close = openAt({ client: await readerOf(channels), hash: `#/channels/${channels.first}` });
   await focusedRow(channels.second);
   pressed({ key: "S", shiftKey: true });
-  const list = await screen.findByRole("dialog", { name: "Scheduled messages" });
+  const list = await screen.findByRole("region", { name: `Scheduled messages in #${channels.second}` });
   const said = await within(list).findByText(`Nothing is scheduled in #${channels.second}.`);
 
-  expect(said.textContent).toBe(`Nothing is scheduled in #${channels.second}.`);
+  expect([said.textContent, globalThis.location.hash]).toStrictEqual([
+    `Nothing is scheduled in #${channels.second}.`,
+    `#/channels/${channels.second}/schedules`,
+  ]);
 
   close();
 });
@@ -227,7 +230,10 @@ it("shift+S off a channel row opens nothing", { timeout: 5000 }, async () => {
   await focusInbox();
   pressed({ key: "S", shiftKey: true });
 
-  expect(screen.queryByRole("dialog", { name: "Scheduled messages" })).toBeNull();
+  expect([screen.queryByRole("region", { name: /^Scheduled messages in/u }), globalThis.location.hash]).toStrictEqual([
+    null,
+    "#/inbox",
+  ]);
 
   close();
 });

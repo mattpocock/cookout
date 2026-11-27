@@ -3,6 +3,7 @@ import type { ChannelName, Identity } from "../../sdk/index.ts";
 import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
 import type { ReactNode } from "react";
 import { ScheduleListRow } from "./schedule-list-row.tsx";
+import type { ScheduledMessageId } from "../../scheduled-messages/index.ts";
 import { soonestFirst } from "./schedule-facts.ts";
 import { useChannelSchedules } from "./use-board.ts";
 
@@ -19,6 +20,7 @@ interface ScheduleListBodyProps {
   readonly me: Identity;
   readonly scheduleList: ScheduleList;
   readonly scheduling: Scheduling;
+  readonly selected: ScheduledMessageId | null;
   readonly state: ScheduleListState;
 }
 
@@ -43,6 +45,7 @@ export function ScheduleListBody(props: ScheduleListBodyProps): ReactNode {
           schedule={schedule}
           scheduleList={props.scheduleList}
           scheduling={props.scheduling}
+          selected={props.selected === schedule.id}
           state={props.state}
         />
       ))}
