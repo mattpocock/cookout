@@ -1,6 +1,19 @@
-import type { ApprovalCode, BoardStore, ChannelCreation, ScheduleList, Scheduling } from "../../board/index.ts";
+import type {
+  ApprovalCode,
+  BoardStore,
+  ChannelCreation,
+  ScheduleList,
+  Scheduling,
+  SessionList,
+} from "../../board/index.ts";
 import { browserClock, browserTimeZone } from "../../format/index.ts";
-import { createApprovalCode, createChannelCreation, createScheduleList, createScheduling } from "../../board/index.ts";
+import {
+  createApprovalCode,
+  createChannelCreation,
+  createScheduleList,
+  createScheduling,
+  createSessionList,
+} from "../../board/index.ts";
 
 const PREVIEW_PAUSE_MS = 200;
 
@@ -9,6 +22,7 @@ interface BoardPageStores {
   readonly channelCreation: ChannelCreation;
   readonly scheduleList: ScheduleList;
   readonly scheduling: Scheduling;
+  readonly sessionList: SessionList;
 }
 
 function boardPageStores(store: BoardStore): BoardPageStores {
@@ -24,6 +38,7 @@ function boardPageStores(store: BoardStore): BoardPageStores {
       preview: store.calls.previewScheduledMessage,
       timeZone: browserTimeZone(),
     }),
+    sessionList: createSessionList(store.calls),
   };
 }
 
