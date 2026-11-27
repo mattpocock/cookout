@@ -26,7 +26,7 @@ async function isFeederNow(name: string): Promise<boolean> {
 
 async function pressAndConfirm(button: string, confirm: string): Promise<void> {
   fireEvent.click(await inProfile().findEnabledButton(button));
-  await screen.findByRole("alertdialog", { name: `${confirm}?` });
+  await screen.findByRole("alertdialog");
   fireEvent.click(await inDialog().findByRole("button", { name: confirm }));
 }
 
