@@ -1,6 +1,6 @@
 # A browser login issues its own per-machine credential
 
-Superseded in part on 2026-11-27 by [ADR 0149](0149-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md): the Login credential a browser approval issues records the credential that approved it as its parent, and revoking that one revokes it.
+Superseded in part on 2026-11-27 by [ADR 0150](0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md): the Login credential a browser approval issues records the credential that approved it as its parent, and revoking that one revokes it.
 
 `cookout login` without `--token` logs a machine in by browser approval, like `gh auth login` (Matt, 2026-11-23, [#117](https://github.com/mattpocock/cookout/issues/117)):
 

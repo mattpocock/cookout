@@ -38,7 +38,7 @@ interface SessionView {
   readonly madeBy?: SessionMadeByView;
 }
 
-/** A credential's public ID (ADR 0149): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
+/** A credential's public ID (ADR 0150): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
 export type PublicId = string & { readonly [brand]: "PublicId" };
 
 /**
@@ -125,7 +125,7 @@ export function approvalPathOf(userCode: string): string {
 }
 
 /**
- * `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0149).
+ * `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0150).
  */
 export const sessionsPath = "/v1/sessions";
 

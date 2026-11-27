@@ -48,7 +48,7 @@ export { AgentSessionSent } from "./lib/server/auth.ts";
 export { LoginCredentialSent } from "./lib/server/auth.ts";
 /**
  * The hash of the credential the request was sent with, whatever its kind (Identity token, session, agent session):
- * what the request makes (a session, an agent session, a join code, an approval) records it as its parent (ADR 0149).
+ * what the request makes (a session, an agent session, a join code, an approval) records it as its parent (ADR 0150).
  */
 export { CredentialSent } from "./lib/server/auth.ts";
 /**
@@ -146,7 +146,7 @@ export interface AdminSettings {
  * applied, and makes it an admin: it creates a human admin on a store without one, and gives it back its admin flag
  * if another admin removed it. `cookout serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` and
  * `COOKOUT_ADMIN_NAME` (Matt, 2026-11-23, mattpocock/cookout#85 and #107), so a token lost or leaked stops working,
- * with every session below it (ADR 0149), once the setting changes and the server restarts. With the setting unchanged, a
+ * with every session below it (ADR 0150), once the setting changes and the server restarts. With the setting unchanged, a
  * token rotated since and its web sessions survive any number of restarts (ADR 0130). A new name leaves the identity
  * the token belonged to in place, still an admin, with no working token.
  *
@@ -180,7 +180,7 @@ export function adminTokenSet(
 /**
  * The identity routes, for the server's route list: whoami, logging the web
  * UI in and out, create, list and rotate, making and removing admins, and listing and revoking a person's sessions
- * (ADR 0149). They need `Caller`, which
+ * (ADR 0150). They need `Caller`, which
  * `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
