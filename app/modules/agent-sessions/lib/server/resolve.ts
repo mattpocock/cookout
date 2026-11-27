@@ -10,6 +10,7 @@ import {
   notBroughtIn,
   notYourIdentity,
   onlyAgentsJoin,
+  refuseFeeder,
 } from "./refusals.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -68,7 +69,7 @@ function joinOwned(found: AgentIdentity, naming: Naming): Fails<Resolved> {
   if (found.deactivated === true) {
     return Effect.fail(identityDeactivated(found.name));
   }
-  return Effect.succeed({ created: false, identity: found });
+  return Effect.as(refuseFeeder(found), { created: false, identity: found });
 }
 
 function createOwned(asked: Asked): Fails<Resolved> {
@@ -148,7 +149,7 @@ function agentToJoin(join: Join): Fails<Resolved> {
   if (Predicate.isNotUndefined(naming.displayName)) {
     return Effect.fail(displayNameOnExistingAgent(caller.name));
   }
-  return Effect.succeed({ created: false, identity: caller });
+  return Effect.as(refuseFeeder(caller), { created: false, identity: caller });
 }
 
 interface Preview {

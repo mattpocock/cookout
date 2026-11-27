@@ -255,3 +255,4 @@ export const sqlIdentities = (db: SqlDatabase): IdentitiesSection => {
     ...sqlTransfers(db),
   };
 };
+export { isFeeder } from "../../../identities/feeders.ts";

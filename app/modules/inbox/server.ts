@@ -26,6 +26,7 @@ import {
   ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
+import { Caller, refuseFeeder } from "../identities/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ackAllPath,
@@ -41,7 +42,6 @@ import {
   readPositionsPath,
   subscriptionPath,
 } from "./index.ts";
-import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import { Inbox } from "./lib/server/service.ts";
 import type { Route } from "../http/server.ts";
@@ -57,7 +57,7 @@ const PATH_BASE = "http://cookout.invalid";
 const inboxRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* inboxRouteHandler() {
-      const caller = yield* Caller;
+      const caller = yield* Effect.tap(Caller, refuseFeeder);
       const inbox = yield* Inbox;
       const answer = yield* inbox.inbox(caller);
       return yield* HttpServerResponse.schemaJson(InboxResponseSchema)(answer);
@@ -74,7 +74,7 @@ const historyRoute: Route<Needs> = {
       const query = yield* HttpServerRequest.schemaSearchParams(InboxHistoryQuerySchema, ALL_ERRORS).pipe(
         Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
       );
-      const caller = yield* Caller;
+      const caller = yield* Effect.tap(Caller, refuseFeeder);
       const inbox = yield* Inbox;
       const answer = yield* inbox.history(caller, query);
       return yield* HttpServerResponse.schemaJson(InboxHistoryResponseSchema)(answer);

@@ -62,6 +62,13 @@ type Described<Fields> = Fields & {
   /** What the agent handles, for people and for routing: 1–500 characters, trimmed. */
   readonly description?: Description;
 };
+/**
+ * An agent identity's fields with its Feeder flag: present, and true, on an agent that only posts, which its owner
+ * declares. A typed `@name` of it is no Mention, and it can't watch, read its inbox or join (ADR 0158).
+ */
+type Fed<Fields> = Fields & {
+  readonly feeder?: true;
+};
 /** The body of `PATCH /v1/identities/:name`. */
 interface UpdateIdentityRequest {
   /** What the agent handles, trimmed, then 1–500 characters (400 `invalid_request` otherwise), or `null` to clear it. */
@@ -77,6 +84,17 @@ interface DescriptionCalls<Answer> {
    * otherwise); a human has no description (403 `identity_kind`).
    */
   readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
+}
+/** Making an agent a Feeder and an agent again (ADR 0158). `Answer` is the `IdentityResponse` both answer with. */
+interface FeederCalls<Answer> {
+  /**
+   * `PUT /v1/identities/:name/feeder`: the agent's owner or an admin makes it a Feeder, which only posts. A typed
+   * `@name` of it is no Mention, and it can't watch, read its inbox or join (403 `identity_kind`). A human is 403
+   * `identity_kind`; anyone else 403 `not_owner`.
+   */
+  readonly makeFeeder: (name: string) => Promise<Answer>;
+  /** `DELETE /v1/identities/:name/feeder`: the owner or an admin makes a Feeder an agent that reads its mentions again. */
+  readonly removeFeeder: (name: string) => Promise<Answer>;
 }
 /** The body of `POST /v1/identities` as an agent sends it to create an agent for its own owner: it names no kind. */
 interface CreateAgentForOwnerRequest {
@@ -186,7 +204,7 @@ type HumanIdentity = IdentityFields & {
   readonly kind: "human";
 };
 /** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
-type AgentIdentity = Described<IdentityFields> & {
+type AgentIdentity = Fed<Described<IdentityFields>> & {
   readonly kind: "agent";
   readonly owner: Owner;
   /** The agent whose approval of a join created this agent (#370); never changed. Absent when a person approved. */
@@ -1952,7 +1970,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence" | "startWakeRun" | "endWakeRun" | "failWakeRun">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & FeederCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence" | "startWakeRun" | "endWakeRun" | "failWakeRun">;
 type CreatedIdentity<Kind extends IdentityKind> = Kind extends "agent" ? IdentityResponse : IdentityWithTokenResponse;
 type CreateIdentityCall = <Kind extends IdentityKind>(request: CreateIdentityRequest & {
   readonly kind: Kind;

@@ -287,6 +287,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   POSTGRES_AGENT_SUBSCRIPTIONS_MIGRATION,
   POSTGRES_LOGIN_ALERT_VIA_MIGRATION,
   POSTGRES_AGENT_KEYS_MIGRATION,
+  ["ALTER TABLE identities ADD COLUMN feeder boolean NOT NULL DEFAULT FALSE"],
 ];
 
 function migratePostgres(db: PostgresDatabase): Effect.Effect<void, StorageUnavailable> {

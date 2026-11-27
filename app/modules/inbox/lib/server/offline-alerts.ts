@@ -1,11 +1,11 @@
 import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
+import { IdentityChanges, isFeeder } from "../../../identities/server.ts";
 import type { InboxAlert, LoginAlert } from "../../index.ts";
 import type { OfflineAlertId, OfflineReason, Presence } from "../../../presence/index.ts";
 import type { SessionMade, TokensEnded } from "../../../identities/server.ts";
 import type { StorageUnavailable, StoredInboxAlert, StoredLoginAlert } from "../../../storage/server.ts";
 import { isOfflineAlertId, offlineAlertNotFound } from "../../../presence/index.ts";
-import { IdentityChanges } from "../../../identities/server.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
@@ -75,13 +75,20 @@ function ownerOfAgent(storage: Storage["Service"], agent: IdentityName): Effect.
   return storage.findIdentityByName(agent).pipe(Effect.map(ownerOf), Effect.orElseSucceed(Option.none));
 }
 
+function ownerToAlert(storage: Storage["Service"], agent: IdentityName): Effect.Effect<Option.Option<IdentityName>> {
+  return storage.findIdentityByName(agent).pipe(
+    Effect.map((found) => Option.filter(ownerOf(found), () => Predicate.isNotUndefined(found) && !isFeeder(found))),
+    Effect.orElseSucceed(Option.none),
+  );
+}
+
 type Raising = Pick<NewOfflineAlert, "agent" | "offlineReason" | "trigger">;
 
 type NewOfflineAlert = Parameters<Storage["Service"]["recordOfflineAlert"]>[typeof FIRST_PARAMETER];
 
 function raised({ publish, storage }: On, raising: Raising): Effect.Effect<void> {
   return Effect.gen(function* raiseAlert() {
-    const owner = yield* ownerOfAgent(storage, raising.agent);
+    const owner = yield* ownerToAlert(storage, raising.agent);
     if (Option.isNone(owner)) {
       return;
     }

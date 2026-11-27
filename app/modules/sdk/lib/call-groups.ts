@@ -1,4 +1,4 @@
-import type { AgentCreationCalls, DescriptionCalls } from "../../identities/client.ts";
+import type { AgentCreationCalls, DescriptionCalls, FeederCalls } from "../../identities/client.ts";
 import type {
   AttachmentCalls,
   ClosedThreadCalls,
@@ -26,6 +26,7 @@ export type CallGroups = LoginCalls &
   IdentityAvatarCalls &
   IdentityDeletionCalls &
   DescriptionCalls<IdentityResponse> &
+  FeederCalls<IdentityResponse> &
   ClosedThreadCalls &
   MessageDeleteCalls &
   OpenThreadCalls &

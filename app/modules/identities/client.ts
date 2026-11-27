@@ -32,6 +32,14 @@ export type Described<Fields> = Fields & {
   readonly description?: Description;
 };
 
+/**
+ * An agent identity's fields with its Feeder flag: present, and true, on an agent that only posts, which its owner
+ * declares. A typed `@name` of it is no Mention, and it can't watch, read its inbox or join (ADR 0158).
+ */
+export type Fed<Fields> = Fields & {
+  readonly feeder?: true;
+};
+
 /** The body of `PATCH /v1/identities/:name`. */
 export interface UpdateIdentityRequest {
   /** What the agent handles, trimmed, then 1–500 characters (400 `invalid_request` otherwise), or `null` to clear it. */
@@ -48,6 +56,18 @@ export interface DescriptionCalls<Answer> {
    * otherwise); a human has no description (403 `identity_kind`).
    */
   readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
+}
+
+/** Making an agent a Feeder and an agent again (ADR 0158). `Answer` is the `IdentityResponse` both answer with. */
+export interface FeederCalls<Answer> {
+  /**
+   * `PUT /v1/identities/:name/feeder`: the agent's owner or an admin makes it a Feeder, which only posts. A typed
+   * `@name` of it is no Mention, and it can't watch, read its inbox or join (403 `identity_kind`). A human is 403
+   * `identity_kind`; anyone else 403 `not_owner`.
+   */
+  readonly makeFeeder: (name: string) => Promise<Answer>;
+  /** `DELETE /v1/identities/:name/feeder`: the owner or an admin makes a Feeder an agent that reads its mentions again. */
+  readonly removeFeeder: (name: string) => Promise<Answer>;
 }
 
 /** The body of `POST /v1/identities` as an agent sends it to create an agent for its own owner: it names no kind. */

@@ -155,8 +155,21 @@ function appendedOr(message: PostMessage): (result: Appended) => Fails<AppendedO
   };
 }
 
-function answerTo(result: AppendedOk): MessageResponse {
-  return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
+function namesFeeder(storage: Storage["Service"], name: string): Fails<boolean> {
+  if (!isIdentityName(name)) {
+    return Effect.succeed(false);
+  }
+  return Effect.map(
+    storage.findIdentityByName(name),
+    (found) => Predicate.isNotUndefined(found) && found.kind === "agent" && found.feeder === true,
+  );
+}
+
+function answerTo(storage: Storage["Service"], message: Message): Fails<MessageResponse> {
+  return Effect.map(
+    Effect.filter(unknownMentionsIn(message), (name) => Effect.map(namesFeeder(storage, name), (fed) => !fed)),
+    (unknownMentions: readonly string[]) => ({ message, unknownMentions }),
+  );
 }
 
 function postWith(posting: Posting): (author: Identity, message: PostMessage) => Fails<MessageResponse> {
@@ -174,7 +187,7 @@ function postWith(posting: Posting): (author: Identity, message: PostMessage) =>
         Effect.flatMap(appendedOr(rest)),
         Effect.onError(() => files.remove),
       );
-      return answerTo(result);
+      return yield* answerTo(posting.storage, result.message);
     });
 }
 

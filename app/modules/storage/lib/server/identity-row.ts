@@ -17,9 +17,11 @@ const NOT_ADMIN = 0;
 const ADMIN = 1;
 const ACTIVE = 0;
 const DEACTIVATED = 1;
+const NOT_FEEDER = 0;
+const FEEDER = 1;
 
 const IDENTITY_COLUMNS =
-  "name, kind, owner, admin, created_at, display_name, description, deactivated, brought_in_by, avatar";
+  "name, kind, owner, admin, created_at, display_name, description, deactivated, brought_in_by, avatar, feeder";
 
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
 
@@ -44,6 +46,7 @@ const HumanRow = Schema.Struct({
   ...sharedColumns,
   brought_in_by: Schema.optionalKey(Schema.Null),
   description: Schema.optionalKey(Schema.Null),
+  feeder: Schema.optionalKey(Schema.Literal(NOT_FEEDER)),
   kind: Schema.Literal("human"),
   owner: Schema.Null,
 });
@@ -52,6 +55,7 @@ const AgentRow = Schema.Struct({
   ...sharedColumns,
   brought_in_by: Schema.NullOr(IdentityNameColumn),
   description: Schema.NullOr(DescriptionColumn),
+  feeder: Schema.Literals([NOT_FEEDER, FEEDER]),
   kind: Schema.Literal("agent"),
   owner: OwnerColumn,
 });
@@ -93,6 +97,13 @@ function deactivatedOf(row: typeof IdentityRow.Type): { readonly deactivated?: t
   return {};
 }
 
+function feederOf(feeder: typeof AgentRow.Type.feeder): { readonly feeder?: true } {
+  if (feeder === FEEDER) {
+    return { feeder: true };
+  }
+  return {};
+}
+
 function toIdentity(row: typeof IdentityRow.Type): Identity {
   const fields = {
     admin: row.admin === ADMIN,
@@ -105,7 +116,7 @@ function toIdentity(row: typeof IdentityRow.Type): Identity {
   if (row.kind === "human") {
     return { ...fields, kind: "human" };
   }
-  const described = { ...fields, ...descriptionOf(row.description) };
+  const described = { ...fields, ...descriptionOf(row.description), ...feederOf(row.feeder) };
   return { ...described, ...broughtInByOf(row.brought_in_by), kind: "agent", owner: row.owner };
 }
 

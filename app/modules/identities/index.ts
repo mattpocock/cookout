@@ -3,7 +3,7 @@
  * `TokenHash` brands, the two identity kinds and their constructors, the identity as the server shows it (its avatar
  * too), the routes, and the error codes bearer auth, the admin check and identity creation answer with.
  */
-import type { Described } from "./client.ts";
+import type { Described, Fed } from "./client.ts";
 import type { IsoTime } from "../time/index.ts";
 import type { WithAvatar } from "../avatars/index.ts";
 import { avatarErrorCodes } from "../avatars/index.ts";
@@ -105,7 +105,7 @@ export type HumanIdentity = IdentityFields & {
 };
 
 /** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
-export type AgentIdentity = Described<IdentityFields> & {
+export type AgentIdentity = Fed<Described<IdentityFields>> & {
   readonly kind: "agent";
   readonly owner: Owner;
   /** The agent whose approval of a join created this agent (#370); never changed. Absent when a person approved. */

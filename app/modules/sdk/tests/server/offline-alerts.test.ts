@@ -211,3 +211,17 @@ it.effect.each<Unexpected>([
     expect(alerts).toMatchObject([{ agent: AGENT, offlineReason, read: false }]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
+
+it.effect("an agent made a feeder raises no offline alert when an admin revokes the session it had", () =>
+  Effect.gen(function* feederRevoked() {
+    const watched = yield* board;
+    const session = yield* joinedSession(watched);
+    yield* watching(session);
+    yield* answer(() => watched.matt.client.makeFeeder(AGENT));
+    yield* revokedByAdmin(watched);
+    yield* watched.cookout.liveConnectionsClosed(AGENT);
+    const alerts = yield* alertsOf(watched.matt.client);
+
+    expect(alerts).toStrictEqual([]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);

@@ -25,6 +25,7 @@ interface RedeemJoinCode {
 type JoinCodeRedemption =
   | { readonly status: "gone" }
   | { readonly status: "deactivated"; readonly identity: IdentityName }
+  | { readonly status: "feeder"; readonly identity: IdentityName }
   | { readonly status: "live"; readonly identity: IdentityName; readonly expiresAt: IsoTime }
   | {
       readonly status: "redeemed";
