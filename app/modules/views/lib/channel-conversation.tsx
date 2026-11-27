@@ -60,6 +60,7 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
       })}
       posts={posts}
       reader={reader}
+      scheduling={props.scheduling}
       selection={props.unread.selection({ channel, thread: null })}
     />
   );
