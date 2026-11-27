@@ -46,7 +46,6 @@ interface InboxEntries {
   readonly nudges: ReadonlyMap<NudgeId, InboxHistoryNudge>;
   readonly deactivationOffers: ReadonlyMap<DeactivationOfferId, DeactivationOffer>;
   readonly deactivatedQuietAgents: ReadonlyMap<DeactivatedQuietAgentId, DeactivatedQuietAgent>;
-  readonly held: ReadonlySet<DeactivatedQuietAgentId>;
   readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
   readonly refusedJoins: ReadonlyMap<string, Refusal>;
   readonly earlier: EarlierHeld;
@@ -66,7 +65,6 @@ type InboxChange =
       readonly readPositions: readonly ReadPosition[];
       readonly alerts: readonly InboxAlert[];
     }
-  | { readonly type: "quiet-agent-held"; readonly id: DeactivatedQuietAgentId; readonly held: boolean }
   | { readonly type: "agent-join-answered"; readonly userCode: string; readonly refusal: Refusal | null }
   | { readonly type: "earlier-more"; readonly more: MoreState }
   | {
@@ -96,7 +94,6 @@ const NO_ENTRIES: InboxEntries = {
   deactivatedQuietAgents: new Map(),
   deactivationOffers: new Map(),
   earlier: NO_EARLIER,
-  held: new Set(),
   history: LOADING,
   inbox: LOADING,
   items: new Map(),

@@ -16,7 +16,6 @@ const INBOX_CHANGES: ReadonlySet<string> = new Set<InboxChange["type"]>([
   "inbox-acked-all",
   "inbox-read-again",
   "positions-read",
-  "quiet-agent-held",
 ]);
 
 const NO_INBOX: InboxState = { entries: NO_ENTRIES, readPositions: NO_READ_POSITIONS };
