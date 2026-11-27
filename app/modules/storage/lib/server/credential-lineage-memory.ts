@@ -1,5 +1,5 @@
 import { Array as Arr, Option, Predicate } from "effect";
-import type { EndedCredential, EndedWhy, NewLineage } from "./credential-lineage.ts";
+import type { EndedCredential, EndedWhy, LogOutEverywhere, NewLineage } from "./credential-lineage.ts";
 import type { IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 
@@ -7,7 +7,10 @@ interface LineageRow extends NewLineage {
   readonly ended: Option.Option<{ readonly at: IsoTime; readonly why: EndedWhy }>;
 }
 
-type Ender = (hash: TokenHash, now: IsoTime) => Option.Option<EndedCredential>;
+interface Ender {
+  readonly live: (hash: TokenHash, now: IsoTime) => Option.Option<EndedCredential>;
+  readonly end: (hash: TokenHash) => void;
+}
 
 interface HeldToken {
   readonly hash: TokenHash;
@@ -36,6 +39,8 @@ interface MemoryLineage {
   readonly revokeTree: (hash: TokenHash, now: IsoTime) => readonly EndedCredential[];
   readonly revokeBelowRevokedTokens: (name: IdentityName, now: IsoTime) => readonly EndedCredential[];
   readonly endCredentialsOf: (name: IdentityName, now: IsoTime) => readonly EndedCredential[];
+  readonly previewLogOutEverywhere: (request: LogOutEverywhere) => readonly EndedCredential[];
+  readonly logOutEverywhere: (request: LogOutEverywhere) => readonly EndedCredential[];
 }
 
 const NO_TOKENS: MemoryTokens = { activeTokens: new Map(), revokedTokens: new Map() };
@@ -98,6 +103,41 @@ function ownRoots(rows: Rows, name: IdentityName): readonly TokenHash[] {
   );
 }
 
+function everywhereBut(rows: Rows, roots: readonly TokenHash[], current: TokenHash | undefined): readonly TokenHash[] {
+  const kept = new Set(treeOf(rows, Arr.fromNullishOr(current)));
+  return Arr.filter(treeOf(rows, roots), (hash) => !kept.has(hash));
+}
+
+const NO_PARENT = Option.getOrUndefined(Option.none<TokenHash>());
+
+function makeRoot(rows: Rows, current: TokenHash | undefined): void {
+  for (const row of Arr.filter([...rows.values()], ({ hash }) => hash === current)) {
+    rows.set(row.hash, { ...row, parent: NO_PARENT });
+  }
+}
+
+type Enders = ReadonlySet<Ender>;
+
+function liveAmong(enders: Enders, hashes: readonly TokenHash[], now: IsoTime): readonly EndedCredential[] {
+  return Arr.flatMap(hashes, (hash) => Arr.getSomes(Arr.map([...enders], (ender) => ender.live(hash, now))));
+}
+
+function endEachIn(
+  rows: Rows,
+  enders: Enders,
+): (hashes: readonly TokenHash[], now: IsoTime) => readonly EndedCredential[] {
+  const markEnded = markEndedIn(rows);
+  return (hashes, now) =>
+    Arr.flatMap(hashes, (hash) => {
+      const ended = liveAmong(enders, [hash], now);
+      for (const ender of enders) {
+        ender.end(hash);
+      }
+      markEnded({ hash, now, why: "revoked" });
+      return ended;
+    });
+}
+
 function newMemoryLineage(): MemoryLineage {
   const rows: Rows = new Map();
   const enders = new Set<Ender>();
@@ -106,22 +146,23 @@ function newMemoryLineage(): MemoryLineage {
   function current(): MemoryTokens {
     return tokens.current;
   }
-  function endEach(hashes: readonly TokenHash[], now: IsoTime): readonly EndedCredential[] {
-    return Arr.flatMap(hashes, (hash) => {
-      const ended = Arr.getSomes(Arr.map([...enders], (end) => end(hash, now)));
-      markEnded({ hash, now, why: "revoked" });
-      return ended;
-    });
+  const endEach = endEachIn(rows, enders);
+  function rootsOf(name: IdentityName): readonly TokenHash[] {
+    return [...Arr.map(tokensOf(current(), name), ({ hash }) => hash), ...ownRoots(rows, name)];
   }
   return {
     addEnder: (ender) => {
       enders.add(ender);
     },
-    endCredentialsOf: (name, now) => {
-      const held = Arr.map(tokensOf(current(), name), ({ hash }) => hash);
-      return endEach(treeOf(rows, [...held, ...ownRoots(rows, name)]), now);
+    endCredentialsOf: (name, now) => endEach(treeOf(rows, rootsOf(name)), now),
+    logOutEverywhere: ({ current: sent, identity, now }) => {
+      const ended = endEach(everywhereBut(rows, rootsOf(identity), sent), now);
+      makeRoot(rows, sent);
+      return ended;
     },
     markEnded,
+    previewLogOutEverywhere: ({ current: sent, identity, now }) =>
+      liveAmong(enders, everywhereBut(rows, rootsOf(identity), sent), now),
     record: (row) => {
       rows.set(row.hash, { ...row, ended: Option.none() });
     },

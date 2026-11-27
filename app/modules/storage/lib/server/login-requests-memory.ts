@@ -240,12 +240,17 @@ function lookUpIn(held: Held, renew: boolean) {
 }
 
 function enderOf(held: Held): Ender {
-  return (hash, now) =>
-    Option.flatMap(Option.fromUndefinedOr(held.credentials.get(hash)), ({ identity, lastUsedAt }) => {
+  return {
+    end: (hash) => {
       held.credentials.delete(hash);
-      const ended: EndedCredential = { hash, identity, kind: "session" };
-      return Option.some(ended).pipe(Option.filter(() => now < loginCredentialExpiry(lastUsedAt)));
-    });
+    },
+    live: (hash, now) =>
+      pipe(
+        Option.fromUndefinedOr(held.credentials.get(hash)),
+        Option.filter(({ lastUsedAt }) => now < loginCredentialExpiry(lastUsedAt)),
+        Option.map(({ identity }): EndedCredential => ({ hash, identity, kind: "session" })),
+      ),
+  };
 }
 
 function memoryLoginRequests({ findIdentity, state }: MemoryLoginRequestsOptions): MemoryLoginRequestsSection {
