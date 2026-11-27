@@ -76,12 +76,12 @@ interface Refusing {
   readonly refused: Promise<unknown>;
 }
 
-async function endToken({ kind, name }: CreateIdentityRequest): Promise<void> {
-  const admin = testClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+async function endToken({ kind, name }: CreateIdentityRequest, token: string): Promise<void> {
   if (kind === "human") {
-    await admin.rotateToken(name);
+    await testClient({ env: {}, token, url: webTestCookout().url }).rotateToken(name);
     return;
   }
+  const admin = testClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
   const { agentKeys } = await admin.listAgentKeys(name);
   await Promise.all(
     agentKeys.map(async ({ id }) => {
@@ -130,7 +130,7 @@ export async function newIdentity(request: CreateIdentityRequest): Promise<NewId
     client,
     rotateToken: async () => {
       await settled();
-      await endToken(request);
+      await endToken(request, token);
     },
     token,
   };

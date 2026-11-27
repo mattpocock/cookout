@@ -1,6 +1,7 @@
 import { Array as Arr, Effect, Predicate } from "effect";
 import {
   Caller,
+  adminActedOn,
   identityNotFound,
   nameParam,
   requireOwnerBringerOrAdmin,
@@ -11,13 +12,14 @@ import type { ListAgentSessionsResponse, ListedAgentSession } from "../../index.
 import { ListAgentSessionsResponseSchema, RevokeAgentSessionResponseSchema } from "./wire.ts";
 import { AgentSessions } from "./service.ts";
 import { HttpServerResponse } from "effect/http";
+import type { IdentityChanges } from "../../../identities/server.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { identityAgentSessionPath } from "../../index.ts";
 
-type Needs = Caller | Storage | AgentSessions;
+type Needs = Caller | Storage | AgentSessions | IdentityChanges;
 
 type Permission = (name: IdentityName) => Effect.Effect<void, Refusal | StorageUnavailable, Caller | Storage>;
 
@@ -64,10 +66,14 @@ const listRoute: Route<Needs> = {
 const revokeRoute: Route<Needs> = {
   handle: (params) =>
     Effect.gen(function* revokeAgentSessionRoute() {
-      const { name } = yield* managedAgent(params, requireOwnerBringerOrAdmin);
+      const agent = yield* managedAgent(params, requireOwnerBringerOrAdmin);
       const caller = yield* Caller;
       const agentSessions = yield* AgentSessions;
-      const revoked = yield* agentSessions.revokeFor(name, caller.name);
+      const revoked = yield* agentSessions.revokeFor(agent.name, caller.name);
+      yield* Effect.when(
+        adminActedOn({ act: "revoked an agent session", caller, target: agent }),
+        Effect.succeed(revoked.revoked),
+      );
       return yield* HttpServerResponse.schemaJson(RevokeAgentSessionResponseSchema)(revoked);
     }),
   method: "DELETE",

@@ -1,4 +1,4 @@
-import { adminClient, anonymousClient, newIdentity, sessionOf } from "./identities.ts";
+import { adminClient, anonymousClient, clientWith, newIdentity, sessionOf } from "./identities.ts";
 import { alertSaying, alertsShown } from "./alerts.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
@@ -83,7 +83,7 @@ it("logging in with a token that was rotated away is refused with token_revoked"
   expect.hasAssertions();
 
   const { token } = await newIdentity({ kind: "human", name: "web-login-rotated" });
-  await adminClient().rotateToken("web-login-rotated");
+  await clientWith(token).rotateToken("web-login-rotated");
 
   await expect(refusalShownFor(token)).resolves.toStrictEqual([
     expect.stringMatching(/^Couldn't log in \(token_revoked\)/u),

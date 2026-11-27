@@ -5,13 +5,15 @@ import { adminActs } from "../../../inbox/index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isPublicId } from "../../../logins/index.ts";
 
-const LOGIN_COLUMNS = "login_kind, credential_id, session_kind, where_from, client_ip, admin_name, admin_act, made_via";
+const LOGIN_COLUMNS =
+  "login_kind, credential_id, session_kind, where_from, client_ip, admin_name, admin_act, made_via, acted_on_agent";
 
 const PublicIdColumn = Schema.String.pipe(Schema.refine(isPublicId));
 
 const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 
 const LoginColumns = {
+  acted_on_agent: Schema.NullOr(IdentityNameColumn),
   admin_act: Schema.NullOr(Schema.Literals(adminActs)),
   admin_name: Schema.NullOr(IdentityNameColumn),
   client_ip: Schema.NullOr(Schema.String),
@@ -26,22 +28,56 @@ const LoginRow = Schema.Struct(LoginColumns);
 
 type LoginRowType = typeof LoginRow.Type;
 
-type LoginColumnValues = readonly [SqlValue, SqlValue, SqlValue, SqlValue, SqlValue, SqlValue, SqlValue, SqlValue];
+type LoginColumnValues = readonly [
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+  SqlValue,
+];
+
+type AdminActEvent = Extract<StoredLoginEvent, { readonly kind: "admin act" }>;
+
+function adminActValues(login: AdminActEvent): LoginColumnValues {
+  const { agent = null, credential = null } = login;
+  return [login.kind, credential, null, null, null, login.admin, login.act, null, agent];
+}
 
 function loginColumnValues(login: StoredLoginEvent): LoginColumnValues {
   if (login.kind === "admin act") {
-    return [login.kind, login.credential, null, null, null, login.admin, login.act, null];
+    return adminActValues(login);
   }
   const { clientIp = null, via = null } = login;
-  return [login.kind, login.session, login.sessionKind, login.where, clientIp, null, null, via];
+  return [login.kind, login.session, login.sessionKind, login.where, clientIp, null, null, via, null];
+}
+
+function credentialOf(row: LoginRowType): Pick<AdminActEvent, "credential"> {
+  if (Predicate.isNull(row.credential_id)) {
+    return {};
+  }
+  return { credential: row.credential_id };
+}
+
+function agentOf(row: LoginRowType): Pick<AdminActEvent, "agent"> {
+  if (Predicate.isNull(row.acted_on_agent)) {
+    return {};
+  }
+  return { agent: row.acted_on_agent };
+}
+
+function actedOnOf(row: LoginRowType): Pick<AdminActEvent, "agent" | "credential"> {
+  return { ...credentialOf(row), ...agentOf(row) };
 }
 
 function adminActOf(row: LoginRowType): Option.Option<StoredLoginEvent> {
   return Option.all({
     act: Option.fromNullOr(row.admin_act),
     admin: Option.fromNullOr(row.admin_name),
-    credential: Option.fromNullOr(row.credential_id),
-  }).pipe(Option.map((act) => ({ ...act, kind: "admin act" as const })));
+  }).pipe(Option.map((act) => ({ ...act, ...actedOnOf(row), kind: "admin act" as const })));
 }
 
 function clientIpOf(row: LoginRowType): { readonly clientIp?: string } {

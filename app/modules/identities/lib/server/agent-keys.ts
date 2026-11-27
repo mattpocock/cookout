@@ -1,4 +1,4 @@
-import { Caller, CredentialSent, credentialsEnded, issueToken } from "./auth.ts";
+import { Caller, CredentialSent, adminActedOn, credentialsEnded, issueToken } from "./auth.ts";
 import {
   CreateAgentKeyRequestSchema,
   CreateAgentKeyResponseSchema,
@@ -93,6 +93,7 @@ const revokeRoute: Route<Needs> = {
         return yield* Effect.fail(keyNotFound);
       }
       yield* credentialsEnded({ by: caller.name, ended: result.ended });
+      yield* adminActedOn({ act: "revoked an agent key", caller, credential: id, target: agent });
       return yield* HttpServerResponse.schemaJson(RevokeAgentKeyResponseSchema)({ ended: result.ended.length });
     }),
   method: "DELETE",

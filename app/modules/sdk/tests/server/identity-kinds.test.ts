@@ -76,7 +76,7 @@ it.effect("an identity keeps the kind it was created with, through a second crea
     const human = yield* answer(() => cookout.client.createIdentity({ kind: "human", name: "ada" }));
     const agent = yield* answer(() => createTestAgent({ by: cookout.client, displayName: "bot", name: "bot" }));
     const recreated = yield* refusal(() => createTestAgent({ by: cookout.client, displayName: "ada", name: "ada" }));
-    const rotated = yield* answer(() => cookout.client.rotateToken("ada"));
+    const rotated = yield* answer(() => cookout.clientFor(human.token).rotateToken("ada"));
     const agentRotated = yield* refusal(() => cookout.client.rotateToken("bot"));
     const now = yield* Effect.forEach(
       [rotated.token, agent.token],
