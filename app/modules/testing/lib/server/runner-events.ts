@@ -49,7 +49,6 @@ interface WakingAgent {
   readonly command?: readonly string[];
   readonly name: string;
   readonly settings?: Omit<FakeWakeSettings, "log">;
-  readonly timeoutMinutes?: number;
   readonly waits?: boolean;
 }
 
@@ -98,7 +97,6 @@ function joinedWith(on: WakeBoard, releaseFile: string, log: string) {
     command,
     name,
     settings,
-    timeoutMinutes,
     waits,
   }: WakingAgent): Effect.Effect<readonly [string, BoardAgent], never, Needs> => {
     const waitFor = Option.match(
@@ -109,10 +107,7 @@ function joinedWith(on: WakeBoard, releaseFile: string, log: string) {
       },
     );
     const given = { ack: true, ...settings, ...waitFor, log };
-    return Effect.map(
-      joinWaking({ command, name, on, settings: given, timeoutMinutes }),
-      (agent) => [name, agent] as const,
-    );
+    return Effect.map(joinWaking({ command, name, on, settings: given }), (agent) => [name, agent] as const);
   };
 }
 

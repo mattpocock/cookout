@@ -16,24 +16,11 @@ const RUNNER_SUFFIX = ".runner.json";
 const DROPPED_SUFFIX = ".dropped.json";
 const PRETTY = 2;
 const NOTHING = {};
-const AT_LEAST_ONE_MINUTE = 1;
 
 const noWakeCommand: CallFailure = {
   code: "usage",
   message: `Give the wake command after --, such as: cookout runner register -- claude -p --resume ${SESSION_ID_PLACEHOLDER}`,
 };
-
-const TIMEOUT_DESCRIPTION =
-  "With a wake command: the whole minutes each wake run may take, 10 by default. When it passes, the runner kills " +
-  "the run's process group, children included, and replies in each given mention's thread that it timed out.";
-
-const badTimeout: CallFailure = {
-  code: "usage",
-  message:
-    "--timeout is the whole minutes a wake run may take before the runner kills it, 1 or more, such as --timeout 30.",
-};
-
-const Minutes = Schema.Int.check(Schema.isGreaterThanOrEqualTo(AT_LEAST_ONE_MINUTE));
 
 const RegistrationSchema = Schema.Struct({
   agent: Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(Schema.refine(isIdentityName)),
@@ -41,7 +28,6 @@ const RegistrationSchema = Schema.Struct({
   harness: Schema.String,
   path: Schema.String,
   sessionId: Schema.optionalKey(Schema.String),
-  timeoutMinutes: Schema.optionalKey(Minutes),
   url: Schema.String,
   wakeCommand: Schema.NonEmptyArray(Schema.String),
 });
@@ -55,7 +41,6 @@ interface RegisteredSession {
 
 interface Wake {
   readonly command: Arr.NonEmptyReadonlyArray<string>;
-  readonly timeoutMinutes: Option.Option<number>;
 }
 
 interface Registering {
@@ -85,11 +70,7 @@ function registrationFor({
     const path = yield* Path.Path;
     const found = yield* Effect.orDie(pathVariable);
     const wakeCommand = Arr.map(wake.command, Str.replaceAll(SESSION_ID_PLACEHOLDER, sessionId));
-    const timeout = Option.match(wake.timeoutMinutes, {
-      onNone: () => NOTHING,
-      onSome: (timeoutMinutes) => ({ timeoutMinutes }),
-    });
-    return { agent, directory: path.resolve("."), harness, path: found, sessionId, url, wakeCommand, ...timeout };
+    return { agent, directory: path.resolve("."), harness, path: found, sessionId, url, wakeCommand };
   });
 }
 
@@ -113,23 +94,15 @@ function register({
   });
 }
 
-interface Asked {
-  readonly timeoutMinutes: Option.Option<number>;
-  readonly words: readonly string[];
-}
-
-function wakeOf({ timeoutMinutes, words }: Asked): Effect.Effect<Wake, CallFailure> {
+function wakeOf(words: readonly string[]): Effect.Effect<Wake, CallFailure> {
   if (!Arr.isReadonlyArrayNonEmpty(words)) {
     return Effect.fail(noWakeCommand);
   }
-  if (Option.exists(timeoutMinutes, (minutes) => !Number.isSafeInteger(minutes) || minutes < AT_LEAST_ONE_MINUTE)) {
-    return Effect.fail(badTimeout);
-  }
-  return Effect.succeed({ command: words, timeoutMinutes });
+  return Effect.succeed({ command: words });
 }
 
-function registerHere(asked: Asked): Effect.Effect<Registration, CallFailure, AgentSessionStateNeeds> {
-  return Effect.flatMap(wakeOf(asked), (wake) =>
+function registerHere(words: readonly string[]): Effect.Effect<Registration, CallFailure, AgentSessionStateNeeds> {
+  return Effect.flatMap(wakeOf(words), (wake) =>
     Effect.flatMap(joinPlace, ({ file, place }) =>
       Option.match(file, {
         onNone: () => Effect.fail(notJoined),
@@ -205,7 +178,6 @@ export {
   REGISTRATION_SUFFIX,
   RUNNER_SUFFIX,
   SESSION_ID_PLACEHOLDER,
-  TIMEOUT_DESCRIPTION,
   forgetRegistration,
   latestRegistration,
   opened,

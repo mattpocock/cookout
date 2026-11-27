@@ -1,6 +1,6 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Array as Arr, Console, Effect, Option } from "effect";
-import { SESSION_ID_PLACEHOLDER, TIMEOUT_DESCRIPTION, registerHere, unregister } from "./registrations.ts";
+import { SESSION_ID_PLACEHOLDER, registerHere, unregister } from "./registrations.ts";
 import { answered, printAnswer, printLine, refused } from "./output.ts";
 import { runnerStatus, statusLines } from "./runner-state.ts";
 import { runnerEvents } from "./runner-log.ts";
@@ -13,16 +13,12 @@ const wakeCommandArgument = Argument.String("wake-command").pipe(
   ),
 );
 
-const timeoutFlag = Flag.Int("timeout").pipe(Flag.optional, Flag.withDescription(TIMEOUT_DESCRIPTION));
-
-const registerCommand = Command.make(
-  "register",
-  { timeout: timeoutFlag, wake: wakeCommandArgument },
-  ({ timeout, wake }) => answered(registerHere({ timeoutMinutes: timeout, words: wake })),
+const registerCommand = Command.make("register", { wake: wakeCommandArgument }, ({ wake }) =>
+  answered(registerHere(wake)),
 ).pipe(
   Command.withDescription(
-    "Register this joined harness session with the runner: cookout runner register [--timeout <minutes>] -- " +
-      "<wake command…>. Keeps the agent, the board, this folder, PATH, the timeout if given and the wake command " +
+    "Register this joined harness session with the runner: cookout runner register -- " +
+      "<wake command…>. Keeps the agent, the board, this folder, PATH and the wake command " +
       `(with ${SESSION_ID_PLACEHOLDER} filled in) in a ` +
       "mode-600 file beside the session's agent session state. Refused with not_joined before join.",
   ),
@@ -85,7 +81,7 @@ const logsCommand = Command.make("logs", { agent: logsAgentArgument }, ({ agent 
   Command.withDescription(
     "Print the runner's event log, one JSON line per event, oldest first: runner-start, connect, mention, " +
       "delivered-live and fell-back (with its reason, each naming the harness it came from), woken, wake-run-start (naming the run's output file), exit, " +
-      "timeout, wake-failed, skip, stand-down, unregister and refusal, each with the agent and the time. Give an agent to print only its events. It holds message " +
+      "wake-failed, skip, stand-down, unregister and refusal, each with the agent and the time. Give an agent to print only its events. It holds message " +
       "IDs, never a mention's text or a token. Each wake run's stdout and stderr are in its own file under runs/ " +
       "in the state folder; an agent's oldest files are deleted once its files pass 1 MiB.",
   ),

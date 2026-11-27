@@ -22,7 +22,6 @@ interface JoinFlags {
 interface WakeAsk {
   readonly asked: boolean;
   readonly command: readonly string[];
-  readonly timeoutMinutes: Option.Option<number>;
 }
 
 interface JoinOptions extends Omit<JoinFlags, "as"> {
@@ -175,21 +174,21 @@ function issueAndKeep(
 const wakeUsage: CallFailure = {
   code: "usage",
   message:
-    "Give a wake command (and --timeout) only with --wake, after --: cookout join --as <name> --wake -- " +
+    "Give a wake command only with --wake, after --: cookout join --as <name> --wake -- " +
     "<wake command…>. --print-env keeps nothing to register.",
 };
 
-function nothingAsked({ asked, command, timeoutMinutes }: WakeAsk): boolean {
-  return !asked && Arr.isReadonlyArrayEmpty(command) && Option.isNone(timeoutMinutes);
+function nothingAsked({ asked, command }: WakeAsk): boolean {
+  return !asked && Arr.isReadonlyArrayEmpty(command);
 }
 
 function wakeCommandOf(ask: WakeAsk): Effect.Effect<Option.Option<Wake>, CallFailure> {
-  const { asked, command, timeoutMinutes } = ask;
+  const { asked, command } = ask;
   if (nothingAsked(ask)) {
     return Effect.succeedNone;
   }
   if (asked && Arr.isReadonlyArrayNonEmpty(command)) {
-    return Effect.asSome(wakeOf({ timeoutMinutes, words: command }));
+    return Effect.asSome(wakeOf(command));
   }
   return Effect.fail(wakeUsage);
 }

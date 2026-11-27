@@ -1,5 +1,7 @@
 # A wake run times out, and a failed one replies in its threads and makes its agent Unreachable
 
+Superseded in part on 2026-11-27 by [ADR 0158](0158-a-wake-run-has-no-timeout.md): a wake run has no timeout and `--timeout` is gone; the failure handling for a non-zero exit stays.
+
 2026-11-26 (mattpocock/cookout#769). Builds on [ADR 0133](0133-a-runner-s-live-connection-shows-its-agent-waking-on-mention.md) and [ADR 0134](0134-the-runner-queues-mentions-skips-answered-ones-and-catches-up-on-start.md). Decided by Matt on 2026-11-26 (board msg 6036, accepting #763's "Failure" and the presence answer recorded on mattpocock/cookout#763: "Failed or timed-out wake run: Unreachable, plus one offline alert").
 
 ## Context
