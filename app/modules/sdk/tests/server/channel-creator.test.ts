@@ -22,8 +22,8 @@ function watching(
 it.effect("whoever creates a channel is subscribed, and its next top-level post reaches their inbox", () =>
   Effect.gen(function* creatorSubscribed() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     yield* answer(() => ann.client.createChannel({ name: "grill" }));
     const { message } = yield* answer(() => bob.client.createMessage({ channel: "grill", text: "lunch?" }));
     const listed = yield* Effect.all(
@@ -52,7 +52,7 @@ it.effect("the creator can unsubscribe from a channel at once", () =>
 it.effect("the creator's other sessions hear the new channel and their subscription to it", () =>
   Effect.gen(function* creatorHears() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
     const events = yield* watchingAllChannels(ann);
     const { channel } = yield* answer(() => ann.client.createChannel({ name: "grill" }));
     const first = yield* answer(() => events.next());
@@ -67,11 +67,28 @@ it.effect("the creator's other sessions hear the new channel and their subscript
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("an agent that creates a channel hears the channel and no subscription to it", () =>
+  Effect.gen(function* agentCreatorHears() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("bot");
+    const events = yield* watchingAllChannels(bot);
+    const { channel } = yield* answer(() => bot.client.createChannel({ name: "grill" }));
+    const { message } = yield* answer(() => bot.client.createMessage({ channel: "grill", text: "first" }));
+    const first = yield* answer(() => events.next());
+    const second = yield* answer(() => events.next());
+
+    expect([first.value, second.value]).toMatchObject([
+      { channel, type: "channel" },
+      { message: { id: message.id }, type: "message" },
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("subscribing and unsubscribing reach the caller's other sessions, and no one else's", () =>
   Effect.gen(function* subscriptionHeard() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     const annEvents = yield* watching(ann.client, false);
     const bobEvents = yield* watching(bob.client, false);

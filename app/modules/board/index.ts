@@ -43,8 +43,9 @@
  * in `deletedSchedules` (from every event heard, shown or not) so its posts' markers say so (#391);
  * `calls.createScheduledMessage`, `calls.editScheduledMessage` and `calls.changeScheduledMessage` (pause, resume,
  * remove) apply each answer as that event, and a refusal rejects the promise and changes nothing. All four are read
- * again on a link back while shown. `createScheduleList` holds which channel's schedules the list shows, which one is
- * selected, the delete being confirmed and each change asked (one at a time, keeping a refusal on its schedule), and
+ * again on a link back while shown. `createScheduleList` holds, for the Scheduled messages page, the delete being
+ * confirmed, each change asked (one at a time, keeping a refusal on its schedule) and the control focus goes back to,
+ * until `leave` forgets them as the page goes, and
  * `cronWords(cron)` writes a cron expression as a short heading, such as `Weekdays · 09:00` or `Mon and Thu · 09:00`, or `null` when it has none.
  *
  * Messages are one table by ID. `channelPages.subscribeShowing(name)` shows a channel's page (`channelPage(name)`):

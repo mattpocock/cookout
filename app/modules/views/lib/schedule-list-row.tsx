@@ -13,6 +13,7 @@ interface ScheduleListRowProps {
   readonly schedule: ScheduledMessage;
   readonly scheduleList: ScheduleList;
   readonly scheduling: Scheduling;
+  readonly selected: boolean;
   readonly state: ScheduleListState;
 }
 
@@ -20,7 +21,7 @@ export function ScheduleListRow(props: ScheduleListRowProps): ReactNode {
   const { schedule, state } = props;
   const failure = failureOf({ schedule, state });
   return (
-    <CurrentItemRow current={state.selected === schedule.id}>
+    <CurrentItemRow current={props.selected}>
       <div className="flex min-h-7 items-center justify-between gap-2">
         <p className="text-sm font-medium">{headingWords(schedule)}</p>
         {mayChange({ me: props.me, schedule }) && (

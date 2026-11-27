@@ -1,11 +1,13 @@
 import {
   ADMIN_SETTING_MIGRATION,
   AGENT_KEYS_MIGRATION,
+  AGENT_SUBSCRIPTIONS_MIGRATION,
   ATTACHMENTS_MIGRATION,
   ATTACHMENT_SIZES_MIGRATION,
   CALL_TIMES_MIGRATION,
   CREDENTIAL_LINEAGE_MIGRATION,
   LOGIN_ALERTS_MIGRATION,
+  LOGIN_ALERT_VIA_MIGRATION,
   LOGIN_EXPIRY_MIGRATION,
   LOGIN_LINKS_MIGRATION,
   LOGIN_REQUEST_KINDS_MIGRATION,
@@ -17,16 +19,10 @@ import {
   TRIGGER_SKIPPED_MIGRATION,
 } from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
-import { Effect, Schema } from "effect";
-import type { FileSystem, Scope } from "effect";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
-import type { SqliteDatabase } from "./adapters/sqlite.ts";
-import { StorageUnavailable } from "./errors.ts";
-import { createOwnerOnly } from "./owner-only-file.ts";
-import { openSqlite } from "./adapters/sqlite.ts";
 
 const migrations: readonly string[] = [
   `CREATE TABLE message_id_sequence (
@@ -262,39 +258,9 @@ const migrations: readonly string[] = [
   LOGIN_REQUEST_KINDS_MIGRATION,
   LOGIN_LINKS_MIGRATION,
   LOGIN_ALERTS_MIGRATION,
+  AGENT_SUBSCRIPTIONS_MIGRATION,
+  LOGIN_ALERT_VIA_MIGRATION,
   AGENT_KEYS_MIGRATION,
 ];
 
-const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
-
-const decodeUserVersion = (row: unknown) =>
-  Schema.decodeUnknownEffect(UserVersionRow)(row).pipe(
-    Effect.mapError(() => new StorageUnavailable({ message: "The database has no readable schema version." })),
-  );
-
-const tooNew = (current: number) =>
-  new StorageUnavailable({
-    message: `The database is at schema version ${current}, newer than this cookout (${migrations.length}). Upgrade cookout.`,
-  });
-
-const apply = (db: SqliteDatabase, sql: string, version: number) =>
-  db.transaction(db.exec(`${sql}\nPRAGMA user_version = ${version};`));
-
-const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
-  Effect.gen(function* () {
-    const { user_version: current } = yield* db.get("PRAGMA user_version").pipe(Effect.flatMap(decodeUserVersion));
-    if (current > migrations.length) {
-      return yield* tooNew(current);
-    }
-    for (const [index, sql] of migrations.entries()) {
-      if (index + 1 > current) {
-        yield* apply(db, sql, index + 1);
-      }
-    }
-  });
-
-export function openMigrated(
-  path: string,
-): Effect.Effect<SqliteDatabase, StorageUnavailable, FileSystem.FileSystem | Scope.Scope> {
-  return Effect.andThen(createOwnerOnly(path), Effect.tap(openSqlite(path), migrate));
-}
+export { migrations };

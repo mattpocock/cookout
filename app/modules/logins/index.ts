@@ -268,7 +268,7 @@ export interface LoginCalls {
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 
-/** `POST` (the agent's owner) makes an agent key, its secret shown once; `GET` (or an admin) lists them (ADR 0156). */
+/** `POST` (the agent's owner) makes an agent key, its secret shown once; `GET` (or an admin) lists them (ADR 0157). */
 export const agentKeysPath = "/v1/identities/:name/agent-keys";
 
 /** `DELETE` (the owner or an admin) revokes an agent's live key by its public ID, with what it made. */

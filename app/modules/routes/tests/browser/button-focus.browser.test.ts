@@ -112,7 +112,7 @@ async function scheduleListOpen(page: Page, prefix: string): Promise<void> {
 }
 
 function inList(page: Page): Locator {
-  return page.getByRole("dialog", { exact: true, name: LIST });
+  return page.getByRole("main");
 }
 
 function editForm(page: Page): Locator {

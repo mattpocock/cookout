@@ -1,7 +1,7 @@
 /**
  * Channels on the backend: the `Channels` service over `Storage`, and the
  * routes that create, list, get and delete channels. Any identity can create a
- * channel, which subscribes it; only an admin can delete one. The routes sit behind the server's token gate.
+ * channel, which subscribes it if it is a person; only an admin can delete one. The routes sit behind the server's token gate.
  */
 import { Array as Arr, Context, DateTime, Effect, Layer, PubSub } from "effect";
 import { AssetStore, Storage } from "../storage/server.ts";
@@ -77,13 +77,22 @@ interface ChannelsNeeds {
   readonly storage: Storage["Service"];
 }
 
+type Stored = ReturnType<Storage["Service"]["createChannel"]>;
+
+function stored(storage: Storage["Service"], channel: Channel, creator: Caller["Service"]): Stored {
+  if (creator.kind === "human") {
+    return storage.createChannel(channel, creator.name);
+  }
+  return storage.createChannel(channel);
+}
+
 function channelsOn({ assets, publish, storage }: ChannelsNeeds): Omit<ChannelsService, "created" | "deleted"> {
   return {
     create: (creator, fields) =>
       Effect.gen(function* createChannel() {
         const now = yield* DateTime.now;
         const channel = stamped(fields, isoTimeOf(now));
-        const outcome = yield* storage.createChannel(channel, creator.name);
+        const outcome = yield* stored(storage, channel, creator);
         if (outcome === "name_taken") {
           return yield* Effect.fail(channelExists(channel.name));
         }
@@ -126,7 +135,8 @@ export const channelNotFound: (name: string) => Refusal = missingChannel;
 
 export interface ChannelsService {
   /**
-   * Makes a channel, stamped with the current time, and subscribes `creator` to it in the same storage change.
+   * Makes a channel, stamped with the current time, and subscribes `creator` to it in the same storage change when
+   * `creator` is a person; an agent is never subscribed.
    * Refuses with 409 `channel_exists` when the name is in use.
    */
   readonly create: (
@@ -135,7 +145,7 @@ export interface ChannelsService {
   ) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
   /**
    * Every channel created from now on, with its creator, for as long as the scope lasts: the live stream sends each
-   * as a `channel` event, and as a `subscription` event to its creator.
+   * as a `channel` event, and as a `subscription` event to its creator when that is a person.
    */
   readonly created: Effect.Effect<PubSub.Subscription<CreatedChannel>, never, Scope.Scope>;
   /** Every channel deleted from now on, for as long as the scope lasts: the live stream sends each as a `channel-deleted` event. */

@@ -25,7 +25,7 @@ function subscriptions({ caller }: StreamRequest): Connected<Inbox | Channels> {
       Stream.map(({ subscription }) => subscription),
     );
     const createdByCaller: Stream.Stream<SubscriptionResponse> = Stream.fromSubscription(created).pipe(
-      Stream.filter(({ creator }) => creator === caller.name),
+      Stream.filter(({ creator }) => caller.kind === "human" && creator === caller.name),
       Stream.map(({ channel }) => ({ channel: channel.name, subscribed: true })),
     );
     return Stream.merge(own, createdByCaller).pipe(

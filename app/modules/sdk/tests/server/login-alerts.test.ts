@@ -1,8 +1,13 @@
-import { Array as Arr, Effect, Option, Predicate } from "effect";
+import { Array as Arr, Effect, Option, Predicate, String as Str } from "effect";
 import type { InboxAlert, LoginAlert, PublicId, Token } from "../../index.ts";
 import { TestCookout, answer, identityName, isoTime, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import { collectLoginRequestPath, loginRequestsPath } from "../../../logins/index.ts";
+import {
+  collectLoginRequestPath,
+  loginLinkWebPath,
+  loginRequestsPath,
+  redeemLoginLinkPath,
+} from "../../../logins/index.ts";
 import { expect, it } from "@effect/vitest";
 import { sessionPath, token } from "../../../identities/index.ts";
 import { createTestAgent } from "../../../testing/index.ts";
@@ -64,6 +69,14 @@ function webLogin(cookout: TestCookoutService, approver: Client): Effect.Effect<
     const started = yield* Effect.flatMap(inFirefox(cookout.url, loginRequestsPath, { kind: "web" }), startedOf);
     yield* answer(() => approver.approveLogin(started.userCode));
     yield* inFirefox(cookout.url, collectLoginRequestPath, { kind: "web", requestId: started.requestId });
+  });
+}
+
+function linkedLogin(cookout: TestCookoutService, admin: Client, person: TestIdentity): Effect.Effect<void> {
+  return Effect.gen(function* redeemedInFirefox() {
+    const { link } = yield* answer(() => admin.createLoginLink(person.identity.name));
+    const [, secret = ""] = Str.split(loginLinkWebPath)(link);
+    yield* inFirefox(cookout.url, redeemLoginLinkPath, { secret });
   });
 }
 
@@ -150,6 +163,48 @@ it.effect("approving a web Login request raises a web Login alert for the browse
     expect(Arr.map(alerts, ({ login }) => login)).toMatchObject([
       { ended: false, kind: "new session", sessionKind: "web", where: "Firefox on macOS" },
     ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("redeeming a login link raises a web Login alert that says it came from a login link", () =>
+  Effect.gen(function* raisedForLink() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { admin: true, kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* linkedLogin(cookout, matt.client, ada);
+    const alerts = yield* loginAlertsOf(ada.client);
+    const { sessions } = yield* answer(() => ada.client.listSessions());
+    const admins = yield* loginAlertsOf(matt.client);
+
+    expect({ admins, alerts: Arr.map(alerts, loginOf) }).toMatchObject({
+      admins: [],
+      alerts: [
+        {
+          ended: false,
+          kind: "new session",
+          session: idAt(sessions, "Firefox on macOS"),
+          sessionKind: "web",
+          via: "login link",
+          where: "Firefox on macOS",
+        },
+      ],
+    });
+    expect(Arr.map(alerts, ({ login }) => login.kind === "new session" && typeof login.clientIp)).toStrictEqual([
+      "string",
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a Login alert for a session that came from no login link says nothing of one", () =>
+  Effect.gen(function* noVia() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* webSession(cookout.url, ada.token);
+    yield* cliSession(cookout, ada.client, "ada-laptop");
+    yield* webLogin(cookout, ada.client);
+    const alerts = yield* loginAlertsOf(ada.client);
+
+    expect(Arr.map(alerts, ({ login }) => "via" in login)).toStrictEqual([false, false, false]);
   }).pipe(Effect.provide(testCookout())),
 );
 

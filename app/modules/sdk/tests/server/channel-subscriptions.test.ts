@@ -7,7 +7,7 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 it.effect("an identity lists only its own subscribed channels, sorted by name, created ones included", () =>
   Effect.gen(function* subscribedChannels() {
     const cookout = yield* TestCookout;
-    const bob = yield* cookout.createIdentity("bob");
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     yield* Effect.all(
       [
         answer(() => cookout.client.createChannel({ description: "Ops talk", name: "ops" })),

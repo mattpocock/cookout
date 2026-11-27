@@ -103,7 +103,7 @@ interface CreateAgentKeyRequest {
   readonly name: string;
   readonly expiresIn?: string;
 }
-/** The SDK's calls for an agent's keys (ADR 0156), with the answers and the key's public `Id` they carry. */
+/** The SDK's calls for an agent's keys (ADR 0157), with the answers and the key's public `Id` they carry. */
 interface AgentKeyCalls$1<Made, Listed, Revoked, Id> {
   /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
   readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<Made>;
@@ -816,8 +816,8 @@ interface OfflineAlert {
 /** What an admin did to someone's credentials, as a Login alert tells them. */
 type AdminAct = "revoked" | "sent a login link";
 /**
- * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
- * ended), or an admin acting on the person's credentials.
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
+ * made it, and whether it has ended), or an admin acting on the person's credentials.
  */
 type LoginAlertEvent = {
   readonly kind: "new session";
@@ -825,6 +825,7 @@ type LoginAlertEvent = {
   readonly sessionKind: "web" | "cli";
   readonly where: string;
   readonly clientIp?: string;
+  readonly via?: "login link";
   readonly ended: boolean;
 } | {
   readonly kind: "admin act";
@@ -886,7 +887,7 @@ interface NudgeResponse {
 }
 /**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
+ * identity's reaction on the identity's own message, or a top-level message in a channel a person subscribes to.
  */
 type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
@@ -2013,7 +2014,7 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
   readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
-  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0156). */
+  /** See `CreateIdentityRequest`. A human's token is shown this once; an agent gets none, only keys (ADR 0157). */
   readonly createIdentity: CreateIdentityCall;
   /** A human's new token (403 `not_owner` unless an admin or themself); an agent is 409 `agent_keys_instead`. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;

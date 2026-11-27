@@ -1,3 +1,7 @@
+export {
+  AGENT_SUBSCRIPTIONS_MIGRATION,
+  POSTGRES_AGENT_SUBSCRIPTIONS_MIGRATION,
+} from "./agent-subscriptions-migrations.ts";
 export { ADMIN_SETTING_MIGRATION, POSTGRES_ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
 export {
   ATTACHMENT_SIZES_MIGRATION,
@@ -11,7 +15,12 @@ export {
   CREDENTIAL_LINEAGE_MIGRATION,
   POSTGRES_CREDENTIAL_LINEAGE_MIGRATION,
 } from "./credential-lineage-migrations.ts";
-export { LOGIN_ALERTS_MIGRATION, POSTGRES_LOGIN_ALERTS_MIGRATION } from "./login-alerts-migrations.ts";
+export {
+  LOGIN_ALERTS_MIGRATION,
+  LOGIN_ALERT_VIA_MIGRATION,
+  POSTGRES_LOGIN_ALERTS_MIGRATION,
+  POSTGRES_LOGIN_ALERT_VIA_MIGRATION,
+} from "./login-alerts-migrations.ts";
 export { LOGIN_EXPIRY_MIGRATION, POSTGRES_LOGIN_EXPIRY_MIGRATION } from "./login-expiry-migrations.ts";
 export { LOGIN_LINKS_MIGRATION, POSTGRES_LOGIN_LINKS_MIGRATION } from "./login-links.ts";
 export { POSTGRES_REQUEST_ORIGINS_MIGRATION, REQUEST_ORIGINS_MIGRATION } from "./request-origins.ts";

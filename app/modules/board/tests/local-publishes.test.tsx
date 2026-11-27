@@ -42,7 +42,7 @@ it("the schedule list publishes nothing when closed again or a delete cancelled 
   const list = createScheduleList({ change: vi.fn<Parameters<typeof createScheduleList>[number]["change"]>() });
   const publishes = recordPublishes(list);
 
-  list.close();
+  list.leave();
   list.cancelDelete();
 
   expect(publishes.count()).toBe(NONE);

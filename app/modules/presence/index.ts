@@ -177,8 +177,8 @@ export type AdminAct = "revoked" | "sent a login link";
 export const adminActs = ["revoked", "sent a login link"] as const satisfies readonly AdminAct[];
 
 /**
- * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
- * ended), or an admin acting on the person's credentials.
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
+ * made it, and whether it has ended), or an admin acting on the person's credentials.
  */
 export type LoginAlertEvent =
   | {
@@ -187,6 +187,7 @@ export type LoginAlertEvent =
       readonly sessionKind: "web" | "cli";
       readonly where: string;
       readonly clientIp?: string;
+      readonly via?: "login link";
       readonly ended: boolean;
     }
   | {

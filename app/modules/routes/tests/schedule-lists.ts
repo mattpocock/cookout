@@ -5,6 +5,8 @@ import { chose } from "./menus.ts";
 import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
+const PAGE = /^Scheduled messages in #/u;
+
 export const LIST = "Scheduled messages";
 
 export interface Making {
@@ -23,8 +25,8 @@ export async function channelMade(channel: string): Promise<void> {
   await adminClient().createChannel({ name: channel });
 }
 
-export function listDialog(): HTMLElement {
-  return screen.getByRole("dialog", { name: LIST });
+export function listPage(): HTMLElement {
+  return screen.getByRole("region", { name: PAGE });
 }
 
 export interface Opening {
@@ -37,12 +39,12 @@ export async function listOpened({ channel, client }: Opening): Promise<() => vo
   const link = await inSidebar().findByRole("link", { name: new RegExp(`^#${channel}(?!-)`, "u") });
   fireEvent.contextMenu(link);
   await chose(LIST);
-  await screen.findByRole("dialog", { name: LIST });
+  await screen.findByRole("region", { name: `${LIST} in #${channel}` });
   return close;
 }
 
 export async function rowOf(text: string): Promise<HTMLElement> {
-  const paragraph = await waitFor(() => within(listDialog()).getByText(text, { selector: "p" }));
+  const paragraph = await waitFor(() => within(listPage()).getByText(text, { selector: "p" }));
   const row = paragraph.closest("li");
   if (row === null) {
     throw new TypeError(`${text} isn't in a row`);
@@ -60,7 +62,7 @@ export async function linesOf(text: string): Promise<readonly (string | null)[]>
 }
 
 export async function listedLines(channel: string): Promise<readonly (readonly (string | null)[])[]> {
-  const list = await within(listDialog()).findByRole("list", { name: `#${channel} scheduled messages` });
+  const list = await within(listPage()).findByRole("list", { name: `#${channel} scheduled messages` });
   const rows: (readonly (string | null)[])[] = [];
   for (const row of within(list).getAllByRole("listitem")) {
     const lines: (string | null)[] = [];

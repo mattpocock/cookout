@@ -179,12 +179,19 @@ it.effect("cookout watch --timeout 1 exits 2 when no item arrives in time", () =
   }).pipe(Effect.provide(commandLineServices)),
 );
 
+function twoOldPosts({ ann, bob }: Watch): Effect.Effect<void> {
+  return Effect.gen(function* replyTwiceWhereBobFollows() {
+    const replyTo = yield* mention(bob, "start");
+    yield* answer(() => ann.client.createMessage({ channel: "grill", replyTo, text: "one" }));
+    yield* answer(() => ann.client.createMessage({ channel: "grill", replyTo, text: "two" }));
+  });
+}
+
 it.effect("cookout watch --until-mention skips an item that isn't a mention and exits 0 at the first mention", () =>
   Effect.gen(function* watchUntilMention() {
     const { during, result, stdoutLines } = yield* watchUntilExit({
       args: ["watch", "--until-mention", "--json"],
-      prepare: ({ bob }) => Effect.asVoid(answer(() => bob.client.subscribe("grill"))),
-      whileWatching: ({ ann }) => Effect.andThen(mention(ann, "no mention here"), mention(ann, "@bob now")),
+      whileWatching: (watch) => Effect.andThen(twoOldPosts(watch), mention(watch.ann, "@bob now")),
     });
 
     expect(result).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { item: { message: { id: during } } } });
@@ -216,16 +223,6 @@ function twoOldMentions({ cookout }: Watch): Effect.Effect<void> {
     yield* answer(() => cat.client.createChannel({ name: "old" }));
     yield* answer(() => cat.client.createMessage({ channel: "old", text: "@bob one" }));
     yield* answer(() => cat.client.createMessage({ channel: "old", text: "@bob two" }));
-  });
-}
-
-function twoOldPosts({ bob, cookout }: Watch): Effect.Effect<void> {
-  return Effect.gen(function* postTwiceWhereBobSubscribes() {
-    const cat = yield* cookout.createIdentity("cat");
-    yield* answer(() => cat.client.createChannel({ name: "old" }));
-    yield* answer(() => bob.client.subscribe("old"));
-    yield* answer(() => cat.client.createMessage({ channel: "old", text: "one" }));
-    yield* answer(() => cat.client.createMessage({ channel: "old", text: "two" }));
   });
 }
 

@@ -78,7 +78,7 @@ export interface CreateAgentKeyRequest {
   readonly expiresIn?: string;
 }
 
-/** The SDK's calls for an agent's keys (ADR 0156), with the answers and the key's public `Id` they carry. */
+/** The SDK's calls for an agent's keys (ADR 0157), with the answers and the key's public `Id` they carry. */
 export interface AgentKeyCalls<Made, Listed, Revoked, Id> {
   /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
   readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<Made>;

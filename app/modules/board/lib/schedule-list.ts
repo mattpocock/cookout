@@ -1,4 +1,4 @@
-import type { ChannelName, Refusal } from "../../sdk/index.ts";
+import type { Refusal } from "../../sdk/index.ts";
 import type { ScheduleChange } from "./board-calls.ts";
 import type { ScheduledMessageId } from "../../scheduled-messages/index.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -17,9 +17,7 @@ interface ScheduleFocus {
 }
 
 interface ScheduleListState {
-  readonly channel: ChannelName | null;
   readonly returnTo: ScheduleFocus | null;
-  readonly selected: ScheduledMessageId | null;
   readonly deleting: ScheduledMessageId | null;
   readonly change: ScheduleChangeState;
 }
@@ -27,8 +25,7 @@ interface ScheduleListState {
 interface ScheduleList {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => ScheduleListState;
-  readonly open: (channel: ChannelName, selected: ScheduledMessageId | null) => void;
-  readonly close: () => void;
+  readonly leave: () => void;
   readonly returnToEdit: (id: ScheduledMessageId | null) => void;
   readonly askDelete: (id: ScheduledMessageId) => void;
   readonly cancelDelete: () => void;
@@ -40,7 +37,7 @@ interface ScheduleListOptions {
 }
 
 const IDLE: ScheduleChangeState = { status: "idle" };
-const CLOSED: ScheduleListState = { change: IDLE, channel: null, deleting: null, returnTo: null, selected: null };
+const LEFT: ScheduleListState = { change: IDLE, deleting: null, returnTo: null };
 
 async function after(previous: Promise<void>, step: () => Promise<void>): Promise<void> {
   await previous;
@@ -89,7 +86,7 @@ function changingIn({
 
 function createScheduleList(options: ScheduleListOptions): ScheduleList {
   const listeners = new Set<() => void>();
-  let current = CLOSED;
+  let current = LEFT;
   let changes = Promise.resolve();
   function publish(next: ScheduleListState): void {
     if (sameSnapshot({ after: next, before: current })) {
@@ -113,11 +110,8 @@ function createScheduleList(options: ScheduleListOptions): ScheduleList {
         await changing(id, change);
       });
     },
-    close: () => {
-      publish(CLOSED);
-    },
-    open: (channel, selected) => {
-      publish({ ...CLOSED, channel, selected });
+    leave: () => {
+      publish(LEFT);
     },
     returnToEdit: (id) => {
       publish({ ...current, returnTo: editFocus(id) });

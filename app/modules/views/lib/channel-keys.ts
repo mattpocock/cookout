@@ -1,8 +1,8 @@
-import type { BoardStore, ScheduleList } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
 import { hrefOf, locationOf } from "../../paths/index.ts";
 import { openChannel, steppedTo } from "./channel-order.ts";
 import type { Act } from "../../keymap/index.ts";
+import type { BoardStore } from "../../board/index.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import { NO_COUNTS } from "../../unread/index.ts";
 import type { Step } from "./channel-order.ts";
@@ -23,7 +23,6 @@ interface ChannelKeys {
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
   readonly land: () => void;
   readonly order: readonly ChannelName[];
-  readonly scheduleList: ScheduleList;
   readonly store: BoardStore;
   readonly unread: Unread;
 }
@@ -120,7 +119,8 @@ function openSchedules(keys: ChannelKeys): Act {
     if (channel === null) {
       return false;
     }
-    keys.scheduleList.open(channel, null);
+    globalThis.location.hash = hrefOf({ channel, name: "schedules", selected: null });
+    keys.land();
     return true;
   };
 }

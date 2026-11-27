@@ -1,6 +1,7 @@
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
+import type { PublicId } from "../../../logins/index.ts";
 
 interface NewLoginLink {
   readonly linkHash: TokenHash;
@@ -17,7 +18,9 @@ interface RedeemLoginLink {
   readonly now: IsoTime;
 }
 
-type LoginLinkRedemption = { readonly status: "gone" } | { readonly status: "redeemed"; readonly identity: Identity };
+type LoginLinkRedemption =
+  | { readonly status: "gone" }
+  | { readonly status: "redeemed"; readonly identity: Identity; readonly session: PublicId };
 
 interface LoginLinksSection {
   readonly addLoginLink: (link: NewLoginLink) => Fails<void>;
@@ -28,8 +31,13 @@ function linkGone(): LoginLinkRedemption {
   return { status: "gone" };
 }
 
-function linkRedeemed(identity: Identity): LoginLinkRedemption {
-  return { identity, status: "redeemed" };
+interface Redeemed {
+  readonly identity: Identity;
+  readonly session: PublicId;
+}
+
+function linkRedeemed({ identity, session }: Redeemed): LoginLinkRedemption {
+  return { identity, session, status: "redeemed" };
 }
 
 const LOGIN_LINKS_TABLE = `CREATE TABLE login_links (

@@ -97,3 +97,30 @@ it("a profile opened over a reply link opens beside the channel", { timeout: 100
     route: { channel: "general", name: "channel" },
   });
 });
+
+function schedulesRebuilt(hash: string): string {
+  const { route } = locationOf(hash);
+  if (route.name !== "schedules") {
+    throw new TypeError(`${hash} is no schedules route`);
+  }
+  return hrefOf(route);
+}
+
+it("a channel's Scheduled messages page has its own link, with or without one schedule selected, and builds back to the same hash", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  const page = "#/channels/general/schedules";
+  const selected = "#/channels/general/schedules/4";
+
+  expect([locationOf(page).route, locationOf(selected).route]).toStrictEqual([
+    { channel: "general", name: "schedules", selected: null },
+    { channel: "general", name: "schedules", selected: 4 },
+  ]);
+  expect([schedulesRebuilt(page), schedulesRebuilt(selected)]).toStrictEqual([page, selected]);
+  expect([
+    locationOf("#/channels/General!/schedules").route,
+    locationOf("#/channels/general/schedules/x").route,
+  ]).toStrictEqual([{ name: "missing" }, { name: "missing" }]);
+});

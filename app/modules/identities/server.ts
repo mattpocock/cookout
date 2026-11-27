@@ -178,7 +178,7 @@ export function adminTokenSet(
 
 /**
  * The identity routes: whoami, web login and logout, create, list and rotate, admins, a person's sessions (ADR 0153)
- * and an agent's keys (ADR 0156). They need `Caller`, which `requireToken` provides.
+ * and an agent's keys (ADR 0157). They need `Caller`, which `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   ...callerRoutes,
@@ -281,7 +281,8 @@ export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from ".
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the
  * presence registry ends the live connections sent with them at once (ADR "how a live connection ends"); and a new
- * session of a person's, told when a Login request is collected or a token is pasted on the web, for a Login alert.
+ * session of a person's, told when a Login request is collected, a token is pasted on the web or a login link is
+ * redeemed, for a Login alert.
  */
 export type { EndedTokens, SessionMade, TokensEnded } from "./lib/server/changes.ts";
 

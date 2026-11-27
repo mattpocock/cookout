@@ -35,7 +35,11 @@ const channelCreateCommand = Command.make(
     });
     return answer((client) => client.createChannel({ name, ...withDescription }));
   },
-).pipe(Command.withDescription("Create a channel. Any identity can, and is subscribed to it; unsubscribe to stop."));
+).pipe(
+  Command.withDescription(
+    "Create a channel. Any identity can; a person is subscribed to it, and can unsubscribe to stop.",
+  ),
+);
 
 const subscribedFlag = Flag.Boolean("subscribed").pipe(
   Flag.withDefault(false),
@@ -127,7 +131,7 @@ const unfollowCommand = Command.make("unfollow", { id: messageIdArgument }, ({ i
 
 const subscribeCommand = Command.make("subscribe", { channel: channelArgument }, ({ channel }) =>
   answer((client) => client.subscribe(channel)),
-).pipe(Command.withDescription("Bring a channel's new top-level messages to the inbox."));
+).pipe(Command.withDescription("Bring a channel's new top-level messages to the inbox. Only people can subscribe."));
 
 const unsubscribeCommand = Command.make("unsubscribe", { channel: channelArgument }, ({ channel }) =>
   answer((client) => client.unsubscribe(channel)),

@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, String as Str, pipe } from "effect";
 import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
-import { Effect, pipe } from "effect";
 import {
   TestCookout,
   answer,
@@ -9,6 +9,8 @@ import {
   testCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { loginLinkWebPath } from "../../../logins/index.ts";
+import { token } from "../../../identities/index.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
@@ -46,7 +48,7 @@ it.effect(
 it.effect("cookout follow, unfollow, subscribe and unsubscribe print the new state", () =>
   Effect.gen(function* followAndSubscribe() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
     const folder = yield* freshStateFolder;
     yield* answer(() => ann.client.createChannel({ name: "grill" }));
     const { message } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "parent" }));
@@ -160,5 +162,56 @@ it.effect("cookout inbox prints a Login alert for a person's new CLI session, wi
         },
       },
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout inbox prints a Login alert for a session a login link made, saying it came from one", () =>
+  Effect.gen(function* inboxLinkAlert() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { admin: true, kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const folder = yield* freshStateFolder;
+    const { link } = yield* answer(() => matt.client.createLoginLink(ada.identity.name));
+    const [, secret = ""] = Str.split(loginLinkWebPath)(link);
+    yield* answer(() => cookout.clientFor().redeemLoginLink(token(secret)));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [["inbox"]]);
+
+    expect(results).toMatchObject([
+      {
+        exitCode: 0,
+        stdoutJson: {
+          alerts: [
+            { login: { ended: false, kind: "new session", sessionKind: "web", via: "login link" }, read: false },
+          ],
+          items: [],
+        },
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout subscribe as an agent exits 1 with 403 identity_kind on stderr, and subscribes nothing", () =>
+  Effect.gen(function* agentSubscribe() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("todo-bot");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [
+      ["subscribe", "grill"],
+      ["channel", "list", "--subscribed"],
+    ]);
+
+    expect(results).toMatchObject([
+      { exitCode: 1, stdout: "" },
+      { exitCode: 0, stdoutJson: { channels: [] } },
+    ]);
+    expect(
+      Arr.join(
+        Arr.map(results, ({ stderr }) => stderr),
+        "",
+      ),
+    ).toContain('"code":"identity_kind","message":"todo-bot is an agent; only people can subscribe to channels."');
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
