@@ -1,11 +1,13 @@
-import type { CommandRun, Draft } from "../../composer/index.ts";
 import { MessageActions, MessageKeys } from "../../design-system/messages.tsx";
 import type { Outgoing, Scheduling } from "../../board/index.ts";
 import { useCallback, useContext, useEffect } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
+import type { Draft } from "../../composer/index.ts";
 import type { MenuChoice } from "../../design-system/messages.tsx";
+import type { WebhookCommandCalls } from "./use-board.ts";
 import { useChannelCalls } from "./use-board.ts";
 import { useFooterHandlers } from "./use-footer-handlers.ts";
+import { useWebhookCommandRun } from "./use-webhook-command-run.ts";
 
 const SCHEDULE = "Schedule…";
 
@@ -59,43 +61,16 @@ function scheduledText(draft: Draft): string {
 }
 
 interface Handlers {
+  readonly calls: WebhookCommandCalls;
   readonly post: (outgoing: Outgoing, posted: () => void) => void;
   readonly saved: () => void;
-}
-
-type WebhookCommandRun = Exclude<CommandRun, { readonly kind: "command" }>;
-
-interface InlineCalling {
-  readonly channel: ChannelName;
-  readonly draft: Draft;
-  readonly saved: () => void;
-}
-
-function useWebhookCommandRun({ channel, draft, saved }: InlineCalling): (run: WebhookCommandRun) => void {
-  const { call, editCallData } = useChannelCalls(channel);
-  return useCallback(
-    (run: WebhookCommandRun) => {
-      const { name } = run.webhookCommand;
-      function opened(): void {
-        draft.openWebhookCommand(name);
-      }
-      if (run.kind === "form") {
-        editCallData("");
-        opened();
-        return;
-      }
-      const data = JSON.stringify({ [run.field]: run.text });
-      editCallData(data);
-      call({ called: saved, data, refused: opened, webhookCommand: name });
-    },
-    [call, draft, editCallData, saved],
-  );
 }
 
 export function useScheduleCommand(command: ScheduleCommand): Handlers {
   const { channel, draft, scheduling } = command;
   const { post, saved } = useFooterHandlers({ channel, draft, form: command.form });
-  const runWebhookCommand = useWebhookCommandRun({ channel, draft, saved });
+  const calls = useChannelCalls(channel);
+  const runWebhookCommand = useWebhookCommandRun({ calls, draft, saved });
   const handleSchedule = useCallback(() => {
     scheduling.open(channel, scheduledText(draft));
   }, [channel, draft, scheduling]);
@@ -113,5 +88,5 @@ export function useScheduleCommand(command: ScheduleCommand): Handlers {
     },
     [channel, draft, post, runWebhookCommand, scheduling],
   );
-  return { post: handlePost, saved };
+  return { calls, post: handlePost, saved };
 }
