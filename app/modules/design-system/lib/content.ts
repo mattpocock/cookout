@@ -17,5 +17,7 @@ export { IdentityLink } from "./identity-link.tsx";
 export { DateText } from "./date-text.tsx";
 export { IdentityRow } from "./identity-row.tsx";
 export { Profile } from "./profile.tsx";
+export { ProfileFrame } from "./profile-frame.tsx";
 export { ProfileName } from "./profile-name.tsx";
+export { ProfileSection } from "./profile-section.tsx";
 export { AvatarImages } from "./avatar-images.ts";

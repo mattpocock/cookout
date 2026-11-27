@@ -1,5 +1,6 @@
-import { Command, Flag } from "effect/cli";
+import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Stdio, String as Str, Stream } from "effect";
+import { answer, answered } from "./output.ts";
 import { boardToLogOutOf, checked, firstLineOnTerminal, givenBoard, typedOnTerminal } from "./board-url.ts";
 import { logInByBrowser, revokedOnServer } from "./browser-login.ts";
 import { loginFor, removeLogin, saveLogin } from "./logins.ts";
@@ -8,7 +9,6 @@ import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { LoggedIn } from "./browser-login.ts";
-import { answered } from "./output.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { toFailure } from "./adapters/sdk.ts";
 
@@ -140,6 +140,20 @@ const loginUrlFlag = Flag.String("url").pipe(
 
 type LoginCommand = Command.Command<"login", LoginFlags, object, CommandFailed, LoginNeeds>;
 
+const loginCodeArgument = Argument.String("code").pipe(
+  Argument.withDescription("The user code the waiting `cookout login` printed, such as WDJB-MJHT."),
+);
+
+const loginApproveCommand = Command.make("approve", { code: loginCodeArgument }, ({ code }) =>
+  answer((client) => client.approveLogin(code)),
+).pipe(
+  Command.withDescription(
+    "Approve another machine's waiting `cookout login` by the code it printed, as a person does on the approval " +
+      "page, acting as this machine's Login or COOKOUT_TOKEN. The other machine then collects its own Login. An " +
+      "agent's credential is refused with human_only. Prints the request as approved.",
+  ),
+);
+
 const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag, url: loginUrlFlag }, (flags) =>
   logInWith(flags).pipe(proxied, answered),
 ).pipe(
@@ -151,6 +165,7 @@ const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag, url
       "harness, every command then acts as that person; inside a harness, join uses it to join an agent the " +
       "person owns. An agent's token is refused.",
   ),
+  Command.withSubcommands([loginApproveCommand]),
 );
 
 const logoutUrlFlag = Flag.String("url").pipe(
