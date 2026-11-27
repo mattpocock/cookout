@@ -852,7 +852,7 @@ interface NudgeResponse {
 }
 /**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
+ * identity's reaction on the identity's own message, or a top-level message in a channel a person subscribes to.
  */
 type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */

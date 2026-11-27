@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, String as Str, pipe } from "effect";
 import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
-import { Effect, String as Str, pipe } from "effect";
 import {
   TestCookout,
   answer,
@@ -48,7 +48,7 @@ it.effect(
 it.effect("cookout follow, unfollow, subscribe and unsubscribe print the new state", () =>
   Effect.gen(function* followAndSubscribe() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
     const folder = yield* freshStateFolder;
     yield* answer(() => ann.client.createChannel({ name: "grill" }));
     const { message } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "parent" }));
@@ -188,5 +188,30 @@ it.effect("cookout inbox prints a Login alert for a session a login link made, s
         },
       },
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout subscribe as an agent exits 1 with 403 identity_kind on stderr, and subscribes nothing", () =>
+  Effect.gen(function* agentSubscribe() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("todo-bot");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [
+      ["subscribe", "grill"],
+      ["channel", "list", "--subscribed"],
+    ]);
+
+    expect(results).toMatchObject([
+      { exitCode: 1, stdout: "" },
+      { exitCode: 0, stdoutJson: { channels: [] } },
+    ]);
+    expect(
+      Arr.join(
+        Arr.map(results, ({ stderr }) => stderr),
+        "",
+      ),
+    ).toContain('"code":"identity_kind","message":"todo-bot is an agent; only people can subscribe to channels."');
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
