@@ -42,6 +42,7 @@ interface FieldParts {
 
 interface TextFieldParts extends FieldParts {
   readonly focused?: boolean;
+  readonly kind?: "secret" | "text";
 }
 
 interface DataAreaParts extends FieldParts {

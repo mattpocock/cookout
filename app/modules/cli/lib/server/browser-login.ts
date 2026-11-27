@@ -51,7 +51,10 @@ function approvalOf(waiting: Waiting): Effect.Effect<ApprovedLogin, CallFailure>
 }
 
 function approvalPrompt(url: string, { approvalPath, expiresAt, userCode }: LoginRequestStartedResponse): string {
-  return `Open ${url}${approvalPath} and check it shows the code ${userCode}, then approve. The link lasts until ${expiresAt}.`;
+  return (
+    `Open ${url}${approvalPath} on a device where you're logged in and type the code ${userCode}, ` +
+    `or run \`cookout login approve ${userCode}\` there. The code lasts until ${expiresAt}.`
+  );
 }
 
 function logInByBrowser(url: string): Effect.Effect<LoggedIn, CallFailure, AgentSessionStateNeeds> {

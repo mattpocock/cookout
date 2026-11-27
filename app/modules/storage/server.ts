@@ -56,6 +56,11 @@ export type { NewWebhookCommandCall } from "./lib/server/command-calls.ts";
 export type { JoinCodeRedemption } from "./lib/server/join-codes.ts";
 export type { AgentAt, StoredAgentSession, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
+/**
+ * Where a Login request or agent join request was started from, recorded when it starts (#905): the client's IP
+ * address and the User-Agent it sent. A request stored before they were recorded has neither.
+ */
+export type { RequestOrigin } from "./lib/server/request-origins.ts";
 export type {
   LoginCollection,
   LoginCredentialLookup,

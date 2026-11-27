@@ -15,6 +15,7 @@ import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { MemoryState } from "./memory-state.ts";
+import { originOf } from "./request-origins.ts";
 
 interface MemoryRequest {
   readonly request: NewLoginRequest;
@@ -48,8 +49,9 @@ type MemoryLoginRequestsSection = LoginRequestsSection & {
 };
 
 function shown({ approvedBy, request }: MemoryRequest): LoginRequest {
-  const { expiresAt, host, userCode } = request;
-  return { approved: Option.isSome(approvedBy), expiresAt, host, userCode };
+  const { clientIp, createdAt, expiresAt, host, userAgent, userCode } = request;
+  const origin = originOf({ clientIp, userAgent });
+  return { ...origin, approved: Option.isSome(approvedBy), createdAt, expiresAt, host, userCode };
 }
 
 function dropExpired(requests: Requests, now: IsoTime): void {
