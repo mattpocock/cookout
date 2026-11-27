@@ -13,6 +13,7 @@ import {
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
 import { freshPostgresDatabase } from "./postgres.ts";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
+import { testSecretsCipher } from "./secrets-key.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 interface StorageLayer {
@@ -39,8 +40,12 @@ const freshDatabasePath: Effect.Effect<string, never, FileSystem.FileSystem | Pa
   },
 ).pipe(Effect.orDie);
 
+function testSqliteStorage(path: string): Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem> {
+  return sqliteStorage({ cipher: testSecretsCipher, path });
+}
+
 const freshSqliteStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
-  Effect.map(freshDatabasePath, sqliteStorage),
+  Effect.map(freshDatabasePath, testSqliteStorage),
 ).pipe(Layer.provide(nodeServices));
 
 function withFixtureOwner<Failure>(
@@ -55,7 +60,7 @@ function withFixtureOwner<Failure>(
 }
 
 const freshPostgresStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
-  Effect.map(freshPostgresDatabase, postgresStorage),
+  Effect.map(freshPostgresDatabase, (url) => postgresStorage({ cipher: testSecretsCipher, url })),
 );
 
 const postgresLayer: StorageLayer = {
@@ -126,13 +131,17 @@ const deactivatedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
 function freshSqliteQueryPlans<Failure>(
   work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
 ): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable, FileSystem.FileSystem | Path.Path> {
-  return Effect.scoped(Effect.flatMap(freshDatabasePath, (path) => sqliteQueryPlans({ path, work })));
+  return Effect.scoped(
+    Effect.flatMap(freshDatabasePath, (path) => sqliteQueryPlans({ cipher: testSecretsCipher, path, work })),
+  );
 }
 
 function freshPostgresQueryPlans<Failure>(
   work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
 ): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable> {
-  return Effect.scoped(Effect.flatMap(freshPostgresDatabase, (url) => postgresQueryPlans({ url, work })));
+  return Effect.scoped(
+    Effect.flatMap(freshPostgresDatabase, (url) => postgresQueryPlans({ cipher: testSecretsCipher, url, work })),
+  );
 }
 
 function openStore<Failure, Needs>(
@@ -157,5 +166,6 @@ export {
   openStore,
   pausedMidRunStorage,
   storageLayers,
+  testSqliteStorage,
   unusableStorage,
 };

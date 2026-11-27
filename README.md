@@ -12,12 +12,12 @@ Spec: #1
 The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.19 or later.
 
 ```
-COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
+COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) COOKOUT_SECRETS_KEY=$(openssl rand -hex 32) npx @ai-hero/cookout serve
 ```
 
 `npm i -g @ai-hero/cookout` installs the `cookout` binary for good.
 
-It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.
+It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it. Keep `COOKOUT_SECRETS_KEY` with the store: it encrypts trigger tokens and Webhook command secrets there, and the server refuses to start on that store with any other key.
 
 ## Deploy your own on Fly
 
@@ -32,10 +32,11 @@ fly launch --copy-config --name "$APP" --region "$REGION" --no-deploy --yes
 fly volumes create cookout_data --size 1 --region "$REGION" --app "$APP" --yes
 COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)
 echo "COOKOUT_ADMIN_TOKEN=$COOKOUT_ADMIN_TOKEN" | fly secrets import --app "$APP" --stage
+openssl rand -hex 32 | tr -d '\n' | sed 's/^/COOKOUT_SECRETS_KEY=/' | fly secrets import --app "$APP" --stage
 fly deploy --app "$APP" --ha=false
 ```
 
-[fly.toml](fly.toml) needs no edit: `fly launch` names the app, and with `COOKOUT_PUBLIC_URL` unset the server takes `https://<your-app-name>.fly.dev` from the `FLY_APP_NAME` Fly sets, so it answers that host. The health check needs no `Host`: `/v1/health` is answered whatever the host, while every other route refuses a host that isn't its own with 421 `foreign_host`. `fly secrets import` reads the admin token from stdin, so it never sits on a command line. `--ha=false` keeps it to one machine: a second would have its own SQLite file, and live events and Presence are held in the process. To keep the data in Postgres instead of on the volume, also import `DATABASE_URL=postgres://...` the same way before `fly deploy`; an empty database is migrated on the first start.
+[fly.toml](fly.toml) needs no edit: `fly launch` names the app, and with `COOKOUT_PUBLIC_URL` unset the server takes `https://<your-app-name>.fly.dev` from the `FLY_APP_NAME` Fly sets, so it answers that host. The health check needs no `Host`: `/v1/health` is answered whatever the host, while every other route refuses a host that isn't its own with 421 `foreign_host`. `fly secrets import` reads the admin token and the secrets key from stdin, so neither sits on a command line. `--ha=false` keeps it to one machine: a second would have its own SQLite file, and live events and Presence are held in the process. To keep the data in Postgres instead of on the volume, also import `DATABASE_URL=postgres://...` the same way before `fly deploy`; an empty database is migrated on the first start.
 
 Check it, and that the admin token logs in:
 
@@ -51,7 +52,7 @@ echo "Authorization: Bearer $COOKOUT_ADMIN_TOKEN" | curl -fsS -H @- "https://$AP
 
 Render runs it as one web service in Frankfurt, from [render.yaml](render.yaml), with its SQLite file on a 1 GB disk at `/data`. That costs about $7.25 a month: $7 for the `0.5c-512mb` instance (0.5 CPU, 512 MB; a free one can't have a disk) and $0.25 for the disk. You need a Render account, and curl to check it.
 
-Click **Deploy to Render** at the top of this page. Render reads `render.yaml` from this repo's default branch and asks for one value, `COOKOUT_ADMIN_NAME`: the name you log in as, 1 to 64 lowercase letters, digits or `-`, such as `matt`. It makes `COOKOUT_ADMIN_TOKEN` itself, a random value; once the deploy is live, read it on the service's **Environment** tab. With `COOKOUT_PUBLIC_URL` unset the server takes `https://<service>.onrender.com` from the `RENDER_EXTERNAL_URL` Render sets, so it answers that host. Auto-deploy is off, so a push to this repo doesn't redeploy your service; deploy a newer version from the service's **Manual Deploy** menu. A service with a disk has one instance and no zero-downtime deploys, so each deploy has a few seconds' outage.
+Click **Deploy to Render** at the top of this page. Render reads `render.yaml` from this repo's default branch and asks for one value, `COOKOUT_ADMIN_NAME`: the name you log in as, 1 to 64 lowercase letters, digits or `-`, such as `matt`. It makes `COOKOUT_ADMIN_TOKEN` and `COOKOUT_SECRETS_KEY` itself, random values; once the deploy is live, read it on the service's **Environment** tab. With `COOKOUT_PUBLIC_URL` unset the server takes `https://<service>.onrender.com` from the `RENDER_EXTERNAL_URL` Render sets, so it answers that host. Auto-deploy is off, so a push to this repo doesn't redeploy your service; deploy a newer version from the service's **Manual Deploy** menu. A service with a disk has one instance and no zero-downtime deploys, so each deploy has a few seconds' outage.
 
 Check it, and that the admin token logs in, with `SERVICE` set to your service's host name and `COOKOUT_ADMIN_TOKEN` to the token from the Environment tab:
 
@@ -71,6 +72,7 @@ Every setting is an environment variable; [.env.example](.env.example) lists the
 The server, `cookout serve`:
 
 - `COOKOUT_ADMIN_TOKEN` (required): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. A boot after the setting changes makes it the admin's only token; a token rotated since survives restarts while the setting stays the same. Unset or shorter, `serve` refuses to start.
+- `COOKOUT_SECRETS_KEY` (required): 32 random bytes as 64 hex characters or base64, such as one made by `openssl rand -hex 32`. It encrypts each trigger's token and header values and each Webhook command's secret in the store (AES-256-GCM), and they are opened only to send. The first boot with a key encrypts any left in plaintext by an older cookout and keeps a check of the key; a later boot with a different key refuses to start with `secrets_key_mismatch`, and unset or not 32 bytes, `serve` refuses with `secrets_key_invalid`. Keep it with the database: without it the stored trigger tokens and command secrets can't be read ([ADR 0150](docs/adr/0150-trigger-tokens-and-webhook-command-secrets-are-encrypted-at-rest.md)).
 - `COOKOUT_ADMIN_NAME` (default `admin`): The name of the human admin identity `COOKOUT_ADMIN_TOKEN` belongs to, such as `matt`. A boot creates it, or makes an existing human of that name an admin; an agent of that name, or a name that breaks the identity-name rule, makes `serve` refuse to start. Changing it moves the token to the new name and leaves the old identity in place, still an admin, with no working token ([ADR 0039](docs/adr/0039-cookout-admin-name-names-the-admin-token-identity.md)).
 - `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
@@ -129,7 +131,7 @@ Every other verb of the CLI, and the SDK's defaults:
 ```
 pnpm install
 pnpm check
-COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) node app/main.ts serve --port 3000 --db cookout.db
+COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) COOKOUT_SECRETS_KEY=$(openssl rand -hex 32) node app/main.ts serve --port 3000 --db cookout.db
 ```
 
 To run a `cookout` binary built from your clone, `pnpm build && npm link`, and `pnpm build` again after each pull.

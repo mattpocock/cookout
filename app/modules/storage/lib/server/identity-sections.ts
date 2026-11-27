@@ -5,7 +5,7 @@ import { memoryOfflineAlerts, sqlOfflineAlerts } from "./offline-alerts.ts";
 import { memoryReach, sqlReach } from "./reach-sections.ts";
 import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
-import type { SqlDatabase } from "./adapters/sql-database.ts";
+import type { SealingDatabase } from "./sealed-secrets.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
 import { sqlLoginRequests } from "./login-requests-sqlite.ts";
 
@@ -43,12 +43,13 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   };
 }
 
-function sqlIdentitySections(db: SqlDatabase): IdentitySections {
+function sqlIdentitySections(sealing: SealingDatabase): IdentitySections {
+  const { db } = sealing;
   return {
     ...sqlIdentities(db),
     ...sqlAdminSetting(db),
     ...sqlLoginRequests(db),
-    ...sqlReach(db),
+    ...sqlReach(sealing),
     ...sqlOfflineAlerts(db),
   };
 }
