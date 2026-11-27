@@ -7,6 +7,7 @@ import type {
   ScheduleList,
   Scheduling,
   Session,
+  SessionList,
 } from "../../board/index.ts";
 import type { Reading, Unread } from "../../unread/index.ts";
 import type { Composer } from "../../composer/index.ts";
@@ -28,6 +29,7 @@ interface Stores {
   readonly scheduling: Scheduling;
   readonly search: Search;
   readonly session: Session;
+  readonly sessionList: SessionList;
   readonly unread: Unread;
 }
 

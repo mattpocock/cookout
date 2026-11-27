@@ -20,7 +20,8 @@ interface SessionMadeByView {
   readonly where?: string;
 }
 
-interface SessionView {
+/** One of a person's live sessions, as `GET /v1/sessions` lists it. */
+export interface SessionView {
   readonly id: PublicId;
   readonly kind: "web" | "cli";
   readonly where: string;
@@ -158,6 +159,29 @@ export const sessionsPath = "/v1/sessions";
  */
 export const sessionByIdPath = "/v1/sessions/:id";
 
+/**
+ * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in
+ * the caller's lineage ends except the session the request was sent with and what it made, which becomes a root.
+ */
+export const logOutEverywherePath = "/v1/sessions/log-out-everywhere";
+
+/** The live credentials Log out everywhere ends, counted by kind. */
+export interface LogOutEverywhereCounts {
+  readonly sessions: number;
+  readonly agentSessions: number;
+  readonly joinCodes: number;
+}
+
+/** The answer to `GET /v1/sessions/log-out-everywhere`: what Log out everywhere would end now. */
+export interface LogOutEverywherePreview {
+  readonly willEnd: LogOutEverywhereCounts;
+}
+
+/** The answer to `POST /v1/sessions/log-out-everywhere`: what it ended. */
+export interface LogOutEverywhereResponse {
+  readonly ended: LogOutEverywhereCounts;
+}
+
 /** The answer to `GET /v1/sessions`, oldest first. */
 export interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -204,4 +228,11 @@ export interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
+  readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
+  /**
+   * `POST /v1/sessions/log-out-everywhere` (a human): ends every credential in the caller's lineage except this
+   * client's session and what it made, whose open event streams close, and answers what ended by kind.
+   */
+  readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }

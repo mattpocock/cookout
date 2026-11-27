@@ -1,4 +1,4 @@
-import { Effect, Option, Predicate } from "effect";
+import { Effect, Option, Predicate, pipe } from "effect";
 import type { EndedCredential, NewLineage } from "./credential-lineage.ts";
 import { GONE, redemptionOf, sessionFor } from "./join-codes.ts";
 import type { JoinCodeRedemption, JoinCodesSection, NewJoinCode, RedeemJoinCode } from "./join-codes.ts";
@@ -20,15 +20,17 @@ interface MemoryJoinCodesOptions {
 type Codes = Map<TokenHash, NewJoinCode>;
 
 function enderOf(codes: Codes): Ender {
-  return (hash, now) =>
-    Option.flatMap(Option.fromUndefinedOr(codes.get(hash)), (code) => {
+  return {
+    end: (hash) => {
       codes.delete(hash);
-      const ended: EndedCredential = { hash, identity: code.agent, kind: "join code" };
-      return Option.as(
-        Option.liftPredicate(code, () => now < code.expiresAt),
-        ended,
-      );
-    });
+    },
+    live: (hash, now) =>
+      pipe(
+        Option.fromUndefinedOr(codes.get(hash)),
+        Option.filter((code) => now < code.expiresAt),
+        Option.map((code): EndedCredential => ({ hash, identity: code.agent, kind: "join code" })),
+      ),
+  };
 }
 
 function lineageOf({ agent, codeHash, createdAt, parent }: NewJoinCode, publicId: PublicId): NewLineage {

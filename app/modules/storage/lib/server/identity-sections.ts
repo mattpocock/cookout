@@ -32,6 +32,16 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
         state.ensureOpen,
         Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
       ),
+    logOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.logOutEverywhere(request)),
+      ),
+    previewLogOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.previewLogOutEverywhere(request)),
+      ),
     removeIdentity: (name, messages) =>
       Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
         Effect.when(
