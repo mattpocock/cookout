@@ -91,9 +91,15 @@ function identityOf(held: Held, name: IdentityName): Option.Option<Identity> {
 }
 
 function collectFrom(requests: Requests, held: Held) {
-  return ({ credentialHash, now, requestHash }: CollectLoginRequest, publicId: PublicId): LoginCollection => {
+  return (
+    { credentialHash, kind = "cli", now, requestHash }: CollectLoginRequest,
+    publicId: PublicId,
+  ): LoginCollection => {
     dropExpired(requests, now);
-    const found = Option.fromUndefinedOr(requests.get(requestHash));
+    const found = Option.filter(
+      Option.fromUndefinedOr(requests.get(requestHash)),
+      ({ request }) => (request.kind ?? "cli") === kind,
+    );
     if (Option.isNone(found)) {
       return GONE;
     }
@@ -109,7 +115,7 @@ function collectFrom(requests: Requests, held: Held) {
         held.lineage.record({
           hash: credentialHash,
           identity: approver.name,
-          kind: "cli",
+          kind,
           madeAt: now,
           parent: Option.getOrUndefined(found.value.approvedWith),
           publicId,

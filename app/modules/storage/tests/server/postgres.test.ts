@@ -26,6 +26,7 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SECRETS_KEY = [
+  "ALTER TABLE login_requests DROP COLUMN kind",
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
@@ -59,7 +60,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 4",
+  "UPDATE schema_version SET version = version - 5",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;
