@@ -14,7 +14,7 @@ import {
 import type { Booted, HeldAssets, LastEnd, LoggedLine } from "./booted.ts";
 import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
 import type { NewMessage, StorageUnavailable, StoredDelivery, StoredWebhookCommand } from "../../../storage/server.ts";
-import { backingServices, newToken, scriptedTriggersIn, storageFor } from "./backing.ts";
+import { agedStorageFor, backingServices, newToken, scriptedTriggersIn } from "./backing.ts";
 import { booted, capturedLogs, heldAssetsOn, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
@@ -48,6 +48,7 @@ export type TestCookoutService = {
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly startSecondServerAs: (adminName: string) => Effect.Effect<BootedServer, AdminNameIsAgent>;
   readonly restart: Effect.Effect<CookoutClient>;
+  readonly ageLogin: (credential: string, days: number) => Effect.Effect<void>;
 
   readonly liveConnectionsClosed: (name: string) => Effect.Effect<void>;
   readonly lastEnd: (name: string) => Effect.Effect<LastEnd>;
@@ -185,6 +186,7 @@ const pendingDeliveries: Effect.Effect<readonly StoredDelivery[], never, Storage
 
 interface Boot {
   readonly adminToken: Token;
+  readonly ageLogin: TestCookoutService["ageLogin"];
   readonly triggers: ReturnType<typeof scriptedTriggersIn>;
   readonly logs: Effect.Effect<readonly LoggedLine[]>;
   readonly boot: Effect.Effect<Booted, never, Scope.Scope>;
@@ -194,7 +196,7 @@ interface Boot {
 function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.Scope> {
   return Effect.gen(function* prepareBoot() {
     const services = yield* Layer.build(backingServices(options));
-    const storage = yield* storageFor(options);
+    const { ageLogin, storage } = yield* Effect.provideContext(agedStorageFor(options), services);
     const logs = yield* capturedLogs;
     const adminToken = yield* newToken(services);
     const env = serverEnv(options);
@@ -221,7 +223,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
         Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
       );
     const boot = Effect.orDie(bootAs(options.adminName));
-    return { adminToken, boot, bootAs, logs: logs.lines, triggers: scriptedTriggersIn(services) };
+    return { adminToken, ageLogin, boot, bootAs, logs: logs.lines, triggers: scriptedTriggersIn(services) };
   });
 }
 
@@ -231,7 +233,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* startTestCookout() {
       yield* startTestClock;
       const scope = yield* Effect.scope;
-      const { adminToken, boot, bootAs, logs, triggers } = yield* bootOn(options);
+      const { adminToken, ageLogin: aged, boot, bootAs, logs, triggers } = yield* bootOn(options);
       const firstScope = yield* Scope.fork(scope);
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
@@ -251,6 +253,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       const onFirst = Effect.provideContext(first.server);
       return TestCookout.of({
         adminToken,
+        ageLogin: aged,
         client: clientAt(first.url)(adminToken),
         clientFor: clientAt(first.url),
         createIdentity: (name, identityOptions = {}) => onFirst(seedIdentity(first.url)(name, identityOptions)),

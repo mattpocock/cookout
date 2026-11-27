@@ -7,7 +7,11 @@ import { isIsoTime } from "../../time/index.ts";
 import { isWebhookCommandName } from "../../webhook-commands/index.ts";
 import { openAt } from "./render.tsx";
 
-const branchSchema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" } as const;
+const formSchema = {
+  properties: { branch: { type: "string" }, count: { type: "integer" } },
+  required: ["branch"],
+  type: "object",
+} as const;
 const noProperties = { required: ["branch"], type: "object" } as const;
 const nowhere = "http://127.0.0.1:9/command";
 const INDENT = 2;
@@ -47,7 +51,7 @@ function pretty(value: unknown): string {
 async function addWebhookCommand(command: Registered): Promise<CookoutClient> {
   const { name } = command;
   const handler = await newIdentity({ kind: "agent", name, owner: "admin" });
-  await adminClient().addCommand({ ...command, schema: command.schema ?? branchSchema, url: nowhere });
+  await adminClient().addCommand({ ...command, schema: command.schema ?? formSchema, url: nowhere });
   return handler.client;
 }
 
@@ -60,7 +64,7 @@ const storedAt = "2026-01-01T00:00:00.000Z";
 
 function storedUnder(name: string): RegisteredWebhookCommand {
   if (isWebhookCommandName(name) && isIdentityName(name) && isIsoTime(storedAt)) {
-    return { createdAt: storedAt, handler: name, name, schema: branchSchema, url: nowhere };
+    return { createdAt: storedAt, handler: name, name, schema: formSchema, url: nowhere };
   }
   throw new Error(`${name} is not a Webhook command name`);
 }

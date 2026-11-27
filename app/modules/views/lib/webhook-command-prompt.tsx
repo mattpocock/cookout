@@ -38,7 +38,8 @@ export function WebhookCommandPrompt(props: WebhookCommandPromptProps): ReactNod
     [editCallData, typed],
   );
   const handleSubmit = useCallback(() => {
-    call(command.name, callDataOf({ kept: callData, prompt, typed }), onDone);
+    const data = callDataOf({ kept: callData, prompt, typed });
+    call({ called: onDone, data, refused: null, webhookCommand: command.name });
   }, [call, callData, command.name, onDone, prompt, typed]);
   const handleCancel = useCallback(() => {
     editCallData("");

@@ -303,12 +303,15 @@ jobs:
         run: node scripts/release-changeset.ts
       # With `branch: v1` (an automatic run starts on the default branch, main), the action opens the
       # Version Packages pull request from changeset-release/v1 against v1: the version bump lands on
-      # v1 like any other change, and main can always fast-forward to v1.
+      # v1 like any other change, and main can always fast-forward to v1. The action resets that branch to
+      # github.sha, the triggering commit, which is older than the chosen one when a newer v1 commit went
+      # green first, and a step's env can't override GITHUB_SHA for an action: the version command resets
+      # it to the chosen commit before running `pnpm run version` (docs/adr/0146-release-versions-the-chosen-commit-not-the-triggering-one.md).
       - name: Open or update the Version Packages pull request
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm run version
+          version: node scripts/release-version.ts ${{ needs.choose.outputs.sha }}
           title: Version Packages
           commit: Version Packages
           branch: v1
