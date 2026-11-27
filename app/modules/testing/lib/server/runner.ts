@@ -8,9 +8,7 @@ import { runCookout as runCommandLine } from "../../../cli/server.ts";
 
 interface FakeWakeSettings {
   readonly ack?: boolean;
-  readonly childPidFile?: string;
   readonly exitCode?: number;
-  readonly hang?: boolean;
   readonly log: string;
   readonly print?: string;
   readonly succeedAfter?: string;

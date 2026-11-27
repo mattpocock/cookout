@@ -83,6 +83,7 @@ export {
   agentSessionTokensIn,
   registerAs,
   registeredAgentsIn,
+  registeredWithOldTimeout,
   registrationIn,
   runnerWritten,
   wakeEvents,

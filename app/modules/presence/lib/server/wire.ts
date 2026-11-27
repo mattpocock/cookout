@@ -50,8 +50,6 @@ const AT_LEAST_ONE = 1;
 
 const AtLeastOne = Schema.Int.check(Schema.isGreaterThanOrEqualTo(AT_LEAST_ONE));
 
-const WakeRunFailureSchema = matchesWire<WakeRunFailure>()(
-  Schema.Union([Schema.Struct({ exitCode: AtLeastOne }), Schema.Struct({ timedOutAfterMinutes: AtLeastOne })]),
-);
+const WakeRunFailureSchema = matchesWire<WakeRunFailure>()(Schema.Struct({ exitCode: AtLeastOne }));
 
 export { PresenceResponseSchema, PresenceSchema, TriggerResultSchema, WakeRunFailureSchema, WakeRunResponseSchema };

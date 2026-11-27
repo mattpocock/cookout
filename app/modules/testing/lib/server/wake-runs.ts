@@ -162,6 +162,21 @@ function registerAs({
   }).pipe(Effect.orDie);
 }
 
+function registeredWithOldTimeout({
+  minutes,
+  stateFolder,
+}: {
+  readonly minutes: number;
+  readonly stateFolder: string;
+}): Effect.Effect<void, never, Files> {
+  return Effect.gen(function* addOldTimeout() {
+    const fs = yield* FileSystem.FileSystem;
+    const [file = ""] = yield* filesIn(stateFolder, true);
+    const text = yield* fs.readFileString(file);
+    yield* fs.writeFileString(file, Str.replace(HARNESS_FIELD, `$&,\n  "timeoutMinutes": ${String(minutes)}`)(text));
+  }).pipe(Effect.orDie);
+}
+
 function agentSessionTokenIn(stateFolder: string): Effect.Effect<Option.Option<string>, never, Files> {
   return Effect.gen(function* readAgentSessionToken() {
     const fs = yield* FileSystem.FileSystem;
@@ -225,6 +240,7 @@ export {
   agentSessionTokensIn,
   registerAs,
   registeredAgentsIn,
+  registeredWithOldTimeout,
   registrationIn,
   runnerWritten,
   wakeEvents,

@@ -1,4 +1,4 @@
-import { Array as Arr, Duration, Effect, Fiber, Option, Record, Schema, String as Str, Stream } from "effect";
+import { Array as Arr, Effect, Fiber, Option, Record, Schema, String as Str, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import type { FileSystem, Path } from "effect";
 import type { RunOutput, RunnerLog } from "./runner-log.ts";
@@ -29,7 +29,6 @@ const runPlace: Effect.Effect<Option.Option<RunPlace>, never, FileSystem.FileSys
     ),
 );
 
-const DEFAULT_TIMEOUT_MINUTES = 10;
 const SUCCESS = 0;
 const FORCE_KILL_AFTER = "5 seconds";
 const DRAIN_AFTER_EXIT = "1 second";
@@ -72,25 +71,15 @@ function wakeFailed(woke: Woke, log: RunnerLog) {
   };
 }
 
-function exited(woke: Woke, log: RunnerLog, timedOutAfterMinutes: number) {
+function exited(woke: Woke, log: RunnerLog) {
   const { agent, messages } = woke;
-  return (exitCode: Option.Option<number>): Effect.Effect<Option.Option<WakeRunFailure>> =>
-    Option.match(exitCode, {
-      onNone: () =>
-        log
-          .record(agent, { messages, timedOutAfterMinutes, type: "timeout" })
-          .pipe(
-            Effect.andThen(printLine({ ...woke, timedOutAfterMinutes, type: "wake-run" })),
-            Effect.as(Option.some({ timedOutAfterMinutes })),
-          ),
-      onSome: (code) =>
-        log
-          .record(agent, { exitCode: code, messages, type: "exit" })
-          .pipe(
-            Effect.andThen(printLine({ ...woke, exitCode: code, type: "wake-run" })),
-            Effect.as(Option.liftPredicate({ exitCode: code }, () => code !== SUCCESS)),
-          ),
-    });
+  return (exitCode: number): Effect.Effect<Option.Option<WakeRunFailure>> =>
+    log
+      .record(agent, { exitCode, messages, type: "exit" })
+      .pipe(
+        Effect.andThen(printLine({ ...woke, exitCode, type: "wake-run" })),
+        Effect.as(Option.liftPredicate({ exitCode }, () => exitCode !== SUCCESS)),
+      );
 }
 
 function commandOf(woken: Woken): Effect.Effect<ChildProcess.Command> {
@@ -133,20 +122,15 @@ function captured(
   );
 }
 
-function timeoutOf(registration: Registration): number {
-  return registration.timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES;
-}
-
 function wakeRun(
   woken: Woken,
 ): Effect.Effect<Option.Option<WakeRunFailure>, never, ChildProcessSpawner.ChildProcessSpawner> {
   const { items, place, registration } = woken;
   const woke = { agent: registration.agent, messages: Arr.map(items, ({ message }) => message.id) };
-  const minutes = timeoutOf(registration);
-  return captured(woken, woke).pipe(
-    Effect.timeoutOption(Duration.minutes(minutes)),
-    Effect.matchEffect({ onFailure: wakeFailed(woke, place.log), onSuccess: exited(woke, place.log, minutes) }),
-  );
+  return Effect.matchEffect(captured(woken, woke), {
+    onFailure: wakeFailed(woke, place.log),
+    onSuccess: exited(woke, place.log),
+  });
 }
 
 export { type RunPlace, runPlace, wakeRun };

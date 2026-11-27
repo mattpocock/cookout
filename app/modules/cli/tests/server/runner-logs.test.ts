@@ -17,7 +17,6 @@ import {
 import { expect, it } from "@effect/vitest";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Scope } from "effect";
-import { TestClock } from "effect/testing";
 
 type Needs = CommandLineNeeds | TestCookout | Scope.Scope;
 
@@ -35,7 +34,6 @@ const EVERY_KIND: readonly EventKind[] = [
   { agent: "brigid", type: "exit" },
   { agent: "brigid", type: "skip" },
   { agent: "brigid", type: "stand-down" },
-  { agent: "cormac", type: "timeout" },
   { agent: "erin", type: "unregister" },
   { agent: "dana", type: "refusal" },
 ];
@@ -52,16 +50,6 @@ function skipOf(waking: WakingAgents): Effect.Effect<MessageId, never, Needs> {
     yield* waking.release;
     yield* untilRunnerEvents({ agent: "brigid", on, type: "skip" });
     return second;
-  });
-}
-
-function timeoutOf(on: WakeBoard, name: string): Effect.Effect<MessageId, never, Needs> {
-  return Effect.gen(function* runThatTimesOut() {
-    const id = yield* mention({ ada: on.ada, text: `@${name} hang` });
-    yield* untilRunnerEvents({ agent: name, on, type: "wake-run-start" });
-    yield* TestClock.adjust("1 minute");
-    yield* untilRunnerEvents({ agent: name, on, type: "timeout" });
-    return id;
   });
 }
 
@@ -122,7 +110,6 @@ function everyEvent(): Effect.Effect<WakingAgents, never, Needs> {
   return Effect.gen(function* everyKindOfEvent() {
     const waking = yield* wakingAgents([
       { name: "brigid", settings: { print: PRINTED }, waits: true },
-      { name: "cormac", settings: { hang: true }, timeoutMinutes: 1 },
       { name: "dana" },
       { name: "erin" },
     ]);
@@ -131,7 +118,6 @@ function everyEvent(): Effect.Effect<WakingAgents, never, Needs> {
     yield* refusalOf(on, "dana");
     yield* skipOf(waking);
     yield* standDownOf(waking, "brigid");
-    yield* timeoutOf(on, "cormac");
     yield* unregisterOf(on, "erin");
     return waking;
   });
@@ -161,18 +147,6 @@ it.effect("a mention logs its message ID, and its wake run its start, its output
     ]);
     expect(eventsOfKind({ agent: "brigid", type: "exit" })(events)).toMatchObject([
       { at: SOME_TIME, exitCode: EXIT_SUCCESS, messages: [id] },
-    ]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
-it.effect("a wake run that times out logs the timeout", () =>
-  Effect.gen(function* timesOut() {
-    const { on } = yield* wakingAgents([{ name: "brigid", settings: { hang: true }, timeoutMinutes: 1 }]);
-    const id = yield* timeoutOf(on, "brigid");
-    const events = yield* runnerEventsIn(on);
-
-    expect(eventsOfKind({ agent: "brigid", type: "timeout" })(events)).toMatchObject([
-      { at: SOME_TIME, messages: [id], timedOutAfterMinutes: 1 },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
