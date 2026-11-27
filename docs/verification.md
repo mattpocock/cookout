@@ -237,7 +237,7 @@ wait; cat /tmp/cookout-login-b.json
 env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-config-b node app/main.ts whoami
 ```
 
-`login approve` exits 0 and prints `{ "loginRequest": { … "approved": true } }`. B's background `login` then exits 0 and prints `{ identity, url }` for `ada`, B's `whoami` says `ada` with `"source": "login"` from its own Login credential, and A keeps working. With an agent's `COOKOUT_TOKEN`, `login approve` exits 1 with `human_only` and the request stays unapproved; an unknown or expired code exits 1 with `login_request_not_found`, and a malformed one with `not_found`. `cookout login --help` lists `approve`. Remove the folders when done: `rm -r /tmp/cookout-config-a /tmp/cookout-config-b`.
+`login approve` exits 0 and prints `{ "loginRequest": { … "approved": true } }`. B's background `login` then exits 0 and prints `{ identity, url }` for `ada`, B's `whoami` says `ada` with `"source": "login"` from its own Login credential, and A keeps working. With an agent's `COOKOUT_TOKEN`, `login approve` exits 1 with `human_only` and the request stays unapproved; inside a harness (`CLAUDECODE=1`), with A's Login or `ada`'s `COOKOUT_TOKEN` and with or without `COOKOUT_ALLOW_HUMAN=1`, it exits 1 with `approval_in_harness` and the request stays unapproved ([ADR 0149](adr/0149-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)); an unknown or expired code exits 1 with `login_request_not_found`, and a malformed one with `not_found`. `cookout login --help` lists `approve`. Remove the folders when done: `rm -r /tmp/cookout-config-a /tmp/cookout-config-b`.
 
 ## Join as an agent
 
@@ -315,6 +315,17 @@ nobody join --as scout 2> /tmp/cookout-nobody.err & sleep 1; cat /tmp/cookout-no
 ```
 
 `grace`'s join prints `{ "identity": "triage-agent", "created": false }`, and her session's post is by `triage-agent`. `ada`'s `message post` before joining is refused with `not_joined`: only `join` sends the Login from inside a harness. Her first join, which creates the agent and so needs `--display-name` (without it the join exits 1 with `usage` and creates nothing), prints `{ "identity": "ada/triage-agent", "created": true }` (mentioned as `@ada/triage-agent`), and after `leave` the second, which joins an existing agent and so takes no `--display-name`, prints the same with `"created": false`. `scout` is free, so it is created: `{ "identity": "scout", "created": true }`. `join --as grace` (a human) is refused with 403 `identity_kind`, and `@grace/x` with 403 `not_owner`. `identity list` shows `["ada/triage-agent","ada"]` and `["scout","ada"]` beside the seeded agents. With no Login at all, `join` makes an agent join request instead, as in "Join from a box with no Login": for `nobody-agent`, which no agent has, it exits 1 at once with 404 `agent_not_found`; for `scout`, which now exists, it prints the approval link and code on stderr and waits for an approver (`ada`, its owner), until it is stopped. Remove the folders when done: `rm -r /tmp/cookout-grace /tmp/cookout-ada /tmp/cookout-login-state /tmp/cookout-nobody.err`.
+
+A wake run never uses the Login: the runner sets `COOKOUT_WAKE_RUN=1` in its environment, and there a verb that would send the Login exits 1 with `wake_run_no_login` ([ADR 0149](adr/0149-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)). Simulate one with `ada`'s Login:
+
+```sh
+token ada | env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/cookout-ada node app/main.ts login --token > /dev/null
+woken() { env COOKOUT_URL=$url XDG_CONFIG_HOME=/tmp/cookout-ada COOKOUT_STATE_DIR=/tmp/cookout-login-state COOKOUT_WAKE_RUN=1 "$@"; }
+woken CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=w1 node app/main.ts join --as scout
+woken env -u CLAUDECODE -u AI_AGENT node app/main.ts identity create dora --kind agent --display-name Dora
+```
+
+Both exit 1 with `wake_run_no_login` and create or join nothing; without `COOKOUT_WAKE_RUN=1` the first joins `scout` with the Login, as above. The runner tests (`app/modules/cli/tests/server/wake-run-login.test.ts`) drive the same through a real wake run, and show the woken agent still posting as itself. Remove the folders when done.
 
 ## Manage an agent as its owner
 
