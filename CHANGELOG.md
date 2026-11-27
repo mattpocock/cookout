@@ -1,5 +1,28 @@
 # @ai-hero/cookout
 
+## 0.10.0
+
+### Minor Changes
+
+- 1759da3: The SDK's `callCommand(name, { channel, data, replyTo })` takes an optional `replyTo` message ID, which makes the Webhook command call a reply in that message's thread; the handler's replies land in that thread.
+
+## 0.9.2
+
+### Patch Changes
+
+- 44128a5: A Webhook command can no longer take a Command's name: `cookout command add schedule …` (and the SDK's `addCommand`) is refused with 409 `command_exists`, saying `schedule` is a Command's name, and stores nothing. A Webhook command already stored under that name still works as before.
+
+## 0.9.1
+
+### Patch Changes
+
+- Work that landed without a changeset:
+  - Release treats files under any tests/ folder as not user-facing (#876) (#885)
+  - Version Packages (#875)
+  - Version Packages (#703)
+  - attach-key browser test: wait for file chooser interception before Ctrl+Shift+U (#866) (#868)
+  - A route test's end waits for the calls its views still have in flight (#858) (#867)
+
 ## 0.9.0
 
 ### Minor Changes
