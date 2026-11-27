@@ -24,6 +24,7 @@ export default defineConfig({
         "app/main.ts",
         "app/dev.ts",
         "app/modules/testing/lib/server/fake-wake-command.ts",
+        "app/modules/testing/lib/server/fake-wake-runs.ts",
         "app/web.tsx",
         "app/modules/live/lib/event-source.ts",
         "app/modules/probe/web.ts",

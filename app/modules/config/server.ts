@@ -270,6 +270,8 @@ export const cookoutAuth = Config.String("COOKOUT_AUTH").pipe(Config.withDefault
  */
 export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
 
+export { isWakeRun, wakeRunVariable } from "./lib/server/wake-run.ts";
+
 /**
  * `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`: the proxy every CLI verb but `serve` sends `http://` and `https://`
  * requests through (`https://` falls back to `HTTP_PROXY`), and the hosts it reaches directly. Each lowercase name, as
@@ -289,8 +291,5 @@ export const harnessEnvironment: Config.Config<Readonly<Record<string, string>>>
   Rec.fromEntries(Arr.map(harnessVariables, (name) => [name, Config.String(name).pipe(Config.withDefault(""))])),
 );
 
-/** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN`, and how to set it. It never includes the value. */
-export { adminTokenRule };
-
-/** Why `cookout serve` refused `COOKOUT_ADMIN_NAME`: the identity-name rule. */
-export { adminNameRule };
+/** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN` or `COOKOUT_ADMIN_NAME`, and how to set it, never the value. */
+export { adminNameRule, adminTokenRule };

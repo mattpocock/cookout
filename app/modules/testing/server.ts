@@ -74,9 +74,11 @@ export {
   startRunner,
 } from "./lib/server/runner.ts";
 export {
+  type CookoutRunLine,
   type RegistrationFile,
   type WakeLogLine,
   agentSessionTokenIn,
+  cookoutRunsIn,
   agentSessionTokensIn,
   registeredAgentsIn,
   registrationIn,
