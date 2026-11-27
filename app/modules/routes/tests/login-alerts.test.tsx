@@ -65,7 +65,7 @@ function asShown(admin: IdentityName): (alert: InboxAlert, index: number) => Inb
     }
     const { session } = alert.login;
     if (index === FIRST) {
-      return { ...alert, login: { act: "revoked", admin, credential: session, kind: "admin act" } };
+      return { ...alert, login: { act: "revoked a session", admin, credential: session, kind: "admin act" } };
     }
     return {
       ...alert,
@@ -91,7 +91,7 @@ async function shownAlerts(owner: CookoutClient): Promise<readonly [number, numb
   const events = await stream;
   const pane = within(inPane().element());
   const shown = [
-    await pane.findByText(/^An admin acted on your credentials: @web-login-admin revoked, /u),
+    await pane.findByText(/^An admin acted on your credentials: @web-login-admin revoked a session, /u),
     await pane.findByText(/^New login: web browser, \d/u),
   ];
   const revokes = pane.getAllByRole("button", { name: "Revoke" }).length;

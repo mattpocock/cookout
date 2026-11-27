@@ -79,6 +79,7 @@ export const errorCodes = [
   "agent_key_not_found",
   "agent_key_expired",
   "agent_keys_instead",
+  "admin_sees_no_secrets",
   ...scheduledMessageErrorCodes,
   "not_found",
   "method_not_allowed",

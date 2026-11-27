@@ -1,10 +1,10 @@
 import type { ClockFixtures, ClockOptions, OwnCookout } from "./clock.ts";
 import { test as base, expect } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
+import { logIn, logInWithStream } from "./login.ts";
 import type { Person } from "./people.ts";
 import type { TopLevelMessage } from "../../../sdk/index.ts";
 import { clockFixtures } from "./clock.ts";
-import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
@@ -57,8 +57,8 @@ test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
 test("closing a thread takes its read nudge out of Earlier, live", async ({ ownCookout, page }) => {
   const started = await threadStarted(ownCookout, unique("browser-nudges-closed"));
   await ownCookout.daysPass(QUIET_DAYS);
-  await logIn({ page, token: started.starter.token, url: "/#/inbox" });
   await everyNudgeRead(started.starter);
+  await logInWithStream({ page, token: started.starter.token, url: "/#/inbox" });
   const earlier = inPane(page).getByRole("list", { exact: true, name: "Earlier nudges" });
 
   await expect(earlier.getByText(NUDGE, { exact: true })).toBeVisible();

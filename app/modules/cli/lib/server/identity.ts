@@ -7,6 +7,7 @@ import type { CallFailure } from "./adapters/sdk.ts";
 import { callServer } from "./adapters/sdk.ts";
 import { identityFeederCommand } from "./identity-feeder.ts";
 import { identityKinds } from "../../../identities/index.ts";
+import { identitySessionsCommand } from "./identity-sessions.ts";
 import { identityTriggerCommand } from "./identity-trigger.ts";
 import { isDeactivationOfferId } from "../../../inbox/index.ts";
 
@@ -138,28 +139,6 @@ const identityAdminCommand = Command.make(
 ).pipe(Command.withDescription("Make a human an admin, or remove admin with --remove (admin only)."));
 
 const agentName = Argument.String("agent").pipe(Argument.withDescription("The agent's name."));
-
-const identitySessionsCommand = Command.make(
-  "sessions",
-  {
-    agent: agentName,
-    revoke: Flag.Boolean("revoke").pipe(
-      Flag.withDefault(false),
-      Flag.withDescription("Revoke its live agent session token: the session's next request is refused."),
-    ),
-  },
-  ({ agent, revoke }) => {
-    if (revoke) {
-      return answer((client) => client.revokeAgentSession(agent));
-    }
-    return answer((client) => client.listAgentSessions(agent));
-  },
-).pipe(
-  Command.withDescription(
-    "List an agent's live agent session (issued, last used, expiry, host), or revoke it with --revoke. Owner or " +
-      "admin; --revoke also the agent that brought it in.",
-  ),
-);
 
 const identityTransferCommand = Command.make(
   "transfer",

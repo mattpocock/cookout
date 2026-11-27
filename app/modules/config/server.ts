@@ -85,7 +85,7 @@ export const publicUrl = Config.all({
 export const behindFly = flyAppName.pipe(Config.map(Str.isNonEmpty));
 
 /**
- * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, optional (#913, ADR 0161). When set, every boot makes it
+ * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, optional (#913, ADR 0162). When set, every boot makes it
  * the admin's only token (Matt, 2026-11-23, mattpocock/cookout#85); shorter than 32 characters, serve refuses to
  * start, and the message never shows the value. Unset or empty, boot sets no admin token, and a store with no admin
  * gets a setup link instead.

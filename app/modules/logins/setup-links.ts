@@ -1,7 +1,7 @@
-/** Setup links on the wire: the route that redeems one into the first admin, its request, and the SDK's call (ADR 0161). */
+/** Setup links on the wire: the route that redeems one into the first admin, its request, and the SDK's call (ADR 0162). */
 import type { IdentityResponse, Token } from "../identities/index.ts";
 
-/** How long a setup link lasts before it is gone, used or not: 24 hours (#913, ADR 0161). */
+/** How long a setup link lasts before it is gone, used or not: 24 hours (#913, ADR 0162). */
 export const setupLinkSeconds = 86_400;
 
 /**

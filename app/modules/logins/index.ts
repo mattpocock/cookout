@@ -1,8 +1,6 @@
 /**
- * Logging a machine in by browser approval, on the wire (ADR 0047), shared by the server, the SDK, the CLI and the
- * web: the routes, their bodies and answers, the user code's rule, the approval page's path and the SDK's calls.
- * `cookout login` starts a login request, a human approves it in the web UI by typing its user code, and the CLI collects
- * the Login's own credential with the secret request ID.
+ * Logging a machine in by browser approval, on the wire (ADR 0047), for the server, SDK, CLI and web: `cookout login`
+ * starts a login request, a human approves it in the web UI by typing its user code, and the CLI collects the Login.
  */
 import type { Identity, IdentityResponse, LoginLinkResponse, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
@@ -35,10 +33,7 @@ export interface SessionView {
 /** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
 export type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
 
-/**
- * What a person sees about a Login request or agent join request before Approve (#905), recorded when it started, so
- * they approve only the device they meant to.
- */
+/** What a person sees of a Login or agent join request before Approve (#905), to approve only the device meant. */
 export interface ApprovalRequestDetails {
   readonly kind: ApprovalRequestKind;
   /** A browser's browser and OS, such as `Firefox on macOS`, or else the host the request named. */
@@ -142,10 +137,7 @@ export const loginRequestApprovalPath = "/v1/login-requests/:code/approval";
 /** `DELETE /v1/login`: revokes the Login credential the request was sent with. */
 export const loginPath = "/v1/login";
 
-/**
- * The approval page's path on the server, for Login requests and agent join requests alike. It never holds a code:
- * the person types the code into the page on a device already logged in (#905).
- */
+/** The approval page's path, for Login and agent join requests alike; it never holds a code (#905). */
 export const approvalPath = "/#/approve";
 
 /** `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0153). */
@@ -156,6 +148,12 @@ export const sessionsPath = "/v1/sessions";
  * below it. Another person's ID or an unknown one is 404 `session_not_found`.
  */
 export const sessionByIdPath = "/v1/sessions/:id";
+
+/** `GET /v1/identities/:name/sessions` (the person or an admin): that person's live sessions (ADR 0161). */
+export const identitySessionsPath = "/v1/identities/:name/sessions";
+
+/** `DELETE /v1/identities/:name/sessions/:id` (the person or an admin): revokes one of that person's sessions. */
+export const identitySessionPath = "/v1/identities/:name/sessions/:id";
 
 /** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
 export const loginLinkSeconds = 900;
@@ -246,6 +244,10 @@ export interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /** `GET /v1/identities/:name/sessions` (that person, or an admin; an agent is 403 `human_only`): their sessions. */
+  readonly listIdentitySessions: (name: string) => Promise<ListSessionsResponse>;
+  /** `DELETE /v1/identities/:name/sessions/:id` (that person, or an admin, who raises an admin act Login alert). */
+  readonly revokeIdentitySession: (name: string, id: PublicId) => Promise<RevokeSessionResponse>;
   /**
    * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
    * within 15 minutes. An agent is 403 `human_only`.

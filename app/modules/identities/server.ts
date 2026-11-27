@@ -198,7 +198,7 @@ export const openIdentityRoutes: typeof openLoginRoutes = [...openLoginRoutes, .
 /**
  * The request limit of the client address a request to one of the no-token routes comes from (`Limits` provides it),
  * and the step that takes one request from it; a fresh setup link while the store has no admin, and a login link made
- * from the server console (#913, ADR 0161).
+ * from the server console (#913, ADR 0162).
  */
 export { AddressLimit, consoleLoginLink, setupLinkFor } from "./lib/server/routes.ts";
 
@@ -279,7 +279,7 @@ export { avatarRoutes } from "./lib/server/avatars.ts";
  * `identity` event. Deleting an identity publishes it on its own hub, which the live stream sends on as an
  * `identity-deleted` event.
  */
-export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from "./lib/server/changes.ts";
+export { IdentityChanges, THE_COOKOUT, adminActedOn, endingsOf, identityChangesLayer } from "./lib/server/changes.ts";
 
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the

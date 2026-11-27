@@ -63,9 +63,26 @@ const laptop: NewLoginAlert = {
 };
 
 const adminRevoked: NewLoginAlert = {
-  login: { act: "revoked", admin: nameOf("matt"), credential: publicId("fedcba9876543210"), kind: "admin act" },
+  login: {
+    act: "revoked a session",
+    admin: nameOf("matt"),
+    credential: publicId("fedcba9876543210"),
+    kind: "admin act",
+  },
   owner: nameOf("ada"),
   raisedAt: isoTime("2026-01-01T10:45:00.000Z"),
+};
+
+const agentSessionRevoked: NewLoginAlert = {
+  login: { act: "revoked an agent session", admin: nameOf("matt"), agent: nameOf("triage"), kind: "admin act" },
+  owner: nameOf("ada"),
+  raisedAt: isoTime("2026-01-01T10:48:00.000Z"),
+};
+
+const deactivated: NewLoginAlert = {
+  login: { act: "deactivated", admin: nameOf("matt"), kind: "admin act" },
+  owner: nameOf("ada"),
+  raisedAt: isoTime("2026-01-01T10:49:00.000Z"),
 };
 
 const bobsLogin: NewLoginAlert = {
@@ -123,6 +140,19 @@ it.effect.each(storageLayers)(
         bob: [storedOf(bobsLogin, SECOND)],
         stored: storedOf(firefox, FIRST),
       });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an admin act Login alert keeps the agent it named, with no credential when it named none",
+  ({ layer }) =>
+    Effect.gen(function* agentActKept() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* Effect.forEach([agentSessionRevoked, deactivated], storage.recordLoginAlert, ONE_AT_A_TIME);
+      const ada = yield* storage.listAlerts(nameOf("ada"));
+
+      expect(ada).toStrictEqual([storedOf(agentSessionRevoked, FIRST), storedOf(deactivated, SECOND)]);
     }),
 );
 

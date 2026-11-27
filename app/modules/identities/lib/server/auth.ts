@@ -284,6 +284,7 @@ export { harnessOf } from "./harness-guard.ts";
 export {
   IdentityChanges,
   adminActed,
+  adminActedOn,
   announced,
   announcedDeleted,
   credentialsEnded,

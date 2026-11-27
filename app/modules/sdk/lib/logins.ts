@@ -10,6 +10,8 @@ import {
   agentKeyPath,
   agentKeysPath,
   collectLoginRequestPath,
+  identitySessionPath,
+  identitySessionsPath,
   logOutEverywherePath,
   loginLinkPath,
   loginPath,
@@ -120,6 +122,33 @@ function sessionCalls(server: ClientConnection): SessionCalls {
   };
 }
 
+type PersonSessionCalls = Pick<SessionLoginCalls, "listIdentitySessions" | "revokeIdentitySession">;
+
+function personSessionCalls(server: ClientConnection): PersonSessionCalls {
+  return {
+    listIdentitySessions: async (name) => {
+      const params = { name };
+      const listed = await send(server, {
+        isExpected: isListSessionsResponse,
+        method: "GET",
+        params,
+        path: identitySessionsPath,
+      });
+      return listed;
+    },
+    revokeIdentitySession: async (name, id) => {
+      const params = { id, name };
+      const revoked = await send(server, {
+        isExpected: isRevokeSessionResponse,
+        method: "DELETE",
+        params,
+        path: identitySessionPath,
+      });
+      return revoked;
+    },
+  };
+}
+
 function loginLinkCalls(server: ClientConnection): Pick<LoginCalls, "createLoginLink" | "redeemLoginLink"> {
   return {
     createLoginLink: async (name) => {
@@ -179,7 +208,7 @@ function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogi
   };
 }
 
-function sessionLoginCalls(server: ClientConnection): SessionLoginCalls {
+function sessionLoginCalls(server: ClientConnection): Omit<SessionLoginCalls, keyof PersonSessionCalls> {
   return {
     ...sessionCalls(server),
     ...loginLinkCalls(server),
@@ -231,7 +260,12 @@ function sessionLoginCalls(server: ClientConnection): SessionLoginCalls {
 }
 
 function loginCalls(server: ClientConnection): LoginCalls {
-  return { ...sessionLoginCalls(server), ...agentKeyCalls(server), ...setupLinkCalls(server) };
+  return {
+    ...sessionLoginCalls(server),
+    ...personSessionCalls(server),
+    ...agentKeyCalls(server),
+    ...setupLinkCalls(server),
+  };
 }
 
 export { loginCalls };

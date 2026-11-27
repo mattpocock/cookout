@@ -1,4 +1,4 @@
-import { Array as Arr, Context, Effect, Layer, PubSub, Ref } from "effect";
+import { Array as Arr, Context, Effect, Layer, Predicate, PubSub, Ref } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../index.ts";
 import type { AdminAct } from "../../../inbox/index.ts";
 import type { EndedCredential } from "../../../storage/server.ts";
@@ -38,7 +38,8 @@ interface AdminActed {
   readonly identity: IdentityName;
   readonly admin?: IdentityName;
   readonly act: AdminAct;
-  readonly credential: PublicId;
+  readonly credential?: PublicId;
+  readonly agent?: IdentityName;
 }
 
 type AdminActedHandler = (acted: AdminActed) => Effect.Effect<void>;
@@ -183,6 +184,42 @@ function adminActed(acted: AdminActed): Effect.Effect<void, never, IdentityChang
   return Effect.flatMap(IdentityChanges, (changes) => changes.adminActed(acted));
 }
 
+interface ActedOn {
+  readonly caller: Identity;
+  readonly target: Identity;
+  readonly act: AdminAct;
+  readonly credential?: PublicId;
+}
+
+function personOf(target: Identity): IdentityName {
+  if (target.kind === "agent") {
+    return target.owner;
+  }
+  return target.name;
+}
+
+function agentOf(target: Identity): Pick<AdminActed, "agent"> {
+  if (target.kind === "agent") {
+    return { agent: target.name };
+  }
+  return {};
+}
+
+function credentialNamed(credential: ActedOn["credential"]): Pick<AdminActed, "credential"> {
+  if (Predicate.isUndefined(credential)) {
+    return {};
+  }
+  return { credential };
+}
+
+function adminActedOn({ act, caller, credential, target }: ActedOn): Effect.Effect<void, never, IdentityChanges> {
+  const identity = personOf(target);
+  if (!caller.admin || caller.name === identity) {
+    return Effect.void;
+  }
+  return adminActed({ act, admin: caller.name, identity, ...credentialNamed(credential), ...agentOf(target) });
+}
+
 function credentialsEnded(revoke: CredentialsEnded): Effect.Effect<void, never, IdentityChanges> {
   return Effect.forEach(endingsOf(revoke), tokensEnded, EACH_IN_TURN);
 }
@@ -190,6 +227,7 @@ function credentialsEnded(revoke: CredentialsEnded): Effect.Effect<void, never, 
 export {
   type AdminActed,
   adminActed,
+  adminActedOn,
   type EndedTokens,
   IdentityChanges,
   THE_COOKOUT,

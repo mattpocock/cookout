@@ -17,9 +17,10 @@ const ada = identityFixture("ada", { kind: "human" });
 const triage = identityFixture("triage", { kind: "agent", owner: "ada" });
 const BEFORE_AGENT_KEYS = [
   "DROP TABLE setup_links",
+  "ALTER TABLE offline_alerts DROP COLUMN acted_on_agent",
   "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys",
-  "UPDATE schema_version SET version = version - 3",
+  "UPDATE schema_version SET version = version - 4",
 ];
 const PUBLIC_ID = /^[0-9a-f]{16}$/u;
 

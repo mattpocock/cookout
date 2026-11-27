@@ -19,8 +19,9 @@ const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const BEFORE_FEEDERS = [
   "DROP TABLE setup_links",
+  "ALTER TABLE offline_alerts DROP COLUMN acted_on_agent",
   "ALTER TABLE identities DROP COLUMN feeder",
-  "UPDATE schema_version SET version = version - 2",
+  "UPDATE schema_version SET version = version - 3",
 ];
 
 it.effect("an agent stored on Postgres before feeders is no feeder after the upgrade, and can be made one", () =>

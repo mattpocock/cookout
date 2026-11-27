@@ -134,7 +134,13 @@ it.effect("cookout inbox prints the owner's unread offline alerts beside the ite
     expect(results).toMatchObject([
       {
         exitCode: 0,
-        stdoutJson: { alerts: [{ agent: "triage", offlineReason: "session revoked", read: false }], items: [] },
+        stdoutJson: {
+          alerts: [
+            { agent: "triage", offlineReason: "session revoked", read: false },
+            { login: { act: "revoked an agent session", admin: "admin", agent: "triage", kind: "admin act" } },
+          ],
+          items: [],
+        },
       },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),

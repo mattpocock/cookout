@@ -72,6 +72,45 @@ function agentKeysInstead(name: IdentityName): Refusal {
   };
 }
 
+function insteadOf(target: Identity): string {
+  if (target.kind === "agent") {
+    return `${target.owner}, its owner, makes it an agent key with cookout agent-key create ${target.name} <key-name>.`;
+  }
+  return `Send ${target.name} a login link from their profile instead.`;
+}
+
+function adminSeesNoSecrets(target: Identity): Refusal {
+  const instead = insteadOf(target);
+  return {
+    code: "admin_sees_no_secrets",
+    message: `Rotating ${target.name}'s token would show you its secret, and an admin never sees one. ${instead}`,
+    status: FORBIDDEN,
+  };
+}
+
+function ownCredentials(caller: Identity, target: Identity): boolean {
+  return caller.name === target.name || (target.kind === "agent" && target.owner === caller.name);
+}
+
+function noSecretShown(caller: Identity, target: Identity | undefined): Effect.Effect<void, Refusal> {
+  if (Predicate.isNotUndefined(target) && !ownCredentials(caller, target)) {
+    return Effect.fail(adminSeesNoSecrets(target));
+  }
+  return Effect.void;
+}
+
+function refusedIfOthers(name: IdentityName): Effect.Effect<void, Refusal | StorageUnavailable, Caller | Storage> {
+  return Effect.gen(function* checkOwnToken() {
+    const caller = yield* Caller;
+    if (caller.name !== name || caller.kind !== "human") {
+      yield* requireOwnerOrAdmin(name);
+    }
+    const storage = yield* Storage;
+    const target = yield* storage.findIdentityByName(name);
+    yield* noSecretShown(caller, target);
+  });
+}
+
 function answeredCreated(created: IdentityResponse | IdentityWithTokenResponse): ReturnType<typeof withToken> {
   if ("token" in created) {
     return withToken(created, { status: CREATED });
@@ -152,7 +191,7 @@ const rotateRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* rotateTokenRoute() {
       const name = yield* nameParam(params);
-      yield* requireOwnerOrAdmin(name);
+      yield* refusedIfOthers(name);
       yield* refusedIfAgent(name);
       const storage = yield* Storage;
       const { token, hash } = yield* issueToken;

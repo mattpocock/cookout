@@ -173,15 +173,27 @@ export const offlineAlertNotFound = "offline_alert_not_found";
 export const presenceErrorCodes = [watchReplaced, offlineAlertNotFound, ...triggerErrorCodes] as const;
 
 /** What an admin did to someone's credentials, as a Login alert tells them. */
-export type AdminAct = "revoked" | "sent a login link";
+export type AdminAct =
+  | "revoked a session"
+  | "revoked an agent key"
+  | "revoked an agent session"
+  | "sent a login link"
+  | "deactivated";
 
 /** Every admin act, in the order the wire lists them. */
-export const adminActs = ["revoked", "sent a login link"] as const satisfies readonly AdminAct[];
+export const adminActs = [
+  "revoked a session",
+  "revoked an agent key",
+  "revoked an agent session",
+  "sent a login link",
+  "deactivated",
+] as const satisfies readonly AdminAct[];
 
 /**
  * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
- * made it, and whether it has ended), or an admin acting on the person's credentials. An admin act with no `admin`
- * was done from the server console, as `cookout admin login-link` does (#913).
+ * made it, and whether it has ended), or an admin acting on the person's credentials (ADR 0161): the admin, what they
+ * did, the credential when the act names one, and the agent when it was one of the person's agents. An admin act with
+ * no `admin` was done from the server console, as `cookout admin login-link` does (#913, ADR 0162).
  */
 export type LoginAlertEvent =
   | {
@@ -197,7 +209,8 @@ export type LoginAlertEvent =
       readonly kind: "admin act";
       readonly admin?: IdentityName;
       readonly act: AdminAct;
-      readonly credential: PublicId;
+      readonly credential?: PublicId;
+      readonly agent?: IdentityName;
     };
 
 /** A Login alert in a person's Inbox: an alert of the offline alert kind, read and cleared like one. */
