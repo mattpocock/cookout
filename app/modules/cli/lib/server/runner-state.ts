@@ -13,13 +13,26 @@ import { isAlive } from "./claude-code-sessions.ts";
 
 const PRETTY = 2;
 
-type LiveState = "connected" | "connecting" | "running";
+type HeldState = "connected" | "connecting" | "running";
+type LiveState = HeldState | "retrying";
 type State = LiveState | "not-connected" | "not-running";
 
+const LastErrorSchema = Schema.Struct({ code: Schema.String, message: Schema.String });
+
+type LastError = typeof LastErrorSchema.Type;
+
 const RunnerStateSchema = Schema.Struct({
+  error: Schema.optionalKey(LastErrorSchema),
   pid: Schema.Int,
-  state: Schema.Literals(["connected", "connecting", "running"]),
+  state: Schema.Literals(["connected", "connecting", "retrying", "running"]),
 });
+
+type RunnerState = typeof RunnerStateSchema.Type;
+
+interface KnownState {
+  readonly error?: LastError;
+  readonly state: State;
+}
 
 const DroppedSchema = Schema.Struct({
   agent: Schema.String,
@@ -34,6 +47,7 @@ type Dropped = typeof DroppedSchema.Type;
 interface RegistrationStatus {
   readonly agent: string;
   readonly directory: string;
+  readonly error?: LastError;
   readonly lastRun?: LastRun;
   readonly liveDelivery?: InboundWarning;
   readonly state: State;
@@ -49,28 +63,35 @@ const encodeDropped = Schema.encodeEffect(Schema.fromJsonString(DroppedSchema, {
 
 function writeRunnerState(
   file: AgentSessionStateFile,
-  state: LiveState,
+  state: Omit<RunnerState, "pid">,
 ): Effect.Effect<void, AgentSessionStateFailure> {
-  return Effect.flatMap(Effect.orDie(encodeRunnerState({ pid: process.pid, state })), (text) =>
+  return Effect.flatMap(Effect.orDie(encodeRunnerState({ ...state, pid: process.pid })), (text) =>
     file.beside(RUNNER_SUFFIX).write(text),
   );
 }
 
 interface Keeper {
   readonly reconnected: Effect.Effect<void>;
-  readonly set: (state: LiveState) => Effect.Effect<void>;
+  readonly retrying: (failure: CallFailure) => Effect.Effect<void>;
+  readonly set: (state: HeldState) => Effect.Effect<void>;
 }
 
 function keeperOf(file: AgentSessionStateFile): Effect.Effect<Keeper> {
   return Effect.gen(function* keepRunnerState() {
     const current = yield* Ref.make<LiveState>("connecting");
-    function set(state: LiveState): Effect.Effect<void> {
-      return Effect.andThen(Ref.set(current, state), Effect.ignore(writeRunnerState(file, state)));
+    function kept(state: Omit<RunnerState, "pid">): Effect.Effect<void> {
+      return Effect.andThen(Ref.set(current, state.state), Effect.ignore(writeRunnerState(file, state)));
     }
-    const reconnected = Effect.flatMap(Ref.get(current), (state) =>
-      Effect.asVoid(Effect.when(set("connected"), Effect.succeed(state !== "running"))),
-    );
-    return { reconnected, set };
+    function unlessRunning(state: Omit<RunnerState, "pid">): Effect.Effect<void> {
+      return Effect.flatMap(Ref.get(current), (now) =>
+        Effect.asVoid(Effect.when(kept(state), Effect.succeed(now !== "running"))),
+      );
+    }
+    return {
+      reconnected: unlessRunning({ state: "connected" }),
+      retrying: ({ code, message }) => unlessRunning({ error: { code, message }, state: "retrying" }),
+      set: (state) => kept({ state }),
+    };
   });
 }
 
@@ -95,17 +116,20 @@ function dropRegistration({ failure, registered }: Dropping): Effect.Effect<void
   });
 }
 
-function stateOf(file: AgentSessionStateFile): Effect.Effect<State, AgentSessionStateFailure> {
+const notRunning: KnownState = { state: "not-running" };
+
+function stateOf(file: AgentSessionStateFile): Effect.Effect<KnownState, AgentSessionStateFailure> {
   return Effect.gen(function* readRunnerState() {
     const decoded = yield* Effect.orElseSucceed(file.beside(RUNNER_SUFFIX).read(RunnerStateSchema), Option.none);
     if (Option.isNone(decoded)) {
-      return "not-running";
+      return notRunning;
     }
     const alive = yield* isAlive(decoded.value.pid);
     if (!alive) {
-      return "not-running";
+      return notRunning;
     }
-    return decoded.value.state;
+    const { pid: _pid, ...known } = decoded.value;
+    return known;
   });
 }
 
@@ -115,9 +139,9 @@ function statusOf(runs: ReadonlyMap<string, LastRun>) {
     registration,
   }: RegisteredSession): Effect.Effect<RegistrationStatus, AgentSessionStateFailure, AgentSessionStateNeeds> =>
     Effect.gen(function* statusOfRegistration() {
-      const state = yield* stateOf(file);
+      const known = yield* stateOf(file);
       const warning = yield* inboundWarning(registration);
-      const status = { agent: registration.agent, directory: registration.directory, state };
+      const status: RegistrationStatus = { agent: registration.agent, directory: registration.directory, ...known };
       const withRun = Option.match(Option.fromNullishOr(runs.get(registration.agent)), {
         onNone: (): RegistrationStatus => status,
         onSome: (lastRun) => ({ ...status, lastRun }),
@@ -170,8 +194,16 @@ const stateText: Readonly<Record<State, string>> = {
   connecting: "connecting",
   "not-connected": "not connected: the running runner holds no connection for it yet; cookout runner logs says why",
   "not-running": "not running: no runner is running",
+  retrying: "retrying",
   running: "running a wake run",
 };
+
+function stateLine({ error, state }: KnownState): string {
+  return Option.match(Option.fromNullishOr(error), {
+    onNone: () => stateText[state],
+    onSome: ({ code, message }) => `${stateText[state]} after ${code}: ${message}`,
+  });
+}
 
 type Ending = NonNullable<LastRun["ended"]>;
 
@@ -210,8 +242,9 @@ function warningLines(agent: string, warning: InboundWarning | undefined): reado
   });
 }
 
-function registrationLines({ agent, directory, lastRun, liveDelivery, state }: RegistrationStatus): readonly string[] {
-  return [`${agent}  ${stateText[state]}  ${directory}${lastRunText(lastRun)}`, ...warningLines(agent, liveDelivery)];
+function registrationLines(status: RegistrationStatus): readonly string[] {
+  const { agent, directory, lastRun, liveDelivery } = status;
+  return [`${agent}  ${stateLine(status)}  ${directory}${lastRunText(lastRun)}`, ...warningLines(agent, liveDelivery)];
 }
 
 function statusLines({ dropped, registrations }: RunnerStatus): readonly string[] {

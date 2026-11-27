@@ -51,6 +51,7 @@ function listen(listening: Listening, { asAgent, keeper, queue }: Heeding): Effe
     queue,
     record: (event) => listening.place.log.record(listening.registered.registration.agent, event),
     replaced: keeper.set("connecting"),
+    retrying: keeper.retrying,
   });
 }
 
