@@ -30,7 +30,6 @@ export function InboxSections(props: InboxSectionsProps): ReactNode {
         actions={props.actions}
         besides={props.besides}
         forYou
-        uncounted={unread.heldDeactivatedQuietAgents.length}
         me={me}
         rows={rows}
         selected={selected}
@@ -39,7 +38,6 @@ export function InboxSections(props: InboxSectionsProps): ReactNode {
         <ForYouNotices
           actions={props.notices}
           deactivated={unread.deactivatedQuietAgents}
-          held={unread.heldDeactivatedQuietAgents}
           joinRequests={unread.agentJoinRequests}
           nudges={unread.nudges}
           offers={unread.deactivationOffers}
@@ -53,7 +51,6 @@ export function InboxSections(props: InboxSectionsProps): ReactNode {
         rows={rows}
         selected={selected}
         title={TEXT.activity}
-        uncounted={NONE}
       />
     </>
   );

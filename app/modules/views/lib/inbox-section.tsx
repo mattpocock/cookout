@@ -16,7 +16,6 @@ interface InboxSectionProps {
   readonly forYou: boolean;
   readonly me: string;
   readonly besides: number;
-  readonly uncounted: number;
   readonly children?: ReactNode;
 }
 
@@ -33,7 +32,7 @@ export function InboxSection(props: InboxSectionProps): ReactNode {
   const rows = props.rows.rows.filter((row) => row.forYou === props.forYou);
   const count = rows.length + props.besides;
   return (
-    count + props.uncounted > NONE && (
+    count > NONE && (
       <>
         <FeedHeading count={countOf(count)} title={props.title} />
         <FeedList label={props.title}>

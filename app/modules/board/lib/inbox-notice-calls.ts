@@ -58,8 +58,6 @@ interface NoticeCalls {
 }
 
 interface JoinCalls {
-  readonly hold: (id: DeactivatedQuietAgentId) => void;
-  readonly release: (id: DeactivatedQuietAgentId) => void;
   readonly approve: (userCode: string) => void;
   readonly replace: (userCode: string) => void;
   readonly dismiss: (userCode: string) => void;
@@ -185,12 +183,6 @@ function joinCalls({ apply, client }: Calling): JoinCalls {
       answering(userCode, async () => {
         await client.denyAgentJoin(userCode);
       });
-    },
-    hold: (id) => {
-      apply({ held: true, id, type: "quiet-agent-held" });
-    },
-    release: (id) => {
-      apply({ held: false, id, type: "quiet-agent-held" });
     },
     replace: (userCode) => {
       answering(userCode, async () => {

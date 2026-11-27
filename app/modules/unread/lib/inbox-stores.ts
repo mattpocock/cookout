@@ -71,8 +71,6 @@ type DeactivatedQuietAgentsState = QuietAgentsShown;
 
 interface DeactivatedQuietAgents extends Shown<DeactivatedQuietAgentsState> {
   readonly markRead: (id: DeactivatedQuietAgentId) => void;
-  readonly hold: (id: DeactivatedQuietAgentId) => void;
-  readonly release: (id: DeactivatedQuietAgentId) => void;
 }
 
 interface AgentJoinRequests extends Shown<JoinsShown> {
@@ -117,12 +115,7 @@ function noticeStores(
   const calls = board.inboxCalls;
   return {
     alerts: { ...shownBy(board, alertsOf), markRead: calls.markAlertRead, revoke: calls.revokeLoginSession },
-    deactivatedQuietAgents: {
-      ...shownBy(board, quietAgentsOf),
-      hold: calls.hold,
-      markRead: calls.markQuietAgentRead,
-      release: calls.release,
-    },
+    deactivatedQuietAgents: { ...shownBy(board, quietAgentsOf), markRead: calls.markQuietAgentRead },
     deactivationOffers: { ...shownBy(board, offersOf), keep: calls.keep },
     nudges: {
       ...shownBy(board, nudgesOf),

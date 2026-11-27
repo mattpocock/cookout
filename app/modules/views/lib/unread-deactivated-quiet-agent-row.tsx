@@ -13,7 +13,7 @@ const TEXT = { markRead: "Mark read", reactivate: "Reactivate" } as const;
 
 interface UnreadDeactivatedQuietAgentRowProps {
   readonly entry: DeactivatedQuietAgent;
-  readonly entries: Pick<DeactivatedQuietAgents, "markRead" | "release">;
+  readonly entries: Pick<DeactivatedQuietAgents, "markRead">;
   readonly identities: Pick<Identities, "actions">;
 }
 
@@ -22,7 +22,6 @@ export function UnreadDeactivatedQuietAgentRow(props: UnreadDeactivatedQuietAgen
   const actions = props.identities.actions(entry.identity.name);
   const handleReactivate = actions.ask.reactivate;
   const handleMarkRead = useCallback(() => {
-    entries.release(entry.id);
     entries.markRead(entry.id);
   }, [entries, entry]);
   return (

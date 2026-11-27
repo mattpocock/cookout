@@ -3,7 +3,6 @@ import type {
   ChannelName,
   CookoutEvent,
   DeactivatedQuietAgent,
-  DeactivatedQuietAgentId,
   DeactivationOffer,
   IdentityName,
   InboxAgentJoinRequest,
@@ -138,26 +137,10 @@ function offersApplied({ change, entries }: Applying): InboxEntries {
   return entries;
 }
 
-function withHeld(entries: InboxEntries, id: DeactivatedQuietAgentId, held: boolean): InboxEntries {
-  if (entries.held.has(id) === held) {
-    return entries;
-  }
-  const next = new Set(entries.held);
-  if (held) {
-    next.add(id);
-  } else {
-    next.delete(id);
-  }
-  return { ...entries, held: next };
-}
-
 function quietAgentsApplied({ change, entries }: Applying): InboxEntries {
   if (change.type === "deactivated-quiet-agent") {
     const value = withAll({ entries: [change.deactivatedQuietAgent], held: entries.deactivatedQuietAgents });
     return withPart({ entries, key: "deactivatedQuietAgents", value });
-  }
-  if (change.type === "quiet-agent-held") {
-    return withHeld(entries, change.id, change.held);
   }
   return entries;
 }
