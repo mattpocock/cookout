@@ -277,18 +277,14 @@ export { avatarRoutes } from "./lib/server/avatars.ts";
  * `identity` event. Deleting an identity publishes it on its own hub, which the live stream sends on as an
  * `identity-deleted` event.
  */
-export {
-  IdentityChanges,
-  THE_COOKOUT,
-  endingsOf,
-  identityChangesLayer,
-} from "./lib/server/changes.ts";
+export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from "./lib/server/changes.ts";
 
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the
- * presence registry ends the live connections sent with them at once (ADR "how a live connection ends").
+ * presence registry ends the live connections sent with them at once (ADR "how a live connection ends"); and a new
+ * session of a person's, told when a Login request is collected or a token is pasted on the web, for a Login alert.
  */
-export type { EndedTokens, TokensEnded } from "./lib/server/changes.ts";
+export type { EndedTokens, SessionMade, TokensEnded } from "./lib/server/changes.ts";
 
 /**
  * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity`,

@@ -11,11 +11,15 @@ const POLL = Schedule.spaced("200 millis");
 
 type Entries = Pick<InboxResponse, "alerts" | "deactivatedQuietAgents" | "deactivationOffers" | "items" | "nudges">;
 
+function isOffline(alert: OfflineAlert | { readonly login: unknown }): alert is OfflineAlert {
+  return "agent" in alert;
+}
+
 function namesIn(entries: Entries): readonly string[] {
   return [
     ...Arr.map(entries.items, ({ channel }) => channel.name),
     ...Arr.map(entries.nudges, ({ channel }) => channel.name),
-    ...Arr.map(entries.alerts, ({ agent }) => agent),
+    ...Arr.map(Arr.filter(entries.alerts, isOffline), ({ agent }) => agent),
     ...Arr.map(entries.deactivationOffers, ({ identity }) => identity.name),
     ...Arr.map(entries.deactivatedQuietAgents, ({ identity }) => identity.name),
   ];
@@ -35,10 +39,11 @@ function ownersAlerts({ owner }: CookoutUnderTestService): Effect.Effect<readonl
   return Effect.gen(function* readOwnersInbox() {
     const client = yield* owner;
     const inbox = yield* Effect.promise(() => client.inbox()).pipe(
-      Effect.repeat({ schedule: POLL, until: ({ alerts }) => alerts.length > NONE }),
+      Effect.map(({ alerts }) => Arr.filter(alerts, isOffline)),
+      Effect.repeat({ schedule: POLL, until: (alerts: readonly OfflineAlert[]) => alerts.length > NONE }),
       Effect.timeoutOption("10 seconds"),
     );
-    return Option.match(inbox, { onNone: () => [], onSome: ({ alerts }) => alerts });
+    return Option.getOrElse(inbox, () => []);
   });
 }
 

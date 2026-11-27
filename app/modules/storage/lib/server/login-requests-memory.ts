@@ -2,6 +2,7 @@ import type {
   ApproveLoginRequest,
   CollectLoginRequest,
   IssueLoginCredential,
+  IssuedLoginCredential,
   LoginCollection,
   LoginCredentialLookup,
   LoginRequest,
@@ -115,7 +116,7 @@ function collectFrom(requests: Requests, held: Held) {
           publicId,
           where: found.value.request.host,
         });
-        return collected(approver);
+        return collected({ id: publicId, identity: approver, request: found.value.request });
       },
     });
   };
@@ -169,7 +170,7 @@ function issueStraightTo(held: Held) {
   return (
     { credentialHash, host, identity, now, parent }: IssueLoginCredential,
     publicId: PublicId,
-  ): Identity | undefined =>
+  ): IssuedLoginCredential | undefined =>
     pipe(
       identityOf(held, identity),
       Option.map((found) => {
@@ -183,7 +184,7 @@ function issueStraightTo(held: Held) {
           publicId,
           where: host,
         });
-        return found;
+        return { identity: found, session: publicId };
       }),
       Option.getOrUndefined,
     );

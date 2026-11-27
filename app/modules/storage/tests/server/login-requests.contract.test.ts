@@ -83,8 +83,8 @@ it.effect.each(storageLayers)(
       const credential = yield* storage.findLoginCredential(credentialHash);
       const notIssued = yield* storage.findLoginCredential(again);
 
-      expect([first, second, credential]).toStrictEqual([
-        { identity: ada, status: "collected" },
+      expect([first, second, credential]).toMatchObject([
+        { identity: ada, session: { where: "ada-laptop" }, status: "collected" },
         { status: "gone" },
         ada,
       ]);
@@ -172,7 +172,7 @@ it.effect.each(storageLayers)(
       });
       const notIssued = yield* storage.findLoginCredential(late);
 
-      expect([issued, found, revoked]).toStrictEqual([ada, ada, true]);
+      expect([issued, found, revoked]).toMatchObject([{ identity: ada }, ada, true]);
       expect([isFound(gone), isFound(nobody), isFound(notIssued)]).toStrictEqual([false, false, false]);
     }),
 );

@@ -2,6 +2,7 @@ import { Array as Arr, Effect, Option } from "effect";
 import type { Presence, WakeRunFailure } from "../../../presence/index.ts";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { isOfflineAlert } from "../../../inbox/index.ts";
 
 const NOT_FOUND = { code: "not_found", status: 404 } as const;
 
@@ -51,7 +52,10 @@ const runnerOfAda = Effect.gen(function* brigidHeldByRunner() {
   const alerts = Effect.map(
     answer(() => ada.client.inbox()),
     (inbox) =>
-      Arr.map(inbox.alerts, ({ backOnlineAt, offlineReason }) => ({ back: typeof backOnlineAt, offlineReason })),
+      Arr.map(Arr.filter(inbox.alerts, isOfflineAlert), ({ backOnlineAt, offlineReason }) => ({
+        back: typeof backOnlineAt,
+        offlineReason,
+      })),
   );
   function failing(failure: WakeRunFailure): Effect.Effect<Option.Option<Presence>> {
     return Effect.andThen(

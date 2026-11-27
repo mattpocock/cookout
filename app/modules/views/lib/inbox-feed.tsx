@@ -23,6 +23,7 @@ interface InboxFeedProps {
 export function InboxFeed(props: InboxFeedProps): ReactNode {
   const { me, rows, selected, state } = props;
   const handleMarkAlertRead = props.unread.alerts.markRead;
+  const handleRevokeSession = props.unread.alerts.revoke;
   return (
     <Feed label={props.label}>
       {state.status === "loaded" && <MarkAllFailed markAll={state.markAll} />}
@@ -31,6 +32,7 @@ export function InboxFeed(props: InboxFeedProps): ReactNode {
         me={me}
         notices={props.notices}
         onMarkAlertRead={handleMarkAlertRead}
+        onRevokeSession={handleRevokeSession}
         rows={rows}
         selected={selected}
         unread={state}

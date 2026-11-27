@@ -20,13 +20,17 @@ import { tokenHash } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
 const BEFORE_SECRETS_KEY = [
+  "ALTER TABLE offline_alerts DROP CONSTRAINT offline_alerts_one_kind",
+  `ALTER TABLE offline_alerts DROP COLUMN login_kind, DROP COLUMN credential_id, DROP COLUMN session_kind,
+     DROP COLUMN where_from, DROP COLUMN client_ip, DROP COLUMN admin_name, DROP COLUMN admin_act`,
+  "ALTER TABLE offline_alerts ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL",
   "DROP TABLE credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN approved_with",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "DROP TABLE secrets_key",
-  "UPDATE schema_version SET version = version - 3",
+  "UPDATE schema_version SET version = version - 4",
 ];
 const TRIGGER_TOKEN = triggerToken("routine-token-5d2a");
 const HEADERS = [{ name: "x-routine-key", value: "header-secret-7e10" }];

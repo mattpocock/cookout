@@ -14,9 +14,10 @@ import type {
   DeactivationOfferId,
 } from "./lib/deactivation-offers.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
-import type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
 import type { InboxAgentJoinRequest } from "./lib/agent-join-requests.ts";
+import type { InboxAlert } from "./lib/login-alerts.ts";
 import type { IsoTime } from "../time/index.ts";
+import type { OfflineAlertId } from "../presence/index.ts";
 
 declare const brand: unique symbol;
 
@@ -121,12 +122,12 @@ export interface ReadPosition {
 }
 
 /**
- * The inbox, oldest first, each message once, and beside it the caller's unread offline alerts, oldest first (always
- * none for an agent, which owns no agent), and its unread Nudges, oldest first. Reading it changes nothing.
+ * The inbox, oldest first, each message once, and beside it the caller's unread alerts, oldest first (always none for
+ * an agent, which owns no agent and has no session), and its unread Nudges, oldest first. Reading it changes nothing.
  */
 export interface InboxResponse {
   readonly items: readonly InboxItem[];
-  readonly alerts: readonly OfflineAlert[];
+  readonly alerts: readonly InboxAlert[];
   readonly nudges: readonly Nudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
   readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
@@ -152,12 +153,12 @@ export interface InboxHistoryQuery {
 /**
  * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
  * newest first, each message once. `hasMore` says older items remain after the last. The first page (no `before`)
- * also lists every offline alert raised for the caller, read or not, newest first; a later page lists none. Reading it
- * changes nothing.
+ * also lists every alert (offline or Login) raised for the caller, read or not, newest first; a later page lists none.
+ * Reading it changes nothing.
  */
 export interface InboxHistoryResponse {
   readonly items: readonly InboxHistoryItem[];
-  readonly alerts: readonly OfflineAlert[];
+  readonly alerts: readonly InboxAlert[];
   readonly hasMore: boolean;
   /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
   readonly nudges: readonly InboxHistoryNudge[];
@@ -199,12 +200,7 @@ export interface AckAllRequest {
  */
 export interface AckAllResponse {
   readonly readPositions: readonly ReadPosition[];
-  readonly alerts: readonly OfflineAlert[];
-}
-
-/** The answer to marking one offline alert read: the alert, now read. */
-export interface OfflineAlertResponse {
-  readonly alert: OfflineAlert;
+  readonly alerts: readonly InboxAlert[];
 }
 
 /** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
@@ -245,7 +241,7 @@ export const inboxPath = "/v1/inbox";
 /** `GET /v1/inbox/history?before=<id>&limit=<n>`: a page of the caller's inbox history, read and unread. */
 export const inboxHistoryPath = "/v1/inbox/history";
 
-/** `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert `id` read (404 `offline_alert_not_found` otherwise). */
+/** `POST /v1/inbox/alerts/:id/read`: marks the caller's alert `id`, offline or Login, read (404 `offline_alert_not_found` otherwise). */
 export const offlineAlertReadPath = "/v1/inbox/alerts/:id/read";
 
 /** `GET /v1/read-positions`: the caller's read positions. */
@@ -298,3 +294,7 @@ export {
 
 /** A pending Agent join request in the Inbox of whoever may approve it (mattpocock/cookout#442). */
 export type { InboxAgentJoinRequest } from "./lib/agent-join-requests.ts";
+
+/** A Login alert (GLOSSARY.md); an `InboxAlert`, offline or Login (`isOfflineAlert`); the answer to marking one read. */
+export type { AdminAct, InboxAlert, LoginAlert, LoginAlertEvent, OfflineAlertResponse } from "./lib/login-alerts.ts";
+export { adminActs, isOfflineAlert } from "./lib/login-alerts.ts";

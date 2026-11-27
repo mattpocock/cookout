@@ -119,11 +119,17 @@ function parentOf(approvedWith: string | null): TokenHash | undefined {
 function issueIn(db: SqlDatabase, { collect, publicId }: Issuing) {
   const { credential } = sqlQueries(db);
   const { credentialHash, now, requestHash } = collect;
-  return ({ approved_by: approver, approved_with: approvedWith, host }: RequestRowType): Fails<LoginCollection> =>
+  return ({
+    approved_by: approver,
+    approved_with: approvedWith,
+    client_ip: clientIp,
+    host,
+  }: RequestRowType): Fails<LoginCollection> =>
     Effect.gen(function* issueCredential() {
       yield* db.run("DELETE FROM login_requests WHERE request_hash = ?", requestHash);
       yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, now, loginCredentialExpiry(now), approver);
       const issued = yield* credential(credentialHash);
+      const request = { host, ...originOf({ clientIp, userAgent: null }) };
       function recorded(identity: Identity): Fails<LoginCollection> {
         return Effect.as(
           lineageIn(db).record({
@@ -135,7 +141,7 @@ function issueIn(db: SqlDatabase, { collect, publicId }: Issuing) {
             publicId,
             where: host,
           }),
-          collected(identity),
+          collected({ id: publicId, identity, request }),
         );
       }
       return yield* Option.match(issued, { onNone: Fn.constant(Effect.succeed(GONE)), onSome: recorded });
@@ -180,7 +186,7 @@ function issueStraightIn(db: SqlDatabase): LoginRequestsSection["issueLoginCrede
               where: host,
             });
           }
-          return Option.getOrUndefined(issued);
+          return Option.getOrUndefined(Option.map(issued, (made) => ({ identity: made, session: publicId })));
         }),
       ),
     );

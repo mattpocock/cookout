@@ -22,6 +22,7 @@ import { Array as Arr, Effect, Option, String as Str } from "effect";
 import { answer, testCookout, triggerToken } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
+import { isOfflineAlert } from "../../../inbox/index.ts";
 
 it.effect("a mention POSTs the message's link and text to the trigger URL with the token, and stores the result", () =>
   Effect.gen(function* callOnMention() {
@@ -185,11 +186,11 @@ it.effect("a failure streak raises one alert in the owner's inbox, and the next 
   Effect.gen(function* oneAlertPerStreak() {
     const { after, elsewhere, first, streak } = yield* streakInboxes;
 
-    expect(Arr.map(streak.alerts, ({ offlineReason, trigger }) => ({ offlineReason, trigger }))).toStrictEqual([
-      { offlineReason: "trigger failed", trigger: { message: first, status: NOT_FOUND } },
-    ]);
+    expect(
+      Arr.map(Arr.filter(streak.alerts, isOfflineAlert), ({ offlineReason, trigger }) => ({ offlineReason, trigger })),
+    ).toStrictEqual([{ offlineReason: "trigger failed", trigger: { message: first, status: NOT_FOUND } }]);
     expect(elsewhere.alerts).toStrictEqual([]);
-    expect(Arr.map(after.alerts, ({ backOnlineAt }) => backOnlineAt)).toStrictEqual([AT]);
+    expect(Arr.map(Arr.filter(after.alerts, isOfflineAlert), ({ backOnlineAt }) => backOnlineAt)).toStrictEqual([AT]);
   }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
 );
 
@@ -202,7 +203,7 @@ it.effect("a new streak after a success raises a new alert", () =>
     const inbox = yield* on.inbox;
 
     expect(calls).toHaveLength(THRICE);
-    expect(Arr.map(inbox.alerts, ({ offlineReason }) => offlineReason)).toStrictEqual(
+    expect(Arr.map(Arr.filter(inbox.alerts, isOfflineAlert), ({ offlineReason }) => offlineReason)).toStrictEqual(
       Arr.makeBy(TWICE, () => "trigger failed"),
     );
   }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
@@ -231,7 +232,7 @@ it.effect("a failed call keeps the error message of its JSON envelope, and the a
     expect(stored).toMatchObject({
       trigger: { lastResult: { error: HEADER_REQUIRED, ok: false, status: BAD_REQUEST } },
     });
-    expect(Arr.map(inbox.alerts, ({ trigger }) => trigger)).toStrictEqual([
+    expect(Arr.map(Arr.filter(inbox.alerts, isOfflineAlert), ({ trigger }) => trigger)).toStrictEqual([
       { error: HEADER_REQUIRED, message: id, status: BAD_REQUEST },
     ]);
   }).pipe(Effect.provide(testCookout())),

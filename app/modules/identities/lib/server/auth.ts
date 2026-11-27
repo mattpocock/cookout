@@ -288,5 +288,6 @@ export {
   announcedDeleted,
   credentialsEnded,
   reactivated,
+  sessionMade,
   tokensEnded,
 } from "./changes.ts";

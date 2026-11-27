@@ -3,6 +3,7 @@ export type {
   AckAllResponse,
   AckRequest,
   AckResponse,
+  AdminAct,
   DeactivatedQuietAgent,
   DeactivatedQuietAgentId,
   DeactivatedQuietAgentResponse,
@@ -11,6 +12,7 @@ export type {
   DeactivationOfferResponse,
   FollowResponse,
   InboxAgentJoinRequest,
+  InboxAlert,
   InboxHistoryItem,
   InboxHistoryNudge,
   InboxHistoryQuery,
@@ -18,6 +20,8 @@ export type {
   InboxItem,
   InboxReason,
   InboxResponse,
+  LoginAlert,
+  LoginAlertEvent,
   MarkUnreadRequest,
   MarkUnreadResponse,
   MovedBackReadPosition,
@@ -32,3 +36,4 @@ export type {
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
+export type { PublicId } from "../../logins/index.ts";

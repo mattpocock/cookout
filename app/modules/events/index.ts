@@ -8,11 +8,11 @@ import type {
   DeactivatedQuietAgent,
   DeactivationOffer,
   InboxAgentJoinRequest,
+  InboxAlert,
   InboxItem,
   MovedBackReadPosition,
   Nudge,
   NudgeId,
-  OfflineAlert,
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
@@ -232,13 +232,13 @@ export interface PresenceEvent {
 }
 
 /**
- * An offline alert of the caller's (GLOSSARY.md) as it now stands: raised the moment an agent it owns goes offline
- * unexpectedly, and sent again when the agent is back online or the alert is marked read. Sent on every stream of the
- * owner, so its sessions stay in sync. It has no SSE `id`.
+ * An alert of the caller's (GLOSSARY.md) as it now stands: raised when an agent it owns goes offline unexpectedly or a
+ * new session of theirs is made, and sent again when the agent is back, the session ends or the alert is marked read.
+ * Sent on every stream of the owner, so its sessions stay in sync. It has no SSE `id`.
  */
 export interface OfflineAlertEvent {
   readonly type: "offline-alert";
-  readonly alert: OfflineAlert;
+  readonly alert: InboxAlert;
 }
 
 /**
