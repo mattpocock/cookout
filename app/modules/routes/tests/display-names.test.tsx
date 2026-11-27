@@ -121,7 +121,12 @@ it("settings saves your own display name and your agents', and shows them at onc
     rowOf("web-names-save-human"),
     inSidebar().getByRole("link", { name: /Ada Lovelace/u }).textContent,
   ]).toStrictEqual([
-    ["Your display name", "Display name of @web-names-save-bot", "Create an agent"],
+    [
+      "Your display name",
+      "Display name of @web-names-save-bot",
+      "Make a key for @web-names-save-bot",
+      "Create an agent",
+    ],
     "Ada Lovelace@web-names-save-human(you)Human",
     "Ada Lovelace@web-names-save-human",
   ]);

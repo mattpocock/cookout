@@ -40,7 +40,6 @@ interface IdentityActions {
   readonly editTransfer: (text: string) => void;
   readonly forgetToken: () => void;
   readonly copyToken: () => void;
-  readonly showToken: (token: Token) => void;
   readonly sendLoginLink: () => void;
   readonly copyLoginLink: () => void;
   readonly forgetLoginLink: () => void;
@@ -101,7 +100,7 @@ function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => stri
 
 type Publish = (next: Partial<Held>) => void;
 
-type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken" | "showToken">;
+type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken">;
 
 function editsOf(publish: Publish, held: () => Held): Edits {
   return {
@@ -110,9 +109,6 @@ function editsOf(publish: Publish, held: () => Held): Edits {
     },
     forgetToken: () => {
       publish({ token: null, tokenForgotten: held().token !== null });
-    },
-    showToken: (token) => {
-      publish({ token });
     },
   };
 }

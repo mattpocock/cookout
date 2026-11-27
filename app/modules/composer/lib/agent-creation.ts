@@ -1,4 +1,4 @@
-import type { IdentityName, Refusal, Token } from "../../sdk/index.ts";
+import type { IdentityName, Refusal } from "../../sdk/index.ts";
 import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -13,6 +13,7 @@ interface AgentCreationSnapshot {
   readonly text: string;
   readonly displayName: string;
   readonly create: CreateState;
+  readonly created: IdentityName | null;
 }
 
 interface AgentCreation {
@@ -25,12 +26,11 @@ interface AgentCreation {
 
 interface AgentCreationOptions {
   readonly list: IdentityList;
-  readonly created: (name: IdentityName, token: Token) => void;
 }
 
 function createAgentCreation(options: AgentCreationOptions): AgentCreation {
   const listeners = listenersOf(options.list.show);
-  const empty: AgentCreationSnapshot = { create: { status: "idle" }, displayName: "", text: "" };
+  const empty: AgentCreationSnapshot = { create: { status: "idle" }, created: null, displayName: "", text: "" };
   let current = empty;
   let queue = Promise.resolve();
 
@@ -47,11 +47,10 @@ function createAgentCreation(options: AgentCreationOptions): AgentCreation {
     const { displayName, text } = asked;
     try {
       const agent = { displayName: displayName.trim(), name: text.trim() };
-      const { name, token } = await options.list.calls.createAgent(agent);
-      options.created(name, token);
-      publish(empty);
+      const created = await options.list.calls.createAgent(agent);
+      publish({ ...empty, created });
     } catch (error: unknown) {
-      publish({ create: { ...refusalOf(error), status: "failed" }, displayName, text });
+      publish({ create: { ...refusalOf(error), status: "failed" }, created: null, displayName, text });
     }
   }
 

@@ -2,6 +2,7 @@ import { ActionGroup } from "../../design-system/controls.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Identity } from "../../sdk/index.ts";
 import { IdentityActionsView } from "./identity-actions.tsx";
+import { KeysSection } from "./keys-section.tsx";
 import { ProfileName } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import { noteOf } from "./use-author.ts";
@@ -17,6 +18,7 @@ export function AgentCard(props: AgentCardProps): ReactNode {
     <ActionGroup label={`@${identity.name}`}>
       <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)} />
       <IdentityActionsView deletable={false} identities={props.identities} identity={identity} transfer={false} />
+      {identity.deactivated !== true && <KeysSection identities={props.identities} makes name={identity.name} />}
     </ActionGroup>
   );
 }
