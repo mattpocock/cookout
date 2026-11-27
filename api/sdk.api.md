@@ -1747,7 +1747,7 @@ interface SessionView {
   readonly current: boolean;
   readonly madeBy?: SessionMadeByView;
 }
-/** A credential's public ID (ADR 0150): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
+/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
 type PublicId = string & {
   readonly [brand$1]: "PublicId";
 };

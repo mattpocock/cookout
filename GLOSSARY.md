@@ -61,22 +61,22 @@ A request from a box with no Login, made by `cookout join --as <name>`, that a p
 _Avoid_: device code
 
 **Login**:
-Superseded by **Session** (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)); `cookout login` stays the verb that makes one. Was: a human identity's token kept on one machine by `cookout login`, one per server URL, which the CLI then sends for that person when no harness runs it. A Login is a person's: an agent's token is refused. Decided by Matt on 2026-11-23, recorded in [#115](https://github.com/mattpocock/cookout/issues/115).
+Superseded by **Session** (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)); `cookout login` stays the verb that makes one. Was: a human identity's token kept on one machine by `cookout login`, one per server URL, which the CLI then sends for that person when no harness runs it. A Login is a person's: an agent's token is refused. Decided by Matt on 2026-11-23, recorded in [#115](https://github.com/mattpocock/cookout/issues/115).
 _Avoid_: account
 
 **Session**:
-One device logged in, for a person: a web session in a browser or a CLI session on a machine, each with its own credential, listed and revoked on its own. An agent's is an **agent session** (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+One device logged in, for a person: a web session in a browser or a CLI session on a machine, each with its own credential, listed and revoked on its own. An agent's is an **agent session** (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 _Avoid_: Login (for the credential), device token
 
 **Lineage**:
-Which credential made or approved which: every session, agent session and join code records its parent, and revoking a credential revokes everything below it. Log out and expiry end only their own credential (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+Which credential made or approved which: every session, agent session and join code records its parent, and revoking a credential revokes everything below it. Log out and expiry end only their own credential (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 _Avoid_: provenance, chain
 
 **Login alert**:
-An Inbox alert telling a person that a session of theirs was made, with Revoke while it is live (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+An Inbox alert telling a person that a session of theirs was made, with Revoke while it is live (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 
 **Login request**:
-The pending approval that `cookout login` creates, until a person approves it from a device that is already logged in by typing its code, and the CLI keeps the resulting session (Matt, 2026-11-23, [#142](https://github.com/mattpocock/cookout/issues/142); reworded Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+The pending approval that `cookout login` creates, until a person approves it from a device that is already logged in by typing its code, and the CLI keeps the resulting session (Matt, 2026-11-23, [#142](https://github.com/mattpocock/cookout/issues/142); reworded Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 _Avoid_: device code, auth request
 
 **Mention**:
@@ -142,14 +142,14 @@ An Inbox item for an agent's owner, saying the agent went offline unexpectedly a
 _Avoid_: notification, offline notice
 
 **Identity token**:
-An identity's long-lived secret, sent as the request's `Authorization` header (`COOKOUT_TOKEN`). Creating an identity or rotating its token issues one, shown once. CI and long-running services use an agent's (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Retired for people by spec #900's moving-over release, and replaced by **Agent key** for agents (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)). Until then, rotating one revokes it and everything below it in the lineage.
+An identity's long-lived secret, sent as the request's `Authorization` header (`COOKOUT_TOKEN`). Creating an identity or rotating its token issues one, shown once. CI and long-running services use an agent's (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Retired for people by spec #900's moving-over release, and replaced by **Agent key** for agents (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)). Until then, rotating one revokes it and everything below it in the lineage.
 _Avoid_: API key, PAT, bearer
 
 **Agent session token**:
-The token `join` issues for one session of an agent, which acts as that agent until `leave` revokes it, another session's `join --force` replaces it, or it goes unused past its idle expiry (7 days by default). An agent has at most one live at a time (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). It is the agent's **session**, and has a parent in the lineage: the credential `join` was sent with, or the one that approved its join; it may later hang under an agent key (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+The token `join` issues for one session of an agent, which acts as that agent until `leave` revokes it, another session's `join --force` replaces it, or it goes unused past its idle expiry (7 days by default). An agent has at most one live at a time (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). It is the agent's **session**, and has a parent in the lineage: the credential `join` was sent with, or the one that approved its join; it may later hang under an agent key (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 
 **Agent key**:
-A long-lived, named key an agent's CI or service uses, several per agent, each listed and revoked on its own; it replaces the agent's Identity token (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0150](docs/adr/0150-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
+A long-lived, named key an agent's CI or service uses, several per agent, each listed and revoked on its own; it replaces the agent's Identity token (Matt, 2026-11-27, board thread 7142, msg 7282; [ADR 0153](docs/adr/0153-every-credential-records-what-made-it-and-revoking-one-revokes-what-it-made.md)).
 _Avoid_: API key, PAT
 
 **Session URL**:
