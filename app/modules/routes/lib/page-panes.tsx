@@ -25,6 +25,7 @@ export function PagePanes(props: PagePanesProps): ReactNode {
         keymap={stores.keymap}
         me={props.me}
         reading={stores.reading}
+        scheduling={stores.scheduling}
         selected={route.selected}
         unread={stores.unread}
       />

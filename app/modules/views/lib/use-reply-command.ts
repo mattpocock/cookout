@@ -1,11 +1,10 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import type { Outgoing, Scheduling } from "../../board/index.ts";
 import { useCallback, useContext } from "react";
 import { useReply, useThreadCalls } from "./use-board.ts";
 import type { Draft } from "../../composer/index.ts";
 import { LandingContext } from "../../landing/index.ts";
-import type { Outgoing } from "../../board/index.ts";
 import type { WebhookCommandCalls } from "./use-board.ts";
-import { useScheduling } from "./scheduling-context.ts";
 import { useWebhookCommandRun } from "./use-webhook-command-run.ts";
 
 interface ReplyCommand {
@@ -13,6 +12,7 @@ interface ReplyCommand {
   readonly draft: Draft;
   readonly form: string;
   readonly replied: (() => void) | null;
+  readonly scheduling: Scheduling;
   readonly thread: MessageId;
 }
 
@@ -23,8 +23,7 @@ interface ReplyHandlers {
 }
 
 function useReplyCommand(command: ReplyCommand): ReplyHandlers {
-  const { channel, draft, form, thread } = command;
-  const scheduling = useScheduling();
+  const { channel, draft, form, scheduling, thread } = command;
   const calls = useThreadCalls({ channel, id: thread });
   const reply = useReply({ place: { channel, id: thread }, replied: command.replied });
   const { watch } = useContext(LandingContext);
