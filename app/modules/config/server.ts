@@ -295,8 +295,5 @@ export const harnessEnvironment: Config.Config<Readonly<Record<string, string>>>
   Rec.fromEntries(Arr.map(harnessVariables, (name) => [name, Config.String(name).pipe(Config.withDefault(""))])),
 );
 
-/** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN`, and how to set it. It never includes the value. */
-export { adminTokenRule };
-
-/** Why `cookout serve` refused `COOKOUT_ADMIN_NAME`: the identity-name rule. */
-export { adminNameRule };
+/** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN` or `COOKOUT_ADMIN_NAME`, and how to set it, never the value. */
+export { adminNameRule, adminTokenRule };
