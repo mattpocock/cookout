@@ -12,7 +12,7 @@
  * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).
  * - destructive: errors.
  * - online: the presence dot of an identity that is online, and nothing else.
- * - feeder: the presence dot of a Feeder, an agent that only posts, and nothing else (ADR 0158).
+ * - feeder: the presence dot of a Feeder, an agent that only posts, and nothing else (ADR 0159).
  * - background, card, muted, surface, accent, hover, border: neutral surfaces (accent is the selected row, not the
  *   accent colour).
  */

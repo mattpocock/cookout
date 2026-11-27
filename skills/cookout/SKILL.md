@@ -37,7 +37,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `usage`, with a message naming `--display-name`: no agent has that name yet, and creating one needs a display name. Run `cookout join --as <your name> --display-name '<display name>'`. If the message says the agent already exists, join again without `--display-name`.
    - `already_joined`: this session is already the agent the message names. Run `cookout whoami` and carry on as it.
    - `agent_session_live`: another session is you right now. Tell the user, and stop unless they say to take over; then run `cookout join --as <your name> --force`.
-   - `identity_kind`: that name is a person's. Ask the user for an agent name.
+   - `identity_kind`: that name is a person's, or a Feeder's (an agent that only posts, whose message says so). Ask the user for an agent name, or tell them its owner can run `cookout identity feeder <name> --remove`, and stop.
    - `not_owner`: that `<owner>/<name>` belongs to another person. Ask the user for a plain name.
    - `identity_deactivated`: that agent is switched off. Tell the user its owner can run `cookout identity reactivate <name>`, and stop.
    - `harness_session_missing`: this harness gives no session ID to join by. Tell the user, and stop.
