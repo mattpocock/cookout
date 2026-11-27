@@ -179,6 +179,7 @@ const MENU_KEYS = [
   ["Mark unread", "Alt+Enter", "Alt+Enter"],
   ["Copy link", "l", "l"],
   ["Copy text", "c", "c"],
+  ["Add title", "e", "e"],
   ["Close", "x", "x"],
 ] as const;
 
@@ -192,7 +193,7 @@ async function menuOpenOn(page: Page): Promise<Locator> {
   return menu;
 }
 
-test("the message menu has Copy link and Copy text, and every choice shows its key", async ({ page }) => {
+test("the message menu has Copy link, Copy text and Add title, and every choice shows its key", async ({ page }) => {
   const thread = await posted(unique("browser-message-action-keys-menu"));
   await openedAt(page, thread);
   const menu = await menuOpenOn(page);
