@@ -4,19 +4,43 @@ import {
   loginRequestApprovalPath,
   loginRequestPath,
   loginRequestsPath,
+  sessionByIdPath,
+  sessionsPath,
 } from "../../logins/index.ts";
 import {
+  isListSessionsResponse,
   isLoginCollectedResponse,
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
   isLogoutResponse,
+  isRevokeSessionResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { LoginCalls } from "../../logins/index.ts";
 import { send } from "./request.ts";
 
+function sessionCalls(server: ClientConnection): Pick<LoginCalls, "listSessions" | "revokeSession"> {
+  return {
+    listSessions: async () => {
+      const listed = await send(server, { isExpected: isListSessionsResponse, method: "GET", path: sessionsPath });
+      return listed;
+    },
+    revokeSession: async (id) => {
+      const params = { id };
+      const revoked = await send(server, {
+        isExpected: isRevokeSessionResponse,
+        method: "DELETE",
+        params,
+        path: sessionByIdPath,
+      });
+      return revoked;
+    },
+  };
+}
+
 function loginCalls(server: ClientConnection): LoginCalls {
   return {
+    ...sessionCalls(server),
     approveLogin: async (userCode) => {
       const params = { code: userCode };
       const approved = await send(server, {

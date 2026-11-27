@@ -1,11 +1,13 @@
 import { AddressLimit, lifetimeOf, loginRequestNotFound, now, requireHuman } from "./login-support.ts";
-import { Caller, credentialsOf, sentToken } from "./auth.ts";
+import { Caller, CredentialSent, credentialsOf, sentToken } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
+  ListSessionsResponseSchema,
   LoginCollectedResponseSchema,
   LoginRequestResponseSchema,
   LoginRequestStartedResponseSchema,
   LogoutResponseSchema,
+  RevokeSessionResponseSchema,
   StartLoginRequestSchema,
 } from "./login-wire.ts";
 import { Effect, Function, Option, Predicate } from "effect";
@@ -160,7 +162,13 @@ const approveRoute: Route<Caller | Storage> = {
       const caller = yield* Caller;
       const storage = yield* Storage;
       const at = yield* now;
-      yield* storage.approveLoginRequest(codeParam(params), caller.name, at);
+      const approvedWith = yield* CredentialSent;
+      yield* storage.approveLoginRequest({
+        approvedWith: Option.getOrUndefined(approvedWith),
+        approver: caller.name,
+        now: at,
+        userCode: codeParam(params),
+      });
       const found = yield* storage.findLoginRequest(codeParam(params), at);
       return yield* requestAnswer(found);
     }),
@@ -177,7 +185,8 @@ const logoutRoute: Route<Storage | Secrets> = {
       const secrets = yield* Secrets;
       const storage = yield* Storage;
       const hash = yield* secrets.hashToken(sent);
-      const revoked = yield* storage.revokeLoginCredential(hash);
+      const at = yield* now;
+      const revoked = yield* storage.revokeLoginCredential(hash, at);
       return yield* HttpServerResponse.schemaJson(LogoutResponseSchema)({ revoked });
     }),
   method: "DELETE",
@@ -189,8 +198,10 @@ export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit>[]
 export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRoute, approveRoute, logoutRoute];
 
 export const loginResponseSchemas = {
+  ListSessionsResponse: ListSessionsResponseSchema,
   LoginCollectedResponse: LoginCollectedResponseSchema,
   LoginRequestResponse: LoginRequestResponseSchema,
   LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
   LogoutResponse: LogoutResponseSchema,
+  RevokeSessionResponse: RevokeSessionResponseSchema,
 };

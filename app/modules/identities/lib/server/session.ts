@@ -1,6 +1,7 @@
-import { Caller, credentialsOf, issueToken, sentToken } from "./auth.ts";
-import { DateTime, Effect, Option } from "effect";
+import { Caller, CredentialSent, issueToken } from "./auth.ts";
+import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { now, webSessionWhere } from "./login-support.ts";
 import { sessionCookieName, sessionPath, token, whoamiPath } from "../../index.ts";
 import type { Cookies } from "effect/http";
 import type { Identity } from "../../index.ts";
@@ -11,11 +12,8 @@ import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
-import { isoTimeOf } from "../../../time/server.ts";
 
 const FORBIDDEN = 403;
-
-const WEB_UI_HOST = "web UI";
 
 const cookieOptions = {
   httpOnly: true,
@@ -45,26 +43,21 @@ const whoamiRoute: Route<Caller> = {
   path: whoamiPath,
 };
 
-const sentTokenHash = Effect.gen(function* hashSentToken() {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const secrets = yield* Secrets;
-  return yield* Effect.flatMap(sentToken(credentialsOf(request)), secrets.hashToken);
-});
-
 function issueWebSession(
   identity: Identity,
 ): Effect.Effect<IssuedToken, Refusal | StorageUnavailable, HttpServerRequest.HttpServerRequest | Secrets | Storage> {
   return Effect.gen(function* issueWebSessionCredential() {
     const storage = yield* Storage;
-    const madeWith = yield* sentTokenHash;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const sent = yield* CredentialSent;
     const issued = yield* issueToken;
-    const now = yield* DateTime.now;
+    const at = yield* now;
     yield* storage.issueLoginCredential({
       credentialHash: issued.hash,
-      host: WEB_UI_HOST,
+      host: webSessionWhere(request.headers["user-agent"]),
       identity: identity.name,
-      madeWith,
-      now: isoTimeOf(now),
+      now: at,
+      parent: Option.getOrUndefined(sent),
     });
     return issued;
   });
@@ -92,7 +85,8 @@ const revokeSessionCookie = Effect.gen(function* revokeSessionCookie() {
     const secrets = yield* Secrets;
     const storage = yield* Storage;
     const hash = yield* secrets.hashToken(token(sent.value));
-    yield* storage.revokeLoginCredential(hash);
+    const at = yield* now;
+    yield* storage.revokeLoginCredential(hash, at);
   }
 });
 

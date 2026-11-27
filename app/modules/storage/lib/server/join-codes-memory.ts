@@ -1,11 +1,15 @@
-import { Effect, Predicate } from "effect";
+import { Effect, Option, Predicate } from "effect";
+import type { EndedCredential, NewLineage } from "./credential-lineage.ts";
 import { GONE, redemptionOf, sessionFor } from "./join-codes.ts";
 import type { JoinCodeRedemption, JoinCodesSection, NewJoinCode, RedeemJoinCode } from "./join-codes.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
+import type { Ender } from "./credential-lineage-memory.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { TokenHash } from "../../../identities/index.ts";
+import { newPublicId } from "./credential-lineage.ts";
 
 interface MemoryJoinCodesOptions {
   readonly state: MemoryState;
@@ -13,8 +17,27 @@ interface MemoryJoinCodesOptions {
   readonly issueAgentSession: AgentSessionsSection["issueAgentSession"];
 }
 
+type Codes = Map<TokenHash, NewJoinCode>;
+
+function enderOf(codes: Codes): Ender {
+  return (hash, now) =>
+    Option.flatMap(Option.fromUndefinedOr(codes.get(hash)), (code) => {
+      codes.delete(hash);
+      const ended: EndedCredential = { hash, identity: code.agent, kind: "join code" };
+      return Option.as(
+        Option.liftPredicate(code, () => now < code.expiresAt),
+        ended,
+      );
+    });
+}
+
+function lineageOf({ agent, codeHash, createdAt, parent }: NewJoinCode, publicId: PublicId): NewLineage {
+  return { hash: codeHash, identity: agent, kind: "join code", madeAt: createdAt, parent, publicId };
+}
+
 function memoryJoinCodes({ findIdentity, issueAgentSession, state }: MemoryJoinCodesOptions): JoinCodesSection {
-  const codes = new Map<TokenHash, NewJoinCode>();
+  const codes: Codes = new Map();
+  state.lineage.addEnder(enderOf(codes));
   function redeemFound(code: NewJoinCode, redeem: RedeemJoinCode): Fails<JoinCodeRedemption> {
     const agent = findIdentity(code.agent);
     if (Predicate.isUndefined(agent)) {
@@ -27,17 +50,21 @@ function memoryJoinCodes({ findIdentity, issueAgentSession, state }: MemoryJoinC
     return Effect.map(issueAgentSession(issue), (result) => {
       if (result.status === "issued") {
         codes.delete(redeem.codeHash);
+        state.lineage.markEnded({ hash: redeem.codeHash, now: redeem.now, why: "redeemed" });
       }
       return redemptionOf({ issue, result });
     });
   }
   return {
     addJoinCode: (code) =>
-      Effect.andThen(
-        state.ensureOpen,
-        Effect.sync(() => {
-          codes.set(code.codeHash, { ...code });
-        }),
+      Effect.flatMap(newPublicId, (publicId) =>
+        Effect.andThen(
+          state.ensureOpen,
+          Effect.sync(() => {
+            codes.set(code.codeHash, { ...code });
+            state.lineage.record(lineageOf(code, publicId));
+          }),
+        ),
       ),
     redeemJoinCode: (redeem) =>
       Effect.andThen(

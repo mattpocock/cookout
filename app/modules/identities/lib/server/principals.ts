@@ -34,6 +34,7 @@ interface Principal {
   readonly webhookCommandThread: Option.Option<MessageId>;
   readonly agentSession: Option.Option<TokenHash>;
   readonly loginCredential: Option.Option<TokenHash>;
+  readonly credential?: TokenHash;
 }
 
 function grantPrincipal(grant: WebhookCommandTokenGrant): Effect.Effect<Principal, Refusal> {

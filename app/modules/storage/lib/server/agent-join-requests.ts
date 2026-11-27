@@ -38,6 +38,7 @@ interface AgentJoinApproval {
   readonly created: boolean;
   readonly idleSeconds: number;
   readonly force: boolean;
+  readonly parent?: TokenHash;
 }
 
 interface CollectAgentJoinRequest {
@@ -90,15 +91,26 @@ const PENDING: AgentJoinCollection = { status: "pending" };
 const GONE: AgentJoinCollection = { status: "gone" };
 const DENIED: AgentJoinCollection = { status: "denied" };
 
+function sessionUrlOf(sessionUrl: string | null): { readonly sessionUrl?: string } {
+  if (Predicate.isNull(sessionUrl)) {
+    return {};
+  }
+  return { sessionUrl };
+}
+
+function parentOf(parent: TokenHash | undefined): { readonly parent?: TokenHash } {
+  if (Predicate.isUndefined(parent)) {
+    return {};
+  }
+  return { parent };
+}
+
 function sessionToIssue({ approval, collect, host, sessionUrl }: Approved): IssueAgentSession {
-  const { force, idleSeconds, identity } = approval;
+  const { force, idleSeconds, identity, parent } = approval;
   const { now, sessionHash } = collect;
   const expiresAt = renewedExpiry({ idleSeconds, now });
   const session = { expiresAt, hash: sessionHash, host, identity, idleSeconds, issuedAt: now };
-  if (sessionUrl === null) {
-    return { force, session };
-  }
-  return { force, session: { ...session, sessionUrl } };
+  return { force, session: { ...session, ...sessionUrlOf(sessionUrl) }, ...parentOf(parent) };
 }
 
 function collectionOf({ created, issue, result }: Issued): AgentJoinCollection {

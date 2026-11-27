@@ -31,7 +31,14 @@ interface IssueLoginCredential {
   readonly identity: IdentityName;
   readonly host: string;
   readonly now: IsoTime;
-  readonly madeWith: TokenHash;
+  readonly parent: TokenHash | undefined;
+}
+
+interface ApproveLoginRequest {
+  readonly userCode: string;
+  readonly approver: IdentityName;
+  readonly now: IsoTime;
+  readonly approvedWith?: TokenHash | undefined;
 }
 
 interface UseLoginCredential {
@@ -57,18 +64,13 @@ type LoginCollection =
 interface LoginRequestsSection {
   readonly addLoginRequest: (request: NewLoginRequest, now: IsoTime) => Fails<"added" | "code_taken">;
   readonly findLoginRequest: (userCode: string, now: IsoTime) => Fails<LoginRequest | undefined>;
-  readonly approveLoginRequest: (
-    userCode: string,
-    approver: IdentityName,
-    now: IsoTime,
-  ) => Fails<"approved" | "not_found">;
+  readonly approveLoginRequest: (approve: ApproveLoginRequest) => Fails<"approved" | "not_found">;
   readonly collectLoginRequest: (collect: CollectLoginRequest) => Fails<LoginCollection>;
   readonly issueLoginCredential: (issue: IssueLoginCredential) => Fails<Identity | undefined>;
   readonly findLoginCredential: (hash: TokenHash) => Fails<Identity | undefined>;
   readonly useLoginCredential: (use: UseLoginCredential) => Fails<LoginCredentialLookup>;
   readonly checkLoginCredential: (use: UseLoginCredential) => Fails<LoginCredentialLookup>;
-  readonly revokeLoginCredential: (hash: TokenHash) => Fails<boolean>;
-  readonly revokeLoginCredentialsMadeWithRevokedTokens: (identity: IdentityName) => Fails<readonly TokenHash[]>;
+  readonly revokeLoginCredential: (hash: TokenHash, now: IsoTime) => Fails<boolean>;
 }
 
 const EXPIRED: LoginCredentialLookup = { status: "expired" };
@@ -86,6 +88,7 @@ function collected(identity: Identity): LoginCollection {
 }
 
 export {
+  type ApproveLoginRequest,
   type CollectLoginRequest,
   EXPIRED,
   GONE,

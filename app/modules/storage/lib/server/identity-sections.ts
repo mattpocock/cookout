@@ -1,13 +1,11 @@
-import type { IdentitySections, SectionsBesideIdentities } from "./identity-section-types.ts";
-import { memoryAdminSetting, sqlAdminSetting } from "./admin-setting.ts";
-import { memoryIdentities, sqlIdentities } from "./identities.ts";
-import { memoryOfflineAlerts, sqlOfflineAlerts } from "./offline-alerts.ts";
-import { memoryReach, sqlReach } from "./reach-sections.ts";
 import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
-import type { SqlDatabase } from "./adapters/sql-database.ts";
+import type { SectionsBesideIdentities } from "./identity-section-types.ts";
+import { memoryAdminSetting } from "./admin-setting.ts";
+import { memoryIdentities } from "./identities.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
-import { sqlLoginRequests } from "./login-requests-sqlite.ts";
+import { memoryOfflineAlerts } from "./offline-alerts.ts";
+import { memoryReach } from "./reach-sections.ts";
 
 type MemoryIdentitySections = ReturnType<typeof memoryIdentities> & SectionsBesideIdentities;
 
@@ -16,7 +14,6 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   const { dropLoginCredentials, ...loginRequests } = memoryLoginRequests({
     findIdentity: identities.findIdentity,
     state,
-    tokenRevoked: identities.tokenRevoked,
   });
   const { dropPresence, ...presence } = memoryReach(state);
   const { dropOfflineAlerts, ...offlineAlerts } = memoryOfflineAlerts(state);
@@ -30,6 +27,11 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
       Effect.tap(identities.deactivateIdentity(name), ({ status }) =>
         Effect.when(dropLoginCredentials(name), Effect.succeed(status === "deactivated")),
       ),
+    endCredentialsOf: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
+      ),
     removeIdentity: (name, messages) =>
       Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
         Effect.when(
@@ -40,19 +42,14 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
           Effect.succeed(status === "deleted"),
         ),
       ),
-  };
-}
-
-function sqlIdentitySections(db: SqlDatabase): IdentitySections {
-  return {
-    ...sqlIdentities(db),
-    ...sqlAdminSetting(db),
-    ...sqlLoginRequests(db),
-    ...sqlReach(db),
-    ...sqlOfflineAlerts(db),
+    revokeBelowRevokedTokens: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.revokeBelowRevokedTokens(name, now)),
+      ),
   };
 }
 
 export { memoryIdentityLifecycle } from "./identity-lifecycle-memory.ts";
 
-export { memoryIdentitySections, sqlIdentitySections };
+export { memoryIdentitySections };

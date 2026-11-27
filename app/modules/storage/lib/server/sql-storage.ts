@@ -2,7 +2,7 @@ import type { SqlDatabase } from "./adapters/sql-database.ts";
 import type { StorageService } from "./service.ts";
 import { sqlAgentSessionSections } from "./agent-join-requests-sqlite.ts";
 import { sqlHealth } from "./health.ts";
-import { sqlIdentitySections } from "./identity-sections.ts";
+import { sqlIdentitySections } from "./identity-sections-sql.ts";
 import { sqlMessageReader } from "./messages-sqlite.ts";
 import { sqlMessageSections } from "./sql-message-sections.ts";
 import { sqlScheduledMessages } from "./scheduled-messages-sqlite.ts";

@@ -62,6 +62,7 @@ export type {
   LoginRequest,
   NewLoginRequest,
 } from "./lib/server/login-requests.ts";
+export type { EndedCredential } from "./lib/server/credential-lineage.ts";
 export type {
   AgentJoinApproval,
   AgentJoinCollection,
