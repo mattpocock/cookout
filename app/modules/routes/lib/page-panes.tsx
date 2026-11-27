@@ -41,6 +41,7 @@ export function PagePanes(props: PagePanesProps): ReactNode {
       me={props.me}
       section={route.section}
       session={stores.session}
+      sessionList={stores.sessionList}
     />
   );
 }
