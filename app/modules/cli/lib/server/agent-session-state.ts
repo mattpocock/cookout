@@ -1,6 +1,6 @@
+import { AGENT_SESSIONS, checkFolder, failure, stateFolder } from "./state-folder.ts";
 import { Array as Arr, Effect, FileSystem, Function, Option, Order, Path, Random, Schema, String as Str } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
-import { checkFolder, failure, stateFolder } from "./state-folder.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import type { HarnessSessionId } from "../../../config/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -180,7 +180,7 @@ function locationOf({
     const digest = yield* secrets.digest(`${harness}\n${sessionId}\n${url}`);
     const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}${STATE_SUFFIX}`;
     return Option.map(found, (base) => {
-      const folder = path.join(base, "agent-sessions");
+      const folder = path.join(base, AGENT_SESSIONS);
       return { base, file: path.join(folder, name), folder, fs };
     });
   });
@@ -269,7 +269,7 @@ function filesBeside<Value>({
     if (Option.isNone(found)) {
       return [];
     }
-    const location = { base: found.value, file: "", folder: path.join(found.value, "agent-sessions"), fs };
+    const location = { base: found.value, file: "", folder: path.join(found.value, AGENT_SESSIONS), fs };
     return yield* listBeside({ decode: Schema.decodeEffect(Schema.fromJsonString(schema)), location, suffix });
   });
 }

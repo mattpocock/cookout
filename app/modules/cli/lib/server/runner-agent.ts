@@ -1,7 +1,7 @@
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { During, Spawner, WakeQueue } from "./wake-queue.ts";
 import { Effect, Function, Option } from "effect";
-import { REGISTRATION_SUFFIX, opened } from "./registrations.ts";
+import { REGISTRATION_SUFFIX, latestRegistration, opened } from "./registrations.ts";
 import { dropRegistration, forgetRunnerState, keeperOf } from "./runner-state.ts";
 import type { Keeper } from "./runner-state.ts";
 import type { RegisteredSession } from "./registrations.ts";
@@ -65,6 +65,7 @@ function wakeUntilUnregistered(listening: Listening): Effect.Effect<void, CallFa
       const queue = yield* wakeQueue({
         asAgent,
         during: presenceDuring(asAgent, keeper),
+        latest: latestRegistration(listening.registered),
         place: listening.place,
         registration,
       });
