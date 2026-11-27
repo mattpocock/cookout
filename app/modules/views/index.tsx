@@ -1,7 +1,7 @@
 /**
  * The views: each screen of the web UI, drawn from the design system and read from the stores with `useSyncExternalStore`.
  *
- * - `LoginView` swaps a human identity's token for the session cookie, or shows who is logged in.
+ * - `LoginView` logs a human in by approval from another device or a pasted token, or shows who is logged in.
  * - `ReconnectingView` is the "Reconnecting…" bar at the top of the workspace, shown while the live stream's link to the server is down.
  * - `IdentityDeletedNotice` says an identity whose profile was open was deleted elsewhere, so its profile closed, until dismissed.
  * - `SidebarView` is the workspace's sidebar: the Inbox link with the inbox's total unread count (in the unread colour when any item is a mention), the People & agents link, every channel sorted by name, bold when it has unread messages, with its mention count as a pill (its unread count read out only), or why the channels can't load, the open item highlighted, and the logged-in human with a Settings link; its links are one Tab stop (the last focused, else the open item), ↑ and ↓ moving between them, Home and End to the ends. The sidebar's footer links to the logged-in human's own profile.
