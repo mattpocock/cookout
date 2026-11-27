@@ -3,13 +3,13 @@ import type { EndedCredential, EndedWhy, LineageSection, ListedSession, NewLinea
 import type { IdentityName, TokenHash } from "../../../identities/index.ts";
 import { TRUE, isFalse } from "./adapters/sql-database.ts";
 import { isIdentityName, tokenHash } from "../../../identities/index.ts";
-import { isSessionKind, madeByOf } from "./credential-lineage.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
 import { isPublicId } from "../../../logins/index.ts";
 import { loginCredentialExpiry } from "./login-requests.ts";
+import { madeByOf } from "./credential-lineage.ts";
 import { unreadable } from "./errors.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -146,21 +146,21 @@ function lineageIn(db: SqlDatabase): SqlLineageWrites {
 
 const SessionRow = Schema.Struct({
   hash: Schema.String,
-  kind: Schema.String,
+  kind: Schema.Literals(["web", "cli"]),
   last_used_at: IsoTimeSchema,
   made_at: IsoTimeSchema,
   parent_identity: Schema.NullOr(NameColumn),
   parent_kind: Schema.NullOr(Schema.String),
-  parent_where: Schema.NullOr(Schema.String),
+  parent_where: Schema.String,
   public_id: Schema.String.pipe(Schema.refine(isPublicId)),
   token_holder: Schema.NullOr(NameColumn),
-  where_from: Schema.NullOr(Schema.String),
+  where_from: Schema.String,
 });
 
 type SessionRowType = typeof SessionRow.Type;
 
-const LIST_SESSIONS = `SELECT l.public_id, l.kind, l.where_from, l.made_at, c.last_used_at, c.hash,
-    p.kind AS parent_kind, p.where_from AS parent_where, p.identity_name AS parent_identity,
+const LIST_SESSIONS = `SELECT l.public_id, l.kind, COALESCE(l.where_from, 'web browser') AS where_from, l.made_at, c.last_used_at, c.hash,
+    p.kind AS parent_kind, COALESCE(p.where_from, 'web browser') AS parent_where, p.identity_name AS parent_identity,
     t.identity_name AS token_holder
   FROM login_credentials AS c
   JOIN credential_lineage AS l ON l.hash = c.hash
@@ -174,28 +174,24 @@ function optional<Value extends string>(value: Value | null): Value | undefined 
 }
 
 function listedOf(identity: IdentityName, current: TokenHash | undefined) {
-  return (row: SessionRowType): Option.Option<ListedSession> => {
-    const { kind } = row;
-    if (!isSessionKind(kind)) {
-      return Option.none();
-    }
+  return (row: SessionRowType): ListedSession => {
     const madeBy = madeByOf({
       identity,
       parentIdentity: optional(row.parent_identity),
       parentKind: optional(row.parent_kind),
-      parentWhere: optional(row.parent_where),
+      parentWhere: row.parent_where,
       tokenHolder: optional(row.token_holder),
     });
-    return Option.some({
+    return {
       current: row.hash === current,
       expiresAt: loginCredentialExpiry(row.last_used_at),
       id: row.public_id,
-      kind,
+      kind: row.kind,
       lastUsedAt: row.last_used_at,
       madeAt: row.made_at,
-      where: row.where_from ?? "web browser",
+      where: row.where_from,
       ...madeBy,
-    });
+    };
   };
 }
 
@@ -206,8 +202,7 @@ function listIn(db: SqlDatabase): LineageSection["listSessions"] {
         Effect.forEach(rows, (row) => Schema.decodeUnknownEffect(SessionRow)(row), ONE_AT_A_TIME),
         {
           onFailure: unreadable,
-          onSuccess: (decoded: readonly SessionRowType[]) =>
-            Arr.getSomes(Arr.map(decoded, listedOf(identity, current))),
+          onSuccess: (decoded: readonly SessionRowType[]) => Arr.map(decoded, listedOf(identity, current)),
         },
       ),
     );

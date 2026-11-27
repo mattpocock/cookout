@@ -8,7 +8,7 @@ import type {
   UseLoginCredential,
 } from "./login-requests.ts";
 import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } from "./login-requests.ts";
-import { Effect, Option, Predicate, Schema, pipe } from "effect";
+import { Effect, Function as Fn, Option, Predicate, Schema, pipe } from "effect";
 import type { Identity, TokenHash } from "../../../identities/index.ts";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
 import { isIdentityName, tokenHash } from "../../../identities/index.ts";
@@ -138,19 +138,21 @@ function issueIn(db: SqlDatabase, { collect, publicId }: Issuing) {
       yield* db.run("DELETE FROM login_requests WHERE request_hash = ?", requestHash);
       yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, now, loginCredentialExpiry(now), approver);
       const issued = yield* credential(credentialHash);
-      if (Option.isNone(issued)) {
-        return GONE;
+      function recorded(identity: Identity): Fails<LoginCollection> {
+        return Effect.as(
+          lineageIn(db).record({
+            hash: credentialHash,
+            identity: identity.name,
+            kind: "cli",
+            madeAt: now,
+            parent: parentOf(approvedWith),
+            publicId,
+            where: host,
+          }),
+          collected(identity),
+        );
       }
-      yield* lineageIn(db).record({
-        hash: credentialHash,
-        identity: issued.value.name,
-        kind: "cli",
-        madeAt: now,
-        parent: parentOf(approvedWith),
-        publicId,
-        where: host,
-      });
-      return collected(issued.value);
+      return yield* Option.match(issued, { onNone: Fn.constant(Effect.succeed(GONE)), onSome: recorded });
     });
 }
 

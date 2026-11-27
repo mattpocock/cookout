@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Predicate, Random } from "effect";
+import { Array as Arr, Effect, Random, Schema } from "effect";
 import type { IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -85,14 +85,22 @@ const randomDigits: Effect.Effect<string> = Effect.map(
     ),
 );
 
-const newPublicId: Effect.Effect<PublicId> = Effect.filterOrElse(randomDigits, isPublicId, (digits) =>
-  Effect.die(new Error(`A new public ID was not 16 hex digits: ${digits}`)),
+const PublicIdText = Schema.String.pipe(Schema.refine(isPublicId));
+
+const newPublicId: Effect.Effect<PublicId> = Effect.orDie(
+  Effect.flatMap(randomDigits, (digits) => Schema.decodeEffect(PublicIdText)(digits)),
 );
+
+const UNNAMED_WHERE = "web browser";
+
+function unnamedWhere(): string {
+  return UNNAMED_WHERE;
+}
 
 interface MadeByRow {
   readonly identity: IdentityName;
   readonly parentKind: string | undefined;
-  readonly parentWhere: string | undefined;
+  readonly parentWhere: string;
   readonly parentIdentity: IdentityName | undefined;
   readonly tokenHolder: IdentityName | undefined;
 }
@@ -101,18 +109,11 @@ function isSessionKind(kind: string | undefined): kind is SessionKind {
   return kind === "web" || kind === "cli";
 }
 
-function whereOf(where: string | undefined): { readonly where?: string } {
-  if (Predicate.isUndefined(where)) {
-    return {};
-  }
-  return { where };
-}
-
 function madeByOf({ identity, parentIdentity, parentKind, parentWhere, tokenHolder }: MadeByRow): {
   readonly madeBy?: SessionMadeBy;
 } {
   if (parentIdentity === identity && isSessionKind(parentKind)) {
-    return { madeBy: { kind: parentKind, ...whereOf(parentWhere) } };
+    return { madeBy: { kind: parentKind, where: parentWhere } };
   }
   if (tokenHolder === identity) {
     return { madeBy: { kind: "identity token" } };
@@ -132,4 +133,5 @@ export {
   isSessionKind,
   madeByOf,
   newPublicId,
+  unnamedWhere,
 };

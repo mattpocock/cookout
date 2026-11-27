@@ -1,7 +1,7 @@
 import { Array as Arr, Option, Order, pipe } from "effect";
 import type { IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { ListSessions, ListedSession, RevokeSession, RevokeSessionResult } from "./credential-lineage.ts";
-import { isSessionKind, madeByOf } from "./credential-lineage.ts";
+import { isSessionKind, madeByOf, unnamedWhere } from "./credential-lineage.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { MemoryLineage } from "./credential-lineage-memory.ts";
 import { loginCredentialExpiry } from "./login-requests.ts";
@@ -37,7 +37,10 @@ function madeByFor(lineage: MemoryLineage, row: LineageRow, identity: IdentityNa
     identity,
     parentIdentity: Option.getOrUndefined(Option.map(parent, (found) => found.identity)),
     parentKind: Option.getOrUndefined(Option.map(parent, (found) => found.kind)),
-    parentWhere: Option.getOrUndefined(Option.flatMapNullishOr(parent, (found) => found.where)),
+    parentWhere: Option.getOrElse(
+      Option.flatMapNullishOr(parent, (found) => found.where),
+      unnamedWhere,
+    ),
     tokenHolder: Option.getOrUndefined(Option.flatMap(parentHash, lineage.tokenHolderOf)),
   });
 }
@@ -61,7 +64,7 @@ function listedOf({ credential, held, list }: Listing): (row: LineageRow) => Opt
       kind,
       lastUsedAt: credential.lastUsedAt,
       madeAt: row.madeAt,
-      where: Option.getOrElse(Option.fromUndefinedOr(row.where), () => "web browser"),
+      where: Option.getOrElse(Option.fromUndefinedOr(row.where), unnamedWhere),
       ...madeByFor(held.lineage, row, list.identity),
     });
   };

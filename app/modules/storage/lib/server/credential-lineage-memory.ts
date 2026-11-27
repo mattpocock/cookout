@@ -40,8 +40,6 @@ interface MemoryLineage {
 
 const NO_TOKENS: MemoryTokens = { activeTokens: new Map(), revokedTokens: new Map() };
 
-const CURRENT = "current";
-
 type Rows = Map<TokenHash, LineageRow>;
 
 function childrenOf(rows: Rows, hash: TokenHash): readonly TokenHash[] {
@@ -103,10 +101,10 @@ function ownRoots(rows: Rows, name: IdentityName): readonly TokenHash[] {
 function newMemoryLineage(): MemoryLineage {
   const rows: Rows = new Map();
   const enders = new Set<Ender>();
-  const tokens = new Map([[CURRENT, NO_TOKENS]]);
+  const tokens = { current: NO_TOKENS };
   const markEnded = markEndedIn(rows);
   function current(): MemoryTokens {
-    return tokens.get(CURRENT) ?? NO_TOKENS;
+    return tokens.current;
   }
   function endEach(hashes: readonly TokenHash[], now: IsoTime): readonly EndedCredential[] {
     return Arr.flatMap(hashes, (hash) => {
@@ -140,7 +138,7 @@ function newMemoryLineage(): MemoryLineage {
     rows: () => [...rows.values()],
     tokenHolderOf: (hash) => holderOf(current(), hash),
     useTokens: (next) => {
-      tokens.set(CURRENT, next);
+      tokens.current = next;
     },
   };
 }

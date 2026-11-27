@@ -234,12 +234,23 @@ it.effect("another person's session ID, or an unknown one, is 404 session_not_fo
       { concurrency: 1 },
     );
     const status = yield* statusWith(cookout.url, bobs);
+    const malformed = yield* answer(() =>
+      request({
+        baseUrl: cookout.url,
+        headers: { authorization: `Bearer ${ada.token}` },
+        method: "DELETE",
+        path: "/v1/sessions/not-an-id",
+      }),
+    );
 
-    expect(refused).toMatchObject([
-      { code: "session_not_found", status: NOT_FOUND },
-      { code: "session_not_found", status: NOT_FOUND },
-    ]);
-    expect(status).toBe(OK);
+    expect({ malformed: malformed.status, refused, status }).toMatchObject({
+      malformed: NOT_FOUND,
+      refused: [
+        { code: "session_not_found", status: NOT_FOUND },
+        { code: "session_not_found", status: NOT_FOUND },
+      ],
+      status: OK,
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 

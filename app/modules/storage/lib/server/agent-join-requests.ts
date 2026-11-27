@@ -38,7 +38,7 @@ interface AgentJoinApproval {
   readonly created: boolean;
   readonly idleSeconds: number;
   readonly force: boolean;
-  readonly parent?: TokenHash;
+  readonly parent?: TokenHash | undefined;
 }
 
 interface CollectAgentJoinRequest {

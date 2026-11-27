@@ -13,8 +13,11 @@ import {
   later,
   liveOf,
   longUnused,
+  made,
+  requestsEnd,
   revokedHashes,
   sibling,
+  webSessionPastedWith,
   withPeople,
   workerSession,
 } from "./lineage-seeds.ts";
@@ -139,5 +142,48 @@ it.effect.each(storageLayers)(
 
       expect(ended).toStrictEqual([{ hash: workerSession, identity: agent.name, kind: "agent session" }]);
       expect(live).toStrictEqual([false, false]);
+    }),
+);
+
+const joinCode = tokenHash("hash:join-code");
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): revoking a session ends the join code it made, which then joins no one",
+  ({ layer }) =>
+    Effect.gen(function* joinCodeEnds() {
+      const { storage } = yield* openStore(layer);
+      yield* withPeople(storage);
+      yield* approvedSession({ approvedWith: adaToken, hash: first, storage });
+      yield* storage.addJoinCode({
+        agent: agent.name,
+        codeHash: joinCode,
+        createdAt: made,
+        expiresAt: requestsEnd,
+        parent: first,
+      });
+      const id = yield* idOf({ hash: first, storage });
+      const revoked = yield* storage.revokeSession({ id, identity: ada.name, now: later });
+
+      expect(revoked).toStrictEqual({
+        ended: [
+          { hash: first, identity: ada.name, kind: "session" },
+          { hash: joinCode, identity: agent.name, kind: "join code" },
+        ],
+        status: "revoked",
+      });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a session whose maker is not the person's own is listed with no madeBy",
+  ({ layer }) =>
+    Effect.gen(function* listedAlone() {
+      const { storage } = yield* openStore(layer);
+      yield* withPeople(storage);
+      yield* webSessionPastedWith({ hash: first, storage });
+      yield* webSessionPastedWith({ hash: sibling, parent: tokenHash("hash:bob"), storage });
+      const listed = yield* storage.listSessions({ current: first, identity: ada.name, now: later });
+
+      expect(Arr.map(listed, (session) => "madeBy" in session)).toStrictEqual([false, false]);
     }),
 );

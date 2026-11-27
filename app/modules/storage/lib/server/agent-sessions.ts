@@ -34,7 +34,7 @@ interface AgentAt {
 interface IssueAgentSession {
   readonly session: StoredAgentSession;
   readonly force: boolean;
-  readonly parent?: TokenHash;
+  readonly parent?: TokenHash | undefined;
 }
 
 type IssueAgentSessionResult = { readonly status: "issued" } | { readonly status: "live"; readonly expiresAt: IsoTime };

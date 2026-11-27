@@ -10,7 +10,7 @@ interface NewJoinCode {
   readonly agent: IdentityName;
   readonly createdAt: IsoTime;
   readonly expiresAt: IsoTime;
-  readonly parent?: TokenHash;
+  readonly parent?: TokenHash | undefined;
 }
 
 interface RedeemJoinCode {
