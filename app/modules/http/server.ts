@@ -288,8 +288,8 @@ export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Ef
   (server) => HttpServer.formatAddress(server.address),
 );
 
-/** The request's client address (ADR 0147): behind Fly its `Fly-Client-IP`, elsewhere the socket's, header ignored. */
+/** The request's client address (ADR 0148): behind Fly its `Fly-Client-IP`, elsewhere the socket's, header ignored. */
 export const clientAddress = requestClientAddress;
 
-/** Whether the request came over HTTPS (ADR 0147): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
+/** Whether the request came over HTTPS (ADR 0148): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
 export const overHttps = requestOverHttps;

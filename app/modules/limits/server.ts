@@ -148,7 +148,7 @@ export const holdStreamPlace: Effect.Effect<void, Refusal, Caller | Limits | Sco
 
 /**
  * The per-address request limit of `COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE`, for the routes that need no token, keyed
- * by the request's client address (ADR 0147) and empty when the server starts.
+ * by the request's client address (ADR 0148) and empty when the server starts.
  */
 export const addressLimitLayer: Layer.Layer<AddressLimit, Config.ConfigError> = Layer.effect(
   AddressLimit,
