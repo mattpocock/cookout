@@ -148,9 +148,7 @@ export const loginPath = "/v1/login";
  */
 export const approvalPath = "/#/approve";
 
-/**
- * `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0153).
- */
+/** `GET /v1/sessions` (a human; an agent is 403 `human_only`): the caller's live sessions (ADR 0153). */
 export const sessionsPath = "/v1/sessions";
 
 /**
@@ -161,7 +159,6 @@ export const sessionByIdPath = "/v1/sessions/:id";
 
 /** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
 export const loginLinkSeconds = 900;
-
 /**
  * `POST /v1/identities/:name/login-link` (an admin; 403 `admin_only` otherwise): a one-time login link for the person
  * named, answered once. An agent is 403 `human_only`; an unknown name is 404 `identity_not_found`.
@@ -179,6 +176,8 @@ export const loginLinkWebPath = "/#/login-link/";
 
 /** The refusal code for a login link that was used, expired or never made. */
 export const loginLinkNotFound = "login_link_not_found";
+
+export * from "./setup-links.ts";
 
 /**
  * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in

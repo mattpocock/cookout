@@ -57,13 +57,13 @@
  * `--version` prints `package.json`'s version, which the build inlines into the bundle (mattpocock/cookout#175).
  */
 import { CliError, Command } from "effect/cli";
-import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
+import { cookoutServer, serverCommands } from "./lib/server/server-commands.ts";
 import { loginCommand, logoutCommand } from "./lib/server/login.ts";
 import { onRunnerHost, verbCommands } from "./lib/server/verbs.ts";
 
 import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
 import { Effect } from "effect";
-import type { ServeLayers } from "./lib/server/serve.ts";
+import type { ServeLayers } from "./lib/server/server-commands.ts";
 import packageJson from "../../../package.json" with { type: "json" };
 import { sayInterrupted } from "./lib/server/interrupted.ts";
 import { watchCommand } from "./lib/server/watch.ts";
@@ -76,7 +76,7 @@ export const runCookout = (args: readonly string[], layers: ServeLayers) =>
   Command.make("cookout").pipe(
     Command.withDescription("A self-hosted, Slack-style board for people and agents."),
     Command.withSubcommands([
-      serveCommand(layers),
+      ...serverCommands(layers),
       loginCommand,
       logoutCommand,
       whoamiCommand,

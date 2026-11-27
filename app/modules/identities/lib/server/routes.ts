@@ -233,6 +233,7 @@ export { humanAdmin } from "./create.ts";
 export { loginResponseSchemas, loginRoutes, openLoginRoutes } from "./logins.ts";
 export { sessionRoutes } from "./sessions.ts";
 export { loginLinkRoutes } from "./login-links.ts";
-export { openLoginLinkRoutes } from "./login-link-redeem.ts";
+export { consoleLoginLink } from "./login-links.ts";
+export { openLinkRoutes, setupLinkFor } from "./setup-link-redeem.ts";
 export { agentKeyRoutes } from "./agent-keys.ts";
 export { AddressLimit, now } from "./login-support.ts";

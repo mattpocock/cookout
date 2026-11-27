@@ -9,18 +9,20 @@ import {
   Layer,
   Option,
   Schema,
+  String as Str,
   pipe,
 } from "effect";
 import { exitCodeAfterFailure, runCookout as runCommandLine } from "../../../cli/server.ts";
 import { memoryStorage, storageLayer } from "../../../storage/server.ts";
+import { parseLine, signallingConsole, textOf, watched } from "./console-lines.ts";
 import type { NodeServices } from "@effect/platform-node/NodeServices";
 import type { Scope } from "effect";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
+import type { Watched } from "./console-lines.ts";
 import { devCommandLine } from "../../../dev/server.ts";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
-import { parseLine } from "./cli.ts";
 import { secretsTest } from "./secrets.ts";
 import { testSecretsKey } from "./secrets-key.ts";
 
@@ -61,13 +63,6 @@ interface WatchRun<During, WatchNeeds> extends Invocation {
   readonly whileWatching: Effect.Effect<During, never, WatchNeeds>;
 }
 
-interface Watched<During> {
-  readonly during: During;
-  readonly stderrLines: readonly string[];
-  readonly stdoutJson: readonly unknown[];
-  readonly stdoutLines: readonly string[];
-}
-
 interface CommandLine {
   readonly console: Console.Console;
   readonly env: Readonly<Record<string, string>>;
@@ -89,10 +84,6 @@ const verbLayers: ServeLayers = { storage: Function.constant(memoryStorage) };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 
 const commandLineServices: Layer.Layer<Needs> = Layer.merge(nodeServices, secretsTest);
-
-function textOf(lines: readonly unknown[]): string {
-  return Arr.join(Arr.map(lines, String), "\n");
-}
 
 function cliResult({ exitCode, stderr, stdout }: Pick<CliResult, "exitCode" | "stderr" | "stdout">): CliResult {
   return { exitCode, stderr, stderrJson: parseLine(stderr), stdout, stdoutJson: parseLine(stdout) };
@@ -178,7 +169,21 @@ function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> &
   const db = Option.match(Option.fromNullishOr(database), { onNone: () => [], onSome: (path) => ["--db", path] });
   const args = [...listen, ...db];
   const program = exitCodeAfter(runCommandLine(args, { storage: storageLayer, ...web }));
-  return { adminToken, env: { COOKOUT_ADMIN_TOKEN: adminToken, COOKOUT_SECRETS_KEY: testSecretsKey, ...env }, program };
+  const admin = Option.match(Option.liftPredicate(adminToken, Str.isNonEmpty), {
+    onNone: () => ({}),
+    onSome: (set) => ({ COOKOUT_ADMIN_TOKEN: set }),
+  });
+  return { adminToken, env: { ...admin, COOKOUT_SECRETS_KEY: testSecretsKey, ...env }, program };
+}
+
+function runAdmin({
+  args,
+  database,
+  env = {},
+}: Pick<ServeOptions, "database" | "env"> & Pick<Invocation, "args">): Effect.Effect<CliResult, never, Needs> {
+  const db = Option.match(Option.fromNullishOr(database), { onNone: () => [], onSome: (path) => ["--db", path] });
+  const program = exitCodeAfter(runCommandLine(["admin", ...args, ...db], { storage: storageLayer }));
+  return captured({ env: { COOKOUT_SECRETS_KEY: testSecretsKey, ...env }, program });
 }
 
 function runServe(options: ServeOptions): Effect.Effect<CliResult, never, Needs> {
@@ -189,58 +194,6 @@ function startServe(options: ServeOptions): Effect.Effect<ServeProcess, never, N
   const { adminToken, env, program } = serveCommandLine(options);
   const started = startUntil(program, isListening, env);
   return Effect.map(started, ({ line, ...output }) => ({ ...output, adminToken, url: line.listening }));
-}
-
-interface SignallingConsole {
-  readonly console: Console.Console;
-  readonly errors: Effect.Effect<readonly string[]>;
-  readonly printed: Effect.Effect<readonly unknown[]>;
-  readonly watching: Effect.Effect<string>;
-}
-
-function watched<During>({
-  during,
-  errors,
-  lines,
-}: {
-  readonly during: During;
-  readonly errors: readonly unknown[];
-  readonly lines: readonly unknown[];
-}): Watched<During> {
-  const stdoutLines = Arr.map(lines, String);
-  const stderrLines = Arr.map(errors, String);
-  return { during, stderrLines, stdoutJson: Arr.map(stdoutLines, (line) => parseLine(line)), stdoutLines };
-}
-
-function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
-  return Effect.gen(function* makeSignallingConsole() {
-    const output = yield* TestConsole.make;
-    const watching = yield* Deferred.make<string>();
-    const printed = yield* Deferred.make<readonly unknown[]>();
-    const logged: unknown[] = [];
-    const errored: string[] = [];
-    const console: Console.Console = {
-      ...output,
-      error: (...line: readonly unknown[]): void => {
-        output.error(...line);
-        errored.push(textOf(line));
-        Deferred.doneUnsafe(watching, Effect.succeed(textOf(line)));
-      },
-      log: (...line: readonly unknown[]): void => {
-        output.log(...line);
-        logged.push(textOf(line));
-        if (logged.length >= lines) {
-          Deferred.doneUnsafe(printed, Effect.succeed(logged));
-        }
-      },
-    };
-    return {
-      console,
-      errors: Effect.sync(() => [...errored]),
-      printed: Deferred.await(printed),
-      watching: Deferred.await(watching),
-    };
-  });
 }
 
 function watchCookout<During, WatchNeeds>({
@@ -279,17 +232,16 @@ export {
   type ServeProcess,
   type ServeOptions,
   type WatchRun,
-  type Watched,
   cliResult,
   commandLineServices,
   exitCodeAfter,
   exitCodeOf,
   verbLayers,
   runCookout,
+  runAdmin,
   runDev,
   startDevCommand,
   runServe,
   startServe,
   watchCookout,
-  watched,
 };

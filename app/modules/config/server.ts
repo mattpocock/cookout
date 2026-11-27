@@ -2,7 +2,7 @@
  * Every environment variable the cookout reads, with its default. Nothing else reads the environment, and every
  * variable here has a line in `.env.example` and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
-import { Array as Arr, Config, Record as Rec, Redacted, Schema, String as Str } from "effect";
+import { Array as Arr, Config, Option, Record as Rec, Redacted, Schema, String as Str } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 import { harnessVariables } from "./index.ts";
@@ -42,10 +42,10 @@ function publicUrlOf({ app, render, url }: Readonly<{ app: string; render: strin
   return render;
 }
 
-const adminTokenRule = `COOKOUT_ADMIN_TOKEN must be set to a token of at least ${String(SHORTEST_ADMIN_TOKEN)} characters, such as one made by \`openssl rand -hex 32\`. It becomes the admin identity's token.`;
+const adminTokenRule = `COOKOUT_ADMIN_TOKEN, when set, must be a token of at least ${String(SHORTEST_ADMIN_TOKEN)} characters, such as one made by \`openssl rand -hex 32\`. It becomes the admin identity's token. Leave it unset to set up the first admin with the setup link serve prints.`;
 
 const isStrongEnoughToken = Schema.makeFilter(
-  (adminToken: string) => adminToken.length >= SHORTEST_ADMIN_TOKEN || adminTokenRule,
+  (adminToken: string) => adminToken === "" || adminToken.length >= SHORTEST_ADMIN_TOKEN || adminTokenRule,
 );
 
 const adminNameRule =
@@ -85,12 +85,17 @@ export const publicUrl = Config.all({
 export const behindFly = flyAppName.pipe(Config.map(Str.isNonEmpty));
 
 /**
- * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, required by `cookout serve`. Every boot makes it the
- * admin's only token (Matt, 2026-11-23, mattpocock/cookout#85). Unset, empty or shorter than 32 characters, serve
- * refuses to start, and the message never shows the value.
+ * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, optional (#913, ADR 0161). When set, every boot makes it
+ * the admin's only token (Matt, 2026-11-23, mattpocock/cookout#85); shorter than 32 characters, serve refuses to
+ * start, and the message never shows the value. Unset or empty, boot sets no admin token, and a store with no admin
+ * gets a setup link instead.
  */
-export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken), "COOKOUT_ADMIN_TOKEN").pipe(
-  Config.map((value) => Redacted.make(value)),
+export const adminToken: Config.Config<Option.Option<Redacted.Redacted>> = Config.schema(
+  Schema.String.check(isStrongEnoughToken),
+  "COOKOUT_ADMIN_TOKEN",
+).pipe(
+  Config.withDefault(""),
+  Config.map((value) => Option.map(Option.liftPredicate(value, Str.isNonEmpty), (set) => Redacted.make(set))),
 );
 
 /**

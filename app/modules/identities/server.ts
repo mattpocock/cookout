@@ -26,7 +26,7 @@ import {
   loginLinkRoutes,
   loginRoutes,
   now,
-  openLoginLinkRoutes,
+  openLinkRoutes,
   openLoginRoutes,
   responseSchemas,
   sessionRoutes,
@@ -191,15 +191,16 @@ export const identityRoutes: readonly Route<Caller | Storage | Secrets | Identit
 
 /**
  * The routes that need no token: starting a login request and collecting it (ADR 0047), and redeeming a login link
- * (#912). The server puts its per-address request limit in front of them.
+ * (#912) or the setup link (#913). The server puts its per-address request limit in front of them.
  */
-export const openIdentityRoutes: typeof openLoginRoutes = [...openLoginRoutes, ...openLoginLinkRoutes];
+export const openIdentityRoutes: typeof openLoginRoutes = [...openLoginRoutes, ...openLinkRoutes];
 
 /**
  * The request limit of the client address a request to one of the no-token routes comes from (`Limits` provides it),
- * and the step that takes one request from it.
+ * and the step that takes one request from it; a fresh setup link while the store has no admin, and a login link made
+ * from the server console (#913, ADR 0161).
  */
-export { AddressLimit } from "./lib/server/routes.ts";
+export { AddressLimit, consoleLoginLink, setupLinkFor } from "./lib/server/routes.ts";
 
 /**
  * The client IP and User-Agent (its first 500 characters) a Login or agent join request starts from, to store with

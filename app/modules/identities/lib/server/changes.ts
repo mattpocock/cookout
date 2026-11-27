@@ -36,7 +36,7 @@ type SessionMadeHandler = (made: SessionMade) => Effect.Effect<void>;
 
 interface AdminActed {
   readonly identity: IdentityName;
-  readonly admin: IdentityName;
+  readonly admin?: IdentityName;
   readonly act: AdminAct;
   readonly credential: PublicId;
 }

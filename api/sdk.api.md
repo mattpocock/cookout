@@ -559,6 +559,21 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
+/** What redeeming a setup link sends: its secret, and the first admin's name and optional display name. */
+interface RedeemSetupLinkRequest {
+  readonly secret: Token;
+  readonly name: string;
+  readonly displayName?: string;
+}
+/** The SDK's call for setting up a cookout's first admin. */
+interface SetupLinkCalls {
+  /**
+   * `POST /v1/setup-links/redeem` (no token): redeems the setup link `cookout serve` printed into the first admin,
+   * named as sent, with a web session set as the session cookie (#913). A used, expired, replaced or unknown link, or
+   * one sent once an admin exists, is 404 `setup_link_not_found`; a taken name is 409 `identity_exists`.
+   */
+  readonly redeemSetupLink: (request: RedeemSetupLinkRequest) => Promise<IdentityResponse>;
+}
 interface StartLoginRequest {
   readonly host: string;
 }
@@ -833,7 +848,8 @@ interface OfflineAlert {
 type AdminAct = "revoked" | "sent a login link";
 /**
  * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
- * made it, and whether it has ended), or an admin acting on the person's credentials.
+ * made it, and whether it has ended), or an admin acting on the person's credentials. An admin act with no `admin`
+ * was done from the server console, as `cookout admin login-link` does (#913).
  */
 type LoginAlertEvent = {
   readonly kind: "new session";
@@ -845,7 +861,7 @@ type LoginAlertEvent = {
   readonly ended: boolean;
 } | {
   readonly kind: "admin act";
-  readonly admin: IdentityName;
+  readonly admin?: IdentityName;
   readonly act: AdminAct;
   readonly credential: PublicId;
 };
@@ -1432,7 +1448,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "login_link_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "login_link_not_found", "setup_link_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1963,7 +1979,7 @@ interface EventCalls {
   readonly failWakeRun: (failure: WakeRunFailure) => Promise<WakeRunResponse>;
 }
 type AgentKeyCalls = AgentKeyCalls$1<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
-type LoginCalls = LoginCalls$1 & AgentKeyCalls;
+type LoginCalls = LoginCalls$1 & AgentKeyCalls & SetupLinkCalls;
 interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;

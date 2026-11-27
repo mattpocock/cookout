@@ -167,16 +167,16 @@ function printsPackageVersion(): void {
   check(printed === expected, `the installed cookout --version prints ${expected} (it printed ${printed})`);
 }
 
-function refusesWithoutAdminToken(): void {
-  const args = withEnv({ COOKOUT_ADMIN_TOKEN: "", COOKOUT_DB: database, COOKOUT_SECRETS_KEY: secretsKey }, bin, [
-    "serve",
-    "--port",
-    "0",
-  ]);
+function refusesShortAdminToken(): void {
+  const args = withEnv(
+    { COOKOUT_ADMIN_TOKEN: "too-short", COOKOUT_DB: database, COOKOUT_SECRETS_KEY: secretsKey },
+    bin,
+    ["serve", "--port", "0"],
+  );
   const result = spawnSync("env", args, { cwd: install, encoding: "utf8" });
   check(
     result.status === EXIT_FAILURE && result.stderr.includes("admin_token_invalid"),
-    "cookout serve without COOKOUT_ADMIN_TOKEN refuses to start with admin_token_invalid",
+    "cookout serve with a COOKOUT_ADMIN_TOKEN under 32 characters refuses to start with admin_token_invalid",
   );
 }
 
@@ -252,7 +252,7 @@ function importSdk(): void {
 async function main(): Promise<void> {
   installTarball();
   printsPackageVersion();
-  refusesWithoutAdminToken();
+  refusesShortAdminToken();
   refusesWithoutSecretsKey();
   await boot();
   await restart();

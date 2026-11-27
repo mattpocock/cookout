@@ -6,6 +6,7 @@ const TEXT = {
   adminActed: "An admin acted on your credentials: ",
   backOnline: "Back online ",
   cli: "cookout CLI on ",
+  consoleActed: "The server console acted on your credentials: ",
   ended: "Session ended",
   live: "Session live",
   newLinkLogin: "New login from a login link: ",
@@ -71,6 +72,9 @@ function leadOf(via: "login link" | undefined): string {
 function loginTextOf({ login, raisedAt }: LoginAlert): string {
   const at = timeOf(raisedAt).short;
   if (login.kind === "admin act") {
+    if (!("admin" in login)) {
+      return `${TEXT.consoleActed}${login.act}, ${at}`;
+    }
     return `${TEXT.adminActed}@${login.admin} ${login.act}, ${at}`;
   }
   const where = whereOf(login.sessionKind, login.where);
