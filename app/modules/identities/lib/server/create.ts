@@ -183,13 +183,10 @@ function storeNew(identity: Identity, hash?: TokenHash): Effect.Effect<void, Ref
   });
 }
 
-function withLoginLinkIfPerson(
+function withLoginLink(
   created: IdentityWithTokenResponse,
   origin: string,
 ): Effect.Effect<IdentityWithTokenResponse, StorageUnavailable, Storage | Secrets> {
-  if (created.identity.kind !== "human") {
-    return Effect.succeed(created);
-  }
   return Effect.map(loginLinkFor({ name: created.identity.name, origin }), (loginLink) => ({ ...created, loginLink }));
 }
 
@@ -210,7 +207,7 @@ function createIdentity(request: {
     }
     const { token, hash } = yield* issueToken;
     yield* storeNew(identity, hash);
-    return yield* withLoginLinkIfPerson({ identity, token }, origin);
+    return yield* withLoginLink({ identity, token }, origin);
   });
 }
 

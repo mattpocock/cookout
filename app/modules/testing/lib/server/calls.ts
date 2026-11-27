@@ -20,11 +20,16 @@ function refusal(call: () => Promise<unknown>): Effect.Effect<CookoutError> {
   );
 }
 
+function withToken(answered: IdentityResponse | IdentityWithTokenResponse): answered is IdentityWithTokenResponse {
+  return "token" in answered;
+}
+
 function freshToken(answered: IdentityResponse | IdentityWithTokenResponse): Effect.Effect<Token> {
-  if ("token" in answered) {
-    return Effect.succeed(answered.token);
-  }
-  return Effect.die(new Error(`${answered.identity.name} was answered with no token`));
+  return Effect.succeed(answered).pipe(
+    Effect.filterOrFail(withToken),
+    Effect.map(({ token }) => token),
+    Effect.orDie,
+  );
 }
 
 export { answer, freshToken, refusal };
