@@ -559,30 +559,10 @@ interface TriggerCalls {
   /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
   readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
 }
-declare const brand$4: unique symbol;
-type PublicId = string & {
-  readonly [brand$4]: "PublicId";
-};
-interface AgentKeyView {
-  readonly id: PublicId;
-  readonly name: string;
-  readonly madeAt: IsoTime;
-  readonly lastUsedAt?: IsoTime;
-  readonly expiresAt?: IsoTime;
-}
-interface CreateAgentKeyResponse {
-  readonly agentKey: AgentKeyView;
-  readonly token: Token;
-}
-interface ListAgentKeysResponse {
-  readonly agentKeys: readonly AgentKeyView[];
-}
-interface RevokeAgentKeyResponse {
-  readonly ended: number;
-}
 interface StartLoginRequest {
   readonly host: string;
 }
+declare const brand$4: unique symbol;
 interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
   readonly where?: string;
@@ -600,10 +580,7 @@ interface SessionView {
 }
 /** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
 type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
-/**
- * What a person sees about a Login request or agent join request before Approve (#905), recorded when it started, so
- * they approve only the device they meant to.
- */
+/** What a person sees of a Login or agent join request before Approve (#905), to approve only the device meant. */
 interface ApprovalRequestDetails {
   readonly kind: ApprovalRequestKind;
   /** A browser's browser and OS, such as `Firefox on macOS`, or else the host the request named. */
@@ -620,6 +597,10 @@ interface LoginRequestView extends ApprovalRequestDetails {
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
 }
+/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
+type PublicId = string & {
+  readonly [brand$4]: "PublicId";
+};
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 interface LoginRequestStartedResponse {
   readonly userCode: string;
@@ -653,10 +634,7 @@ interface LoginRequestResponse {
 interface LogoutResponse {
   readonly revoked: boolean;
 }
-/**
- * The approval page's path on the server, for Login requests and agent join requests alike. It never holds a code:
- * the person types the code into the page on a device already logged in (#905).
- */
+/** The approval page's path, for Login and agent join requests alike; it never holds a code (#905). */
 declare const approvalPath = "/#/approve";
 /** The live credentials Log out everywhere ends, counted by kind. */
 interface LogOutEverywhereCounts {
@@ -716,15 +694,9 @@ interface LoginCalls$1 {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
-  /**
-   * `GET /v1/identities/:name/sessions` (that person, or an admin): the person's live sessions, oldest first, never a
-   * secret. Anyone else is 403 `admin_only`; an agent is 403 `human_only`.
-   */
+  /** `GET /v1/identities/:name/sessions` (that person, or an admin; an agent is 403 `human_only`): their sessions. */
   readonly listIdentitySessions: (name: string) => Promise<ListSessionsResponse>;
-  /**
-   * `DELETE /v1/identities/:name/sessions/:id` (that person, or an admin): revokes their session with that public ID
-   * and everything below it. An admin revoking someone else's puts an admin act Login alert in their Inbox.
-   */
+  /** `DELETE /v1/identities/:name/sessions/:id` (that person, or an admin, who raises an admin act Login alert). */
   readonly revokeIdentitySession: (name: string, id: PublicId) => Promise<RevokeSessionResponse>;
   /**
    * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
@@ -743,6 +715,27 @@ interface LoginCalls$1 {
    * client's session and what it made, whose open event streams close, and answers what ended by kind.
    */
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
+}
+/** An agent key as listed: never its secret. */
+interface AgentKeyView {
+  readonly id: PublicId;
+  readonly name: string;
+  readonly madeAt: IsoTime;
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt?: IsoTime;
+}
+/** The answer to making an agent key: the key, and its secret, shown only here. */
+interface CreateAgentKeyResponse {
+  readonly agentKey: AgentKeyView;
+  readonly token: Token;
+}
+/** The answer to `GET /v1/identities/:name/agent-keys`, oldest first. */
+interface ListAgentKeysResponse {
+  readonly agentKeys: readonly AgentKeyView[];
+}
+/** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
+interface RevokeAgentKeyResponse {
+  readonly ended: number;
 }
 declare const brand$3: unique symbol;
 /**
