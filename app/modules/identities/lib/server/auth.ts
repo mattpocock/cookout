@@ -262,6 +262,10 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
   return { hash: yield* secrets.hashToken(token), token };
 });
 
+export function hashOf(sent: Token): Effect.Effect<TokenHash, never, Secrets> {
+  return Effect.flatMap(Secrets, (secrets) => secrets.hashToken(sent));
+}
+
 export {
   AgentSessionSent,
   Caller,

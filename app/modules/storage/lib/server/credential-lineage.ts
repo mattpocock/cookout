@@ -5,7 +5,7 @@ import type { IsoTime } from "../../../time/index.ts";
 import type { PublicId } from "../../../logins/index.ts";
 import { isPublicId } from "../../../logins/index.ts";
 
-type LineageKind = "web" | "cli" | "agent session" | "join code";
+type LineageKind = "web" | "cli" | "agent session" | "join code" | "login link";
 
 type SessionKind = "web" | "cli";
 
@@ -14,7 +14,7 @@ type EndedWhy = "revoked" | "logged out" | "expired" | "redeemed";
 interface EndedCredential {
   readonly hash: TokenHash;
   readonly identity: IdentityName;
-  readonly kind: "session" | "agent session" | "join code";
+  readonly kind: "session" | "agent session" | "join code" | "login link";
 }
 
 interface NewLineage {

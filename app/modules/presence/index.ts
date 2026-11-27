@@ -7,6 +7,7 @@
 import type { TriggerFailure, TriggerResult } from "../triggers/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
+import type { PublicId } from "../logins/index.ts";
 import { triggerErrorCodes } from "../triggers/index.ts";
 
 declare const brand: unique symbol;
@@ -168,3 +169,54 @@ export const offlineAlertNotFound = "offline_alert_not_found";
  * (which presence reports on) is refused with.
  */
 export const presenceErrorCodes = [watchReplaced, offlineAlertNotFound, ...triggerErrorCodes] as const;
+
+/** What an admin did to someone's credentials, as a Login alert tells them. */
+export type AdminAct = "revoked" | "sent a login link";
+
+/** Every admin act, in the order the wire lists them. */
+export const adminActs = ["revoked", "sent a login link"] as const satisfies readonly AdminAct[];
+
+/**
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
+ * ended), or an admin acting on the person's credentials.
+ */
+export type LoginAlertEvent =
+  | {
+      readonly kind: "new session";
+      readonly session: PublicId;
+      readonly sessionKind: "web" | "cli";
+      readonly where: string;
+      readonly clientIp?: string;
+      readonly ended: boolean;
+    }
+  | {
+      readonly kind: "admin act";
+      readonly admin: IdentityName;
+      readonly act: AdminAct;
+      readonly credential: PublicId;
+    };
+
+/** A Login alert in a person's Inbox: an alert of the offline alert kind, read and cleared like one. */
+export interface LoginAlert {
+  readonly id: OfflineAlertId;
+  readonly login: LoginAlertEvent;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+}
+
+/** Any alert an Inbox holds: an offline alert or a Login alert. */
+export type InboxAlert = OfflineAlert | LoginAlert;
+
+/** The answer to marking one alert read. */
+export interface OfflineAlertResponse {
+  readonly alert: InboxAlert;
+}
+
+/**
+ * Whether an Inbox alert is an offline alert rather than a Login alert.
+ * @param alert - The alert to tell apart.
+ * @returns True for an offline alert.
+ */
+export function isOfflineAlert(alert: OfflineAlert | { readonly login: unknown }): alert is OfflineAlert {
+  return !("login" in alert);
+}

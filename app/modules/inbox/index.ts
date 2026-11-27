@@ -13,11 +13,10 @@ import type {
   DeactivationOffer,
   DeactivationOfferId,
 } from "./lib/deactivation-offers.ts";
+import type { InboxAlert, OfflineAlertId } from "../presence/index.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
 import type { InboxAgentJoinRequest } from "./lib/agent-join-requests.ts";
-import type { InboxAlert } from "./lib/login-alerts.ts";
 import type { IsoTime } from "../time/index.ts";
-import type { OfflineAlertId } from "../presence/index.ts";
 
 declare const brand: unique symbol;
 
@@ -296,5 +295,5 @@ export {
 export type { InboxAgentJoinRequest } from "./lib/agent-join-requests.ts";
 
 /** A Login alert (GLOSSARY.md); an `InboxAlert`, offline or Login (`isOfflineAlert`); the answer to marking one read. */
-export type { AdminAct, InboxAlert, LoginAlert, LoginAlertEvent, OfflineAlertResponse } from "./lib/login-alerts.ts";
-export { adminActs, isOfflineAlert } from "./lib/login-alerts.ts";
+export type { AdminAct, InboxAlert, LoginAlert, LoginAlertEvent, OfflineAlertResponse } from "../presence/index.ts";
+export { adminActs, isOfflineAlert } from "../presence/index.ts";

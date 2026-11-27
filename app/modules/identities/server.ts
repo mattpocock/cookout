@@ -1,8 +1,6 @@
 /**
- * Identities on the backend: bearer auth, issuing tokens,
- * the admin identity's token from the setting, `GET /v1/whoami` and the web UI's
- * session cookie. A token is
- * never stored: only its hash, made by `Secrets`, goes into `Storage`.
+ * Identities on the backend: bearer auth, issuing tokens, the admin identity's token from the setting, `GET /v1/whoami`
+ * and the web UI's session cookie. A token is never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
 import {
   AgentSessionSent,
@@ -24,8 +22,10 @@ import type { IdentityName, Token } from "./index.ts";
 import {
   humanAdmin,
   identityAdminRoutes,
+  loginLinkRoutes,
   loginRoutes,
   now,
+  openLoginLinkRoutes,
   openLoginRoutes,
   responseSchemas,
   sessionRoutes,
@@ -97,10 +97,8 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
 );
 
 /**
- * The gate every route but `/v1/health` sits behind: authenticates the
- * request's bearer token or, without one, its session cookie, and provides
- * its identity as `Caller`. Refuses
- * with 401 `token_missing`, `token_unknown`, `token_revoked`, `token_expired` or `login_expired`. A command token gets 403
+ * The gate every route but `/v1/health` sits behind: authenticates the request's bearer token or, without one, its
+ * session cookie, and provides its identity as `Caller`. Refuses with 401 `token_missing`, `token_unknown`, `token_revoked`, `token_expired` or `login_expired`. A command token gets 403
  * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`. A human's
  * token sent with `cookout-harness` gets 403 `agent_as_human` on every route but join (`POST /v1/agent-session`);
  * an agent's provides the tool as `HarnessSent`.
@@ -187,14 +185,15 @@ export const identityRoutes: readonly Route<Caller | Storage | Secrets | Identit
   ...callerRoutes,
   ...identityAdminRoutes,
   ...loginRoutes,
+  ...loginLinkRoutes,
   ...sessionRoutes,
 ];
 
 /**
- * The routes that need no token: starting a login request and collecting it (ADR 0047). The server puts its
- * per-address request limit in front of them.
+ * The routes that need no token: starting a login request and collecting it (ADR 0047), and redeeming a login link
+ * (#912). The server puts its per-address request limit in front of them.
  */
-export const openIdentityRoutes: typeof openLoginRoutes = openLoginRoutes;
+export const openIdentityRoutes: typeof openLoginRoutes = [...openLoginRoutes, ...openLoginLinkRoutes];
 
 /**
  * The request limit of the client address a request to one of the no-token routes comes from (`Limits` provides it),

@@ -4,7 +4,7 @@ import type { JoinCodeResponse } from "../../../agent-sessions/join-codes.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageDeletedEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent, WakeRunResponse } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
-import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
+import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse, LoginLinkResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { ListSessionsResponse, LogOutEverywherePreview, LogOutEverywhereResponse, LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse, RevokeSessionResponse, WebLoginCollectedResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse, ListOpenThreadsResponse } from "../../../messages/index.ts";
@@ -59,6 +59,7 @@ export declare function isIdentityMessageCountResponse(data: unknown): data is I
 export declare function isIdentityResponse(data: unknown): data is IdentityResponse;
 export declare function isIdentityWithTokenResponse(data: unknown): data is IdentityWithTokenResponse;
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;
+export declare function isLoginLinkResponse(data: unknown): data is LoginLinkResponse;
 export declare function isAckAllResponse(data: unknown): data is AckAllResponse;
 export declare function isAckResponse(data: unknown): data is AckResponse;
 export declare function isDeactivatedQuietAgentResponse(data: unknown): data is DeactivatedQuietAgentResponse;
