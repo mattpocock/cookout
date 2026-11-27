@@ -1,7 +1,7 @@
 import { Effect, identity } from "effect";
 import type { SecretsCipher } from "../../../secrets/server.ts";
 import type { StorageService } from "./service.ts";
-import { openMigrated } from "./migrations.ts";
+import { openMigrated } from "./migrate-sqlite.ts";
 import { sqlStorage } from "./sql-storage.ts";
 
 type Opened = ReturnType<typeof openMigrated>;

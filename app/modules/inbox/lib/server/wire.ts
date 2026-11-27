@@ -155,6 +155,7 @@ const NewSessionSchema = Schema.Struct({
   kind: Schema.Literal("new session"),
   session: PublicIdSchema,
   sessionKind: Schema.Literals(["web", "cli"]),
+  via: Schema.optionalKey(Schema.Literal("login link")),
   where: Schema.String,
 });
 

@@ -68,7 +68,12 @@ function redeemIn(options: MemoryLoginLinksOptions, links: Links) {
         links.delete(linkHash);
         options.state.lineage.markEnded({ hash: linkHash, now, why: "redeemed" });
         const issue = { credentialHash, host, identity: link.identity, now, parent: linkHash };
-        return Effect.as(options.issueLoginCredential(issue), linkRedeemed(person));
+        return Effect.map(options.issueLoginCredential(issue), (made) =>
+          Option.match(Option.fromUndefinedOr(made), {
+            onNone: linkGone,
+            onSome: ({ session }) => linkRedeemed({ identity: person, session }),
+          }),
+        );
       },
     });
 }

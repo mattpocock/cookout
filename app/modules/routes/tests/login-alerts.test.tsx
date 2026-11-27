@@ -1,9 +1,11 @@
 import type { CookoutClient, IdentityName, InboxAlert } from "../../sdk/index.ts";
-import { anonymousClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, anonymousClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { inPane } from "./regions.ts";
+import { loginLinkWebPath } from "../../logins/index.ts";
 import { openAt } from "./render.tsx";
+import { token } from "../../identities/index.ts";
 import { watched } from "./watched.ts";
 
 const UNAUTHORIZED = 401;
@@ -135,4 +137,31 @@ it("a read Login alert moves to Earlier, with no Revoke even while its session l
   );
 
   await expect(earlierLogin(owner.client)).resolves.toBeNull();
+});
+
+async function linkedLogin(owner: CookoutClient): Promise<readonly [string, number]> {
+  const { live, stream } = watched(owner);
+  const unmount = openAt({ client: owner, hash: "#/inbox", live });
+  const events = await stream;
+  const pane = within(inPane().element());
+  const shown = await pane.findByText(/^New login from a login link: /u);
+  const revokes = pane.getAllByRole("button", { name: "Revoke" }).length;
+  await closed(unmount, events);
+  return [shown.textContent, revokes];
+}
+
+it("a Login alert for a session a login link made says it came from a login link, with Revoke while it lives", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const owner = await newIdentity({ kind: "human", name: "web-login-linked" });
+  const { link } = await adminClient().createLoginLink("web-login-linked");
+  const [, secret = ""] = link.split(loginLinkWebPath);
+  await anonymousClient().redeemLoginLink(token(secret));
+
+  await expect(linkedLogin(owner.client)).resolves.toStrictEqual([
+    expect.stringMatching(/^New login from a login link: web browser, /u),
+    ONE,
+  ]);
 });
