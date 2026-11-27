@@ -45,6 +45,7 @@ interface Joined {
 }
 
 interface WakingAgent {
+  readonly command?: readonly string[];
   readonly name: string;
   readonly settings?: Omit<FakeWakeSettings, "log">;
   readonly timeoutMinutes?: number;
@@ -93,6 +94,7 @@ function untilRunnerEvents({
 
 function joinedWith(on: WakeBoard, releaseFile: string, log: string) {
   return ({
+    command,
     name,
     settings,
     timeoutMinutes,
@@ -106,7 +108,10 @@ function joinedWith(on: WakeBoard, releaseFile: string, log: string) {
       },
     );
     const given = { ack: true, ...settings, ...waitFor, log };
-    return Effect.map(joinWaking({ name, on, settings: given, timeoutMinutes }), (agent) => [name, agent] as const);
+    return Effect.map(
+      joinWaking({ command, name, on, settings: given, timeoutMinutes }),
+      (agent) => [name, agent] as const,
+    );
   };
 }
 
