@@ -1,7 +1,8 @@
+import { DateTime, Predicate } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { DateTime } from "effect";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { RequestOrigin } from "./request-origins.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { loginCredentialIdleSeconds } from "../../../logins/index.ts";
@@ -62,9 +63,20 @@ type LoginCredentialLookup =
   | { readonly status: "expired" }
   | { readonly status: "unknown" };
 
+interface MadeSession {
+  readonly id: PublicId;
+  readonly where: string;
+  readonly clientIp?: string;
+}
+
+interface IssuedLoginCredential {
+  readonly identity: Identity;
+  readonly session: PublicId;
+}
+
 type LoginCollection =
   | { readonly status: "pending" }
-  | { readonly status: "collected"; readonly identity: Identity }
+  | { readonly status: "collected"; readonly identity: Identity; readonly session: MadeSession }
   | { readonly status: "gone" };
 
 interface LoginRequestsSection {
@@ -72,7 +84,7 @@ interface LoginRequestsSection {
   readonly findLoginRequest: (userCode: string, now: IsoTime) => Fails<LoginRequest | undefined>;
   readonly approveLoginRequest: (approve: ApproveLoginRequest) => Fails<"approved" | "not_found">;
   readonly collectLoginRequest: (collect: CollectLoginRequest) => Fails<LoginCollection>;
-  readonly issueLoginCredential: (issue: IssueLoginCredential) => Fails<Identity | undefined>;
+  readonly issueLoginCredential: (issue: IssueLoginCredential) => Fails<IssuedLoginCredential | undefined>;
   readonly findLoginCredential: (hash: TokenHash) => Fails<Identity | undefined>;
   readonly useLoginCredential: (use: UseLoginCredential) => Fails<LoginCredentialLookup>;
   readonly checkLoginCredential: (use: UseLoginCredential) => Fails<LoginCredentialLookup>;
@@ -89,8 +101,18 @@ function loginCredentialExpiry(lastUsedAt: IsoTime): IsoTime {
 const PENDING: LoginCollection = { status: "pending" };
 const GONE: LoginCollection = { status: "gone" };
 
-function collected(identity: Identity): LoginCollection {
-  return { identity, status: "collected" };
+interface Collected {
+  readonly identity: Identity;
+  readonly id: PublicId;
+  readonly request: RequestOrigin & { readonly host: string };
+}
+
+function collected({ id, identity, request }: Collected): LoginCollection {
+  const { clientIp, host } = request;
+  if (Predicate.isUndefined(clientIp)) {
+    return { identity, session: { id, where: host }, status: "collected" };
+  }
+  return { identity, session: { clientIp, id, where: host }, status: "collected" };
 }
 
 const LOGIN_REQUEST_KINDS_MIGRATION =
@@ -113,6 +135,7 @@ export {
   type UseLoginCredential,
   loginCredentialExpiry,
   type IssueLoginCredential,
+  type IssuedLoginCredential,
   type LoginCollection,
   type LoginRequest,
   type LoginRequestsSection,

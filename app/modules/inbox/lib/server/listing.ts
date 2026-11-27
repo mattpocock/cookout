@@ -2,6 +2,7 @@ import { Array as Arr, Effect, Option, Predicate } from "effect";
 import type {
   DeactivatedQuietAgent,
   DeactivationOffer,
+  InboxAlert,
   InboxHistoryItem,
   InboxHistoryNudge,
   InboxHistoryResponse,
@@ -9,7 +10,6 @@ import type {
   InboxResponse,
   Nudge,
   NudgeResponse,
-  OfflineAlert,
 } from "../../index.ts";
 import type { Storage, StorageUnavailable, StoredNudge } from "../../../storage/server.ts";
 import { isNudgeId, nudgeTexts } from "../../index.ts";
@@ -139,10 +139,7 @@ function nudgesOnPage({ caller, storage }: Asking, query: HistoryQuery): Fails<r
   );
 }
 
-function alertsOnPage(
-  { caller, offlineAlerts }: Listing & Asking,
-  query: HistoryQuery,
-): Fails<readonly OfflineAlert[]> {
+function alertsOnPage({ caller, offlineAlerts }: Listing & Asking, query: HistoryQuery): Fails<readonly InboxAlert[]> {
   if (Predicate.isNotUndefined(query.before)) {
     return Effect.succeed([]);
   }

@@ -146,7 +146,16 @@ it.effect("rotating the human's token closes the event streams of every session 
 
     expect(
       Arr.map(ended, (each) => Arr.map(each, ({ data, event }) => [event, Str.includes(REVOKED)(data)])),
-    ).toStrictEqual([[[refusalEvent, true]], [[refusalEvent, true]]]);
+    ).toStrictEqual([
+      [
+        ["offline-alert", false],
+        [refusalEvent, true],
+      ],
+      [
+        ["offline-alert", false],
+        [refusalEvent, true],
+      ],
+    ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
 

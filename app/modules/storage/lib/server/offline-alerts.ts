@@ -1,17 +1,12 @@
-import { Array as Arr, Effect, Number as Num, Option, Order, Predicate, Schema } from "effect";
-import { FALSE, TRUE, isFalse } from "./adapters/sql-database.ts";
+import { Array as Arr, Effect, Number as Num, Option, Order, Predicate } from "effect";
+import type { NewLoginAlert, StoredInboxAlert, StoredLoginAlert } from "./inbox-alerts.ts";
 import type { OfflineAlert, OfflineAlertId, OfflineReason } from "../../../presence/index.ts";
-import type { SqlDatabase, SqlValue } from "./adapters/sql-database.ts";
-import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import type { Fails } from "./errors.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
-import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { TriggerFailure } from "../../../triggers/index.ts";
-import { isIdentityName } from "../../../identities/index.ts";
-import { isMessageId } from "../../../messages/index.ts";
-import { unreadable } from "./errors.ts";
+import { isOfflineAlertId } from "../../../presence/index.ts";
 
 interface NewOfflineAlert {
   readonly agent: IdentityName;
@@ -23,14 +18,15 @@ interface NewOfflineAlert {
 
 interface OfflineAlertsSection {
   readonly recordOfflineAlert: (alert: NewOfflineAlert) => Fails<OfflineAlert>;
-  readonly listOfflineAlerts: (owner: IdentityName) => Fails<readonly OfflineAlert[]>;
-  readonly markOfflineAlertRead: (owner: IdentityName, id: OfflineAlertId) => Fails<OfflineAlert | null>;
-  readonly markOfflineAlertsRead: (owner: IdentityName, upTo: OfflineAlertId) => Fails<readonly OfflineAlert[]>;
+  readonly recordLoginAlert: (alert: NewLoginAlert) => Fails<StoredLoginAlert>;
+  readonly listAlerts: (owner: IdentityName) => Fails<readonly StoredInboxAlert[]>;
+  readonly markAlertRead: (owner: IdentityName, id: OfflineAlertId) => Fails<StoredInboxAlert | null>;
+  readonly markAlertsRead: (owner: IdentityName, upTo: OfflineAlertId) => Fails<readonly StoredInboxAlert[]>;
   readonly markBackOnline: (agent: IdentityName, at: IsoTime) => Fails<readonly OfflineAlert[]>;
   readonly markTriggerAlertsCleared: (agent: IdentityName, at: IsoTime) => Fails<readonly OfflineAlert[]>;
 }
 
-type StoredAlert = OfflineAlert & { readonly owner: IdentityName };
+type StoredAlert = StoredInboxAlert & { readonly owner: IdentityName };
 
 interface Change {
   readonly matches: (alert: StoredAlert) => boolean;
@@ -38,31 +34,47 @@ interface Change {
 }
 
 const STEP = 1;
-const UNREAD = 0;
-const READ = 1;
 
 const TRIGGER_FAILED: OfflineReason = "trigger failed";
 
-function isWaiting(alert: StoredAlert): boolean {
-  return Predicate.isUndefined(alert.backOnlineAt);
+type StoredOfflineAlert = OfflineAlert & { readonly owner: IdentityName };
+
+function isOffline(alert: StoredAlert): alert is StoredOfflineAlert {
+  return "agent" in alert;
+}
+
+function isWaiting(alert: StoredOfflineAlert, agent: IdentityName): boolean {
+  return alert.agent === agent && Predicate.isUndefined(alert.backOnlineAt);
 }
 
 function backAt(agent: IdentityName, at: IsoTime, triggerFailed: boolean): Change {
   return {
     change: (alert) => ({ ...alert, backOnlineAt: at }),
     matches: (alert) =>
-      alert.agent === agent && isWaiting(alert) && (alert.offlineReason === TRIGGER_FAILED) === triggerFailed,
+      isOffline(alert) && isWaiting(alert, agent) && (alert.offlineReason === TRIGGER_FAILED) === triggerFailed,
   };
 }
 
-const byId = Order.mapInput(Num.Order, (alert: OfflineAlert) => alert.id);
+const byId = Order.mapInput(Num.Order, (alert: StoredInboxAlert) => alert.id);
 
-function sortedById(alerts: readonly OfflineAlert[]): readonly OfflineAlert[] {
+function sortedById<Alert extends StoredInboxAlert>(alerts: readonly Alert[]): readonly Alert[] {
   return Arr.sort(alerts, byId);
 }
 
-function withoutOwner({ owner: _owner, ...alert }: StoredAlert): OfflineAlert {
+function withoutOwner({ owner: _owner, ...alert }: StoredAlert): StoredInboxAlert {
   return alert;
+}
+
+function isOfflineAlert(alert: StoredInboxAlert): alert is OfflineAlert {
+  return "agent" in alert;
+}
+
+function offlineOnly(alerts: readonly StoredInboxAlert[]): readonly OfflineAlert[] {
+  return Arr.filter(alerts, isOfflineAlert);
+}
+
+function involves(identity: IdentityName): (alert: StoredAlert) => boolean {
+  return (alert) => alert.owner === identity || (isOffline(alert) && alert.agent === identity);
 }
 
 function alertIdOf(value: number): OfflineAlertId {
@@ -89,7 +101,7 @@ type MemoryOfflineAlertsSection = OfflineAlertsSection & {
 function memoryOfflineAlerts(state: MemoryState): MemoryOfflineAlertsSection {
   let alerts: readonly StoredAlert[] = [];
   let raised = 0;
-  function changed(change: Change): readonly OfflineAlert[] {
+  function changed(change: Change): readonly StoredInboxAlert[] {
     const changing = Arr.filter(alerts, change.matches);
     alerts = Arr.map(alerts, changedIf(change));
     return Arr.map(changing, (alert) => withoutOwner(change.change(alert)));
@@ -97,166 +109,41 @@ function memoryOfflineAlerts(state: MemoryState): MemoryOfflineAlertsSection {
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
   }
+  function nextId(): OfflineAlertId {
+    raised += STEP;
+    return alertIdOf(raised);
+  }
+  function kept<Alert extends StoredAlert>(stored: Alert): Omit<Alert, "owner"> {
+    alerts = [...alerts, stored];
+    const { owner: _owner, ...shown } = stored;
+    return shown;
+  }
   return {
     dropOfflineAlerts: (identity) =>
       Effect.sync(() => {
-        alerts = Arr.filter(alerts, ({ agent, owner }) => agent !== identity && owner !== identity);
+        alerts = Arr.filter(alerts, (alert) => !involves(identity)(alert));
       }),
-    listOfflineAlerts: (owner) =>
+    listAlerts: (owner) =>
       open(() =>
         Arr.map(
           Arr.filter(alerts, (alert) => alert.owner === owner),
           withoutOwner,
         ),
       ),
-    markBackOnline: (agent, at) => open(() => changed(backAt(agent, at, false))),
-    markOfflineAlertRead: (owner, id) =>
+    markAlertRead: (owner, id) =>
       open(() =>
         Option.getOrNull(
           Arr.head(changed({ change: markedRead, matches: (alert) => alert.owner === owner && alert.id === id })),
         ),
       ),
-    markOfflineAlertsRead: (owner, upTo) =>
+    markAlertsRead: (owner, upTo) =>
       open(() =>
         changed({ change: markedRead, matches: (alert) => alert.owner === owner && alert.id <= upTo && !alert.read }),
       ),
-    markTriggerAlertsCleared: (agent, at) => open(() => changed(backAt(agent, at, true))),
-    recordOfflineAlert: (alert) =>
-      open(() => {
-        raised += STEP;
-        const stored = { ...alert, id: alertIdOf(raised), read: false };
-        alerts = [...alerts, stored];
-        return withoutOwner(stored);
-      }),
-  };
-}
-
-const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
-
-const AlertRow = Schema.Struct({
-  agent_name: Schema.String.pipe(Schema.refine(isIdentityName)),
-  back_online_at: Schema.NullOr(IsoTimeSchema),
-  id: Schema.Int.pipe(Schema.refine(isOfflineAlertId)),
-  offline_reason: Schema.Literals(offlineReasons),
-  raised_at: IsoTimeSchema,
-  read: Schema.Literals([UNREAD, READ]),
-  trigger_error: Schema.NullOr(Schema.String),
-  trigger_message: Schema.NullOr(MessageIdColumn),
-  trigger_status: Schema.NullOr(Schema.Int),
-});
-
-type Row = typeof AlertRow.Type;
-
-function failureOf({ trigger_error: error, trigger_status: status }: Row): Omit<TriggerFailure, "message"> {
-  const answered = Option.match(Option.fromNullOr(status), {
-    onNone: () => ({}),
-    onSome: (code) => ({ status: code }),
-  });
-  if (Predicate.isNotNull(error)) {
-    return { error, ...answered };
-  }
-  return answered;
-}
-
-function triggerOf(row: Row): Pick<OfflineAlert, "trigger"> {
-  const message = row.trigger_message;
-  if (Predicate.isNull(message)) {
-    return {};
-  }
-  return { trigger: { message, ...failureOf(row) } };
-}
-
-function alertOf(row: Row): OfflineAlert {
-  const alert = {
-    agent: row.agent_name,
-    id: row.id,
-    offlineReason: row.offline_reason,
-    raisedAt: row.raised_at,
-    read: row.read === READ,
-    ...triggerOf(row),
-  };
-  if (Predicate.isNull(row.back_online_at)) {
-    return alert;
-  }
-  return { ...alert, backOnlineAt: row.back_online_at };
-}
-
-function alertsOf(rows: readonly unknown[]): Fails<readonly OfflineAlert[]> {
-  return Schema.decodeUnknownEffect(Schema.Array(AlertRow))(rows).pipe(
-    Effect.mapBoth({ onFailure: unreadable, onSuccess: Arr.map(alertOf) }),
-  );
-}
-
-function firstOf(alerts: readonly OfflineAlert[]): Fails<OfflineAlert> {
-  return Effect.mapError(Effect.fromOption(Arr.head(alerts)), unreadable);
-}
-
-const COLUMNS =
-  "id, agent_name, offline_reason, raised_at, read, back_online_at, trigger_message, trigger_status, trigger_error";
-
-type TriggerColumns = readonly [SqlValue, SqlValue, SqlValue];
-
-const NO_TRIGGER: TriggerColumns = [null, null, null];
-
-function triggerColumns(trigger: TriggerFailure | undefined): TriggerColumns {
-  return Option.match(Option.fromUndefinedOr(trigger), {
-    onNone: () => NO_TRIGGER,
-    onSome: ({ error = null, message, status = null }) => [message, status, error],
-  });
-}
-
-function markedBack(db: SqlDatabase, reasonTest: string) {
-  return (agent: IdentityName, at: IsoTime): Fails<readonly OfflineAlert[]> =>
-    Effect.flatMap(
-      db.all(
-        `UPDATE offline_alerts SET back_online_at = ? WHERE agent_name = ? AND back_online_at IS NULL
-         AND offline_reason ${reasonTest} ? RETURNING ${COLUMNS}`,
-        at,
-        agent,
-        TRIGGER_FAILED,
-      ),
-      alertsOf,
-    ).pipe(Effect.map(sortedById));
-}
-
-function sqlOfflineAlerts(db: SqlDatabase): OfflineAlertsSection {
-  return {
-    listOfflineAlerts: (owner) =>
-      Effect.flatMap(db.all(`SELECT ${COLUMNS} FROM offline_alerts WHERE owner_name = ? ORDER BY id`, owner), alertsOf),
-    markBackOnline: markedBack(db, "<>"),
-    markOfflineAlertRead: (owner, id) =>
-      Effect.flatMap(
-        db.all(
-          `UPDATE offline_alerts SET read = ${TRUE[db.dialect]} WHERE owner_name = ? AND id = ? RETURNING ${COLUMNS}`,
-          owner,
-          id,
-        ),
-        alertsOf,
-      ).pipe(Effect.map((alerts) => Option.getOrNull(Arr.head(alerts)))),
-    markOfflineAlertsRead: (owner, upTo) =>
-      Effect.flatMap(
-        db.all(
-          `UPDATE offline_alerts SET read = ${TRUE[db.dialect]} WHERE owner_name = ? AND id <= ? AND ${isFalse[db.dialect]("read")} RETURNING ${COLUMNS}`,
-          owner,
-          upTo,
-        ),
-        alertsOf,
-      ).pipe(Effect.map(sortedById)),
-    markTriggerAlertsCleared: markedBack(db, "="),
-    recordOfflineAlert: ({ agent, offlineReason, owner, raisedAt, trigger }) =>
-      Effect.flatMap(
-        db.all(
-          `INSERT INTO offline_alerts
-             (agent_name, owner_name, offline_reason, raised_at, read, trigger_message, trigger_status, trigger_error)
-           VALUES (?, ?, ?, ?, ${FALSE[db.dialect]}, ?, ?, ?) RETURNING ${COLUMNS}`,
-          agent,
-          owner,
-          offlineReason,
-          raisedAt,
-          ...triggerColumns(trigger),
-        ),
-        alertsOf,
-      ).pipe(Effect.flatMap(firstOf)),
+    markBackOnline: (agent, at) => open(() => offlineOnly(changed(backAt(agent, at, false)))),
+    markTriggerAlertsCleared: (agent, at) => open(() => offlineOnly(changed(backAt(agent, at, true)))),
+    recordLoginAlert: (alert) => open(() => kept({ ...alert, id: nextId(), read: false })),
+    recordOfflineAlert: (alert) => open(() => kept({ ...alert, id: nextId(), read: false })),
   };
 }
 
@@ -271,4 +158,12 @@ const OFFLINE_ALERTS_MIGRATION = `CREATE TABLE offline_alerts (
    ) STRICT;
    CREATE INDEX offline_alerts_by_owner ON offline_alerts (owner_name, id);`;
 
-export { type OfflineAlertsSection, OFFLINE_ALERTS_MIGRATION, memoryOfflineAlerts, sqlOfflineAlerts };
+export {
+  type OfflineAlertsSection,
+  OFFLINE_ALERTS_MIGRATION,
+  TRIGGER_FAILED,
+  isOfflineAlert,
+  memoryOfflineAlerts,
+  offlineOnly,
+  sortedById,
+};

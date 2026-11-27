@@ -214,7 +214,10 @@ it.effect("revoking a session ends the sessions below it, whose next request is 
       statuses,
     }).toStrictEqual({
       answered: { ended: 2 },
-      ended: [[refusalEvent, true]],
+      ended: [
+        ["offline-alert", false],
+        [refusalEvent, true],
+      ],
       left: [],
       statuses: [UNAUTHORIZED, UNAUTHORIZED],
     });
