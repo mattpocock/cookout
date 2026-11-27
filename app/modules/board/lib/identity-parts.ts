@@ -1,17 +1,24 @@
 import type { Identities, IdentitiesClient, IdentityChange } from "./identities-slice.ts";
 import type { IdentityCalls, IdentityCallsClient } from "./identity-calls.ts";
+import type { LoginLink, LoginLinkClient } from "./login-link-part.ts";
 import type { SessionClient, SessionPart } from "./session-part.ts";
 import type { SessionsClient, SessionsPart } from "./agent-sessions-part.ts";
 import type { WebLogin, WebLoginClient } from "./web-login-part.ts";
 import type { Part } from "./slice.ts";
 import { createIdentityCalls } from "./identity-calls.ts";
+import { createLoginLink } from "./login-link-part.ts";
 import { createPart } from "./slice.ts";
 import { createSessionPart } from "./session-part.ts";
 import { createSessionsPart } from "./agent-sessions-part.ts";
 import { createWebLogin } from "./web-login-part.ts";
 import { identitiesSlice } from "./identities-slice.ts";
 
-type IdentityPartsClient = IdentitiesClient & IdentityCallsClient & SessionClient & SessionsClient & WebLoginClient;
+type IdentityPartsClient = IdentitiesClient &
+  IdentityCallsClient &
+  LoginLinkClient &
+  SessionClient &
+  SessionsClient &
+  WebLoginClient;
 
 interface IdentityParts {
   readonly identities: Part<Identities, IdentityChange>;
@@ -19,6 +26,7 @@ interface IdentityParts {
   readonly session: SessionPart;
   readonly identityCalls: IdentityCalls;
   readonly webLogin: WebLogin;
+  readonly loginLink: LoginLink;
 }
 
 interface IdentityPartsOptions {
@@ -34,6 +42,7 @@ function identityPartsOf({ changed, client, url }: IdentityPartsOptions): Identi
   return {
     identities,
     identityCalls: createIdentityCalls({ client, identities, sessions }),
+    loginLink: createLoginLink({ client, loggedIn: session.loggedIn }),
     session,
     sessions,
     webLogin: createWebLogin({ client, loggedIn: session.loggedIn, url }),
@@ -44,5 +53,6 @@ export type { AgentSessions, Sessions } from "./agent-sessions-part.ts";
 export type { Identities } from "./identities-slice.ts";
 export type { IdentityCalls } from "./identity-calls.ts";
 export type { SessionState } from "./session-part.ts";
+export type { LoginLink, LoginLinkState } from "./login-link-part.ts";
 export type { WebLogin, WebLoginState } from "./web-login-part.ts";
 export { type IdentityParts, type IdentityPartsClient, identityPartsOf };

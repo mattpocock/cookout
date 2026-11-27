@@ -284,7 +284,7 @@ export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from ".
  * session of a person's, told when a Login request is collected, a token is pasted on the web or a login link is
  * redeemed, for a Login alert.
  */
-export type { EndedTokens, SessionMade, TokensEnded } from "./lib/server/changes.ts";
+export type { AdminActed, EndedTokens, SessionMade, TokensEnded } from "./lib/server/changes.ts";
 
 /**
  * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity`,

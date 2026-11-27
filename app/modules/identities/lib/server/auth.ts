@@ -283,6 +283,7 @@ export type { Secrets } from "../../../secrets/server.ts";
 export { harnessOf } from "./harness-guard.ts";
 export {
   IdentityChanges,
+  adminActed,
   announced,
   announcedDeleted,
   credentialsEnded,

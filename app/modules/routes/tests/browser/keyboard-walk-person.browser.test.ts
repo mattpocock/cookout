@@ -32,7 +32,7 @@ async function personProfileOpen(page: Page): Promise<string> {
   return ada;
 }
 
-test("a person's profile by keyboard alone: the admin toggle, Deactivate, Reactivate and its token", async ({
+test("a person's profile by keyboard alone: the admin toggle, Send a login link, Deactivate, Reactivate and its token", async ({
   page,
 }) => {
   await copiesRecorded(page);
@@ -44,6 +44,7 @@ test("a person's profile by keyboard alone: the admin toggle, Deactivate, Reacti
       { focused: button(page, "Make admin"), keys: "Tab" },
       { focused: button(page, "Remove admin"), keys: "Enter" },
       { focused: button(page, "Make admin"), keys: "Enter" },
+      { focused: button(page, "Send a login link"), keys: "Tab" },
       { focused: button(page, "Deactivate"), keys: "Tab" },
       { focused: inConfirm(page, "Cancel"), keys: "Enter" },
       { focused: button(page, "Deactivate"), gone: [inDialog(page)], keys: "Escape" },
