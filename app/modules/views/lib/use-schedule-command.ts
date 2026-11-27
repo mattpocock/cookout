@@ -72,7 +72,7 @@ export function useScheduleCommand(command: ScheduleCommand): Handlers {
   const calls = useChannelCalls(channel);
   const runWebhookCommand = useWebhookCommandRun({ calls, draft, saved });
   const handleSchedule = useCallback(() => {
-    scheduling.open(channel, scheduledText(draft));
+    scheduling.open({ channel, thread: null }, scheduledText(draft));
   }, [channel, draft, scheduling]);
   useScheduleKey({ form: command.form, onSchedule: handleSchedule, shown: command.shown });
   const handlePost = useCallback(
@@ -81,7 +81,7 @@ export function useScheduleCommand(command: ScheduleCommand): Handlers {
       if (run === null) {
         post(outgoing, posted);
       } else if (run.kind === "command") {
-        scheduling.open(channel, run.text);
+        scheduling.open({ channel, thread: null }, run.text);
       } else {
         runWebhookCommand(run);
       }

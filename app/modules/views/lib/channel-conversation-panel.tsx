@@ -3,11 +3,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { ConversationPanel, ScrollArea } from "../../design-system/layout.tsx";
 import type { MessageMenu, Reader, Selection } from "../../unread/index.ts";
 import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/layout.tsx";
+import type { Scheduling, ThreadMessagesState } from "../../board/index.ts";
 import { ChannelConversationBody } from "./channel-conversation-body.tsx";
 import type { Composer } from "./use-channel-reply.ts";
 import { ReadNote } from "./read-note.tsx";
 import { ReplyFooter } from "./reply-footer.tsx";
-import type { ThreadMessagesState } from "../../board/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useChannelReply } from "./use-channel-reply.ts";
 
@@ -29,6 +29,7 @@ interface ChannelConversationPanelProps {
   readonly keymap: ComponentProps<typeof ReplyFooter>["keymap"];
   readonly menu: MessageMenu;
   readonly reader: Reader;
+  readonly scheduling: Scheduling;
   readonly actions: readonly PanelAction[];
   readonly open: ShortcutLinkParts;
 }
@@ -48,16 +49,8 @@ function repliesOf(state: ThreadMessagesState): ThreadReplies {
 }
 
 export function ChannelConversationPanel(props: ChannelConversationPanelProps): ReactNode {
-  const { channel, first, newest, posts, reader } = props;
-  const reply = useChannelReply({
-    channel,
-    composer: props.composer,
-    first,
-    me: props.me,
-    newest,
-    replied: reader.markRead,
-    selection: props.selection,
-  });
+  const { channel, posts, reader } = props;
+  const reply = useChannelReply({ ...props, replied: reader.markRead });
   const handleFiles = reply.draft.attachments.attach;
   return (
     <ConversationPanel
@@ -91,6 +84,7 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
         keymap={props.keymap}
         channel={channel}
         replied={reply.replied}
+        scheduling={props.scheduling}
         state={reply.state}
         thread={reply.post.id}
       />

@@ -32,6 +32,7 @@ const SCHEMA_VERSION_OFFSET = 60;
 const SCHEMA_VERSION_BYTES = 4;
 const NEWER_VERSION = 1000;
 const NEGATIVE_VERSION = -1;
+const MEMORY_FOLDER = "/dev/shm";
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const hashC = tokenHash(Str.repeat(HASH_LENGTH)("c"));
@@ -129,6 +130,18 @@ it.effect("a new database, its WAL and its shared-memory file are readable by th
 
     expect(Arr.map(infos, ({ mode }) => permissions(mode))).toStrictEqual([OWNER_ONLY, OWNER_ONLY, OWNER_ONLY]);
   }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "a test's database is made in memory, under /dev/shm, wherever the machine has it, so a busy disk can't stall it",
+  () =>
+    Effect.gen(function* inMemoryFolder() {
+      const fs = yield* FileSystem.FileSystem;
+      const machineHasIt = yield* fs.exists(MEMORY_FOLDER);
+      const path = yield* freshDatabasePath;
+
+      expect(Str.startsWith(`${MEMORY_FOLDER}/`)(path)).toBe(machineHasIt);
+    }).pipe(Effect.provide(NodeServices.layer)),
 );
 
 it.effect("a database file that can't be created fails with StorageUnavailable", () =>

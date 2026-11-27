@@ -60,8 +60,14 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
         />
       )}
       <WebhookCommandsRefusal />
-      <ScheduleConfirmation channel={channel} scheduling={scheduling} />
-      <ScheduleDialog cancelled={MESSAGE_FIELD} channel={channel} onSaved={handleSaved} scheduling={scheduling} />
+      <ScheduleConfirmation channel={channel} scheduling={scheduling} thread={null} />
+      <ScheduleDialog
+        cancelled={MESSAGE_FIELD}
+        channel={channel}
+        onSaved={handleSaved}
+        scheduling={scheduling}
+        thread={null}
+      />
     </>
   );
 }

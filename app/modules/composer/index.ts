@@ -56,7 +56,7 @@
  * Choosing a Command completes the box to `/name `, and so does choosing an inline Webhook command, one whose form `inlineField` reads as exactly one text field (#872); `commandRun(text)` says when sending `/name`, or `/name ` and a text, runs a Command, calls an inline Webhook command with that text, or opens a Webhook command's form, instead of posting.
  * Choosing any other Webhook command, or `openWebhookCommand`, makes it the draft's `webhookCommand`, whose data the box prompts
  * for, until `clear`, or `unpickWebhookCommand`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit.
- * `draft(key)`, a thread's reply box, suggests and runs the same Webhook commands but no Commands (#873): its calls are made as replies in the thread.
+ * `draft(key)`, a thread's reply box, suggests and runs the same Commands and Webhook commands (#873, #874): its Webhook command calls are made as replies in the thread, while `/schedule` still schedules a top-level message in the thread's channel.
  * Each box's text, unsent, is kept in the browser's storage (`options.storage`, under the browser-storage module's
  * `keptTextKey`) for the identity logged in when the box is first drawn, so it shows only in its own box and only to
  * that identity, and comes back, with the caret at its end, when the page opens again (#600); while nobody is logged in it is kept
@@ -229,7 +229,7 @@ export interface Identities extends AdminChanges {
 /** The composer store: a draft for each message box (and each identity typing in it), and for each display name being edited. */
 export interface Composer {
   /**
-   * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests the Webhook commands, as a channel's box does, but no Commands.
+   * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests the Commands and the Webhook commands, as a channel's box does.
    * `members`, read at each edit, names the identities to suggest ahead of the other matches, in its order (a thread's members, most recent poster first); the first call for a key sets it.
    */
   readonly draft: (key: string, members: () => readonly IdentityName[]) => Draft;
@@ -283,7 +283,7 @@ export function createComposer(options: ComposerOptions): Composer {
     channelDraft: (channel) =>
       keptDraft(channel, { commands: COMMANDS, members: () => list.posters(channel), webhookCommands }),
     channelPosters: list.posters,
-    draft: (key, members) => keptDraft(key, { commands: [], members, webhookCommands }),
+    draft: (key, members) => keptDraft(key, { commands: COMMANDS, members, webhookCommands }),
     identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }
