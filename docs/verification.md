@@ -433,7 +433,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts command add ada --url http://12
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command add other --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
 ```
 
-`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The Webhook command's handler is an agent identity with the Webhook command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the join recipe) is 403 `admin_only`; each exits 1.
+`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The Webhook command's handler is an agent identity with the Webhook command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, as is a Command's name (`add schedule`, whose message says `schedule` is a Command's name), a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the join recipe) is 403 `admin_only`; each exits 1.
 
 A handler that lost its secret gets a new one by rotating it:
 
