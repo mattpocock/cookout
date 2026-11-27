@@ -1,7 +1,7 @@
 import type { CookoutClient, Identity, Refusal } from "../../sdk/index.ts";
 import { createListeners } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
-import { setupLinkNotFound } from "../../logins/index.ts";
+import { setupLinkNotFound } from "../../logins/setup-links.ts";
 import { token } from "../../identities/index.ts";
 
 type SetupLinkOutcome =

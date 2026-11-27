@@ -2,11 +2,10 @@ import type {
   CreateAgentKeyResponse,
   ListAgentKeysResponse,
   PublicId,
-  RedeemSetupLinkRequest,
   RevokeAgentKeyResponse,
   LoginCalls as SessionLoginCalls,
-  SetupLinkCalls,
 } from "../../logins/index.ts";
+import type { RedeemSetupLinkRequest, SetupLinkCalls } from "../../logins/setup-links.ts";
 import {
   agentKeyPath,
   agentKeysPath,
@@ -18,7 +17,6 @@ import {
   loginRequestPath,
   loginRequestsPath,
   redeemLoginLinkPath,
-  redeemSetupLinkPath,
   sessionByIdPath,
   sessionsPath,
 } from "../../logins/index.ts";
@@ -40,6 +38,7 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { AgentKeyCalls as KeyCalls } from "../../identities/client.ts";
+import { redeemSetupLinkPath } from "../../logins/setup-links.ts";
 import { send } from "./request.ts";
 
 type AgentKeyCalls = KeyCalls<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;

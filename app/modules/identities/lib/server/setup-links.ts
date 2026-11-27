@@ -1,7 +1,7 @@
 import { Array as Arr, Effect, Predicate, Schema, String as Str } from "effect";
 import type { Identity, IdentityName, LoginLinkResponse, Token } from "../../index.ts";
 import { IdentityNameSchema, SentDisplayNameSchema } from "./wire.ts";
-import { setupLinkNotFound, setupLinkSeconds, setupLinkWebPath } from "../../../logins/index.ts";
+import { setupLinkNotFound, setupLinkSeconds, setupLinkWebPath } from "../../../logins/setup-links.ts";
 import type { Option } from "effect";
 import type { Refusal } from "../../../http/index.ts";
 import type { Secrets } from "./auth.ts";

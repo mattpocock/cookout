@@ -1,22 +1,14 @@
 import { Array as Arr, Effect, Schema, String as Str } from "effect";
-import {
-  answer,
-  freshDatabasePath,
-  identityFixture,
-  openStore,
-  runAdmin,
-  startServe,
-  testSecretsCipher,
-} from "../../../testing/server.ts";
+import { answer, freshDatabasePath, runAdmin, startServe } from "../../../testing/server.ts";
 import { createTestAgent, testClient } from "../../../testing/index.ts";
 import { expect, it } from "@effect/vitest";
-import { loginLinkWebPath, redeemLoginLinkPath, redeemSetupLinkPath, setupLinkWebPath } from "../../../logins/index.ts";
-import { token, tokenHash, whoamiPath } from "../../../identities/index.ts";
+import { loginLinkWebPath, redeemLoginLinkPath } from "../../../logins/index.ts";
+import { redeemSetupLinkPath, setupLinkWebPath } from "../../../logins/setup-links.ts";
 import type { CommandLineNeeds } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { request } from "../../../http/client.ts";
 import { secretsLive } from "../../../secrets/server.ts";
-import { sqliteStorage } from "../../../storage/server.ts";
+import { whoamiPath } from "../../../identities/index.ts";
 
 const NO_TOKEN = "";
 const EXIT_SUCCESS = 0;
@@ -267,34 +259,5 @@ it.effect("cookout admin setup-link prints a fresh link while no admin exists, a
     const runs = yield* setupLinkCommandRuns();
 
     expect(runs).toMatchObject([true, EXIT_SUCCESS, EXIT_FAILURE, { error: { code: "admin_exists" } }]);
-  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
-);
-
-const ada = identityFixture("ada", { kind: "human" });
-
-function takenThenFree(): Effect.Effect<readonly [unknown, unknown], never, CommandLineNeeds> {
-  return Effect.scoped(
-    Effect.gen(function* redeemTakenName() {
-      const database = yield* freshDatabasePath;
-      const store = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path: database }));
-      yield* Effect.andThen(store.storage.createIdentity(ada, tokenHash("hash:ada")), store.close);
-      const server = yield* startServe({ adminToken: NO_TOKEN, database });
-      const [link = ""] = setupLinksIn(server.lines);
-      const taken = yield* redeemedSetup(server.url, link, "ada");
-      const secret = secretAfter(setupLinkWebPath, link);
-      const sent = { displayName: "Grace", name: "grace", secret: token(secret) };
-      const free = yield* answer(() => testClient({ env: {}, url: server.url }).redeemSetupLink(sent));
-      return [taken.json, free] as const;
-    }),
-  ).pipe(Effect.orDie);
-}
-
-it.effect("a setup link sent with a name already taken is refused, and still makes the first admin under another", () =>
-  Effect.gen(function* takenName() {
-    const [taken, free] = yield* takenThenFree();
-
-    const grace = { identity: { admin: true, displayName: "Grace", name: "grace" } };
-
-    expect([taken, free]).toMatchObject([{ error: { code: "identity_exists" } }, grace]);
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

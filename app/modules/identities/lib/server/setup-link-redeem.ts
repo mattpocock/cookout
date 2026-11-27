@@ -14,7 +14,7 @@ import type { Route } from "../../../http/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { clientAddress } from "../../../http/server.ts";
 import { openLoginLinkRoutes } from "./login-link-redeem.ts";
-import { redeemSetupLinkPath } from "../../../logins/index.ts";
+import { redeemSetupLinkPath } from "../../../logins/setup-links.ts";
 import { signedInRoute } from "./session.ts";
 
 const admitted = Effect.gen(function* admitAddress() {

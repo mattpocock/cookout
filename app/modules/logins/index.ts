@@ -177,8 +177,6 @@ export const loginLinkWebPath = "/#/login-link/";
 /** The refusal code for a login link that was used, expired or never made. */
 export const loginLinkNotFound = "login_link_not_found";
 
-export * from "./setup-links.ts";
-
 /**
  * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in
  * the caller's lineage ends except the session the request was sent with and what it made, which becomes a root.

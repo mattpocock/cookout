@@ -3,7 +3,7 @@ import { anonymousClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { CookoutError } from "../../sdk/index.ts";
-import type { RedeemSetupLinkRequest } from "../../logins/index.ts";
+import type { RedeemSetupLinkRequest } from "../../logins/setup-links.ts";
 import { alertsShown } from "./alerts.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
