@@ -40,8 +40,8 @@ function watching(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEve
 it.effect("acking all of the inbox reads every unread item across channels and threads", () =>
   Effect.gen(function* ackAllEmpties() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { mention, newest, parent, reply } = yield* postToBob(ann.client, bob.client);
     const before = yield* answer(() => bob.client.inbox());
     const { readPositions } = yield* answer(() => bob.client.ackAll(newest.id));
@@ -62,8 +62,8 @@ it.effect("acking all of the inbox reads every unread item across channels and t
 it.effect("a message that arrives after acking all of the inbox up to what was seen stays unread", () =>
   Effect.gen(function* laterStaysUnread() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { mention } = yield* postToBob(ann.client, bob.client);
     const { message: later } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob again" }));
     yield* answer(() => bob.client.ackAll(mention.id));
@@ -78,8 +78,8 @@ it.effect("a message that arrives after acking all of the inbox up to what was s
 it.effect("acking all of the inbox reaches the identity's open stream as read-position events", () =>
   Effect.gen(function* ackAllReachesStream() {
     const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     const { mention } = yield* postToBob(ann.client, bob.client);
     const events = yield* watching(bob.client);
     const { readPositions } = yield* answer(() => bob.client.ackAll(mention.id));

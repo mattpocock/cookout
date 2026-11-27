@@ -16,7 +16,7 @@ const schema = { properties: { branch: { type: "string" } }, required: ["branch"
 it.effect("an admin deletes a channel, and its messages, threads and inbox items go with it", () =>
   Effect.gen(function* deleteChannel() {
     const cookout = yield* TestCookout;
-    const bob = yield* cookout.createIdentity("bob");
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     yield* answer(() => cookout.client.createChannel({ description: "Grill it", name: "grill" }));
     yield* answer(() => bob.client.subscribe("grill"));
     const { message } = yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "@bob look" }));

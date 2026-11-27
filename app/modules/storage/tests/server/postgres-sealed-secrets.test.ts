@@ -32,7 +32,7 @@ const BEFORE_SECRETS_KEY = [
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "DROP TABLE secrets_key",
-  "UPDATE schema_version SET version = version - 6",
+  "UPDATE schema_version SET version = version - 7",
 ];
 const TRIGGER_TOKEN = triggerToken("routine-token-5d2a");
 const HEADERS = [{ name: "x-routine-key", value: "header-secret-7e10" }];

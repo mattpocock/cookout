@@ -404,11 +404,9 @@ The first gives `adaReply` with `["followed-thread"]` then `graceReply` with `["
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unfollow $(jq .thread /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts follow $(jq .thread /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts subscribe deploys
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unsubscribe deploys
 ```
 
-`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds the `deploys` top-level messages (`deployed`, `rollbackCall` and `oldBotPost`), each with `["subscribed-channel"]`.
+`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. Only people subscribe to channels ([ADR 0156](adr/0156-only-people-subscribe-to-channels.md)): `triage-agent`'s `subscribe` is refused with 403 `identity_kind`, and no agent's inbox lists a `subscribed-channel` item. A person's `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`, and after a subscribe their `inbox` adds the channel's new top-level messages, each with `["subscribed-channel"]`.
 
 `channel list --subscribed` lists only the caller's subscribed channels (`GET /v1/channels?subscribed=true`), sorted by name, in the `{ "channels" }` shape of `channel list`:
 
