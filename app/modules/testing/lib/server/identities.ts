@@ -1,7 +1,11 @@
-import type { Identity, IdentityName } from "../../../identities/index.ts";
+import { DateTime, Effect, Option } from "effect";
+import type { Identity, IdentityName, Token, TokenHash } from "../../../identities/index.ts";
+import { Storage, newPublicId } from "../../../storage/server.ts";
+import { currentTime, fixtureTime } from "./time.ts";
 import { firstAdminName, isIdentityName, isOwner } from "../../../identities/index.ts";
-import { Option } from "effect";
-import { fixtureTime } from "./time.ts";
+import { Identities } from "../../../identities/server.ts";
+import type { StorageUnavailable } from "../../../storage/server.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 
 type AgentFixtureOptions = { readonly kind?: "agent"; readonly owner?: string; readonly admin?: boolean };
 
@@ -25,15 +29,108 @@ function ownedByAdminUnlessNamed(options: IdentityFixtureOptions): IdentityFixtu
 
 const testCookoutAdminName = firstAdminName;
 
-export const identityName = nameOf;
+const identityName = nameOf;
 
-export type IdentityFixtureOptions = { readonly kind: "human"; readonly admin?: boolean } | AgentFixtureOptions;
+type IdentityFixtureOptions = { readonly kind: "human"; readonly admin?: boolean } | AgentFixtureOptions;
 
-export const identityFixture = (name: string, options: IdentityFixtureOptions = {}): Identity => {
+const identityFixture = (name: string, options: IdentityFixtureOptions = {}): Identity => {
   if (options.kind === "human") {
     return { admin: options.admin ?? false, createdAt: fixtureTime, kind: "human", name: nameOf(name) };
   }
   return agentFixture(name, options);
 };
 
-export { fixtureOwnerName, ownedByAdminUnlessNamed, testCookoutAdminName };
+type SeededCredential = "identity token" | "session or agent key";
+
+type CredentialNeeds = Storage | Identities;
+
+type Seeding = Effect.Effect<Token, StorageUnavailable, CredentialNeeds>;
+
+const ONE_AT_A_TIME = { concurrency: 1 } as const;
+const LOGIN_LINK_MINUTES = 15;
+const NO_USER_AGENT_WHERE = "web browser";
+const TEST_AGENT_KEY = "test";
+const asRoot = Option.getOrUndefined(Option.none<TokenHash>());
+
+function createdOrDie(created: string): Effect.Effect<void> {
+  const made = Option.liftPredicate(created, (result) => result === "created");
+  return Effect.orDie(Effect.asVoid(Effect.fromOption(made)));
+}
+
+function isRedeemed({ status }: { readonly status: string }): boolean {
+  return status === "redeemed";
+}
+
+function sessionFromLoginLink(identity: Identity): Seeding {
+  return Effect.gen(function* redeemTestLoginLink() {
+    const [storage, identities, now] = yield* Effect.all([Storage, Identities, currentTime], ONE_AT_A_TIME);
+    const [link, session] = yield* Effect.all([identities.issueToken, identities.issueToken], ONE_AT_A_TIME);
+    const expiresAt = isoTimeOf(DateTime.add(DateTime.makeUnsafe(now), { minutes: LOGIN_LINK_MINUTES }));
+    const { name } = identity;
+    yield* storage.addLoginLink({ createdAt: now, expiresAt, identity: name, linkHash: link.hash, parent: asRoot });
+    const redeemed = { credentialHash: session.hash, host: NO_USER_AGENT_WHERE, linkHash: link.hash, now };
+    const redemption = yield* storage.redeemLoginLink(redeemed);
+    yield* Effect.orDie(Effect.fromOption(Option.liftPredicate(redemption, isRedeemed)));
+    return session.token;
+  });
+}
+
+function agentKey(identity: Identity): Seeding {
+  return Effect.gen(function* makeTestAgentKey() {
+    const [storage, identities, now, publicId] = yield* Effect.all(
+      [Storage, Identities, currentTime, newPublicId],
+      ONE_AT_A_TIME,
+    );
+    const { hash, token } = yield* identities.issueToken;
+    const made = { expiresAt: Option.none(), hash, identity: identity.name, now, parent: asRoot, publicId };
+    yield* storage.createAgentKey({ ...made, name: TEST_AGENT_KEY });
+    return token;
+  });
+}
+
+const credentialOfKind: Record<Identity["kind"], (identity: Identity) => Seeding> = {
+  agent: agentKey,
+  human: sessionFromLoginLink,
+};
+
+function identityToken(identity: Identity): Seeding {
+  return Effect.gen(function* createWithIdentityToken() {
+    const storage = yield* Storage;
+    const { hash, token } = yield* Effect.flatMap(Identities, (identities) => identities.issueToken);
+    yield* Effect.flatMap(storage.createIdentity(identity, hash), createdOrDie);
+    return token;
+  });
+}
+
+function sessionOrAgentKey(identity: Identity): Seeding {
+  return Effect.gen(function* createWithSessionOrKey() {
+    const storage = yield* Storage;
+    yield* Effect.flatMap(storage.createIdentity(identity), createdOrDie);
+    return yield* credentialOfKind[identity.kind](identity);
+  });
+}
+
+const seededWith: Record<SeededCredential, (identity: Identity) => Seeding> = {
+  "identity token": identityToken,
+  "session or agent key": sessionOrAgentKey,
+};
+
+interface IdentitySeed {
+  readonly identity: Identity;
+  readonly credential: SeededCredential;
+}
+
+function seededIdentity({ credential, identity }: IdentitySeed): Seeding {
+  return seededWith[credential](identity);
+}
+
+export {
+  type IdentityFixtureOptions,
+  type SeededCredential,
+  fixtureOwnerName,
+  identityFixture,
+  identityName,
+  ownedByAdminUnlessNamed,
+  seededIdentity,
+  testCookoutAdminName,
+};
