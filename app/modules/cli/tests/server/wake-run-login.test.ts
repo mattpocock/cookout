@@ -117,3 +117,19 @@ it.effect(
       ]);
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("with COOKOUT_WAKE_RUN=1 and a saved Login, a verb that would send the Login is refused", () =>
+  Effect.gen(function* wakeRunMarked() {
+    const { home, on } = yield* boardWithAdasLogin;
+    const env = { COOKOUT_URL: on.url, COOKOUT_WAKE_RUN: "1", HOME: home };
+
+    const created = yield* runCookout({
+      args: ["identity", "create", "dora", "--kind", "agent", "--display-name", "Dora"],
+      env,
+    });
+    const unmarked = yield* runCookout({ args: ["whoami"], env: { ...env, COOKOUT_WAKE_RUN: "" } });
+
+    expect(created).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "wake_run_no_login" } } });
+    expect(unmarked).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "ada" }, source: "login" } });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

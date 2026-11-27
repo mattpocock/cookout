@@ -143,3 +143,17 @@ it.effect.each([
       expect(collected).toMatchObject({ status: "pending" });
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("login approve in a wake run is refused with approval_in_harness, and the request stays unapproved", () =>
+  Effect.gen(function* approveInWakeRun() {
+    const { ada, cookout, first } = yield* twoMachines;
+    yield* logInByBrowser(first, ada);
+    const started = yield* answer(() => cookout.clientFor().startLogin(FIRST_LOGIN));
+
+    const refused = yield* run({ ...first, COOKOUT_WAKE_RUN: "1" }, "login", "approve", started.userCode);
+    const collected = yield* answer(() => cookout.clientFor().collectLogin(started.requestId));
+
+    expect(refused).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "approval_in_harness" } } });
+    expect(collected).toMatchObject({ status: "pending" });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
