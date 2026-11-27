@@ -4,8 +4,24 @@ import { useCallback } from "react";
 import { useFocusOnOpen } from "./focus-on-open.ts";
 import { useKeptFocus } from "./use-kept-focus.ts";
 
-export function Button(parts: ButtonParts): ReactNode {
+type ButtonTone = "solid" | "quiet" | "destructive";
+
+const SHAPE =
+  "self-start rounded-md border text-xs font-medium transition-opacity disabled:opacity-50 aria-disabled:opacity-50";
+
+const LOOKS: Readonly<Record<ButtonTone, string>> = {
+  destructive: `${SHAPE} border-transparent px-2 py-1 text-destructive hover:bg-destructive/10`,
+  quiet: `${SHAPE} border-transparent px-2 py-1 text-muted-foreground hover:bg-muted hover:text-foreground`,
+  solid: `${SHAPE} bg-foreground px-3 py-1.5 text-background hover:opacity-90`,
+};
+
+interface TonedButtonParts extends ButtonParts {
+  readonly tone?: ButtonTone;
+}
+
+export function Button(parts: TonedButtonParts): ReactNode {
   const { onClick, unavailable } = parts;
+  const tone = parts.tone ?? "solid";
   const button = useFocusOnOpen<HTMLButtonElement>(parts.focused === true);
   const handleClick = useCallback(() => {
     if (unavailable !== true) {
@@ -15,8 +31,9 @@ export function Button(parts: ButtonParts): ReactNode {
   useKeptFocus(parts.disabled === true);
   return (
     <button
-      className="self-start rounded-md border bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50 aria-disabled:opacity-50"
+      className={LOOKS[tone]}
       aria-disabled={unavailable}
+      data-tone={tone}
       disabled={parts.disabled}
       onClick={handleClick}
       ref={button}

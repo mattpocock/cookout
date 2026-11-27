@@ -2,9 +2,9 @@ import {
   LIST,
   buttonsOf,
   channelMade,
-  linesOf,
   listDialog,
   listOpened,
+  listedLines,
   made,
   pressedIn,
   rowOf,
@@ -17,6 +17,7 @@ import { createTestAgent } from "../../testing/index.ts";
 
 const EDIT = "Edit a scheduled message";
 const CONTROLS = ["Pause", "Edit", "Delete"] as const;
+const LONG = 12;
 
 async function deactivatedMaker(channel: string): Promise<void> {
   const maker = await newIdentity({ kind: "human", name: `${channel}-maker` });
@@ -39,7 +40,7 @@ async function fieldsBoard(channel: string): Promise<void> {
   await deactivatedMaker(channel);
 }
 
-it("the channel menu's Scheduled messages lists the channel's schedules with their timing, zone, next run, creator and state", {
+it("the channel menu's Scheduled messages lists the channel's schedules, soonest next run first and paused ones last, each led by its timing", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -47,41 +48,44 @@ it("the channel menu's Scheduled messages lists the channel's schedules with the
   const channel = "web-schedule-list-fields";
   await fieldsBoard(channel);
   const close = await listOpened({ channel, client: adminClient() });
-  const shown = await Promise.all(
-    ["Standup", "Deploy window", "Invoices", "Midsummer", "Their standup"].map(async (text) => {
-      const lines = await linesOf(text);
-      return lines;
-    }),
-  );
+  await rowOf("Their standup");
+  const description = within(listDialog()).getByText(`Messages that post into #${channel} on a schedule.`);
 
-  expect(shown).toStrictEqual([
+  expect([description.textContent, await listedLines(channel)]).toStrictEqual([
+    `Messages that post into #${channel} on a schedule.`,
     [
-      "Standup",
-      "Weekdays at 09:00 (0 9 * * 1-5)",
-      expect.stringMatching(/^Next run \w{3}, .+, 09:00 · UTC$/u),
-      "Created by @admin",
-    ],
-    [
-      "Deploy window",
-      "Once, at Mon, 1 Jun 2099, 09:30",
-      "Next run Mon, 1 Jun 2099, 09:30 · Europe/London",
-      "Created by @admin",
-    ],
-    ["Invoices", "On day 1 of every month at 08:15 (15 8 1 * *)", "No next run · UTC", "Created by @admin", "Paused"],
-    [
-      "Midsummer",
-      "Cron 0 9 21 6 *",
-      expect.stringMatching(/^Next run \w{3}, 21 Jun \d{4}, 09:00 · UTC$/u),
-      "Created by @admin",
-    ],
-    [
-      "Their standup",
-      "Every day at 09:00 (0 9 * * *)",
-      "No next run · UTC",
-      `Created by @${channel}-maker`,
-      "Paused: its creator was deactivated",
+      ["Weekdays · 09:00", "Standup", expect.stringMatching(/^Next \w{3} \d{1,2} \w{3}, 09:00 UTC · by @admin$/u)],
+      ["Cron 0 9 21 6 *", "Midsummer", expect.stringMatching(/^Next \w{3} 21 Jun, 09:00 UTC · by @admin$/u)],
+      ["Once · Mon, 1 Jun 2099, 09:30", "Deploy window", "Next Mon 1 Jun, 09:30 Europe/London · by @admin"],
+      ["Paused · Day 1 of each month · 08:15", "Invoices", "No next run · UTC · by @admin"],
+      [
+        "Paused: its creator was deactivated · Every day · 09:00",
+        "Their standup",
+        `No next run · UTC · by @${channel}-maker`,
+      ],
     ],
   ]);
+
+  close();
+});
+
+it("a schedule's text shows as a message does, clamped to two lines with the whole text as its tooltip", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-text";
+  await channelMade(channel);
+  const text = `Morning **all**, @admin: ${"the standup notes are in the doc. ".repeat(LONG).trimEnd()}`;
+  await made({ by: adminClient(), channel, text });
+  const close = await listOpened({ channel, client: adminClient() });
+  const shown = await within(listDialog()).findByTitle(text);
+
+  expect([
+    shown.classList.contains("line-clamp-2"),
+    within(shown).getByText("all").tagName,
+    within(shown).getByRole("link", { name: "@admin" }).getAttribute("href"),
+  ]).toStrictEqual([true, "STRONG", expect.stringMatching(/admin$/u)]);
 
   close();
 });
@@ -215,6 +219,20 @@ it("its creator pauses, resumes, edits (in the composer's dialog, filled in) and
     [{ cron: "30 9 * * 1", text: "Retro, in the big room" }],
     `Nothing is scheduled in #${channel}.`,
   ]);
+
+  close();
+});
+
+it("a schedule's actions are quiet buttons, with Delete in the destructive tone", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-tones";
+  const client = await retroBy(channel);
+  const close = await listOpened({ channel, client });
+  const row = await rowOf("Retro");
+  const tones = CONTROLS.map((name) => within(row).getByRole("button", { name }).dataset["tone"]);
+
+  expect(tones).toStrictEqual(["quiet", "quiet", "destructive"]);
 
   close();
 });

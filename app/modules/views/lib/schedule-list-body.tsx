@@ -3,6 +3,7 @@ import type { ChannelName, Identity } from "../../sdk/index.ts";
 import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
 import type { ReactNode } from "react";
 import { ScheduleListRow } from "./schedule-list-row.tsx";
+import { soonestFirst } from "./schedule-facts.ts";
 import { useChannelSchedules } from "./use-board.ts";
 
 const NONE = 0;
@@ -35,7 +36,7 @@ export function ScheduleListBody(props: ScheduleListBodyProps): ReactNode {
   }
   return (
     <ItemList label={TEXT.label(channel)}>
-      {listed.schedules.map((schedule) => (
+      {soonestFirst(listed.schedules).map((schedule) => (
         <ScheduleListRow
           key={schedule.id}
           me={props.me}
