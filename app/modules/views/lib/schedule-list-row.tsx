@@ -1,10 +1,12 @@
-import { CurrentItemRow, Muted, Tag } from "../../design-system/content.tsx";
+import { Alert, CurrentItemRow, Muted } from "../../design-system/content.tsx";
 import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
-import { mayChange, nextRunWords, stateWords, timingWords } from "./schedule-facts.ts";
+import { detailWords, headingWords, mayChange } from "./schedule-facts.ts";
 import type { Identity } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { ScheduleControls } from "./schedule-controls.tsx";
+import { ScheduleText } from "./schedule-text.tsx";
 import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
+import { failureOf } from "./schedule-failure.ts";
 
 interface ScheduleListRowProps {
   readonly me: Identity;
@@ -15,27 +17,24 @@ interface ScheduleListRowProps {
 }
 
 export function ScheduleListRow(props: ScheduleListRowProps): ReactNode {
-  const { schedule } = props;
-  const shownState = stateWords(schedule);
+  const { schedule, state } = props;
+  const failure = failureOf({ schedule, state });
   return (
-    <CurrentItemRow current={props.state.selected === schedule.id}>
-      <p className="text-sm break-words whitespace-pre-wrap">{schedule.text}</p>
-      <Muted>{timingWords(schedule)}</Muted>
-      <Muted>{nextRunWords(schedule)}</Muted>
-      <Muted>{`Created by @${schedule.creator.name}`}</Muted>
-      {shownState !== null && (
-        <div>
-          <Tag label={shownState} />
-        </div>
-      )}
-      {mayChange({ me: props.me, schedule }) && (
-        <ScheduleControls
-          schedule={schedule}
-          scheduleList={props.scheduleList}
-          scheduling={props.scheduling}
-          state={props.state}
-        />
-      )}
+    <CurrentItemRow current={state.selected === schedule.id}>
+      <div className="flex min-h-7 items-center justify-between gap-2">
+        <p className="text-sm font-medium">{headingWords(schedule)}</p>
+        {mayChange({ me: props.me, schedule }) && (
+          <ScheduleControls
+            schedule={schedule}
+            scheduleList={props.scheduleList}
+            scheduling={props.scheduling}
+            state={state}
+          />
+        )}
+      </div>
+      <ScheduleText me={props.me.name} schedule={schedule} />
+      <Muted>{detailWords(schedule)}</Muted>
+      {failure !== null && <Alert>{failure}</Alert>}
     </CurrentItemRow>
   );
 }

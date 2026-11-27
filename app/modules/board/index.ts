@@ -45,7 +45,7 @@
  * remove) apply each answer as that event, and a refusal rejects the promise and changes nothing. All four are read
  * again on a link back while shown. `createScheduleList` holds which channel's schedules the list shows, which one is
  * selected, the delete being confirmed and each change asked (one at a time, keeping a refusal on its schedule), and
- * `cronWords(cron)` writes a cron expression in words, such as `Weekdays at 09:00`, or `null` when it has none.
+ * `cronWords(cron)` writes a cron expression as a short heading, such as `Weekdays · 09:00` or `Mon and Thu · 09:00`, or `null` when it has none.
  *
  * Messages are one table by ID. `channelPages.subscribeShowing(name)` shows a channel's page (`channelPage(name)`):
  * its first reader reads the newest page and acks its newest message, so viewing a channel counts as reading it; while
