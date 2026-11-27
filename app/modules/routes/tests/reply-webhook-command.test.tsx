@@ -1,3 +1,4 @@
+import { addWebhookCommand, noProperties } from "./webhook-commands.ts";
 import {
   callForms,
   newestIn,
@@ -9,7 +10,6 @@ import {
 } from "./reply-webhook-commands.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
-import { addWebhookCommand } from "./webhook-commands.ts";
 import { inThread } from "./regions.ts";
 
 type Replying = ReturnType<typeof replyingIn>;
@@ -165,6 +165,31 @@ it("a refused call from the reply box keeps the typed value and shows the refusa
     within(channelBox()).getByLabelText<HTMLTextAreaElement>("Message").value,
     await threadTexts(parent),
   ]).toStrictEqual(["ab", true, ONE_FORM, null, "", []]);
+
+  await close();
+});
+
+it("data that isn't JSON in a reply box's call form is refused there before it is sent", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { parent } = await threadWithWebhookCommand({
+    channel: "web-reply-not-json",
+    webhookCommand: { name: "web-reply-not-json", schema: noProperties },
+  });
+  const close = await openReplying({ hash: threadHash("web-reply-not-json", parent), region: inThread() });
+
+  const prompt = await replyingIn(inThread()).pick("web-reply-not-json");
+  fireEvent.change(within(prompt).getByLabelText("Data"), { target: { value: "{not json" } });
+  fireEvent.click(within(prompt).getByRole("button", { name: "Call" }));
+  const alert = await within(prompt).findByRole("alert");
+
+  expect([
+    alert.textContent.includes("The data isn't JSON."),
+    within(prompt).getByLabelText<HTMLTextAreaElement>("Data").value,
+    await threadTexts(parent),
+  ]).toStrictEqual([true, "{not json", []]);
 
   await close();
 });
