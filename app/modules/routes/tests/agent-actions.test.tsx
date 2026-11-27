@@ -1,9 +1,8 @@
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { expect, it, onTestFinished, vi } from "vitest";
+import { expect, it } from "vitest";
 import { inDialog, inSettings, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import type { Mock } from "vitest";
 import { alertSaying } from "./alerts.ts";
 import { openAt } from "./render.tsx";
 import { refusalOf } from "../../sdk/index.ts";
@@ -45,11 +44,6 @@ async function pressAndAnswer(name: string, button: string, answer: string): Pro
   await confirmWith(answer);
 }
 
-async function shownToken(name: string): Promise<string> {
-  const token = await within(await agentCard(name)).findByLabelText("New Identity token");
-  return token.textContent;
-}
-
 async function refusalWith(client: CookoutClient): Promise<string> {
   try {
     await client.whoami();
@@ -66,33 +60,16 @@ async function joinedSession(aide: CookoutClient, name: string): Promise<Cookout
   return session;
 }
 
-async function nameWith(token: string): Promise<string> {
-  const { identity } = await clientWith(token).whoami();
-  return identity.name;
-}
-
-async function rotateIn(name: string): Promise<string> {
-  await press(name, "Rotate token");
-  await confirmWith("Rotate token");
-  const token = await shownToken(name);
-  return token;
+async function rotateOn(name: string): Promise<HTMLElement | null> {
+  const card = await agentCard(name);
+  await within(card).findByRole("button", { name: "Make key" });
+  return within(card).queryByRole("button", { name: "Rotate token" });
 }
 
 async function profileAs(client: CookoutClient, name: string): Promise<HTMLElement> {
   openAt({ client, hash: `#/people/${name}` });
   const panel = await screen.findByRole("complementary", { name: "Profile" });
   return panel;
-}
-
-function stubClipboard(): Mock<(text: string) => Promise<void>> {
-  const writeText = vi.fn<(text: string) => Promise<void>>(async () => {
-    await Promise.resolve();
-  });
-  Object.defineProperty(globalThis.navigator, "clipboard", { configurable: true, value: { writeText } });
-  onTestFinished(() => {
-    Reflect.deleteProperty(globalThis.navigator, "clipboard");
-  });
-  return writeText;
 }
 
 async function submitIn(label: string, text: string): Promise<void> {
@@ -125,27 +102,17 @@ it("settings lists your agents with their live session, and Revoke ends it", { t
   close();
 });
 
-it("rotate shows the new token once, and the old one is refused", { timeout: 5000 }, async () => {
+it("an agent's card and profile offer no Rotate token", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { aide, human } = await crewOf("web-mine-rotate");
+  const { human } = await crewOf("web-mine-norotate");
   const close = await openSettings(human);
-  const token = await rotateIn("web-mine-rotate-bot");
-  const card = await agentCard("web-mine-rotate-bot");
-  const warning = within(card).getByText(/old token stops working/u).textContent;
-  fireEvent.click(within(card).getByRole("button", { name: "Done" }));
+  const onCard = await rotateOn("web-mine-norotate-bot");
+  cleanup();
+  const panel = await profileAs(human, "web-mine-norotate-bot");
+  await within(panel).findByRole("button", { name: "Make key" });
 
-  expect([
-    await refusalWith(aide),
-    await nameWith(token),
-    warning,
-    within(card).queryByLabelText("New Identity token"),
-  ]).toStrictEqual([
-    "token_revoked",
-    "web-mine-rotate-bot",
-    "Copy it now: it isn't shown again, and the old token stops working.",
-    null,
-  ]);
+  expect([onCard, within(panel).queryAllByRole("button", { name: "Rotate token" })]).toStrictEqual([null, []]);
 
   close();
 });
@@ -192,7 +159,7 @@ it("on a profile, the owner gets the agent's actions without Transfer, and other
   const { human } = await crewOf("web-mine-who");
   const other = await newIdentity({ kind: "human", name: "web-mine-who-other" });
   const ownerPanel = await profileAs(human, "web-mine-who-bot");
-  await within(ownerPanel).findByRole("button", { name: "Rotate token" });
+  await within(ownerPanel).findByRole("button", { name: "Deactivate" });
   const ownerForms = within(ownerPanel).queryAllByRole("form", { name: /^Transfer/u });
   cleanup();
   const otherPanel = await profileAs(other.client, "web-mine-who-bot");
@@ -201,20 +168,6 @@ it("on a profile, the owner gets the agent's actions without Transfer, and other
   await waitFor(() => {
     expect([ownerForms, within(otherPanel).queryAllByRole("button")]).toStrictEqual([[], []]);
   });
-});
-
-it("copy token puts the new token on the clipboard", { timeout: 5000 }, async () => {
-  expect.hasAssertions();
-
-  const writeText = stubClipboard();
-  const { human } = await crewOf("web-mine-copy");
-  const close = await openSettings(human);
-  const token = await rotateIn("web-mine-copy-bot");
-  await press("web-mine-copy-bot", "Copy token");
-
-  expect(writeText).toHaveBeenCalledWith(token);
-
-  close();
 });
 
 it("a session not yet used shows when it joined, and Cancel keeps the agent active", { timeout: 5000 }, async () => {
@@ -250,7 +203,7 @@ it("a session list the server refuses shows no session and no Revoke", { timeout
   };
   const close = await openSettings(refusing);
   const card = await agentCard("web-mine-unlisted-bot");
-  await within(card).findByRole("button", { name: "Rotate token" });
+  await within(card).findByRole("button", { name: "Deactivate" });
 
   expect([
     within(card).queryByText(/session/u),

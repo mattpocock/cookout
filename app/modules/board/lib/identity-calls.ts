@@ -52,7 +52,6 @@ interface IdentityCalls {
   readonly listKeys: (name: IdentityName) => Promise<readonly AgentKeyView[]>;
   readonly makeKey: (name: IdentityName, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
   readonly revokeKey: (name: IdentityName, key: AgentKeyView["id"]) => Promise<void>;
-  readonly rotateToken: (name: IdentityName) => Promise<Token>;
   readonly sendLoginLink: (name: IdentityName) => Promise<LoginLinkResponse>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
   readonly listPersonSessions: (name: IdentityName) => Promise<readonly SessionView[]>;
@@ -181,19 +180,6 @@ function keyCalls({ client }: IdentityCallsOptions): Pick<IdentityCalls, "listKe
   };
 }
 
-const WEB_KEY = "web";
-
-async function newWebKey(client: IdentityCallsClient, name: IdentityName): Promise<Token> {
-  const { agentKeys } = await client.listAgentKeys(name);
-  await Promise.all(
-    agentKeys.map(async ({ id }) => {
-      await client.revokeAgentKey(name, id);
-    }),
-  );
-  const { token } = await client.createAgentKey(name, { name: WEB_KEY });
-  return token;
-}
-
 function personSessionCalls({
   client,
 }: IdentityCallsOptions): Pick<IdentityCalls, "listPersonSessions" | "revokePersonSession"> {
@@ -231,10 +217,6 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
     revokeSession: async (name) => {
       await client.revokeAgentSession(name);
       sessions.put(name, []);
-    },
-    rotateToken: async (name) => {
-      const key = await newWebKey(client, name);
-      return key;
     },
     sendLoginLink: async (name) => {
       const made = await client.createLoginLink(name);

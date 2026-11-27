@@ -41,9 +41,9 @@
  * `avatar(name)` is an avatar picked and not saved yet (#560): `choose` refuses a file over 2 MB or, after `options.crop`, not an image, else keeps the 256 px PNG with a `data:` URL to preview;
  * `save` sends it and saves as `description` does, and `cancel` forgets it. `canvasAvatarCrop` is the page's crop.
  * `identities.actions(name)` is what an agent's owner or an admin does to
- * that identity: rotate its token, list and revoke its agent session (the board store's agent sessions for it, shown while `subscribeToSessions` has a reader),
+ * that identity: list and revoke its agent session (the board store's agent sessions for it, shown while `subscribeToSessions` has a reader),
  * deactivate it, reactivate it, delete it and transfer it. Each is asked
- * first (`ask.rotate()` and so on puts it in `confirming`), runs on `confirm`
+ * first (`ask.deactivate()` and so on puts it in `confirming`), runs on `confirm`
  * and stays `confirming` while it runs and if the server refuses it, so the
  * question stays open with the refusal kept as `action`; it closes once the
  * action succeeds, or on `cancel`, which does nothing while it runs and keeps a refusal as `action` until the next ask,
