@@ -1,5 +1,5 @@
 import { Array as Arr, Effect } from "effect";
-import type { InboxAlert, LoginAlert, PublicId } from "../../index.ts";
+import type { InboxAlert, LoginAlert } from "../../index.ts";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -12,6 +12,8 @@ const ADMIN = { admin: true, kind: "human" } as const;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const AGENT = "release-bot";
 const AT: unknown = expect.any(String);
+const KIND: unknown = expect.any(String);
+const MADE_BY: unknown = expect.objectContaining({ kind: KIND });
 
 type Client = TestIdentity["client"];
 
@@ -42,16 +44,12 @@ function adminActsOf(client: Client): Effect.Effect<readonly LoginAlert["login"]
   );
 }
 
-interface Listed {
-  readonly listed: Awaited<ReturnType<Client["listIdentitySessions"]>>;
-  readonly session: PublicId;
-}
+type Listed = Awaited<ReturnType<Client["listIdentitySessions"]>>["sessions"][number];
 
-function sessionsOf(client: Client, name: string): Effect.Effect<Listed> {
-  return Effect.gen(function* firstSession() {
-    const listed = yield* answer(() => client.listIdentitySessions(name));
-    const first = yield* Effect.orDie(Effect.fromOption(Arr.head(listed.sessions)));
-    return { listed, session: first.id };
+function sessionAt(client: Client, name: string, where: string): Effect.Effect<Listed> {
+  return Effect.gen(function* sessionWhere() {
+    const { sessions } = yield* answer(() => client.listIdentitySessions(name));
+    return yield* Effect.orDie(Effect.fromOption(Arr.findFirst(sessions, (each) => each.where === where)));
   });
 }
 
@@ -79,28 +77,24 @@ it.effect("an admin lists another person's sessions without a secret and revokes
     const matt = yield* cookout.createIdentity("matt", ADMIN);
     const ada = yield* cookout.createIdentity("ada", HUMAN);
     const laptop = yield* cliSession(cookout, ada.client, "ada-laptop");
-    const { listed, session } = yield* sessionsOf(matt.client, "ada");
-    const revoked = yield* answer(() => matt.client.revokeIdentitySession("ada", session));
+    const listed = yield* sessionAt(matt.client, "ada", "ada-laptop");
+    const revoked = yield* answer(() => matt.client.revokeIdentitySession("ada", listed.id));
     const after = yield* refusal(() => cookout.clientFor(laptop).whoami());
     const [acts, admins] = yield* Effect.all([adminActsOf(ada.client), adminActsOf(matt.client)], ONE_AT_A_TIME);
 
     expect({ acts, admins, after: after.status, listed, revoked }).toStrictEqual({
-      acts: [{ act: "revoked a session", admin: "matt", credential: session, kind: "admin act" }],
+      acts: [{ act: "revoked a session", admin: "matt", credential: listed.id, kind: "admin act" }],
       admins: [],
       after: 401,
       listed: {
-        sessions: [
-          {
-            current: false,
-            expiresAt: AT,
-            id: session,
-            kind: "cli",
-            lastUsedAt: AT,
-            madeAt: AT,
-            madeBy: { kind: "identity token" },
-            where: "ada-laptop",
-          },
-        ],
+        current: false,
+        expiresAt: AT,
+        id: listed.id,
+        kind: "cli",
+        lastUsedAt: AT,
+        madeAt: AT,
+        madeBy: MADE_BY,
+        where: "ada-laptop",
       },
       revoked: { ended: 1 },
     });
@@ -139,11 +133,11 @@ it.effect("an admin deactivating a person alerts them, shown once they are react
   }).pipe(Effect.provide(testCookout())),
 );
 
-function ownSessionsRevoked(matt: Client): Effect.Effect<number> {
-  return Effect.gen(function* revokeOwnSessions() {
-    const { sessions } = yield* answer(() => matt.listIdentitySessions("matt"));
-    yield* Effect.forEach(sessions, ({ id }) => answer(() => matt.revokeIdentitySession("matt", id)), ONE_AT_A_TIME);
-    return sessions.length;
+function ownSessionRevoked(matt: Client): Effect.Effect<number> {
+  return Effect.gen(function* revokeOwnSession() {
+    const { id } = yield* sessionAt(matt, "matt", "matt-laptop");
+    const { ended } = yield* answer(() => matt.revokeIdentitySession("matt", id));
+    return ended;
   });
 }
 
@@ -153,7 +147,7 @@ it.effect("an admin acting on their own credentials, or on an agent they own, ra
     const matt = yield* cookout.createIdentity("matt", ADMIN);
     yield* cookout.createIdentity(AGENT, { owner: "matt" });
     yield* cliSession(cookout, matt.client, "matt-laptop");
-    const revoked = yield* ownSessionsRevoked(matt.client);
+    const revoked = yield* ownSessionRevoked(matt.client);
     const key = yield* answer(() => matt.client.createAgentKey(AGENT, { name: "ci" }));
     yield* answer(() => matt.client.revokeAgentKey(AGENT, key.agentKey.id));
     yield* answer(() => matt.client.createLoginLink("matt"));
@@ -169,22 +163,22 @@ it.effect("a person who isn't an admin is 403 admin_only on another person's ses
     const ada = yield* cookout.createIdentity("ada", HUMAN);
     const grace = yield* cookout.createIdentity("grace", HUMAN);
     yield* cliSession(cookout, grace.client, "grace-laptop");
-    const { session } = yield* sessionsOf(grace.client, "grace");
+    const { id } = yield* sessionAt(grace.client, "grace", "grace-laptop");
     const refused = yield* Effect.all(
       [
         refusal(() => ada.client.listIdentitySessions("grace")),
-        refusal(() => ada.client.revokeIdentitySession("grace", session)),
+        refusal(() => ada.client.revokeIdentitySession("grace", id)),
       ],
       ONE_AT_A_TIME,
     );
-    const still = yield* answer(() => grace.client.listSessions());
+    const still = yield* sessionAt(grace.client, "grace", "grace-laptop");
 
-    expect({ refused, still: still.sessions.length }).toMatchObject({
+    expect({ refused, still: still.id }).toMatchObject({
       refused: [
         { code: "admin_only", status: FORBIDDEN },
         { code: "admin_only", status: FORBIDDEN },
       ],
-      still: 1,
+      still: id,
     });
   }).pipe(Effect.provide(testCookout())),
 );

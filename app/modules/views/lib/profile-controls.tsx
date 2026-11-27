@@ -1,7 +1,8 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { actionableBy, adminChangeableBy } from "./profile-rights.ts";
+import { actionableBy, manageShownTo, sessionsOverseenBy } from "./profile-rights.ts";
 import type { Identities } from "../../composer/index.ts";
 import { ProfileManage } from "./profile-manage.tsx";
+import { ProfilePersonSessions } from "./profile-person-sessions.tsx";
 import { ProfileSession } from "./profile-session.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
@@ -22,7 +23,8 @@ export function ProfileControls(props: ProfileControlsProps): ReactNode {
       {actionable && identity.kind === "agent" && (
         <ProfileSession actions={identities.actions(identity.name)} active={identity.deactivated !== true} />
       )}
-      {(actionable || adminChangeableBy(viewing)) && (
+      {sessionsOverseenBy(viewing) && <ProfilePersonSessions sessionList={identities.sessionList(identity.name)} />}
+      {manageShownTo(viewing) && (
         <ProfileManage actionable={actionable} identities={identities} identity={identity} me={me} />
       )}
     </>

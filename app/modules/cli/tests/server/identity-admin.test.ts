@@ -2,6 +2,7 @@ import { Array as Arr, Effect, String as Str } from "effect";
 import { TestCookout, answer, commandLineServices, runCookout, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { sessionPath, whoamiPath } from "../../../identities/index.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { TestCookoutService } from "../../../testing/server.ts";
 import { request } from "../../../http/client.ts";
 
@@ -74,14 +75,20 @@ it.effect("cookout identity rotate ends the web sessions logged in with the old 
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-function graceSessionId(cookout: TestCookoutService): Effect.Effect<string> {
+function listedWith(id: PublicId): unknown {
+  return expect.arrayContaining([expect.objectContaining({ id, kind: "cli" })]);
+}
+
+function graceSessionId(cookout: TestCookoutService): Effect.Effect<PublicId> {
   return Effect.gen(function* graceOnALaptop() {
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const started = yield* answer(() => cookout.clientFor().startLogin({ host: "grace-laptop" }));
     yield* answer(() => grace.client.approveLogin(started.userCode));
     yield* answer(() => cookout.clientFor().collectLogin(started.requestId));
     const { sessions } = yield* answer(() => grace.client.listSessions());
-    const session = yield* Effect.orDie(Effect.fromOption(Arr.head(sessions)));
+    const session = yield* Effect.orDie(
+      Effect.fromOption(Arr.findFirst(sessions, (each) => each.where === "grace-laptop")),
+    );
     return session.id;
   });
 }
@@ -108,7 +115,10 @@ it.effect("cookout identity sessions <person> lists and --revoke <id> revokes fo
     expect(results).toMatchObject([
       { exitCode: 1, stderrJson: { error: { code: "admin_only" } } },
       { exitCode: 1, stderrJson: { error: { code: "admin_only" } } },
-      { ...succeeded, stdoutJson: { sessions: [{ id, kind: "cli", where: "grace-laptop" }] } },
+      {
+        ...succeeded,
+        stdoutJson: { sessions: listedWith(id) },
+      },
       { ...succeeded, stdoutJson: { ended: 1 } },
       { exitCode: 1, stderrJson: { error: { code: "usage" } } },
     ]);

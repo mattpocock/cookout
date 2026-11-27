@@ -1,5 +1,6 @@
 import type { CookoutClient, Identity, IdentityName, SetTriggerRequest, Token, Trigger } from "../../sdk/index.ts";
 import type { Identities, IdentityChange } from "./identities-slice.ts";
+import type { PublicId, SessionView } from "../../logins/index.ts";
 import type { Part } from "./slice.ts";
 import type { SessionsPart } from "./agent-sessions-part.ts";
 
@@ -14,6 +15,7 @@ type IdentityCallsClient = Pick<
   | "deleteIdentity"
   | "getTrigger"
   | "listAgentKeys"
+  | "listIdentitySessions"
   | "makeAdmin"
   | "makeFeeder"
   | "reactivateIdentity"
@@ -21,6 +23,7 @@ type IdentityCallsClient = Pick<
   | "removeFeeder"
   | "revokeAgentKey"
   | "revokeAgentSession"
+  | "revokeIdentitySession"
   | "setAvatar"
   | "setDescription"
   | "setDisplayName"
@@ -50,6 +53,8 @@ interface IdentityCalls {
   readonly rotateToken: (name: IdentityName) => Promise<Token>;
   readonly sendLoginLink: (name: IdentityName) => Promise<LoginLinkResponse>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
+  readonly listPersonSessions: (name: IdentityName) => Promise<readonly SessionView[]>;
+  readonly revokePersonSession: (name: IdentityName, id: PublicId) => Promise<void>;
   readonly deactivate: (name: IdentityName) => Promise<void>;
   readonly reactivate: (name: IdentityName) => Promise<Token | null>;
   readonly delete: (name: IdentityName) => Promise<void>;
@@ -171,6 +176,20 @@ async function newWebKey(client: IdentityCallsClient, name: IdentityName): Promi
   return token;
 }
 
+function personSessionCalls({
+  client,
+}: IdentityCallsOptions): Pick<IdentityCalls, "listPersonSessions" | "revokePersonSession"> {
+  return {
+    listPersonSessions: async (name) => {
+      const { sessions } = await client.listIdentitySessions(name);
+      return sessions;
+    },
+    revokePersonSession: async (name, id) => {
+      await client.revokeIdentitySession(name, id);
+    },
+  };
+}
+
 function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
   const { client, identities, sessions } = options;
   function put(identity: Identity): void {
@@ -180,6 +199,7 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
     ...textCalls(options, put),
     ...lifeCalls(options, put),
     ...triggerCalls(options),
+    ...personSessionCalls(options),
     countMessages: async (name) => {
       const { messages } = await client.countMessagesBy(name);
       return messages;

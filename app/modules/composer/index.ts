@@ -87,6 +87,7 @@ import { storeIn, withAttachments } from "./lib/draft.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
 import type { PendingAttachments } from "./lib/draft.ts";
+import type { SessionList } from "../board/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
@@ -221,10 +222,9 @@ export interface Identities extends AdminChanges {
   readonly actions: (name: IdentityName) => IdentityActions;
   /** Creating an agent the caller owns. */
   readonly creation: AgentCreation;
-  /**
-   * The identity just deleted elsewhere whose open profile closed, for a notice, until `dismiss`: `null` if none.
-   * With `live`, an identity deleted elsewhere leaves the list at once, and a profile open on it closes.
-   */
+  /** A person's live sessions, as their profile shows an admin, each with Revoke (ADR 0161): the same store each time for one name. */
+  readonly sessionList: (name: IdentityName) => SessionList;
+  /** The identity just deleted elsewhere whose open profile closed, for a notice, until `dismiss` (`null` if none); with `live`, it leaves the list at once and the profile closes. */
   readonly deletion: Pick<IdentityDeletion, "dismiss" | "snapshot" | "subscribe">;
 }
 
