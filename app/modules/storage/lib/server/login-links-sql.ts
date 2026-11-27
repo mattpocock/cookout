@@ -1,8 +1,9 @@
 import { Effect, Option, Schema } from "effect";
-import type { LoginLinkRedemption, LoginLinksSection, RedeemLoginLink } from "./login-links.ts";
+import type { LoginLinkRedemption, LoginLinksSection, NewLoginLink, RedeemLoginLink } from "./login-links.ts";
 import { credentialIn, rowOf } from "./login-credential-lookup-sqlite.ts";
 import { linkGone, linkRedeemed } from "./login-links.ts";
 import type { Fails } from "./errors.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
 import { isFalse } from "./adapters/sql-database.ts";
 import { isIdentityName } from "../../../identities/index.ts";
@@ -56,17 +57,18 @@ function issueFrom({ db, publicId, redeem }: Redeeming) {
     });
 }
 
+function linkAdded(db: SqlDatabase, link: NewLoginLink, publicId: PublicId): Fails<PublicId> {
+  const { createdAt, expiresAt, identity, linkHash, parent } = link;
+  return Effect.gen(function* addLink() {
+    yield* db.run(INSERT_LINK, linkHash, identity, createdAt, expiresAt);
+    yield* lineageIn(db).record({ hash: linkHash, identity, kind: "login link", madeAt: createdAt, parent, publicId });
+    return publicId;
+  });
+}
+
 function sqlLoginLinks(db: SqlDatabase): LoginLinksSection {
   return {
-    addLoginLink: ({ createdAt, expiresAt, identity, linkHash, parent }) =>
-      Effect.flatMap(newPublicId, (publicId) =>
-        db.transaction(
-          Effect.andThen(
-            db.run(INSERT_LINK, linkHash, identity, createdAt, expiresAt),
-            lineageIn(db).record({ hash: linkHash, identity, kind: "login link", madeAt: createdAt, parent, publicId }),
-          ),
-        ),
-      ),
+    addLoginLink: (link) => Effect.flatMap(newPublicId, (publicId) => db.transaction(linkAdded(db, link, publicId))),
     redeemLoginLink: (redeem) =>
       Effect.flatMap(newPublicId, (publicId) =>
         db.transaction(

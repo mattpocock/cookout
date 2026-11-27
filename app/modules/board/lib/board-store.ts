@@ -4,6 +4,7 @@ import type {
   IdentityCalls,
   IdentityParts,
   IdentityPartsClient,
+  LoginLink,
   SessionState,
   WebLogin,
 } from "./identity-parts.ts";
@@ -67,6 +68,7 @@ interface Session {
   readonly logIn: (token: string) => void;
   readonly logOut: () => void;
   readonly webLogin: WebLogin;
+  readonly loginLink: LoginLink;
 }
 
 type BoardStoreClient = OwnClient &
@@ -192,10 +194,11 @@ function followOf(parts: Parts, live: FollowedLive): () => void {
   });
 }
 
-type SessionCalls = Pick<Session, "logIn" | "logOut" | "webLogin">;
+type SessionCalls = Pick<Session, "logIn" | "logOut" | "loginLink" | "webLogin">;
 
-function sessionCalls({ session: { logIn, logOut }, webLogin }: Pick<Parts, "session" | "webLogin">): SessionCalls {
-  return { logIn, logOut, webLogin };
+function sessionCalls(parts: Pick<Parts, "loginLink" | "session" | "webLogin">): SessionCalls {
+  const { logIn, logOut } = parts.session;
+  return { logIn, logOut, loginLink: parts.loginLink, webLogin: parts.webLogin };
 }
 
 function createBoardStore(options: BoardStoreOptions): BoardStore {
@@ -248,5 +251,5 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
 
 export type { IdentityCalls } from "./identity-parts.ts";
 export { type BoardState, type BoardStore, type Session, createBoardStore };
-export type { SessionState, WebLoginState } from "./identity-parts.ts";
+export type { LoginLinkState, SessionState, WebLoginState } from "./identity-parts.ts";
 export type { Presences } from "./presence-slice.ts";

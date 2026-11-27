@@ -23,7 +23,7 @@ type LoginLinkRedemption =
   | { readonly status: "redeemed"; readonly identity: Identity; readonly session: PublicId };
 
 interface LoginLinksSection {
-  readonly addLoginLink: (link: NewLoginLink) => Fails<void>;
+  readonly addLoginLink: (link: NewLoginLink) => Fails<PublicId>;
   readonly redeemLoginLink: (redeem: RedeemLoginLink) => Fails<LoginLinkRedemption>;
 }
 

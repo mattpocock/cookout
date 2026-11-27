@@ -1,5 +1,6 @@
 import { Array as Arr, Context, Effect, Layer, PubSub, Ref } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../index.ts";
+import type { AdminAct } from "../../../inbox/index.ts";
 import type { EndedCredential } from "../../../storage/server.ts";
 import type { PublicId } from "../../../logins/index.ts";
 import type { Scope } from "effect";
@@ -33,6 +34,15 @@ interface SessionMade {
 
 type SessionMadeHandler = (made: SessionMade) => Effect.Effect<void>;
 
+interface AdminActed {
+  readonly identity: IdentityName;
+  readonly admin: IdentityName;
+  readonly act: AdminAct;
+  readonly credential: PublicId;
+}
+
+type AdminActedHandler = (acted: AdminActed) => Effect.Effect<void>;
+
 const THE_COOKOUT = "the cookout";
 
 interface IdentityChangesService {
@@ -46,6 +56,8 @@ interface IdentityChangesService {
   readonly onReactivated: (handler: ReactivatedHandler) => Effect.Effect<void, never, Scope.Scope>;
   readonly sessionMade: (made: SessionMade) => Effect.Effect<void>;
   readonly onSessionMade: (handler: SessionMadeHandler) => Effect.Effect<void, never, Scope.Scope>;
+  readonly adminActed: (acted: AdminActed) => Effect.Effect<void>;
+  readonly onAdminActed: (handler: AdminActedHandler) => Effect.Effect<void, never, Scope.Scope>;
 }
 
 class IdentityChanges extends Context.Service<IdentityChanges, IdentityChangesService>()(
@@ -83,13 +95,16 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
     const handlers = yield* Ref.make<ReadonlySet<TokensEndedHandler>>(new Set());
     const onReactivation = yield* Ref.make<ReadonlySet<ReactivatedHandler>>(new Set());
     const sessions = yield* handlersOf<SessionMade>();
+    const acts = yield* handlersOf<AdminActed>();
     return {
+      adminActed: acts.tell,
       changed: PubSub.subscribe(changedHub),
       deleted: PubSub.subscribe(deletedHub),
       endTokens: (ended) =>
         Effect.flatMap(Ref.get(handlers), (held) =>
           Effect.forEach([...held], (handler) => handler(ended), EACH_IN_TURN),
         ),
+      onAdminActed: acts.add,
       onReactivated: (handler) =>
         Effect.acquireRelease(
           Ref.update(onReactivation, (held) => new Set([...held, handler])),
@@ -164,11 +179,17 @@ function sessionMade(made: SessionMade): Effect.Effect<void, never, IdentityChan
   return Effect.flatMap(IdentityChanges, (changes) => changes.sessionMade(made));
 }
 
+function adminActed(acted: AdminActed): Effect.Effect<void, never, IdentityChanges> {
+  return Effect.flatMap(IdentityChanges, (changes) => changes.adminActed(acted));
+}
+
 function credentialsEnded(revoke: CredentialsEnded): Effect.Effect<void, never, IdentityChanges> {
   return Effect.forEach(endingsOf(revoke), tokensEnded, EACH_IN_TURN);
 }
 
 export {
+  type AdminActed,
+  adminActed,
   type EndedTokens,
   IdentityChanges,
   THE_COOKOUT,
