@@ -1,9 +1,9 @@
 import { Alert, Skeleton } from "../../design-system/content.tsx";
 import type { ComponentProps, ReactNode } from "react";
+import type { OfflineAlertId, PublicId } from "../../sdk/index.ts";
 import { FeedNote } from "../../design-system/feed.tsx";
 import { InboxAlerts } from "./inbox-alerts.tsx";
 import { InboxSections } from "./inbox-sections.tsx";
-import type { OfflineAlertId } from "../../sdk/index.ts";
 import type { UnreadState } from "../../unread/index.ts";
 import { besideCountOf } from "./beside-count.ts";
 
@@ -20,6 +20,7 @@ interface InboxBodyProps {
   readonly rows: SectionsProps["rows"];
   readonly selected: SectionsProps["selected"];
   readonly onMarkAlertRead: (id: OfflineAlertId) => void;
+  readonly onRevokeSession: (session: PublicId) => void;
   readonly notices: SectionsProps["notices"];
 }
 
@@ -40,7 +41,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   return (
     <>
       {unread.items.length + besideCountOf(unread) + held === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
-      <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
+      <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} onRevoke={props.onRevokeSession} />
       <InboxSections
         actions={props.actions}
         besides={besideCountOf(unread) - unread.alerts.length}

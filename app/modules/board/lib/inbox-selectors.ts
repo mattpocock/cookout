@@ -4,11 +4,11 @@ import type {
   DeactivatedQuietAgentId,
   DeactivationOffer,
   InboxAgentJoinRequest,
+  InboxAlert,
   InboxHistoryNudge,
   InboxItem,
   MessageId,
   Nudge,
-  OfflineAlert,
   Refusal,
 } from "../../sdk/index.ts";
 import type { InboxEntries, Loaded } from "./inbox-entries.ts";
@@ -24,7 +24,7 @@ type InboxShown =
   | {
       readonly status: "loaded";
       readonly items: readonly InboxItem[];
-      readonly alerts: readonly OfflineAlert[];
+      readonly alerts: readonly InboxAlert[];
       readonly nudges: readonly Nudge[];
       readonly deactivationOffers: readonly DeactivationOffer[];
       readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
@@ -49,7 +49,7 @@ type EarlierShown =
 
 type HistoryShown<Shown> = { readonly status: "loading" } | Shown | { readonly status: "failed" };
 
-type AlertsShown = HistoryShown<{ readonly status: "loaded"; readonly alerts: readonly OfflineAlert[] }>;
+type AlertsShown = HistoryShown<{ readonly status: "loaded"; readonly alerts: readonly InboxAlert[] }>;
 
 type NudgesShown = HistoryShown<{ readonly status: "loaded"; readonly nudges: readonly InboxHistoryNudge[] }>;
 

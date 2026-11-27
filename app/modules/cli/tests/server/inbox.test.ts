@@ -138,6 +138,31 @@ it.effect("cookout inbox prints the owner's unread offline alerts beside the ite
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("cookout inbox prints a Login alert for a person's new CLI session, with its session still live", () =>
+  Effect.gen(function* inboxLoginAlert() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { kind: "human" });
+    const folder = yield* freshStateFolder;
+    const started = yield* answer(() => cookout.clientFor().startLogin({ host: "matt-laptop" }));
+    yield* answer(() => matt.client.approveLogin(started.userCode));
+    yield* answer(() => cookout.clientFor().collectLogin(started.requestId));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: matt.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [["inbox"]]);
+
+    expect(results).toMatchObject([
+      {
+        exitCode: 0,
+        stdoutJson: {
+          alerts: [
+            { login: { ended: false, kind: "new session", sessionKind: "cli", where: "matt-laptop" }, read: false },
+          ],
+          items: [],
+        },
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
 it.effect("cookout subscribe as an agent exits 1 with 403 identity_kind on stderr, and subscribes nothing", () =>
   Effect.gen(function* agentSubscribe() {
     const cookout = yield* TestCookout;

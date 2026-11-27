@@ -7,6 +7,7 @@ import type {
   MessageId,
   NudgeId,
   OfflineAlertId,
+  PublicId,
   Refusal,
 } from "../../sdk/index.ts";
 import { oldestOf, queryOf } from "./inbox-read.ts";
@@ -36,6 +37,7 @@ type InboxCallsClient = InboxClient &
     | "markNudgeRead"
     | "markOfflineAlertRead"
     | "markUnread"
+    | "revokeSession"
   >;
 
 interface Calling {
@@ -52,6 +54,7 @@ interface NoticeCalls {
   readonly closeNudged: (thread: MessageId) => void;
   readonly keep: (id: DeactivationOfferId) => void;
   readonly markQuietAgentRead: (id: DeactivatedQuietAgentId) => void;
+  readonly revokeLoginSession: (session: PublicId) => void;
 }
 
 interface JoinCalls {
@@ -118,6 +121,11 @@ function noticeCalls(calling: Calling): NoticeCalls {
       after(async () => {
         const { deactivatedQuietAgent } = await client.markDeactivatedQuietAgentRead(id);
         apply({ deactivatedQuietAgent, type: "deactivated-quiet-agent" });
+      });
+    },
+    revokeLoginSession: (session) => {
+      after(async () => {
+        await client.revokeSession(session);
       });
     },
   };

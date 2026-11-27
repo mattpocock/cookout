@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, String as Str } from "effect";
 import type { OfflineAlert, OfflineAlertId } from "../../../presence/index.ts";
-import type { Storage, StorageUnavailable } from "../../server.ts";
+import type { Storage, StorageUnavailable, StoredInboxAlert } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
   identityFixture as identity,
@@ -90,7 +90,7 @@ function raisedAll(storage: Storage["Service"]): Effect.Effect<void, StorageUnav
   );
 }
 
-function readFlags(alerts: readonly OfflineAlert[]): readonly boolean[] {
+function readFlags(alerts: readonly StoredInboxAlert[]): readonly boolean[] {
   return Arr.map(alerts, ({ read }) => read);
 }
 
@@ -103,8 +103,8 @@ it.effect.each(storageLayers)(
       const stored = yield* storage.recordOfflineAlert(adasDrop);
       yield* storage.recordOfflineAlert(bobsExpiry);
       yield* storage.recordOfflineAlert(adasRevoke);
-      const ada = yield* storage.listOfflineAlerts(nameOf("ada"));
-      const triage = yield* storage.listOfflineAlerts(nameOf("triage"));
+      const ada = yield* storage.listAlerts(nameOf("ada"));
+      const triage = yield* storage.listAlerts(nameOf("triage"));
 
       expect(stored).toStrictEqual(adasDropStored);
       expect(ada).toStrictEqual([
@@ -121,10 +121,10 @@ it.effect.each(storageLayers)(
     Effect.gen(function* alertRead() {
       const { storage } = yield* openStore(layer);
       yield* raisedAll(storage);
-      const notTheOwner = yield* storage.markOfflineAlertRead(nameOf("bob"), first);
-      const notThere = yield* storage.markOfflineAlertRead(nameOf("ada"), missing);
-      const one = yield* storage.markOfflineAlertRead(nameOf("ada"), third);
-      const ada = yield* storage.listOfflineAlerts(nameOf("ada"));
+      const notTheOwner = yield* storage.markAlertRead(nameOf("bob"), first);
+      const notThere = yield* storage.markAlertRead(nameOf("ada"), missing);
+      const one = yield* storage.markAlertRead(nameOf("ada"), third);
+      const ada = yield* storage.listAlerts(nameOf("ada"));
 
       expect([notTheOwner, notThere]).toStrictEqual([null, null]);
       expect(one).toMatchObject({ id: third, read: true });
@@ -138,10 +138,10 @@ it.effect.each(storageLayers)(
     Effect.gen(function* alertsReadUpTo() {
       const { storage } = yield* openStore(layer);
       yield* raisedAll(storage);
-      const upTo = yield* storage.markOfflineAlertsRead(nameOf("ada"), second);
-      const again = yield* storage.markOfflineAlertsRead(nameOf("ada"), third);
-      const ada = yield* storage.listOfflineAlerts(nameOf("ada"));
-      const bob = yield* storage.listOfflineAlerts(nameOf("bob"));
+      const upTo = yield* storage.markAlertsRead(nameOf("ada"), second);
+      const again = yield* storage.markAlertsRead(nameOf("ada"), third);
+      const ada = yield* storage.listAlerts(nameOf("ada"));
+      const bob = yield* storage.listAlerts(nameOf("bob"));
 
       expect(upTo).toStrictEqual([{ ...adasDropStored, read: true }]);
       expect(again).toMatchObject([{ id: third, read: true }]);
@@ -157,7 +157,7 @@ it.effect.each(storageLayers)(
       yield* raisedAll(storage);
       const back = yield* storage.markBackOnline(nameOf("triage"), isoTime("2026-01-01T00:05:00.000Z"));
       const later = yield* storage.markBackOnline(nameOf("triage"), isoTime("2026-01-01T00:06:00.000Z"));
-      const bob = yield* storage.listOfflineAlerts(nameOf("bob"));
+      const bob = yield* storage.listAlerts(nameOf("bob"));
 
       expect(Arr.map(back, ({ backOnlineAt, id }) => [id, backOnlineAt])).toStrictEqual([
         [first, "2026-01-01T00:05:00.000Z"],
@@ -173,7 +173,7 @@ it.effect.each(storageLayers)("storage contract ($adapter): deleting an agent dr
     const { storage } = yield* openStore(layer);
     yield* raisedAll(storage);
     yield* storage.deleteIdentity(nameOf("triage"));
-    const ada = yield* storage.listOfflineAlerts(nameOf("ada"));
+    const ada = yield* storage.listAlerts(nameOf("ada"));
 
     expect(ada).toStrictEqual([]);
   }),

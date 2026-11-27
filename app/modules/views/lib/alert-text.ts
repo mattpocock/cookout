@@ -1,8 +1,14 @@
-import type { OfflineAlert, TriggerFailure } from "../../sdk/index.ts";
+import type { InboxAlert, LoginAlert, OfflineAlert, PublicId, TriggerFailure } from "../../sdk/index.ts";
 import { answerTextOf } from "./trigger-answer.ts";
+import { timeOf } from "../../format/index.ts";
 
 const TEXT = {
+  adminActed: "An admin acted on your credentials: ",
   backOnline: "Back online ",
+  cli: "cookout CLI on ",
+  ended: "Session ended",
+  live: "Session live",
+  newLogin: "New login: ",
   reachedAgain: "Reached again ",
   stillOffline: "Still offline",
   stillUnreachable: "Still unreachable",
@@ -43,4 +49,41 @@ function backTextOf({ ago, alert }: Back): string {
   return TEXT.stillOffline;
 }
 
-export { alertTextOf, backTextOf };
+function isLoginAlert(alert: InboxAlert): alert is LoginAlert {
+  return "login" in alert;
+}
+
+function whereOf(kind: "web" | "cli", where: string): string {
+  if (kind === "cli") {
+    return `${TEXT.cli}${where}`;
+  }
+  return where;
+}
+
+function loginTextOf({ login, raisedAt }: LoginAlert): string {
+  const at = timeOf(raisedAt).short;
+  if (login.kind === "admin act") {
+    return `${TEXT.adminActed}@${login.admin} ${login.act}, ${at}`;
+  }
+  const where = whereOf(login.sessionKind, login.where);
+  return `${TEXT.newLogin}${[where, login.clientIp, at].filter(Boolean).join(", ")}`;
+}
+
+function liveSessionOf({ login }: LoginAlert): PublicId | null {
+  if (login.kind === "admin act" || login.ended) {
+    return null;
+  }
+  return login.session;
+}
+
+function sessionTextOf({ login }: LoginAlert): string {
+  if (login.kind === "admin act") {
+    return "";
+  }
+  if (login.ended) {
+    return ` · ${TEXT.ended}`;
+  }
+  return ` · ${TEXT.live}`;
+}
+
+export { alertTextOf, backTextOf, isLoginAlert, liveSessionOf, loginTextOf, sessionTextOf };

@@ -120,13 +120,13 @@ test("acking in one tab moves the item from Activity to Earlier in another", asy
 test("Show earlier reads the next page of what was read into the rows shown, and the end says so", async ({ page }) => {
   await logInHavingRead(page, unique("browser-inbox-more"));
 
-  await expect(rows(page, "Earlier")).toHaveText([/Build 51 passed$/u]);
+  await expect(rows(page, "Earlier")).toHaveText([/^New login: /u, /Build 51 passed$/u]);
   await expect(page.getByText("That's everything.", { exact: true })).toBeHidden();
 
   await inPane(page).getByRole("button", { exact: true, name: "Show earlier" }).click();
 
   await expect(page.getByText("That's everything.", { exact: true })).toBeVisible();
-  await expect(rows(page, "Earlier")).toHaveText([/Build 51 passed$/u]);
+  await expect(rows(page, "Earlier")).toHaveText([/^New login: /u, /Build 51 passed$/u]);
   await expect(inPane(page).getByRole("button", { exact: true, name: "Show earlier" })).toBeHidden();
 });
 
