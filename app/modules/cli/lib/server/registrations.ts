@@ -40,6 +40,7 @@ const RegistrationSchema = Schema.Struct({
   directory: Schema.String,
   harness: Schema.String,
   path: Schema.String,
+  sessionId: Schema.optionalKey(Schema.String),
   timeoutMinutes: Schema.optionalKey(Minutes),
   url: Schema.String,
   wakeCommand: Schema.NonEmptyArray(Schema.String),
@@ -88,7 +89,7 @@ function registrationFor({
       onNone: () => NOTHING,
       onSome: (timeoutMinutes) => ({ timeoutMinutes }),
     });
-    return { agent, directory: path.resolve("."), harness, path: found, url, wakeCommand, ...timeout };
+    return { agent, directory: path.resolve("."), harness, path: found, sessionId, url, wakeCommand, ...timeout };
   });
 }
 

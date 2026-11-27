@@ -15,10 +15,6 @@ const DEFAULT_WEBHOOK_RETRY_DELAY_SECONDS = 10;
 const SMALLEST_WEBHOOK_RETRY_FACTOR = 1;
 const DEFAULT_WEBHOOK_RETRY_FACTOR = 2.3;
 const SHORTEST_ADMIN_TOKEN = 32;
-const SMALLEST_LIMIT = 1;
-const DEFAULT_REQUESTS_PER_MINUTE = 6000;
-const DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE = 60;
-const DEFAULT_STREAMS_PER_IDENTITY = 20;
 const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
 const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
 
@@ -84,6 +80,9 @@ export const publicUrl = Config.all({
   render: Config.String("RENDER_EXTERNAL_URL").pipe(Config.withDefault("")),
   url: Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(Config.withDefault("")),
 }).pipe(Config.map(publicUrlOf));
+
+/** Whether the server runs on Fly (`FLY_APP_NAME` set), so it trusts the headers of Fly's proxy (ADR 0148). */
+export const behindFly = flyAppName.pipe(Config.map(Str.isNonEmpty));
 
 /**
  * `COOKOUT_ADMIN_TOKEN`: the token of the `admin` identity, required by `cookout serve`. Every boot makes it the
@@ -200,30 +199,19 @@ export const webhookRetryFactor = Config.schema(
 ).pipe(Config.withDefault(DEFAULT_WEBHOOK_RETRY_FACTOR));
 
 /**
- * `COOKOUT_REQUESTS_PER_MINUTE`: how many requests one identity may make a minute, counted from a full bucket that
- * holds as many and refills evenly (mattpocock/cookout#92, ADR 0033). The default of 6000 is far above any session's
- * use and is not settled yet.
+ * The limits, each counted from a full bucket that holds a minute's worth and refills evenly (ADR 0033), none of their
+ * defaults settled yet: `COOKOUT_REQUESTS_PER_MINUTE` (6000), the requests one identity may make a minute;
+ * `COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE` (30), the requests one client address may make a minute to the routes that
+ * need no token (ADR 0148); `COOKOUT_COMMAND_CALLS_PER_MINUTE` (60), the command calls one identity may make a minute
+ * on top, since each fans out to the command's handler; and `COOKOUT_STREAMS_PER_IDENTITY` (20), the `/v1/events`
+ * streams one identity may hold open at once.
  */
-export const requestsPerMinute = Config.schema(
-  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
-  "COOKOUT_REQUESTS_PER_MINUTE",
-).pipe(Config.withDefault(DEFAULT_REQUESTS_PER_MINUTE));
-
-/**
- * `COOKOUT_COMMAND_CALLS_PER_MINUTE`: how many command calls one identity may make a minute, in a bucket of its own
- * on top of the request one, because each call fans out to the command's handler. The default of 60 is not settled
- * yet.
- */
-export const webhookCommandCallsPerMinute = Config.schema(
-  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
-  "COOKOUT_COMMAND_CALLS_PER_MINUTE",
-).pipe(Config.withDefault(DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE));
-
-/** `COOKOUT_STREAMS_PER_IDENTITY`: how many `/v1/events` streams one identity may hold open at once. */
-export const streamsPerIdentity = Config.schema(
-  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
-  "COOKOUT_STREAMS_PER_IDENTITY",
-).pipe(Config.withDefault(DEFAULT_STREAMS_PER_IDENTITY));
+export {
+  noTokenRequestsPerMinute,
+  requestsPerMinute,
+  streamsPerIdentity,
+  webhookCommandCallsPerMinute,
+} from "./lib/server/limits.ts";
 
 /**
  * `COOKOUT_PRESENCE_GRACE_SECONDS`: how long an identity stays online after its last live connection closes, so a
@@ -245,6 +233,8 @@ export const xdgStateHome = Config.String("XDG_STATE_HOME").pipe(Config.withDefa
  * three, the CLI keeps no agent session token and `join` is refused with `state_folder_missing`.
  */
 export const home = Config.String("HOME").pipe(Config.withDefault(""));
+/** `CLAUDE_CONFIG_DIR`: Claude Code's config folder, `~/.claude` when unset, where the runner finds open sessions. */
+export const claudeConfigDir = Config.String("CLAUDE_CONFIG_DIR").pipe(Config.withDefault(""));
 
 /** `XDG_CONFIG_HOME`: the CLI keeps the Login in `cookout/credentials` under it, or under `~/.config` when unset. */
 export const xdgConfigHome = Config.String("XDG_CONFIG_HOME").pipe(Config.withDefault(""));
