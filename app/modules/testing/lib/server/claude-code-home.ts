@@ -1,5 +1,5 @@
-import { Effect, FileSystem, Option, Path, Ref, Schema } from "effect";
-import type { ChildProcessSpawner } from "effect/process";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import { Effect, FileSystem, Function, Option, Path, Ref, Schema } from "effect";
 import type { FakeInbox } from "./fake-inbox.ts";
 import type { Scope } from "effect";
 import { fakeInbox } from "./fake-inbox.ts";
@@ -13,6 +13,7 @@ type Inbox = "listening" | "missing" | "refusing";
 interface FakeClaudeSession {
   readonly harnessSession: string;
   readonly inbox?: Inbox;
+  readonly launchedWith?: readonly string[];
   readonly peerProtocol?: number;
   readonly pid?: number;
   readonly projectSettings?: unknown;
@@ -67,6 +68,23 @@ function writeJson(file: string, value: unknown): Effect.Effect<void, never, Fil
   }).pipe(Effect.orDie);
 }
 
+const IDLE = "setInterval(() => {}, 2 ** 30)";
+
+function launched(args: readonly string[]): Effect.Effect<number, never, Spawns> {
+  return Effect.gen(function* launchIdleProcess() {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const handle = yield* spawner.spawn(ChildProcess.make(process.execPath, ["-e", IDLE, "--", ...args]));
+    return Number(handle.pid);
+  }).pipe(Effect.orDie);
+}
+
+function pidOf({ launchedWith, pid = process.pid }: FakeClaudeSession): Effect.Effect<number, never, Spawns> {
+  return Option.match(Option.fromUndefinedOr(launchedWith), {
+    onNone: Function.constant(Effect.succeed(pid)),
+    onSome: launched,
+  });
+}
+
 const noLines: FakeInbox = { nextLine: Effect.never, waiting: Effect.succeed([]) };
 
 function inboxAt(inbox: Inbox, socket: string): Effect.Effect<Opened, never, Spawns> {
@@ -85,12 +103,12 @@ function inboxAt(inbox: Inbox, socket: string): Effect.Effect<Opened, never, Spa
 }
 
 function writeSessionFile(
-  session: FakeClaudeSession,
+  session: FakeClaudeSession & { readonly pid: number },
   { cwd, folder, socket }: Layout,
 ): Effect.Effect<void, never, Files> {
   return Effect.gen(function* writeSession() {
     const path = yield* Path.Path;
-    const { harnessSession, peerProtocol = PROTOCOL, pid = process.pid } = session;
+    const { harnessSession, peerProtocol = PROTOCOL, pid } = session;
     const messaging = Option.match(socket, {
       onNone: () => ({}),
       onSome: (messagingSocketPath) => ({ messagingSocketPath }),
@@ -147,7 +165,8 @@ function claudeCodeHome(session: FakeClaudeSession): Effect.Effect<ClaudeCodeHom
     const path = yield* Path.Path;
     const { cwd, folder } = yield* folders();
     const { at, listening } = yield* inboxAt(session.inbox ?? "listening", path.join(folder, "in.sock"));
-    yield* writeSessionFile(session, { cwd, folder, socket: at });
+    const pid = yield* pidOf(session);
+    yield* writeSessionFile({ ...session, pid }, { cwd, folder, socket: at });
     yield* writeSettings(session, { cwd, folder, socket: at });
     const reader = yield* readerOf(listening);
     return { folder, ...reader };

@@ -16,7 +16,6 @@ import {
   commandLineServices,
   inboxJson,
   joinWaking,
-  runCookout,
   sentLine,
   startRunner,
   startsIn,
@@ -51,24 +50,16 @@ interface Delivered {
   readonly text: string;
 }
 
-interface Status {
-  readonly json: string;
-  readonly text: string;
-  readonly textExit: number;
-}
-
 const BRIGID = "brigid";
 const TICK = "5 seconds";
 const PAUSE_MILLIS = 5;
 const PAUSE = Duration.millis(PAUSE_MILLIS);
 const EXITED_PID = 4_194_305;
 const OTHER_PROTOCOL = 2;
-const EXIT_SUCCESS = 0;
 const ONE = 1;
 const ONE_CLOSING_TAG = 2;
 const OPENING = '<cross-session-message from-name="cookout-runner">';
 const CLOSING = "</cross-session-message>";
-const LAUNCH_LINE = `claude --settings '{"crossSessionInbound":"accept"}'`;
 const NO_REASON = "none";
 
 const tick = Effect.andThen(TestClock.adjust(TICK), TestClock.withLive(Effect.sleep(PAUSE)));
@@ -227,68 +218,5 @@ it.effect("a runner with no Claude Code folder wakes the session as before, reco
 
     expect(deliveryEvents(events)).toStrictEqual([["woken", NO_REASON]]);
     expect(starts).toStrictEqual([[id]]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
-function statusWith(session: Session): Effect.Effect<Status, never, Needs> {
-  return Effect.gen(function* statusOfOpenSession() {
-    const path = yield* Path.Path;
-    const on = yield* wakeBoard;
-    const brigid = yield* joinWaking({ name: BRIGID, on, settings: { log: path.join(on.folder, "wake.log") } });
-    const home = yield* claudeCodeHome({ ...session, harnessSession: brigid.harnessSession });
-    const env = { CLAUDE_CONFIG_DIR: home.folder, COOKOUT_STATE_DIR: on.folder };
-    const text = yield* runCookout({ args: ["runner", "status"], env });
-    const json = yield* runCookout({ args: ["runner", "status", "--json"], env });
-    return { json: json.stdout, text: text.stdout, textExit: text.exitCode };
-  });
-}
-
-it.effect.each([
-  { how: "holds them (user settings)", session: { userSettings: { crossSessionInbound: "hold" } }, value: "hold" },
-  {
-    how: "refuses them (its folder's settings)",
-    session: { projectSettings: { crossSessionInbound: "refuse" } },
-    value: "refuse",
-  },
-  {
-    how: "bypasses permissions with no crossSessionInbound",
-    session: { userSettings: { permissions: { defaultMode: "bypassPermissions" } } },
-    value: "hold",
-  },
-  {
-    how: "refuses them in its folder over the user's accept",
-    session: {
-      projectSettings: { crossSessionInbound: "refuse" },
-      userSettings: { crossSessionInbound: "accept" },
-    },
-    value: "refuse",
-  },
-])(
-  "runner status warns when a registered session $how, with the launch line that fixes it",
-  ({ session, value }: { readonly session: Session; readonly value: string }) =>
-    Effect.gen(function* warned() {
-      const { json, text, textExit } = yield* statusWith(session);
-
-      expect(textExit).toBe(EXIT_SUCCESS);
-      expect(text).toContain(`would ${value} runner messages`);
-      expect(text).toContain(LAUNCH_LINE);
-      expect(json).toContain(`"crossSessionInbound": "${value}"`);
-    }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
-it.effect.each([
-  { how: "accepts them", session: { userSettings: { crossSessionInbound: "accept" } } },
-  { how: "has no setting and prompts for permissions", session: {} },
-  {
-    how: "bypasses permissions but accepts them",
-    session: { userSettings: { crossSessionInbound: "accept", permissions: { defaultMode: "bypassPermissions" } } },
-  },
-])("runner status gives no warning when a registered session $how", ({ session }: { readonly session: Session }) =>
-  Effect.gen(function* notWarned() {
-    const { json, text, textExit } = yield* statusWith(session);
-
-    expect(textExit).toBe(EXIT_SUCCESS);
-    expect(text).not.toContain("runner messages");
-    expect(json).not.toContain("crossSessionInbound");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

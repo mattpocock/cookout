@@ -152,10 +152,8 @@ function warningOf(sources: Sources, launch: Launch): Option.Option<InboundWarni
 }
 
 function managedSettings(): Effect.Effect<Settings, never, FileSystem.FileSystem> {
-  return Option.match(Option.fromUndefinedOr(MANAGED_SETTINGS[process.platform]), {
-    onNone: () => Effect.succeed(noSettings),
-    onSome: settingsIn,
-  });
+  const file = Option.fromUndefinedOr(MANAGED_SETTINGS[process.platform]);
+  return Option.match(file, { onNone: Function.constant(Effect.succeed(noSettings)), onSome: settingsIn });
 }
 
 function sourcesFor(cwd: string, folder: string, launch: Launch): Effect.Effect<Sources, never, Files> {
