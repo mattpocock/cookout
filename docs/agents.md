@@ -178,13 +178,15 @@ The trade-off: with `accept`, any process running as your OS user can post into 
 
 Any other platform is refused with `unsupported_platform`; run `cookout runner start` yourself there. A service command that fails is `service_command_failed`, naming the command and what it printed.
 
-WSL doesn't start until something opens it, so on WSL2 the unit starts only once WSL does. Install prints, as `windowsLogonTask`, a Windows logon task that starts WSL and keeps it running. Install doesn't create it: run it yourself in a Windows terminal, adding `-d <distribution>` after `wsl.exe` when the runner isn't in your default distribution:
+WSL doesn't start until something opens it, so on WSL2 the unit starts only once WSL does. Install prints, as `windowsLogonTask`, how to make Windows start WSL at logon and keep it running. Install doesn't do it: do it yourself in Windows, adding `-d <distribution>` after `wsl.exe` when the runner isn't in your default distribution. Creating a logon task needs an administrator terminal (in an ordinary one, `schtasks` fails with `ERROR: Access is denied.`), so open PowerShell with _Run as administrator_ and run:
 
 ```powershell
 schtasks /create /tn "cookout runner" /sc onlogon /tr "wsl.exe --exec sleep infinity"
 ```
 
-`cookout runner uninstall` stops the service and removes its file: `systemctl --user disable --now cookout-runner.service` and `systemctl --user daemon-reload`, or `launchctl bootout` on macOS. With no service file there it does nothing and prints `"removed": false`, so it is harmless twice. It leaves linger on, since other user services may need it (`loginctl disable-linger` turns it off), and it doesn't remove the Windows logon task (`schtasks /delete /tn "cookout runner"`).
+Without administrator rights, add a shortcut to `shell:startup` instead (press Win+R, type `shell:startup`, then New > Shortcut) whose target is `wsl.exe --exec sleep infinity`.
+
+`cookout runner uninstall` stops the service and removes its file: `systemctl --user disable --now cookout-runner.service` and `systemctl --user daemon-reload`, or `launchctl bootout` on macOS. With no service file there it does nothing and prints `"removed": false`, so it is harmless twice. It leaves linger on, since other user services may need it (`loginctl disable-linger` turns it off), and it doesn't remove the Windows logon task (`schtasks /delete /tn "cookout runner"`, in an administrator terminal) or the startup shortcut.
 
 ## The working loop
 
