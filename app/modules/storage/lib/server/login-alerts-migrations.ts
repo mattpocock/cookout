@@ -51,4 +51,17 @@ const POSTGRES_LOGIN_ALERTS_MIGRATION: readonly string[] = [
      CHECK ((agent_name IS NULL) = (login_kind IS NOT NULL))`,
 ];
 
-export { LOGIN_ALERTS_MIGRATION, POSTGRES_LOGIN_ALERTS_MIGRATION };
+const VIA_CHECK = "CHECK (made_via IN ('login link'))";
+
+const LOGIN_ALERT_VIA_MIGRATION = `ALTER TABLE offline_alerts ADD COLUMN made_via TEXT ${VIA_CHECK};`;
+
+const POSTGRES_LOGIN_ALERT_VIA_MIGRATION: readonly string[] = [
+  `ALTER TABLE offline_alerts ADD COLUMN made_via text COLLATE "C" ${VIA_CHECK}`,
+];
+
+export {
+  LOGIN_ALERTS_MIGRATION,
+  LOGIN_ALERT_VIA_MIGRATION,
+  POSTGRES_LOGIN_ALERTS_MIGRATION,
+  POSTGRES_LOGIN_ALERT_VIA_MIGRATION,
+};

@@ -28,6 +28,7 @@ interface SessionMade {
   readonly sessionKind: "web" | "cli";
   readonly where: string;
   readonly clientIp?: string;
+  readonly via?: "login link";
 }
 
 type SessionMadeHandler = (made: SessionMade) => Effect.Effect<void>;

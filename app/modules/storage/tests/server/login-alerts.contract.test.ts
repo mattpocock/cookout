@@ -74,6 +74,18 @@ const bobsLogin: NewLoginAlert = {
   raisedAt: isoTime("2026-01-01T10:46:00.000Z"),
 };
 
+const linked: NewLoginAlert = {
+  login: {
+    kind: "new session",
+    session: publicId("00000000000000aa"),
+    sessionKind: "web",
+    via: "login link",
+    where: "Firefox on macOS",
+  },
+  owner: nameOf("ada"),
+  raisedAt: isoTime("2026-01-01T10:47:00.000Z"),
+};
+
 function boardOf(storage: Storage["Service"]): Effect.Effect<void, StorageUnavailable> {
   return Effect.forEach(
     [
@@ -110,6 +122,23 @@ it.effect.each(storageLayers)(
         ada: [storedOf(firefox, FIRST), storedOf(laptop, THIRD), storedOf(adminRevoked, FOURTH)],
         bob: [storedOf(bobsLogin, SECOND)],
         stored: storedOf(firefox, FIRST),
+      });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a Login alert for a session a login link made keeps that it came from one",
+  ({ layer }) =>
+    Effect.gen(function* linkedAlertKept() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      const stored = yield* storage.recordLoginAlert(linked);
+      yield* storage.recordLoginAlert(laptop);
+      const ada = yield* storage.listAlerts(nameOf("ada"));
+
+      expect({ ada, stored }).toStrictEqual({
+        ada: [storedOf(linked, FIRST), storedOf(laptop, SECOND)],
+        stored: storedOf(linked, FIRST),
       });
     }),
 );

@@ -1,5 +1,5 @@
 import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
-import { Effect, pipe } from "effect";
+import { Effect, String as Str, pipe } from "effect";
 import {
   TestCookout,
   answer,
@@ -9,6 +9,8 @@ import {
   testCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { loginLinkWebPath } from "../../../logins/index.ts";
+import { token } from "../../../identities/index.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
@@ -155,6 +157,32 @@ it.effect("cookout inbox prints a Login alert for a person's new CLI session, wi
         stdoutJson: {
           alerts: [
             { login: { ended: false, kind: "new session", sessionKind: "cli", where: "matt-laptop" }, read: false },
+          ],
+          items: [],
+        },
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout inbox prints a Login alert for a session a login link made, saying it came from one", () =>
+  Effect.gen(function* inboxLinkAlert() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { admin: true, kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const folder = yield* freshStateFolder;
+    const { link } = yield* answer(() => matt.client.createLoginLink(ada.identity.name));
+    const [, secret = ""] = Str.split(loginLinkWebPath)(link);
+    yield* answer(() => cookout.clientFor().redeemLoginLink(token(secret)));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [["inbox"]]);
+
+    expect(results).toMatchObject([
+      {
+        exitCode: 0,
+        stdoutJson: {
+          alerts: [
+            { login: { ended: false, kind: "new session", sessionKind: "web", via: "login link" }, read: false },
           ],
           items: [],
         },

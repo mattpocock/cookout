@@ -281,7 +281,8 @@ export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from ".
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the
  * presence registry ends the live connections sent with them at once (ADR "how a live connection ends"); and a new
- * session of a person's, told when a Login request is collected or a token is pasted on the web, for a Login alert.
+ * session of a person's, told when a Login request is collected, a token is pasted on the web or a login link is
+ * redeemed, for a Login alert.
  */
 export type { EndedTokens, SessionMade, TokensEnded } from "./lib/server/changes.ts";
 

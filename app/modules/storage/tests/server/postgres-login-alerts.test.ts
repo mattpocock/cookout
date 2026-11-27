@@ -26,12 +26,15 @@ const backAt = isoTime("2026-01-01T00:05:00.000Z");
 const HASH_LENGTH = 64;
 const SECOND = 2;
 
+const MIGRATIONS_SINCE = 2;
+
 const DOWNGRADE_POSTGRES = [
+  "ALTER TABLE offline_alerts DROP COLUMN made_via",
   "ALTER TABLE offline_alerts DROP CONSTRAINT offline_alerts_one_kind",
   `ALTER TABLE offline_alerts DROP COLUMN login_kind, DROP COLUMN credential_id, DROP COLUMN session_kind,
      DROP COLUMN where_from, DROP COLUMN client_ip, DROP COLUMN admin_name, DROP COLUMN admin_act`,
   "ALTER TABLE offline_alerts ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL",
-  "UPDATE schema_version SET version = version - 1",
+  `UPDATE schema_version SET version = version - ${String(MIGRATIONS_SINCE)}`,
 ];
 
 const session = "0123456789abcdef";

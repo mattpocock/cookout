@@ -529,7 +529,7 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Cookie: $(cat /tmp/cookout-gr
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Content-Type: application/json" -d "{\"secret\":\"$(cat /tmp/cookout-link.secret)\"}" "$COOKOUT_URL/v1/login-links/redeem"'
 ```
 
-The cookie answers `whoami` as `grace`; the second redeem, one after 15 minutes and an unknown secret are 404 `login_link_not_found`. A link for an agent is 403 `human_only`, one made with a non-admin's token 403 `admin_only`, and one for an unknown name 404 `identity_not_found`. Creating a person (`POST /v1/identities` with `kind: "human"`) answers a `loginLink` beside the token, the same one-time link; creating an agent answers none.
+The cookie answers `whoami` as `grace`; the second redeem, one after 15 minutes and an unknown secret are 404 `login_link_not_found`. A link for an agent is 403 `human_only`, one made with a non-admin's token 403 `admin_only`, and one for an unknown name 404 `identity_not_found`. Creating a person (`POST /v1/identities` with `kind: "human"`) answers a `loginLink` beside the token, the same one-time link; creating an agent answers none. Redeeming a link raises a Login alert in `grace`'s Inbox, as every new session does: `inbox().alerts` holds a `login` with `kind: "new session"`, `sessionKind: "web"` and `via: "login link"`, and the web UI's Inbox shows `New login from a login link: <where>, <IP>, <time>` with Revoke while the session lives.
 
 ## Log out everywhere
 

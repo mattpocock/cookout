@@ -781,8 +781,8 @@ interface OfflineAlert {
 /** What an admin did to someone's credentials, as a Login alert tells them. */
 type AdminAct = "revoked" | "sent a login link";
 /**
- * What a Login alert reports: a new session (its kind, where it was made, the IP when known, and whether it has
- * ended), or an admin acting on the person's credentials.
+ * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
+ * made it, and whether it has ended), or an admin acting on the person's credentials.
  */
 type LoginAlertEvent = {
   readonly kind: "new session";
@@ -790,6 +790,7 @@ type LoginAlertEvent = {
   readonly sessionKind: "web" | "cli";
   readonly where: string;
   readonly clientIp?: string;
+  readonly via?: "login link";
   readonly ended: boolean;
 } | {
   readonly kind: "admin act";

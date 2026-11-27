@@ -1,11 +1,13 @@
 import { AddressLimit, now, webSessionWhere } from "./login-support.ts";
 import { Effect, Schema } from "effect";
-import { hashOf, issueToken } from "./auth.ts";
+import type { IdentityChanges, Secrets } from "./auth.ts";
+import { hashOf, issueToken, sessionMade } from "./auth.ts";
 import { loginLinkNotFound, redeemLoginLinkPath } from "../../../logins/index.ts";
 import { HttpServerRequest } from "effect/http";
+import type { IdentityName } from "../../index.ts";
+import type { PublicId } from "../../../logins/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
-import type { Secrets } from "./auth.ts";
 import { Storage } from "../../../storage/server.ts";
 import { clientAddress } from "../../../http/server.ts";
 import { signedInRoute } from "./session.ts";
@@ -33,6 +35,20 @@ const admitted = Effect.gen(function* admitAddress() {
 
 const admittedLinkHash = Effect.andThen(admitted, sentLinkHash);
 
+type LinkNeeds = HttpServerRequest.HttpServerRequest | IdentityChanges;
+
+interface LinkSession {
+  readonly identity: IdentityName;
+  readonly session: PublicId;
+  readonly where: string;
+}
+
+function announcedLinkSession({ identity, session, where }: LinkSession): Effect.Effect<void, never, LinkNeeds> {
+  return Effect.flatMap(clientAddress, (clientIp) =>
+    sessionMade({ clientIp, identity, session, sessionKind: "web", via: "login link", where }),
+  );
+}
+
 const redeemed = Effect.gen(function* redeemLoginLink() {
   const linkHash = yield* admittedLinkHash;
   const request = yield* HttpServerRequest.HttpServerRequest;
@@ -44,13 +60,16 @@ const redeemed = Effect.gen(function* redeemLoginLink() {
   if (redemption.status === "gone") {
     return yield* Effect.fail(linkNotFound);
   }
-  return { identity: redemption.identity, token: issued.token };
+  return yield* Effect.as(
+    announcedLinkSession({ identity: redemption.identity.name, session: redemption.session, where: host }),
+    { identity: redemption.identity, token: issued.token },
+  );
 });
 
-const redeemRoute: Route<Storage | Secrets | AddressLimit> = signedInRoute({
+const redeemRoute: Route<Storage | Secrets | AddressLimit | IdentityChanges> = signedInRoute({
   method: "POST",
   path: redeemLoginLinkPath,
   signIn: redeemed,
 });
 
-export const openLoginLinkRoutes: readonly Route<Storage | Secrets | AddressLimit>[] = [redeemRoute];
+export const openLoginLinkRoutes: readonly Route<Storage | Secrets | AddressLimit | IdentityChanges>[] = [redeemRoute];

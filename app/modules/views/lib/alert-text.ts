@@ -8,6 +8,7 @@ const TEXT = {
   cli: "cookout CLI on ",
   ended: "Session ended",
   live: "Session live",
+  newLinkLogin: "New login from a login link: ",
   newLogin: "New login: ",
   reachedAgain: "Reached again ",
   stillOffline: "Still offline",
@@ -60,13 +61,20 @@ function whereOf(kind: "web" | "cli", where: string): string {
   return where;
 }
 
+function leadOf(via: "login link" | undefined): string {
+  if (via === "login link") {
+    return TEXT.newLinkLogin;
+  }
+  return TEXT.newLogin;
+}
+
 function loginTextOf({ login, raisedAt }: LoginAlert): string {
   const at = timeOf(raisedAt).short;
   if (login.kind === "admin act") {
     return `${TEXT.adminActed}@${login.admin} ${login.act}, ${at}`;
   }
   const where = whereOf(login.sessionKind, login.where);
-  return `${TEXT.newLogin}${[where, login.clientIp, at].filter(Boolean).join(", ")}`;
+  return `${leadOf(login.via)}${[where, login.clientIp, at].filter(Boolean).join(", ")}`;
 }
 
 function liveSessionOf({ login }: LoginAlert): PublicId | null {

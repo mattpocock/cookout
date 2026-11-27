@@ -49,7 +49,10 @@ function issueFrom({ db, publicId, redeem }: Redeeming) {
         where: host,
       });
       const issued = yield* credentialIn(db)(credentialHash);
-      return Option.match(issued, { onNone: linkGone, onSome: linkRedeemed });
+      return Option.match(issued, {
+        onNone: linkGone,
+        onSome: (person) => linkRedeemed({ identity: person, session: publicId }),
+      });
     });
 }
 
