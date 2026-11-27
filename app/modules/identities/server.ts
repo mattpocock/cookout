@@ -38,6 +38,11 @@ export { AgentSessionSent } from "./lib/server/auth.ts";
 /** The hash of the Login credential the request was sent with, if it was: a web session's cookie holds one (ADR 0103). */
 export { LoginCredentialSent } from "./lib/server/auth.ts";
 /**
+ * Ends with `login_expired` once the request's Login credential has gone 90 days unused, for an open stream to end
+ * with; never for any other token.
+ */
+export { sentLoginCredentialEnded } from "./lib/server/login-ends.ts";
+/**
  * The one thread a request may reply in when it carries a command token, and none for any other token. `Messages`
  * posts such a request only as a reply in this thread.
  */
@@ -52,7 +57,8 @@ export type IdentitiesService = {
   /**
    * The identity behind a request's `Authorization` header or, without one, its session cookie, and for a command
    * token the thread of its call. An agent session token's use moves its expiry on. Refuses with 401 `token_missing`,
-   * `token_unknown`, `token_revoked`, `token_expired`, `agent_session_revoked` or `agent_session_expired`.
+   * `token_unknown`, `token_revoked`, `token_expired`, `login_expired`, `agent_session_revoked` or
+   * `agent_session_expired`. A Login credential's use moves its expiry on to 90 days later.
    */
   readonly authenticate: (credentials: Credentials) => Effect.Effect<Principal, Refusal | StorageUnavailable>;
   /** A new token and its hash. Creating an identity and rotating a token both issue one. */
@@ -80,7 +86,7 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * The gate every route but `/v1/health` sits behind: authenticates the
  * request's bearer token or, without one, its session cookie, and provides
  * its identity as `Caller`. Refuses
- * with 401 `token_missing`, `token_unknown`, `token_revoked` or `token_expired`. A command token gets 403
+ * with 401 `token_missing`, `token_unknown`, `token_revoked`, `token_expired` or `login_expired`. A command token gets 403
  * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`. A human's
  * token sent with `cookout-harness` gets 403 `agent_as_human` on every route but join (`POST /v1/agent-session`);
  * an agent's provides the tool as `HarnessSent`.
