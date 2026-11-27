@@ -1,4 +1,4 @@
-import { AddressLimit, Caller } from "../../../identities/server.ts";
+import { AddressLimit, Caller, requestOriginOf } from "../../../identities/server.ts";
 import {
   AgentJoinCollectedResponseSchema,
   AgentJoinRequestResponseSchema,
@@ -52,8 +52,10 @@ const startRoute: Route<AgentSessions | AddressLimit> = {
     withinAddressLimit(
       Effect.gen(function* startAgentJoinRequest() {
         const body = yield* HttpServerRequest.schemaBodyJson(StartAgentJoinRequestSchema, ALL_ERRORS);
+        const { headers } = yield* HttpServerRequest.HttpServerRequest;
+        const origin = requestOriginOf({ clientIp: yield* clientAddress, headers });
         const agentSessions = yield* AgentSessions;
-        const started = yield* agentSessions.startJoin(body);
+        const started = yield* agentSessions.startJoin({ ...body, ...origin });
         return yield* HttpServerResponse.schemaJson(AgentJoinRequestStartedResponseSchema)(started, {
           status: CREATED,
         });

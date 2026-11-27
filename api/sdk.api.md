@@ -908,6 +908,78 @@ interface CallCommandResponse {
   readonly messageId: MessageId;
   readonly threadId: MessageId;
 }
+interface StartLoginRequest {
+  readonly host: string;
+}
+/** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
+type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
+/**
+ * What a person sees about a Login request or agent join request before Approve (#905), recorded when it started, so
+ * they approve only the device they meant to.
+ */
+interface ApprovalRequestDetails {
+  readonly kind: ApprovalRequestKind;
+  /** A browser's browser and OS, such as `Firefox on macOS`, or else the host the request named. */
+  readonly where: string;
+  /** The client's IP address when it started (`Fly-Client-IP` on Fly); missing on a request stored before #905. */
+  readonly clientIp?: string;
+  /** When it started, for its age. */
+  readonly createdAt: IsoTime;
+}
+/** A Login request as the person approving it sees it. */
+interface LoginRequestView extends ApprovalRequestDetails {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+}
+/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
+interface LoginRequestStartedResponse {
+  readonly userCode: string;
+  readonly requestId: Token;
+  readonly expiresAt: IsoTime;
+  readonly approvalPath: string;
+}
+/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
+type LoginCollectedResponse = {
+  readonly status: "pending";
+} | {
+  readonly status: "approved";
+  readonly identity: Identity;
+  readonly token: Token;
+};
+/** The answer to showing or approving a login request. */
+interface LoginRequestResponse {
+  readonly loginRequest: LoginRequestView;
+}
+/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
+interface LogoutResponse {
+  readonly revoked: boolean;
+}
+/**
+ * The approval page's path on the server, for Login requests and agent join requests alike. It never holds a code:
+ * the person types the code into the page on a device already logged in (#905).
+ */
+declare const approvalPath = "/#/approve";
+/** The SDK's calls for logging a machine in by browser approval. */
+interface LoginCalls {
+  /**
+   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person types
+   * `userCode` into the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
+   */
+  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
+  /**
+   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
+   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
+   */
+  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
+  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
+  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
+  readonly revokeLogin: () => Promise<LogoutResponse>;
+}
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 declare const agentSessionPath = "/v1/agent-session";
 /**
@@ -1043,12 +1115,6 @@ declare const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/appr
  * approver's list, and its collect is then 403 `agent_join_request_denied`.
  */
 declare const agentJoinRequestDenialPath = "/v1/agent-join-requests/:code/denial";
-/**
- * The approval page's path on the server for an agent join request's user code.
- * @param userCode The request's user code.
- * @returns The path, such as `/#/approve-join/WDJB-MJHT`.
- */
-declare function agentJoinApprovalPathOf(userCode: string): string;
 /** The body of `POST /v1/agent-join-requests`: the agent to join as, the box's host and the idle expiry it asks for. */
 interface StartAgentJoinRequest {
   /** A name as `join` takes it: the approver's own agent, a free name, or else `<approver>/<name>`. */
@@ -1075,7 +1141,7 @@ type AgentJoinCollectedResponse = {
   readonly agentSession: AgentSessionResponse;
 };
 /** An agent join request as the human viewing it would approve it. */
-interface AgentJoinRequestView {
+interface AgentJoinRequestView extends ApprovalRequestDetails {
   readonly userCode: string;
   readonly host: string;
   readonly expiresAt: IsoTime;
@@ -1723,57 +1789,6 @@ interface SchemaProblem {
   readonly path: readonly (string | number)[];
 }
 type IdentityAvatarCalls = AvatarCalls<IdentityResponse>;
-interface StartLoginRequest {
-  readonly host: string;
-}
-interface LoginRequestView {
-  readonly userCode: string;
-  readonly host: string;
-  readonly expiresAt: IsoTime;
-  readonly approved: boolean;
-}
-/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
-interface LoginRequestStartedResponse {
-  readonly userCode: string;
-  readonly requestId: Token;
-  readonly expiresAt: IsoTime;
-  readonly approvalPath: string;
-}
-/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
-type LoginCollectedResponse = {
-  readonly status: "pending";
-} | {
-  readonly status: "approved";
-  readonly identity: Identity;
-  readonly token: Token;
-};
-/** The answer to showing or approving a login request. */
-interface LoginRequestResponse {
-  readonly loginRequest: LoginRequestView;
-}
-/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
-interface LogoutResponse {
-  readonly revoked: boolean;
-}
-/** The SDK's calls for logging a machine in by browser approval. */
-interface LoginCalls {
-  /**
-   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
-   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
-   */
-  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
-  /**
-   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
-   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
-   */
-  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
-  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
-  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
-  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
-  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
-  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
-  readonly revokeLogin: () => Promise<LogoutResponse>;
-}
 interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
@@ -2003,5 +2018,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type DenyAgentJoinResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageDeletedEvent, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WakeRunResponse, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestDenialPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type DenyAgentJoinResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageDeletedEvent, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WakeRunResponse, type WatchOptions, type approvalPath as agentJoinApprovalPath, type agentJoinRequestApprovalPath, type agentJoinRequestDenialPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

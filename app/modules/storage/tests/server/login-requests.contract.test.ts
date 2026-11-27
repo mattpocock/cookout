@@ -61,10 +61,10 @@ it.effect.each(storageLayers)(
 
       expect([added, found, pending, approved, shown]).toStrictEqual([
         "added",
-        { approved: false, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" },
+        { approved: false, createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" },
         { status: "pending" },
         "approved",
-        { approved: true, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" },
+        { approved: true, createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" },
       ]);
     }),
 );

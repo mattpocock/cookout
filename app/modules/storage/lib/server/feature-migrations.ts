@@ -1,3 +1,4 @@
+export { ADMIN_SETTING_MIGRATION, POSTGRES_ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
 export {
   ATTACHMENT_SIZES_MIGRATION,
   ATTACHMENTS_MIGRATION,
@@ -6,6 +7,7 @@ export {
 } from "./attachments.ts";
 export { CALL_TIMES_MIGRATION, POSTGRES_CALL_TIMES_MIGRATION } from "./deliveries.ts";
 export { LOGIN_EXPIRY_MIGRATION, POSTGRES_LOGIN_EXPIRY_MIGRATION } from "./login-expiry-migrations.ts";
+export { POSTGRES_REQUEST_ORIGINS_MIGRATION, REQUEST_ORIGINS_MIGRATION } from "./request-origins.ts";
 export { POSTGRES_SECRETS_KEY_MIGRATION, SECRETS_KEY_MIGRATION } from "./sealed-secrets.ts";
 export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION } from "./search-sqlite.ts";
 export {

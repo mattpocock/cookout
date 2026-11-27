@@ -12,6 +12,7 @@ import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } fro
 import type { Identity, TokenHash } from "../../../identities/index.ts";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
 import { isIdentityName, tokenHash } from "../../../identities/index.ts";
+import { originColumns, originOf } from "./request-origins.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
@@ -23,14 +24,17 @@ const ApproverColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 
 const RequestRow = Schema.Struct({
   approved_by: Schema.NullOr(ApproverColumn),
+  client_ip: Schema.NullOr(Schema.String),
+  created_at: IsoTimeSchema,
   expires_at: IsoTimeSchema,
   host: Schema.String,
+  user_agent: Schema.NullOr(Schema.String),
   user_code: Schema.String,
 });
 
 type RequestRowType = typeof RequestRow.Type;
 
-const REQUEST_COLUMNS = "approved_by, expires_at, host, user_code";
+const REQUEST_COLUMNS = "approved_by, client_ip, created_at, expires_at, host, user_agent, user_code";
 
 const FIND_CREDENTIAL = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, i.avatar
   FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
@@ -45,8 +49,9 @@ const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE r
 
 const FIND_LIVE_BY_CODE = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE user_code = ? AND expires_at > ?`;
 
-const INSERT_REQUEST = `INSERT INTO login_requests (request_hash, user_code, host, created_at, expires_at)
-  VALUES (?, ?, ?, ?, ?)`;
+const INSERT_REQUEST = `INSERT INTO login_requests
+  (request_hash, user_code, host, created_at, expires_at, client_ip, user_agent)
+  VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
 const ISSUE_CREDENTIAL = `INSERT INTO login_credentials (hash, identity_name, host, created_at, last_used_at, expires_at)
   SELECT ?, name, ?, ?, ?, ? FROM identities WHERE name = ?`;
@@ -80,7 +85,14 @@ const identityRow = rowOf(Schema.decodeUnknownEffect(IdentityRow));
 const lastUsedRow = rowOf(Schema.decodeUnknownEffect(LastUsedRow));
 
 function shown(row: RequestRowType): LoginRequest {
-  return { approved: row.approved_by !== null, expiresAt: row.expires_at, host: row.host, userCode: row.user_code };
+  return {
+    ...originOf({ clientIp: row.client_ip, userAgent: row.user_agent }),
+    approved: row.approved_by !== null,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    host: row.host,
+    userCode: row.user_code,
+  };
 }
 
 interface Queries {
@@ -108,7 +120,7 @@ function addIn(db: SqlDatabase): LoginRequestsSection["addLoginRequest"] {
           return "code_taken" as const;
         }
         const { createdAt, expiresAt, host, requestHash, userCode } = request;
-        yield* db.run(INSERT_REQUEST, requestHash, userCode, host, createdAt, expiresAt);
+        yield* db.run(INSERT_REQUEST, requestHash, userCode, host, createdAt, expiresAt, ...originColumns(request));
         return "added" as const;
       }),
     );

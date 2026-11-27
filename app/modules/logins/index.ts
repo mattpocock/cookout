@@ -1,7 +1,7 @@
 /**
  * Logging a machine in by browser approval, on the wire (ADR 0047), shared by the server, the SDK, the CLI and the
  * web: the routes, their bodies and answers, the user code's rule, the approval page's path and the SDK's calls.
- * `cookout login` starts a login request, a human approves it in the web UI by its user code, and the CLI collects
+ * `cookout login` starts a login request, a human approves it in the web UI by typing its user code, and the CLI collects
  * the Login's own credential with the secret request ID.
  */
 import type { Identity, Token } from "../identities/index.ts";
@@ -11,14 +11,32 @@ interface StartLoginRequest {
   readonly host: string;
 }
 
-interface LoginRequestView {
+/** What started a request a person approves by its code: a browser or a terminal logging in, or an agent joining. */
+export type ApprovalRequestKind = "browser" | "terminal" | "agent_join";
+
+/**
+ * What a person sees about a Login request or agent join request before Approve (#905), recorded when it started, so
+ * they approve only the device they meant to.
+ */
+export interface ApprovalRequestDetails {
+  readonly kind: ApprovalRequestKind;
+  /** A browser's browser and OS, such as `Firefox on macOS`, or else the host the request named. */
+  readonly where: string;
+  /** The client's IP address when it started (`Fly-Client-IP` on Fly); missing on a request stored before #905. */
+  readonly clientIp?: string;
+  /** When it started, for its age. */
+  readonly createdAt: IsoTime;
+}
+
+/** A Login request as the person approving it sees it. */
+export interface LoginRequestView extends ApprovalRequestDetails {
   readonly userCode: string;
   readonly host: string;
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
 }
 
-/** A login request's user code, which a person checks on the approval page against the terminal: `WDJB-MJHT`. */
+/** A login request's user code, which a person types into the approval page from the terminal: `WDJB-MJHT`. */
 export const userCodePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/u;
 
 /** How long a login request lasts before it is gone, approved or not. */
@@ -84,19 +102,16 @@ export const loginRequestApprovalPath = "/v1/login-requests/:code/approval";
 export const loginPath = "/v1/login";
 
 /**
- * The approval page's path on the server for a user code.
- * @param userCode The login request's user code.
- * @returns The path, such as `/#/approve/WDJB-MJHT`.
+ * The approval page's path on the server, for Login requests and agent join requests alike. It never holds a code:
+ * the person types the code into the page on a device already logged in (#905).
  */
-export function approvalPathOf(userCode: string): string {
-  return `/#/approve/${userCode}`;
-}
+export const approvalPath = "/#/approve";
 
 /** The SDK's calls for logging a machine in by browser approval. */
 export interface LoginCalls {
   /**
-   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
-   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
+   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person types
+   * `userCode` into the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
    */
   readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
   /**

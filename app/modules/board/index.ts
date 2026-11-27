@@ -120,8 +120,10 @@
  * keeps the server's error code to show. `logOut` ends the session on the server (`DELETE /v1/session`, which revokes the
  * session cookie's credential) and is then logged out; if the server doesn't answer, it asks who is logged in again.
  *
- * `createLoginApprovals` makes the store the approval page reads: for a login request's user code, the request (its
- * host and when it expires) once the page subscribes, or why it can't be shown, and `approve`, which approves it as
+ * `createApprovalCode` makes the approval page's code field store: the code a person types (trimmed, upper-cased, its
+ * dash put back), or that what they typed isn't a code; it starts empty and empties again when the page closes, so no
+ * link can fill it. `createLoginApprovals` makes the store the approval page reads: for a login request's user code,
+ * the request (its kind, browser or host, client IP, when it started and when it expires) once the page subscribes, or why it can't be shown, and `approve`, which approves it as
  * whoever is logged in so the terminal that started it finishes logging in. `createAgentJoinApprovals` does the same
  * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
  * lower, and whether to replace the agent's live session.
@@ -228,6 +230,7 @@ export {
   threadOf,
 } from "./lib/board-selectors.ts";
 export { searchResultsOf } from "./lib/search-selectors.ts";
+export { type ApprovalCode, createApprovalCode } from "./lib/approval-code.ts";
 export {
   type LoginApproval,
   type LoginApprovalState,

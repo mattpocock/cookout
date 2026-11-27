@@ -47,7 +47,10 @@ const twoMachines = Effect.gen(function* makeTwoMachines() {
   return { ada, cookout, first, second };
 });
 
-it.effect("login approve on a logged-in machine approves another machine's waiting login, and both act as ada", () =>
+const SOME_TEXT: unknown = expect.any(String);
+const details = { clientIp: SOME_TEXT, createdAt: SOME_TEXT, where: SOME_TEXT };
+
+it.effect("login approve approves another machine's waiting login, printing its details, and both act as ada", () =>
   Effect.gen(function* approveFromCli() {
     const { ada, cookout, first, second } = yield* twoMachines;
     yield* logInByBrowser(first, ada);
@@ -60,7 +63,10 @@ it.effect("login approve on a logged-in machine approves another machine's waiti
     });
     const results = yield* Effect.all([run(first, "whoami"), run(second, "whoami")], ONE_AT_A_TIME);
 
-    expect(login.during).toMatchObject({ exitCode: 0, stdoutJson: { loginRequest: { approved: true } } });
+    expect(login.during).toMatchObject({
+      exitCode: 0,
+      stdoutJson: { loginRequest: { ...details, approved: true, kind: "terminal" } },
+    });
     expect(login).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "ada" }, url: cookout.url } });
     expect(results).toMatchObject([
       { exitCode: 0, stdoutJson: { identity: { name: "ada" }, source: "login" } },

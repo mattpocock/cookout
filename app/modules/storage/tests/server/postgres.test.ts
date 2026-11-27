@@ -27,6 +27,8 @@ const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DE
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
   "DROP TABLE secrets_key",
+  "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
+  "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
   "ALTER TABLE deliveries DROP COLUMN called_at",
   "ALTER TABLE messages DROP COLUMN title, DROP COLUMN title_set_by, DROP COLUMN title_set_at",
@@ -49,8 +51,10 @@ const BEFORE_SEARCH = [
 ];
 const BEFORE_LOGIN_EXPIRY = [
   "DROP TABLE secrets_key",
+  "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
+  "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 2",
+  "UPDATE schema_version SET version = version - 3",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;

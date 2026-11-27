@@ -7,7 +7,7 @@ import type {
   PendingAgentJoinRequest,
 } from "./agent-join-requests.ts";
 import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
-import { DENIED, GONE, PENDING, collectionOf, sessionToIssue } from "./agent-join-requests.ts";
+import { DENIED, GONE, PENDING, collectionOf, originColumns, originOf, sessionToIssue } from "./agent-join-requests.ts";
 import { agentSessionIssuer, sqlAgentSessions } from "./agent-sessions-sqlite.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
 import type { Fails } from "./errors.ts";
@@ -24,7 +24,9 @@ const YES = 1;
 
 const RequestRow = Schema.Struct({
   agent: NameColumn,
+  client_ip: Schema.NullOr(Schema.String),
   created: Schema.NullOr(Schema.Literals([NO, YES])),
+  created_at: IsoTimeSchema,
   denied_at: Schema.NullOr(IsoTimeSchema),
   expires_at: IsoTimeSchema,
   force: Schema.NullOr(Schema.Literals([NO, YES])),
@@ -33,6 +35,7 @@ const RequestRow = Schema.Struct({
   idle_seconds: Schema.NullOr(Schema.Int),
   joins: Schema.NullOr(NameColumn),
   session_url: Schema.NullOr(Schema.String),
+  user_agent: Schema.NullOr(Schema.String),
   user_code: Schema.String,
 });
 
@@ -51,16 +54,16 @@ const LIST_PENDING = `SELECT agent, created_at, expires_at, host, user_code FROM
 
 const decodePendingRows = Schema.decodeUnknownEffect(Schema.Array(PendingRow));
 
-const COLUMNS =
-  "agent, created, denied_at, expires_at, force, host, idle_expiry, idle_seconds, joins, session_url, user_code";
+const COLUMNS = `agent, client_ip, created, created_at, denied_at, expires_at, force, host, idle_expiry, idle_seconds,
+  joins, session_url, user_agent, user_code`;
 
 const FIND_LIVE_BY_HASH = `SELECT ${COLUMNS} FROM agent_join_requests WHERE request_hash = ? AND expires_at > ?`;
 
 const FIND_LIVE_BY_CODE = `SELECT ${COLUMNS} FROM agent_join_requests WHERE user_code = ? AND expires_at > ?`;
 
 const INSERT_REQUEST = `INSERT INTO agent_join_requests
-  (request_hash, user_code, agent, host, idle_expiry, session_url, created_at, expires_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  (request_hash, user_code, agent, host, idle_expiry, session_url, created_at, expires_at, client_ip, user_agent)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const APPROVE = `UPDATE agent_join_requests SET joins = ?, created = ?, idle_seconds = ?, force = ?
   WHERE user_code = ? AND joins IS NULL`;
@@ -78,8 +81,10 @@ function requestRow(row: unknown): Fails<Option.Option<RequestRowType>> {
 
 function shown(row: RequestRowType): AgentJoinRequest {
   const view = {
+    ...originOf({ clientIp: row.client_ip, userAgent: row.user_agent }),
     agent: row.agent,
     approved: row.joins !== null,
+    createdAt: row.created_at,
     expiresAt: row.expires_at,
     host: row.host,
     userCode: row.user_code,
@@ -137,7 +142,20 @@ function addIn(db: SqlDatabase): AgentJoinRequestsSection["addAgentJoinRequest"]
           sessionUrl = null,
           userCode,
         } = request;
-        yield* db.run(INSERT_REQUEST, requestHash, userCode, agent, host, idleExpiry, sessionUrl, createdAt, expiresAt);
+        const [clientIp, userAgent] = originColumns(request);
+        yield* db.run(
+          INSERT_REQUEST,
+          requestHash,
+          userCode,
+          agent,
+          host,
+          idleExpiry,
+          sessionUrl,
+          createdAt,
+          expiresAt,
+          clientIp,
+          userAgent,
+        );
         return "added" as const;
       }),
     );

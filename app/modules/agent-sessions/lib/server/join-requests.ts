@@ -3,6 +3,7 @@ import type {
   AgentJoinApproval,
   AgentJoinCollection,
   AgentJoinRequest,
+  RequestOrigin,
   StorageUnavailable,
 } from "../../../storage/server.ts";
 import type {
@@ -30,12 +31,12 @@ import { agentNotFound, agentSessionLive, joinNotOwned } from "./refusals.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
-import { agentJoinApprovalPathOf } from "../../index.ts";
+import { agentJoinApprovalPath } from "../../index.ts";
 import { agentToApprove } from "./resolve.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-interface StartAgentJoin {
+interface StartAgentJoin extends RequestOrigin {
   readonly as: IdentityName;
   readonly host: string;
   readonly idleExpiry?: string;
@@ -118,7 +119,7 @@ function starter(on: Changing): JoinRequests["startJoin"] {
         Function.constant(Effect.die(codeTaken)),
       );
       yield* Effect.andThen(stored, on.joinRequestChanges.started(startedOf(identity, { createdAt, expiresAt })));
-      return { approvalPath: agentJoinApprovalPathOf(userCode), expiresAt, requestId, userCode };
+      return { approvalPath: agentJoinApprovalPath, expiresAt, requestId, userCode };
     });
 }
 
