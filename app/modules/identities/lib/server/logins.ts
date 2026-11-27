@@ -166,13 +166,6 @@ function collectionAnswer(
   return approvedAnswer(collection.identity, collected);
 }
 
-function ipOf(clientIp: string | undefined): { readonly clientIp?: string } {
-  if (Predicate.isUndefined(clientIp)) {
-    return {};
-  }
-  return { clientIp };
-}
-
 function announcedSession({
   collection,
   kind,
@@ -181,8 +174,8 @@ function announcedSession({
     return Effect.void;
   }
   const { identity, session } = collection;
-  const { clientIp, id, where } = session;
-  return sessionMade({ identity: identity.name, session: id, sessionKind: kind, where, ...ipOf(clientIp) });
+  const { id, ...seen } = session;
+  return sessionMade({ ...seen, identity: identity.name, session: id, sessionKind: kind });
 }
 
 const collectRoute: Route<Storage | Secrets | AddressLimit | IdentityChanges> = {

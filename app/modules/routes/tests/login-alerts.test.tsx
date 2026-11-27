@@ -108,3 +108,31 @@ it("a Login alert says when an admin acted on your credentials, and a web login 
 
   await expect(shownAlerts(owner.client)).resolves.toStrictEqual([TWO, ONE]);
 });
+
+async function earlierLogin(owner: CookoutClient): Promise<HTMLElement | null> {
+  const { live, stream } = watched(owner);
+  const unmount = openAt({ client: owner, hash: "#/inbox", live });
+  const events = await stream;
+  const earlier = within(await inPane().findByRole("list", { name: "Earlier" }));
+  await earlier.findByText(/^New login: cookout CLI on web-login-earlier, /u);
+  const revoke = earlier.queryByRole("button", { name: "Revoke" });
+  await closed(unmount, events);
+  return revoke;
+}
+
+it("a read Login alert moves to Earlier, with no Revoke even while its session lives", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const owner = await newIdentity({ kind: "human", name: "web-login-earlier" });
+  await cliSession(owner.client, "web-login-earlier");
+  const { alerts } = await owner.client.inbox();
+  await Promise.all(
+    alerts.map(async ({ id }) => {
+      await owner.client.markOfflineAlertRead(id);
+    }),
+  );
+
+  await expect(earlierLogin(owner.client)).resolves.toBeNull();
+});

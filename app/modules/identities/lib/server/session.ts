@@ -1,5 +1,5 @@
 import { Caller, CredentialSent, issueToken, sessionMade } from "./auth.ts";
-import { Effect, Option, Predicate } from "effect";
+import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { IdentityChanges, IssuedToken } from "./auth.ts";
 import type { IssuedLoginCredential, StorageUnavailable } from "../../../storage/server.ts";
@@ -43,11 +43,13 @@ function announcedWebSession(
   made: IssuedLoginCredential | undefined,
   where: string,
 ): Effect.Effect<void, never, HttpServerRequest.HttpServerRequest | IdentityChanges> {
-  if (Predicate.isUndefined(made)) {
-    return Effect.void;
-  }
-  return Effect.flatMap(clientAddress, (clientIp) =>
-    sessionMade({ clientIp, identity: made.identity.name, session: made.session, sessionKind: "web", where }),
+  return Effect.forEach(
+    Option.toArray(Option.fromUndefinedOr(made)),
+    ({ identity, session }) =>
+      Effect.flatMap(clientAddress, (clientIp) =>
+        sessionMade({ clientIp, identity: identity.name, session, sessionKind: "web", where }),
+      ),
+    { concurrency: 1, discard: true },
   );
 }
 

@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Option, Predicate } from "effect";
 import type { InboxAlert, LoginAlert, PublicId, Token } from "../../index.ts";
-import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, identityName, isoTime, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { collectLoginRequestPath, loginRequestsPath } from "../../../logins/index.ts";
 import { expect, it } from "@effect/vitest";
@@ -76,6 +76,10 @@ function loginAlertsOf(client: Client): Effect.Effect<readonly LoginAlert[]> {
     answer(() => client.inbox()),
     ({ alerts }) => Arr.filter(alerts, isLoginAlert),
   );
+}
+
+function loginOf({ login }: LoginAlert): LoginAlert["login"] {
+  return login;
 }
 
 function idAt(sessions: readonly Session[], where: string): PublicId | null {
@@ -171,5 +175,20 @@ it.effect("once its session is revoked, a Login alert shows the session ended", 
     const after = yield* loginAlertsOf(ada.client);
 
     expect(after).toStrictEqual(Arr.map(before, (alert) => ({ ...alert, login: { ...alert.login, ended: true } })));
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("an admin act Login alert is shown as it was recorded, with no session to have ended", () =>
+  Effect.gen(function* adminActShown() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* cliSession(cookout, ada.client, "ada-laptop");
+    const made = yield* loginAlertsOf(ada.client);
+    const credential = yield* sessionOf(made);
+    const login = { act: "revoked", admin: identityName("matt"), credential, kind: "admin act" } as const;
+    yield* cookout.seedLoginAlert({ login, owner: ada.identity.name, raisedAt: isoTime("2026-01-01T10:42:00.000Z") });
+    const alerts = yield* loginAlertsOf(ada.client);
+
+    expect(Arr.map(alerts, loginOf)).toStrictEqual([...Arr.map(made, loginOf), login]);
   }).pipe(Effect.provide(testCookout())),
 );

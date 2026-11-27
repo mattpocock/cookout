@@ -42,14 +42,12 @@ class OfflineAlerts extends Context.Service<OfflineAlerts, OfflineAlertsService>
 
 type Publish = (owner: IdentityName) => (alerts: readonly InboxAlert[]) => Effect.Effect<void>;
 
-type Shown = (
-  owner: IdentityName,
-) => (alerts: readonly StoredInboxAlert[]) => Effect.Effect<readonly InboxAlert[], StorageUnavailable>;
+type Shows = (owner: IdentityName) => Effect.Effect<(alert: StoredInboxAlert) => InboxAlert, StorageUnavailable>;
 
 interface On {
   readonly storage: Storage["Service"];
   readonly publish: Publish;
-  readonly shown: Shown;
+  readonly shows: Shows;
 }
 
 const NOT_FOUND = 404;
@@ -104,16 +102,17 @@ function wasBack({ publish, storage }: On, agent: IdentityName, markBack: MarkBa
   }).pipe(Effect.ignore);
 }
 
-function markedRead({ publish, shown, storage }: On, caller: Identity, asked: string): Fails<InboxAlert> {
+function markedRead({ publish, shows, storage }: On, caller: Identity, asked: string): Fails<InboxAlert> {
   return Effect.gen(function* markOneRead() {
     const notFound = alertNotFound(asked);
     const named = Option.liftPredicate(Number(asked), isOfflineAlertId);
     const id = yield* Effect.mapError(Effect.fromOption(named), () => notFound);
     const marked = yield* storage.markAlertRead(caller.name, id);
     const stored = yield* Effect.mapError(Effect.fromNullishOr(marked), () => notFound);
-    const alerts = yield* shown(caller.name)([stored]);
-    yield* publish(caller.name)(alerts);
-    return yield* Effect.mapError(Effect.fromOption(Arr.head(alerts)), () => notFound);
+    const show = yield* shows(caller.name);
+    const alert = show(stored);
+    yield* publish(caller.name)([alert]);
+    return alert;
   });
 }
 
@@ -160,14 +159,21 @@ function endedIn(live: ReadonlySet<string>): (alert: StoredInboxAlert) => InboxA
   };
 }
 
-function shownBy(storage: Storage["Service"]): Shown {
-  return (owner) => (alerts) =>
+function showsBy(storage: Storage["Service"]): Shows {
+  return (owner) =>
     Effect.gen(function* showAlerts() {
       const at = yield* now;
       const sessions = yield* storage.listSessions({ current: NO_CURRENT, identity: owner, now: at });
-      const live = new Set(Arr.map(sessions, ({ id }) => id));
-      return Arr.map(alerts, endedIn(live));
+      return endedIn(new Set(Arr.map(sessions, ({ id }) => id)));
     });
+}
+
+function shownIn(
+  on: On,
+  owner: IdentityName,
+  alerts: readonly StoredInboxAlert[],
+): Effect.Effect<readonly InboxAlert[], StorageUnavailable> {
+  return Effect.map(on.shows(owner), (show) => Arr.map(alerts, show));
 }
 
 function shownThenPublished(
@@ -175,14 +181,11 @@ function shownThenPublished(
   owner: IdentityName,
   alerts: readonly StoredInboxAlert[],
 ): Effect.Effect<readonly InboxAlert[], StorageUnavailable> {
-  return Effect.tap(on.shown(owner)(alerts), on.publish(owner));
+  return Effect.tap(shownIn(on, owner, alerts), on.publish(owner));
 }
 
-function loginOf({ clientIp, session, sessionKind, where }: SessionMade): StoredLoginAlert["login"] {
-  if (Predicate.isUndefined(clientIp)) {
-    return { kind: "new session", session, sessionKind, where };
-  }
-  return { clientIp, kind: "new session", session, sessionKind, where };
+function loginOf({ identity: _owner, ...made }: SessionMade): StoredLoginAlert["login"] {
+  return { ...made, kind: "new session" };
 }
 
 function raisedLogin(on: On, made: SessionMade): Effect.Effect<void> {
@@ -200,7 +203,7 @@ function isEndedSession(alert: InboxAlert): alert is LoginAlert {
 function republishedEnded(on: On, { identity }: TokensEnded): Effect.Effect<void> {
   return Effect.gen(function* republishEnded() {
     const stored = yield* on.storage.listAlerts(identity);
-    const shown = yield* on.shown(identity)(stored);
+    const shown = yield* shownIn(on, identity, stored);
     yield* on.publish(identity)(Arr.filter(shown, isEndedSession));
   }).pipe(Effect.ignore);
 }
@@ -211,13 +214,13 @@ const offlineAlertsLayer: Layer.Layer<OfflineAlerts, never, Storage | IdentityCh
     const storage = yield* Storage;
     const changes = yield* IdentityChanges;
     const hub = yield* PubSub.unbounded<OwnedAlert>();
-    const on: On = { publish: publisher((owned) => PubSub.publish(hub, owned)), shown: shownBy(storage), storage };
+    const on: On = { publish: publisher((owned) => PubSub.publish(hub, owned)), shows: showsBy(storage), storage };
     yield* changes.onSessionMade((made) => raisedLogin(on, made));
     yield* changes.onTokensEnded((ended) => republishedEnded(on, ended));
     return {
       backOnline: (agent) => wasBack(on, agent, storage.markBackOnline),
       changed: PubSub.subscribe(hub),
-      list: (caller) => Effect.flatMap(storage.listAlerts(caller.name), on.shown(caller.name)),
+      list: (caller) => Effect.flatMap(storage.listAlerts(caller.name), (alerts) => shownIn(on, caller.name, alerts)),
       markAllRead: (caller, upTo) =>
         Effect.flatMap(storage.markAlertsRead(caller.name, upTo), (read) => shownThenPublished(on, caller.name, read)),
       markRead: (caller, asked) => markedRead(on, caller, asked),

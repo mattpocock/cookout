@@ -27,6 +27,10 @@ import { WebhookFake } from "../../../webhook-fake/server.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
+const FIRST_PARAMETER = 0;
+
+type SeededLoginAlert = Parameters<Storage["Service"]["recordLoginAlert"]>[typeof FIRST_PARAMETER];
+
 export type TestIdentity = {
   readonly identity: Identity;
   readonly token: Token;
@@ -56,6 +60,7 @@ export type TestCookoutService = {
   readonly restartServerAfter: (whileDown: Effect.Effect<void>) => Effect.Effect<BootedServer>;
   readonly seedMessage: (message: NewMessage) => Effect.Effect<Message>;
   readonly seedCommand: (stored: StoredWebhookCommand) => Effect.Effect<void>;
+  readonly seedLoginAlert: (alert: SeededLoginAlert) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
   readonly heldAssets: HeldAssets;
   readonly logs: Effect.Effect<readonly LoggedLine[]>;
@@ -169,6 +174,10 @@ function seedCommand(stored: StoredWebhookCommand): Effect.Effect<void, never, S
   }).pipe(Effect.orDie);
 }
 
+function seedLoginAlert(alert: SeededLoginAlert): Effect.Effect<void, never, Storage> {
+  return Effect.asVoid(Effect.orDie(Effect.flatMap(Storage, (storage) => storage.recordLoginAlert(alert))));
+}
+
 function seedMessage(message: NewMessage): Effect.Effect<Message, never, Storage> {
   return Effect.flatMap(Storage, (storage) => storage.appendMessage(message)).pipe(
     Effect.filterOrFail((result) => result.status === "appended"),
@@ -272,6 +281,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         restartServer: restartServerAfter(Effect.void),
         restartServerAfter,
         seedCommand: (stored) => onFirst(seedCommand(stored)),
+        seedLoginAlert: (alert) => onFirst(seedLoginAlert(alert)),
         seedMessage: (message) => onFirst(seedMessage(message)),
         startSecondServer: Effect.map(Scope.provide(boot, scope), ({ url }) => ({ url })),
         startSecondServerAs: (adminName) => Effect.map(Scope.provide(bootAs(adminName), scope), ({ url }) => ({ url })),
