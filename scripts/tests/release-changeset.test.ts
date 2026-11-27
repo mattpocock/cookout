@@ -113,6 +113,31 @@ it("adds nothing when only docs, tests and scripts changed since the last versio
   expect(outcome).toStrictEqual({ ok: true, value: `added nothing: no shipping code landed since ${VERSIONED}` });
 });
 
+it("adds nothing when only a test helper under a tests/ folder changed since the last version", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  const { outcome } = added({ changed: ["app/modules/routes/tests/sidebar-keys.ts"] });
+
+  expect(outcome).toStrictEqual({ ok: true, value: `added nothing: no shipping code landed since ${VERSIONED}` });
+});
+
+it.each([["app/modules/routes/index.ts"], ["package.json"]])(
+  "still adds a patch changeset when %s, outside any tests/ folder, changed",
+  { timeout: 1000 },
+  (file) => {
+    expect.hasAssertions();
+
+    const { outcome } = added({ changed: ["app/modules/routes/tests/sidebar-keys.ts", file] });
+
+    expect(outcome).toStrictEqual({
+      ok: true,
+      value: `added .changeset/unreleased-work.md: ${file} landed since ${VERSIONED} with no changeset, so this releases a patch`,
+    });
+  },
+);
+
 it("counts every file as landed when no commit has versioned the package yet", { timeout: 1000 }, () => {
   expect.hasAssertions();
 

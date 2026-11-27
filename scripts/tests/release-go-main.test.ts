@@ -16,6 +16,7 @@ const CI_ONLY = [
   ".changeset/small.md",
   "app/modules/cli/tests/server/cli.test.ts",
   "app/modules/web/tests/browser/thread.browser.test.ts",
+  "app/modules/routes/tests/sidebar-keys.ts",
   "scripts/release-commit.ts",
   ".github/workflows/release.yml",
 ];
@@ -96,6 +97,32 @@ it("moves nothing for a range with only CI changes when main already has the com
     },
   });
 });
+
+it("finds nothing user-facing in a range touching only a test helper under a tests/ folder", { timeout: 1000 }, () => {
+  expect.hasAssertions();
+
+  expect(decided({ changed: ["app/modules/routes/tests/sidebar-keys.ts"] })).toStrictEqual({
+    ok: true,
+    value: {
+      go: false,
+      line: `moves main: nothing user-facing since ${TAG}, so main takes ${SHA}'s workflows without the gate or a deploy`,
+      promote: true,
+    },
+  });
+});
+
+it.each([["app/modules/routes/index.ts"], ["package.json"]])(
+  "still runs the gate when %s, outside any tests/ folder, changed",
+  { timeout: 1000 },
+  (file) => {
+    expect.hasAssertions();
+
+    expect(decided({ changed: ["app/modules/routes/tests/sidebar-keys.ts", file] })).toMatchObject({
+      ok: true,
+      value: { go: true, promote: true },
+    });
+  },
+);
 
 it("still runs the gate for a range with a user-facing change", { timeout: 1000 }, () => {
   expect.hasAssertions();
