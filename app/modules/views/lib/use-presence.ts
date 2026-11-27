@@ -1,13 +1,15 @@
-import type { IdentityName, LiveConnectionDetail, Presence } from "../../sdk/index.ts";
+import type { Identity, IdentityName, LiveConnectionDetail, Presence } from "../../sdk/index.ts";
+import { identityList, presences } from "../../board/index.ts";
 import { isUnreachable, reachText, unreachableBrief } from "./trigger-presence.ts";
 import type { Presences } from "../../board/index.ts";
+import { isFeeder } from "../../identities/feeders.ts";
 import { onTick } from "./use-time-ago.ts";
-import { presences } from "../../board/index.ts";
 import { timeAgo } from "../../format/index.ts";
 import { useBoardStore } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = {
+  feeder: "Feeder: only posts",
   lastSeen: "last seen ",
   offline: "Offline",
   online: "Online",
@@ -19,6 +21,7 @@ const TEXT = {
 } as const;
 
 interface PresenceShown {
+  readonly feeder: boolean;
   readonly online: boolean;
   readonly warning: boolean;
   readonly unreachable: boolean;
@@ -28,8 +31,17 @@ interface PresenceShown {
 
 interface Among {
   readonly presences: Presences;
-  readonly name: IdentityName;
+  readonly identity: Identity;
 }
+
+const FEEDER: PresenceShown = {
+  feeder: true,
+  label: TEXT.feeder,
+  online: false,
+  spoken: TEXT.feeder,
+  unreachable: false,
+  warning: false,
+};
 
 function lastSeenOf(presence: Presence): string | null {
   const at = presence.lastSeenAt ?? null;
@@ -119,6 +131,7 @@ function detailOf(presence: Presence): string {
 
 function shownOf(presence: Presence, label: string): PresenceShown {
   return {
+    feeder: false,
     label,
     online: presence.online,
     spoken: label,
@@ -137,7 +150,10 @@ function usePresenceOf(name: IdentityName): Presence | null {
 }
 
 function shownIn(among: Among): PresenceShown | null {
-  const presence = among.presences.get(among.name) ?? null;
+  if (isFeeder(among.identity)) {
+    return FEEDER;
+  }
+  const presence = among.presences.get(among.identity.name) ?? null;
   if (presence === null) {
     return null;
   }
@@ -154,16 +170,30 @@ function useTicking(presence: Presence | null, text: (known: Presence) => string
   });
 }
 
+function useFeeder(name: IdentityName): boolean {
+  const store = useBoardStore();
+  return useSyncExternalStore(store.subscribeShowing("identities"), () =>
+    identityList(store.snapshot()).some((identity) => identity.name === name && isFeeder(identity)),
+  );
+}
+
 function usePresence(name: IdentityName): PresenceShown | null {
+  const feeder = useFeeder(name);
   const presence = usePresenceOf(name);
   const label = useTicking(presence, labelOf);
+  if (feeder) {
+    return FEEDER;
+  }
   if (presence === null || label === null) {
     return null;
   }
   return shownOf(presence, label);
 }
 
-function briefOf({ online, unreachable, warning }: PresenceShown): string {
+function briefOf({ feeder, online, unreachable, warning }: PresenceShown): string {
+  if (feeder) {
+    return TEXT.feeder;
+  }
   if (online) {
     return TEXT.online;
   }
@@ -185,7 +215,12 @@ function useAuthorPresence(name: IdentityName): PresenceShown | null {
 }
 
 function usePresenceDetail(name: IdentityName): string | null {
-  return useTicking(usePresenceOf(name), detailOf);
+  const feeder = useFeeder(name);
+  const detail = useTicking(usePresenceOf(name), detailOf);
+  if (feeder) {
+    return TEXT.feeder;
+  }
+  return detail;
 }
 
 export { type PresenceShown, shownIn, useAuthorPresence, usePresence, usePresenceDetail, usePresences };

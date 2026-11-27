@@ -66,12 +66,12 @@ function whoamiAfter(
 it.effect("a join in one Claude Code session acts as the agent in that session only, until leave forgets it", () =>
   Effect.gen(function* joinInOneSession() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const folder = yield* freshStateFolder;
     const shared = { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url };
     const [first, second] = [claudeCode("s1", shared), claudeCode("s2", shared)];
     const results = yield* runAll([
-      { args: ["join", "--as", "release-bot"], env: { ...first, COOKOUT_TOKEN: bot.token } },
+      { args: ["join", "--as", "release-bot"], env: { ...first, COOKOUT_TOKEN: aide.token } },
       { args: ["channel", "create", "grill"], env: first },
       { args: WHOAMI, env: second },
       { args: ["channel", "list"], env: second },
@@ -93,16 +93,16 @@ it.effect("a join in one Claude Code session acts as the agent in that session o
 it.effect("a second join in a joined session is refused naming the agent; --print-env issues one for another", () =>
   Effect.gen(function* secondJoin() {
     const cookout = yield* TestCookout;
-    const [bot, other] = yield* Effect.all(
+    const [aide, other] = yield* Effect.all(
       [cookout.createIdentity("release-bot"), cookout.createIdentity("other")],
       ONE_AT_A_TIME,
     );
     const first = claudeCode("s1", { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url });
-    const joinAsBot = { args: ["join", "--as", "release-bot"], env: withToken(first, bot.token) };
+    const joinAsAgent = { args: ["join", "--as", "release-bot"], env: withToken(first, aide.token) };
     const [, again, printed] = yield* Effect.all(
       [
-        runCookout(joinAsBot),
-        runCookout(joinAsBot),
+        runCookout(joinAsAgent),
+        runCookout(joinAsAgent),
         runCookout({ args: ["join", "--as", "other", "--print-env"], env: withToken(first, other.token) }),
       ],
       ONE_AT_A_TIME,
@@ -129,9 +129,9 @@ it.effect("a second join in a joined session is refused naming the agent; --prin
 it.effect("outside a harness, or in one with no session ID, join is refused, and --print-env prints the export", () =>
   Effect.gen(function* joinOutsideHarness() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const folder = yield* freshStateFolder;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url };
     const refusals = yield* runAll([
       { args: ["join", "--as", "release-bot"], env },
       { args: ["join", "--as", "release-bot"], env: { ...env, CLAUDECODE: "1" } },
@@ -158,9 +158,9 @@ it.effect("outside a harness, or in one with no session ID, join is refused, and
 it.effect("whoami says how long ago this harness session joined", () =>
   Effect.gen(function* joinedAgo() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const first = claudeCode("s1", { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url });
-    yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(first, bot.token) });
+    yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(first, aide.token) });
     const summaries = yield* Effect.all(
       [whoamiAfter("0 millis", first), whoamiAfter("30 minutes", first), whoamiAfter("3 days", first)],
       ONE_AT_A_TIME,

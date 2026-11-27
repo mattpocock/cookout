@@ -27,6 +27,7 @@ const BEFORE_LOGIN_ALERTS = [
      ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL`,
 ];
 const BEFORE_REQUEST_ORIGINS = [
+  "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys",
   ...BEFORE_LOGIN_ALERTS,
   "DROP TABLE login_links",
@@ -36,7 +37,7 @@ const BEFORE_REQUEST_ORIGINS = [
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with",
   "ALTER TABLE login_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN client_ip, DROP COLUMN user_agent",
-  "UPDATE schema_version SET version = version - 8",
+  "UPDATE schema_version SET version = version - 9",
 ];
 
 const login = { createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" };
@@ -86,10 +87,11 @@ it.live("a Login request and an agent join request stored before request origins
 );
 
 const BEFORE_LOGIN_LINKS = [
+  "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys",
   ...BEFORE_LOGIN_ALERTS,
   "DROP TABLE login_links",
-  "UPDATE schema_version SET version = version - 5",
+  "UPDATE schema_version SET version = version - 6",
 ];
 const [session, linkHash, redeemed] = [tokenHash("hash:session"), tokenHash("hash:link"), tokenHash("hash:redeemed")];
 const linkMadeAt = isoTime("2026-01-01T00:05:00.000Z");
@@ -155,11 +157,12 @@ it.live(
 );
 
 const BEFORE_REQUEST_KINDS = [
+  "ALTER TABLE identities DROP COLUMN feeder",
   "DROP TABLE agent_keys",
   ...BEFORE_LOGIN_ALERTS,
   "DROP TABLE login_links",
   "ALTER TABLE login_requests DROP COLUMN kind",
-  "UPDATE schema_version SET version = version - 6",
+  "UPDATE schema_version SET version = version - 7",
 ];
 
 const requestStoredBeforeKinds = Effect.gen(function* storeRequestBeforeKinds() {
@@ -207,9 +210,10 @@ const agentSubscribedBeforeTheUpgrade = Effect.gen(function* storeAgentSubscript
   yield* close;
   yield* onPostgresDatabase({
     statements: [
+      "ALTER TABLE identities DROP COLUMN feeder",
       "DROP TABLE agent_keys",
       "ALTER TABLE offline_alerts DROP COLUMN made_via",
-      "UPDATE schema_version SET version = version - 3",
+      "UPDATE schema_version SET version = version - 4",
     ],
     url,
   });

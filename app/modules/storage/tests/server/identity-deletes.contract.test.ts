@@ -28,7 +28,7 @@ const T60 = isoTime("2026-01-01T00:01:00.000Z");
 const IDLE_SECONDS = 60;
 const ONE = 1;
 const PAGE = { limit: 10 } as const;
-const BOT = nameOf("e2e-bot");
+const AGENT = nameOf("e2e-bot");
 const DELIVERY = {
   attempts: 0,
   callId: callId("call_1"),
@@ -50,7 +50,7 @@ it.effect.each(storageLayers)(
       const deleted = yield* storage.deleteIdentity(nameOf("e2e-bot"));
       const afterwards = yield* Effect.all(
         [
-          Effect.map(storage.findIdentityByName(BOT), Predicate.isUndefined),
+          Effect.map(storage.findIdentityByName(AGENT), Predicate.isUndefined),
           storage.findIdentityByTokenHash(hashA),
           storage.useAgentSession({ hash: hashB, now: T30 }),
         ],

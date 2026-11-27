@@ -12,13 +12,13 @@ it.effect("an agent's owner describes it, and every caller on the board reads it
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     yield* cookout.createIdentity("grace", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
     const relay = yield* cookout.createIdentity("relay", { owner: "grace" });
     const { identity } = yield* answer(() => ada.client.setDescription("todo-bot", "  Ada's to-dos and life admin "));
     const got = yield* answer(() => relay.client.getIdentity("todo-bot"));
     const listed = yield* answer(relay.client.listIdentities);
 
-    expect(identity).toStrictEqual({ ...bot.identity, description: "Ada's to-dos and life admin" });
+    expect(identity).toStrictEqual({ ...aide.identity, description: "Ada's to-dos and life admin" });
     expect([got.identity, listed.identities]).toStrictEqual([identity, expect.arrayContaining([identity])]);
   }).pipe(Effect.provide(testCookout())),
 );
@@ -27,18 +27,18 @@ it.effect("an agent describes itself, and an admin sets and clears any agent's d
   Effect.gen(function* selfAndAdmin() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
-    const byItself = yield* answer(() => bot.client.setDescription("todo-bot", "Voice-note follow-ups"));
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const byItself = yield* answer(() => aide.client.setDescription("todo-bot", "Voice-note follow-ups"));
     const byAdmin = yield* answer(() => cookout.client.setDescription("todo-bot", "Ada's to-dos"));
     const cleared = yield* answer(() => cookout.client.setDescription("todo-bot", null));
-    const got = yield* answer(() => bot.client.getIdentity("todo-bot"));
+    const got = yield* answer(() => aide.client.getIdentity("todo-bot"));
 
     expect([byItself.identity.kind, byAdmin.identity.kind]).toStrictEqual(["agent", "agent"]);
     expect([byItself.identity, byAdmin.identity]).toMatchObject([
       { description: "Voice-note follow-ups" },
       { description: "Ada's to-dos" },
     ]);
-    expect([cleared, got]).toStrictEqual([{ identity: bot.identity }, { identity: bot.identity }]);
+    expect([cleared, got]).toStrictEqual([{ identity: aide.identity }, { identity: aide.identity }]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -47,7 +47,7 @@ it.effect("another human or another agent describing an agent is refused with 40
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
     const other = yield* cookout.createIdentity("other-bot", { owner: "ada" });
     const byHuman = yield* refusal(() => grace.client.setDescription("todo-bot", "Mine now"));
     const byAgent = yield* refusal(() => other.client.setDescription("todo-bot", "Mine now"));
@@ -57,7 +57,7 @@ it.effect("another human or another agent describing an agent is refused with 40
       { code: "not_owner", status: FORBIDDEN },
       { code: "not_owner", status: FORBIDDEN },
     ]);
-    expect(got).toStrictEqual({ identity: bot.identity });
+    expect(got).toStrictEqual({ identity: aide.identity });
   }).pipe(Effect.provide(testCookout())),
 );
 

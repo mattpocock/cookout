@@ -20,9 +20,9 @@ interface Watching {
 
 async function watchingAgent({ agent, owner }: Owned): Promise<Watching> {
   const human = await newIdentity({ kind: "human", name: owner });
-  const bot = await newIdentity({ kind: "agent", name: agent, owner });
-  const events = await bot.client.watch();
-  return { agent: bot.client, drop: events.close, owner: human.client };
+  const aide = await newIdentity({ kind: "agent", name: agent, owner });
+  const events = await aide.client.watch();
+  return { agent: aide.client, drop: events.close, owner: human.client };
 }
 
 it("as the owner, an agent that drops shows the warning on its dot and profile, and reconnecting clears it", {
@@ -31,8 +31,8 @@ it("as the owner, an agent that drops shows the warning on its dot and profile, 
   expect.hasAssertions();
 
   const owner = await newIdentity({ kind: "human", name: "web-warning-owner" });
-  const bot = await newIdentity({ kind: "agent", name: "web-warning-bot", owner: "web-warning-owner" });
-  const events = await bot.client.watch();
+  const aide = await newIdentity({ kind: "agent", name: "web-warning-bot", owner: "web-warning-owner" });
+  const events = await aide.client.watch();
   await openedBy({ client: owner.client, hash: "#/people/web-warning-bot" });
   await inProfile().findByText("Online · watching");
   await events.close();
@@ -45,7 +45,7 @@ it("as the owner, an agent that drops shows the warning on its dot and profile, 
     ]),
   ).resolves.toStrictEqual([warned(WARNING), warned(WARNING), expect.anything()]);
 
-  await bot.client.watch();
+  await aide.client.watch();
 
   await expect(profileDot({ label: "Online", who: "web-warning-bot" })).resolves.toStrictEqual(online());
 });
@@ -56,8 +56,8 @@ it("as the owner, an agent that dropped before the page opened shows the warning
   expect.hasAssertions();
 
   const owner = await newIdentity({ kind: "human", name: "web-warning-early-owner" });
-  const bot = await newIdentity({ kind: "agent", name: "web-warning-early-bot", owner: "web-warning-early-owner" });
-  const events = await bot.client.watch();
+  const aide = await newIdentity({ kind: "agent", name: "web-warning-early-bot", owner: "web-warning-early-owner" });
+  const events = await aide.client.watch();
   await events.close();
   await openedBy({ client: owner.client, hash: "#/people/web-warning-early-bot" });
 

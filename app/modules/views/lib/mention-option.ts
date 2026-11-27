@@ -29,7 +29,7 @@ function mentionOptionOf({ identity, presences }: Mentioning): MentionOption {
     detail: identity.displayName ?? null,
     identity: { agent: identity.kind === "agent", name: identity.name },
     option: `@${identity.name}`,
-    presence: shownIn({ name: identity.name, presences }),
+    presence: shownIn({ identity, presences }),
     spoken: spokenMention(identity),
   };
 }

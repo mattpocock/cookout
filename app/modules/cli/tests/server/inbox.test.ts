@@ -195,10 +195,10 @@ it.effect("cookout inbox prints a Login alert for a session a login link made, s
 it.effect("cookout subscribe as an agent exits 1 with 403 identity_kind on stderr, and subscribes nothing", () =>
   Effect.gen(function* agentSubscribe() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("todo-bot");
+    const aide = yield* cookout.createIdentity("todo-bot");
     const folder = yield* freshStateFolder;
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url };
     const results = yield* runAll(env, [
       ["subscribe", "grill"],
       ["channel", "list", "--subscribed"],

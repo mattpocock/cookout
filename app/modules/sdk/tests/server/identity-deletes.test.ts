@@ -13,7 +13,7 @@ const CONFLICT = 409;
 it.effect("an admin deletes an identity with no messages: its token stops working and its name is free", () =>
   Effect.gen(function* deleteUnused() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("e2e-run-1");
+    const aide = yield* cookout.createIdentity("e2e-run-1");
     const answers = yield* Effect.all(
       [
         answer(() => cookout.client.countMessagesBy("e2e-run-1")),
@@ -21,13 +21,13 @@ it.effect("an admin deletes an identity with no messages: its token stops workin
       ],
       ONE_AT_A_TIME,
     );
-    const token = yield* refusal(bot.client.whoami);
+    const token = yield* refusal(aide.client.whoami);
     const { identities } = yield* answer(() => cookout.client.listIdentities({ include: "deactivated" }));
     const again = yield* answer(() =>
       createTestAgent({ by: cookout.client, displayName: "e2e-run-1", name: "e2e-run-1" }),
     );
 
-    expect(answers).toStrictEqual([{ messages: 0 }, { identity: bot.identity }]);
+    expect(answers).toStrictEqual([{ messages: 0 }, { identity: aide.identity }]);
     expect(token).toMatchObject({ status: UNAUTHORIZED });
     expect(Arr.map(identities, ({ name }) => name)).not.toContain("e2e-run-1");
     expect(again.identity).toMatchObject({ name: "e2e-run-1" });
@@ -37,11 +37,11 @@ it.effect("an admin deletes an identity with no messages: its token stops workin
 it.effect("an identity with messages on the board is refused with 409 has_messages, and keeps working", () =>
   Effect.gen(function* refuseWithMessages() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("talker");
+    const aide = yield* cookout.createIdentity("talker");
     yield* Effect.all(
       [
-        answer(() => bot.client.createChannel({ name: "grill" })),
-        answer(() => bot.client.createMessage({ channel: "grill", text: "hello" })),
+        answer(() => aide.client.createChannel({ name: "grill" })),
+        answer(() => aide.client.createMessage({ channel: "grill", text: "hello" })),
       ],
       ONE_AT_A_TIME,
     );
@@ -49,7 +49,7 @@ it.effect("an identity with messages on the board is refused with 409 has_messag
       [answer(() => cookout.client.countMessagesBy("talker")), refusal(() => cookout.client.deleteIdentity("talker"))],
       ONE_AT_A_TIME,
     );
-    const still = yield* answer(bot.client.whoami);
+    const still = yield* answer(aide.client.whoami);
 
     expect(counted).toStrictEqual({ messages: 1 });
     expect(refused).toMatchObject({ code: "has_messages", status: CONFLICT });

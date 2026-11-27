@@ -17,7 +17,7 @@ const ONE = 1;
 const NONE = 0;
 
 interface Opened {
-  readonly bot: string;
+  readonly aide: string;
   readonly heir: string;
 }
 
@@ -31,20 +31,20 @@ async function agentOf(prefix: string): Promise<Opened & { readonly token: strin
   const viewer = `${prefix}-viewer`;
   const me = await newIdentity({ kind: "human", name: viewer });
   await adminClient().makeAdmin(viewer);
-  const opened = { bot: `${prefix}-bot`, heir: `${prefix}-heir` };
+  const opened = { aide: `${prefix}-bot`, heir: `${prefix}-heir` };
   await newIdentity({ kind: "human", name: opened.heir });
-  await createTestAgent({ by: me.client, name: opened.bot });
-  await me.client.join({ as: opened.bot });
+  await createTestAgent({ by: me.client, name: opened.aide });
+  await me.client.join({ as: opened.aide });
   return { ...opened, token: me.token };
 }
 
 async function agentProfileOpen(page: Page): Promise<Opened> {
-  const { bot, heir, token } = await agentOf(unique("browser-profile-scroll"));
-  await logIn({ page, token, url: `/#/people/${bot}` });
+  const { aide, heir, token } = await agentOf(unique("browser-profile-scroll"));
+  await logIn({ page, token, url: `/#/people/${aide}` });
 
   await expect(inProfile(page).getByRole("button", { exact: true, name: "Revoke session" })).toBeAttached();
 
-  return { bot, heir };
+  return { aide, heir };
 }
 
 function header(page: Page): Locator {
@@ -72,16 +72,16 @@ async function tabTo({ left, page, target }: Tabbing): Promise<void> {
   await tabTo({ left: left - ONE, page, target });
 }
 
-async function headerShown(page: Page, bot: string): Promise<void> {
+async function headerShown(page: Page, aide: string): Promise<void> {
   await expect(header(page)).toBeInViewport({ ratio: 1 });
-  await expect(header(page)).toContainText(bot);
+  await expect(header(page)).toContainText(aide);
   expect(await documentScrolls(page)).toBe(false);
 }
 
 test("on a short window an agent's profile scrolls its sections under a header that stays put, and the page itself never scrolls", async ({
   page,
 }) => {
-  const { bot, heir } = await agentProfileOpen(page);
+  const { aide, heir } = await agentProfileOpen(page);
   const transfer = inProfile(page).getByRole("button", { exact: true, name: "Transfer" });
 
   await expect(transfer).not.toBeInViewport();
@@ -92,7 +92,7 @@ test("on a short window an agent's profile scrolls its sections under a header t
 
   await expect(transfer).toBeInViewport({ ratio: 1 });
 
-  await headerShown(page, bot);
+  await headerShown(page, aide);
   await transfer.click();
 
   await expect(inDialog(page).getByRole("button", { exact: true, name: `Transfer to @${heir}` })).toBeVisible();
@@ -101,7 +101,7 @@ test("on a short window an agent's profile scrolls its sections under a header t
 test("on a short window tabbing to a field below the fold of an agent's profile brings it into view", async ({
   page,
 }) => {
-  const { bot } = await agentProfileOpen(page);
+  const { aide } = await agentProfileOpen(page);
   const field = transferField(page);
 
   await expect(field).not.toBeInViewport();
@@ -113,5 +113,5 @@ test("on a short window tabbing to a field below the fold of an agent's profile 
   await expect(field).toBeFocused();
   await expect(field).toBeInViewport({ ratio: 1 });
 
-  await headerShown(page, bot);
+  await headerShown(page, aide);
 });

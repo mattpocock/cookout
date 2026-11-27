@@ -210,6 +210,8 @@ export { requestOriginOf } from "./lib/server/login-support.ts";
 /** The wire fields of what a person sees about a Login or agent join request before Approve (#905). */
 export { approvalRequestDetailsFields } from "./lib/server/login-wire.ts";
 
+/** Feeder routes (owner or admin), the check for a Feeder, and its refusal when it would watch, read or join (ADR 0160). */
+export { feederRefused, feederRoutes, isFeeder, refuseFeeder } from "./lib/server/feeders.ts";
 /** `PUT /v1/identities/:name/owner`, an admin transferring an agent to another human. It needs `Caller`. */
 export { transferRoutes } from "./lib/server/transfer.ts";
 

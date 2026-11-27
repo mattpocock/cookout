@@ -32,6 +32,7 @@ import type { MemoryInboxSection } from "./inbox-memory.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { MemoryThreads } from "./threads-memory.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { isFeeder } from "./identities.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 interface MemoryMessages extends MemoryThreads {
@@ -240,7 +241,7 @@ function namesAuthor(identity: Author["name"]): (message: Message) => boolean {
 type Listed = Effect.Success<ReturnType<IdentitiesSection["listIdentities"]>>;
 
 function activeNamesOf(listed: Listed): Mentioning["known"] {
-  const active = Arr.filter(listed, (identity) => identity.deactivated !== true);
+  const active = Arr.filter(listed, (identity) => identity.deactivated !== true && !isFeeder(identity));
   return new Set(Arr.map(active, (identity) => identity.name));
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useContext, useState } from "react";
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import { LinkedMessage } from "./linked-message.ts";
 import type { Message } from "../../sdk/index.ts";
 
@@ -25,7 +25,7 @@ function shownAtOnce(folding: Folding, linked: boolean): boolean {
 }
 
 function useFold(folding: Folding): Fold {
-  const announce = useContext(Announcer);
+  const announce = useContext(AnnounceContext);
   const linked = useContext(LinkedMessage) === folding.message.id;
   const [unfolded, setUnfolded] = useState(false);
   const shown = shownAtOnce(folding, linked);

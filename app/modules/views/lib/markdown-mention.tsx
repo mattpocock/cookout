@@ -12,7 +12,12 @@ interface MarkdownMentionProps {
 export function MarkdownMention(props: MarkdownMentionProps): ReactNode {
   const name = props["data-name"] ?? "";
   const profileOf = useProfileHref();
-  const mention = <Mention mine={props["data-mention"] === "mine"}>{props.children}</Mention>;
+  const whose = props["data-mention"];
+  const mention = (
+    <Mention feeder={whose === "feeder"} mine={whose === "mine"}>
+      {props.children}
+    </Mention>
+  );
   if (!isIdentityName(name)) {
     return mention;
   }

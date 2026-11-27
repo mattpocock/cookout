@@ -50,8 +50,8 @@ interface Shown {
 
 async function agentCardShown(): Promise<Shown> {
   const owner = await newIdentity({ kind: "human", name: "web-revoke-focus-owner" });
-  const bot = await newIdentity({ kind: "agent", name: "web-revoke-focus-bot", owner: "web-revoke-focus-owner" });
-  await bot.client.join({ as: "web-revoke-focus-bot", host: "laptop" });
+  const aide = await newIdentity({ kind: "agent", name: "web-revoke-focus-bot", owner: "web-revoke-focus-owner" });
+  await aide.client.join({ as: "web-revoke-focus-bot", host: "laptop" });
   const close = openAt({ client: owner.client, hash: "#/settings/agents" });
   const card = await screen.findByRole("group", { name: "@web-revoke-focus-bot" });
   return { card, close };

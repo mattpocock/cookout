@@ -10,6 +10,7 @@ export function Avatar(parts: AvatarParts): ReactNode {
       <AvatarFace agent={parts.agent} name={parts.name} size={parts.size ?? "small"} />
       {presence !== null && (
         <PresenceDot
+          feeder={presence.feeder}
           label={presence.label}
           name={parts.name}
           online={presence.online}

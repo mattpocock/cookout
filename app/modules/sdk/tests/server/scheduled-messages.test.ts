@@ -151,12 +151,12 @@ it.effect("a schedule paused while its run is posting doesn't post", () =>
 it.effect("only the creator, an agent creator's owner or an admin can pause, resume or delete a schedule", () =>
   Effect.gen(function* permissions() {
     const { ada, bob, cookout } = yield* board;
-    const bot = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
-    const made = yield* schedule(bot, DAILY_NINE);
+    const aide = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
+    const made = yield* schedule(aide, DAILY_NINE);
     const refused = yield* refusal(() => bob.client.pauseScheduledMessage(made.id));
     const byOwner = yield* answer(() => ada.client.pauseScheduledMessage(made.id));
     const byAdmin = yield* answer(() => cookout.client.resumeScheduledMessage(made.id));
-    const byCreator = yield* answer(() => bot.client.deleteScheduledMessage(made.id));
+    const byCreator = yield* answer(() => aide.client.deleteScheduledMessage(made.id));
     const gone = yield* refusal(() => bob.client.getScheduledMessage(made.id));
 
     expect([refused.code, gone.code]).toStrictEqual(["not_owner", "scheduled_message_not_found"]);
@@ -207,8 +207,8 @@ it.effect("reactivating the creator leaves its schedules paused, and a manager c
 it.effect("an agent's schedules keep posting when its owner is Deactivated", () =>
   Effect.gen(function* agentKeepsRunning() {
     const { cookout } = yield* board;
-    const bot = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
-    const made = yield* schedule(bot, DAILY_NINE);
+    const aide = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
+    const made = yield* schedule(aide, DAILY_NINE);
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const after = yield* shown(cookout.client, made);
     const posted = yield* Effect.andThen(quietFor("9 hours"), grillTexts(cookout.client));

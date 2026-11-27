@@ -54,8 +54,8 @@ it.effect("joining with an agent's own token takes no --display-name", () =>
   Effect.gen(function* ownTokenTakesNoDisplayName() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("grace", { kind: "human" });
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "grace" });
-    const env = { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "grace" });
+    const env = { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url };
     const args = ["join", "--as", "release-bot", "--display-name", "Release bot", "--print-env"];
     const result = yield* runCookout({ args, env });
 

@@ -5,7 +5,7 @@ import type { BookState, Connection, Reach } from "./book.ts";
 import type { LiveConnectionId, Presence } from "../../index.ts";
 import type { Option, Scope } from "effect";
 import type { StorageUnavailable, StoredPresence } from "../../../storage/server.ts";
-import { announced, announcer, now } from "./announce.ts";
+import { announced, now, openAnnounce } from "./announce.ts";
 import {
   connect,
   endBootGrace,
@@ -132,7 +132,7 @@ type RegistryNeeds = Storage | IdentityChanges | AnnounceNeeds;
 function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailable, RegistryNeeds | Scope.Scope> {
   return Effect.gen(function* openPresenceRegistry() {
     const storage = yield* Storage;
-    const announce = yield* announcer(storage);
+    const announce = yield* openAnnounce(storage);
     const kept = yield* keptPresence(storage);
     const book = yield* bookOf(announce, kept);
     const ends = yield* openEnds(book);

@@ -12,6 +12,7 @@
  * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).
  * - destructive: errors.
  * - online: the presence dot of an identity that is online, and nothing else.
+ * - feeder: the presence dot of a Feeder, an agent that only posts, and nothing else (ADR 0160).
  * - background, card, muted, surface, accent, hover, border: neutral surfaces (accent is the selected row, not the
  *   accent colour).
  */
@@ -34,6 +35,7 @@
   --color-unread: #ff6166;
   --color-link: #52a8ff;
   --color-online: #3ecf71;
+  --color-feeder: #a78bfa;
   --color-hover: rgb(255 255 255 / 0.035);
   --color-surface: #0f0f0f;
   --radius-lg: 0.5rem;
@@ -73,6 +75,7 @@
   --color-unread: #e5484d;
   --color-link: #0068d6;
   --color-online: #1f9d4c;
+  --color-feeder: #7c3aed;
   --color-hover: rgb(0 0 0 / 0.025);
   --color-surface: #ffffff;
   --avatar-lightness: 0.6;
@@ -96,6 +99,7 @@
     --color-unread: #e5484d;
     --color-link: #0068d6;
     --color-online: #1f9d4c;
+    --color-feeder: #7c3aed;
     --color-hover: rgb(0 0 0 / 0.025);
     --color-surface: #ffffff;
     --avatar-lightness: 0.6;

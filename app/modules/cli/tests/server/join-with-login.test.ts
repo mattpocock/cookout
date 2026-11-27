@@ -61,7 +61,7 @@ it.effect("join inside Claude Code prints no agent session token, whether it use
   Effect.gen(function* joinPrintsNoToken() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const terminal = {
       COOKOUT_STATE_DIR: yield* freshStateFolder,
       COOKOUT_URL: cookout.url,
@@ -75,7 +75,7 @@ it.effect("join inside Claude Code prints no agent session token, whether it use
       },
       {
         args: ["join", "--as", "release-bot"],
-        env: { ...terminal, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s2", COOKOUT_TOKEN: bot.token },
+        env: { ...terminal, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s2", COOKOUT_TOKEN: aide.token },
       },
     ];
     const results = yield* Effect.forEach(joins, runCookout, ONE_AT_A_TIME);
@@ -190,8 +190,8 @@ it.effect("join sends COOKOUT_SESSION before the Login, and with no COOKOUT_URL 
   Effect.gen(function* joinPrecedence() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    const bot = yield* cookout.createIdentity("release-bot");
-    const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+    const aide = yield* cookout.createIdentity("release-bot");
+    const { agentSessionToken } = yield* answer(() => aide.client.join({ as: "release-bot" }));
     const terminal = { COOKOUT_URL: cookout.url, XDG_CONFIG_HOME: yield* configFolder };
     const inClaudeCode = { CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s1", COOKOUT_STATE_DIR: yield* freshStateFolder };
     yield* logIn(terminal, grace.token);

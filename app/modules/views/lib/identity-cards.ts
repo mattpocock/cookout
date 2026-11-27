@@ -40,7 +40,7 @@ function cardFor(boardStore: BoardStore, identity: Identity): IdentityCardParts 
     displayName: identity.displayName ?? null,
     kind: kindOf(identity),
     name: identity.name,
-    presence: shownIn({ name: identity.name, presences: presences(boardStore.snapshot()) }),
+    presence: shownIn({ identity, presences: presences(boardStore.snapshot()) }),
     profileHref: hrefOf({ identity: identity.name, name: "profile" }),
   };
 }

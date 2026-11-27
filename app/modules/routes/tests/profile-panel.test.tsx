@@ -12,17 +12,17 @@ const ONE = 1;
 
 interface Crew {
   readonly human: CookoutClient;
-  readonly bot: CookoutClient;
+  readonly aide: CookoutClient;
   readonly stranger: CookoutClient;
 }
 
 async function crewOf(prefix: string): Promise<Crew> {
   const human = await newIdentity({ kind: "human", name: `${prefix}-human` });
-  const bot = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
+  const aide = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
   const stranger = await newIdentity({ kind: "human", name: `${prefix}-stranger` });
   await adminClient().createChannel({ name: prefix });
-  await bot.client.createMessage({ channel: prefix, text: "Deployed" });
-  return { bot: bot.client, human: human.client, stranger: stranger.client };
+  await aide.client.createMessage({ channel: prefix, text: "Deployed" });
+  return { aide: aide.client, human: human.client, stranger: stranger.client };
 }
 
 async function clickAuthor(name: string): Promise<void> {

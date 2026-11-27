@@ -4,7 +4,7 @@ import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
 import { copyingLink, threadChoice } from "./use-message-menu.ts";
 import { useCallback, useContext, useMemo } from "react";
 import type { Announce } from "./announcer.ts";
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import { LandingContext } from "../../landing/index.ts";
 import { MessageKeys } from "../../design-system/messages.tsx";
 import type { MessageMenu } from "../../unread/index.ts";
@@ -76,7 +76,7 @@ function aloneLink({ alone, channel, thread }: Pick<ThreadHeaderOf, "alone" | "c
 function useThreadHeader({ alone, channel, closing, menu, state, thread }: ThreadHeaderOf): ThreadHeader {
   const gone = state.status === "loaded" && state.deleted.has(state.parent.id);
   const parent = state.status === "loaded" && !gone && state.parent;
-  const announce = useContext(Announcer);
+  const announce = useContext(AnnounceContext);
   const keys = useContext(MessageKeys);
   const { watch } = useContext(LandingContext);
   const onClose = useCallback(() => {

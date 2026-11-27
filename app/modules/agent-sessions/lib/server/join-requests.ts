@@ -27,7 +27,7 @@ import {
   termsAsked,
   viewOf,
 } from "./join-request-terms.ts";
-import { agentNotFound, agentSessionLive, joinNotOwned, withParent } from "./refusals.ts";
+import { agentNotFound, agentSessionLive, joinNotOwned, refuseFeeder, withParent } from "./refusals.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -91,7 +91,9 @@ function isActiveAgent(found: Identity | undefined): found is AgentIdentity {
 }
 
 function refuseUnlessAgent(on: On, agent: IdentityName): Fails<AgentIdentity> {
-  return Effect.filterOrFail(on.storage.findIdentityByName(agent), isActiveAgent, () => agentNotFound(agent));
+  return Effect.filterOrFail(on.storage.findIdentityByName(agent), isActiveAgent, () => agentNotFound(agent)).pipe(
+    Effect.tap(refuseFeeder),
+  );
 }
 
 function startedOf(agent: AgentIdentity, { createdAt, expiresAt }: Lifetime): StartedJoinRequest {

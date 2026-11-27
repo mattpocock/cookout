@@ -26,13 +26,13 @@ function desk(cookout: TestCookoutService): Effect.Effect<Desk, never, CommandLi
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
     const folder = yield* freshStateFolder;
     yield* Effect.orDie(fs.writeFile(path.join(folder, "me.png"), avatarPng()));
     yield* Effect.orDie(fs.writeFile(path.join(folder, "hills.png"), hillsPng()));
     yield* Effect.orDie(fs.writeFileString(path.join(folder, "big.png"), ""));
     yield* Effect.orDie(fs.truncate(path.join(folder, "big.png"), OVER_MAXIMUM_BYTES));
-    return { env: { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url }, folder };
+    return { env: { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url }, folder };
   });
 }
 

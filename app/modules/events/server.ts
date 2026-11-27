@@ -62,10 +62,10 @@ import {
   ThreadEventSchema,
   WakeRunResponseSchema,
 } from "./lib/server/wire.ts";
+import { Caller, refuseFeeder } from "../identities/server.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { isLast, lastEventIdIn, sseText } from "./lib/server/source.ts";
-import { Caller } from "../identities/server.ts";
 import type { Limits } from "../limits/server.ts";
 import type { Route } from "../http/server.ts";
 import type { SourceNeeds } from "./lib/server/sources.ts";
@@ -82,7 +82,7 @@ const OPENED = ": open\n\n";
 const eventsRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* openEventStream() {
-      const caller = yield* Caller;
+      const caller = yield* Effect.tap(Caller, refuseFeeder);
       const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
       const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();

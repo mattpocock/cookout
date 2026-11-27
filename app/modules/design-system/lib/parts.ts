@@ -206,6 +206,7 @@ interface MessageBodyParts extends Parts {
 
 interface MentionParts extends Parts {
   readonly mine: boolean;
+  readonly feeder?: boolean;
 }
 
 interface CallChipParts {

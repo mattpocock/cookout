@@ -16,7 +16,7 @@ it.effect("cookout identity describe, get, list and describe --clear reach the s
   Effect.gen(function* describeVerbs() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
     const env = { COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(
       [describe, get, list, clear],
@@ -32,7 +32,7 @@ it.effect("cookout identity describe, get, list and describe --clear reach the s
       { ...succeeded, stdoutJson: { identities: [{ name: "ada" }, { name: "admin" }, described] } },
       { ...succeeded, stdoutJson: { identity: { name: "todo-bot" } } },
     ]);
-    expect(after).toStrictEqual({ identity: bot.identity });
+    expect(after).toStrictEqual({ identity: aide.identity });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

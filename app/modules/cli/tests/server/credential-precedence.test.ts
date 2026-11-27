@@ -43,13 +43,13 @@ it.effect(
   () =>
     Effect.gen(function* precedence() {
       const cookout = yield* TestCookout;
-      const [bot, other, third] = yield* Effect.all(
+      const [aide, other, third] = yield* Effect.all(
         [cookout.createIdentity("release-bot"), cookout.createIdentity("other"), cookout.createIdentity("third")],
         ONE_AT_A_TIME,
       );
       const shared = { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url };
       const first = claudeCode("s1", shared);
-      yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(first, bot.token) });
+      yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(first, aide.token) });
       const session = yield* Effect.map(
         runCookout({ args: ["join", "--as", "other", "--print-env"], env: withToken(first, other.token) }),
         exportedToken,
@@ -109,13 +109,13 @@ it.effect("inside a harness with no board's URL anywhere, whoami is url_missing,
 it.effect("a joined session with COOKOUT_TOKEN set posts as the joined agent", () =>
   Effect.gen(function* joinedBeatsToken() {
     const cookout = yield* TestCookout;
-    const [bot, other] = yield* Effect.all(
+    const [aide, other] = yield* Effect.all(
       [cookout.createIdentity("release-bot"), cookout.createIdentity("other")],
       ONE_AT_A_TIME,
     );
     const env = claudeCode("s1", { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url });
     yield* answer(() => other.client.createChannel({ name: "grill" }));
-    yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(env, bot.token) });
+    yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(env, aide.token) });
     const posted = yield* runCookout({ args: ["message", "post", "grill", "hello"], env: withToken(env, other.token) });
 
     expect(posted).toMatchObject({ exitCode: 0, stdoutJson: { message: { author: { name: "release-bot" } } } });

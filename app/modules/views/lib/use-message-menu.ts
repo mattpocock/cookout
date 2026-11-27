@@ -4,7 +4,7 @@ import type { ReactionChoice, ThreadChoice, TitleChoice } from "../../design-sys
 import { copyLinkOf, copyTextOf } from "./message-copying.ts";
 import { useContext, useMemo } from "react";
 import type { Announce } from "./announcer.ts";
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import { titleChoiceOf } from "./title-choice.ts";
 import { useBoardStore } from "./use-board.ts";
@@ -104,7 +104,7 @@ function deleteOf({ deletes, me, message }: DeleteOf): (() => void) | null {
 
 function useMessageMenu({ closing, me, menu, message, threadParent, titling }: MenuOf): MenuParts {
   const messageId = message.id;
-  const announce = useContext(Announcer);
+  const announce = useContext(AnnounceContext);
   const reactions = useReactionChoices({ announce, me, message });
   const { calls } = useBoardStore();
   return useMemo(

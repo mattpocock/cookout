@@ -45,9 +45,9 @@ it.effect(
   () =>
     Effect.gen(function* sessionDefault() {
       const cookout = yield* TestCookout;
-      const bot = yield* cookout.createIdentity("release-bot");
+      const aide = yield* cookout.createIdentity("release-bot");
       const other = yield* cookout.createIdentity("other");
-      const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const { agentSessionToken } = yield* answer(() => aide.client.join({ as: "release-bot" }));
       const fromSession = createCookoutClient({
         env: { COOKOUT_SESSION: agentSessionToken, COOKOUT_URL: cookout.url },
       });
@@ -65,9 +65,9 @@ it.effect(
   () =>
     Effect.gen(function* sessionInHarness() {
       const cookout = yield* TestCookout;
-      const bot = yield* cookout.createIdentity("release-bot");
+      const aide = yield* cookout.createIdentity("release-bot");
       const other = yield* cookout.createIdentity("other");
-      const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const { agentSessionToken } = yield* answer(() => aide.client.join({ as: "release-bot" }));
       const harness = { CLAUDECODE: "1", COOKOUT_TOKEN: other.token, COOKOUT_URL: cookout.url };
       const fromSession = createCookoutClient({ env: { ...harness, COOKOUT_SESSION: agentSessionToken } });
       const fromToken = createCookoutClient({ env: harness });

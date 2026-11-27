@@ -121,10 +121,10 @@ it.effect("login --token refuses an agent's token, an unknown one or none with e
   Effect.gen(function* refusedLogins() {
     const { cookout, env, file } = yield* setUp;
     const fs = yield* FileSystem.FileSystem;
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "matt" });
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "matt" });
 
     const results = yield* Effect.all(
-      [logIn(env, bot.token), logIn(env, "not-a-real-token"), logIn(env, "")],
+      [logIn(env, aide.token), logIn(env, "not-a-real-token"), logIn(env, "")],
       ONE_AT_A_TIME,
     );
     const stored = yield* Effect.orDie(fs.exists(file));
@@ -170,9 +170,9 @@ it.effect("with only HOME set, the Login is kept in ~/.config/cookout/credential
 it.effect("COOKOUT_TOKEN wins over the Login, and whoami says so", () =>
   Effect.gen(function* tokenWins() {
     const { cookout, env } = yield* loggedIn;
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "matt" });
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "matt" });
 
-    const whoami = yield* run({ ...env, COOKOUT_TOKEN: bot.token }, "whoami");
+    const whoami = yield* run({ ...env, COOKOUT_TOKEN: aide.token }, "whoami");
 
     expect(whoami).toMatchObject({
       exitCode: 0,

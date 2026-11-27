@@ -28,7 +28,7 @@ it.effect(
     Effect.gen(function* postWithSeen() {
       const cookout = yield* TestCookout;
       const ann = yield* cookout.createIdentity("ann", { kind: "human" });
-      const bot = yield* cookout.createIdentity("bot");
+      const aide = yield* cookout.createIdentity("bot");
       const folder = yield* freshStateFolder;
       const { message } = yield* Effect.andThen(
         answer(() => ann.client.createChannel({ name: "grill" })),
@@ -38,7 +38,7 @@ it.effect(
         ann.client.createMessage({ channel: "grill", replyTo: message.id, text: "on it" }),
       );
       const parent = String(message.id);
-      const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+      const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url };
       const results = yield* runAll(env, [
         ["message", "post", "grill", "me too", "--reply-to", parent],
         ["message", "post", "grill", "ok", "--reply-to", parent, "--seen", String(newer.message.id)],

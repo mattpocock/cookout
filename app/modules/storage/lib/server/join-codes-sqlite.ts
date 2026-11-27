@@ -11,15 +11,19 @@ import { unreadable } from "./errors.ts";
 
 const ACTIVE = 0;
 const DEACTIVATED = 1;
+const NOT_FEEDER = 0;
+const FEEDER = 1;
 
 const CodeRow = Schema.Struct({
   agent: Schema.String.pipe(Schema.refine(isIdentityName)),
   deactivated: Schema.Literals([ACTIVE, DEACTIVATED]),
+  feeder: Schema.Literals([NOT_FEEDER, FEEDER]),
 });
 
 type CodeRowType = typeof CodeRow.Type;
 
-const FIND_LIVE = `SELECT join_codes.agent AS agent, identities.deactivated AS deactivated
+const FIND_LIVE = `SELECT join_codes.agent AS agent, identities.deactivated AS deactivated,
+  identities.feeder AS feeder
   FROM join_codes JOIN identities ON identities.name = join_codes.agent
   WHERE join_codes.code_hash = ? AND join_codes.expires_at > ?`;
 
@@ -37,6 +41,9 @@ function redeemFound(db: SqlDatabase, redeem: RedeemJoinCode) {
     Effect.gen(function* issueForCode() {
       if (row.deactivated === DEACTIVATED) {
         return { identity: row.agent, status: "deactivated" } as const;
+      }
+      if (row.feeder === FEEDER) {
+        return { identity: row.agent, status: "feeder" } as const;
       }
       const issue = sessionFor({ agent: row.agent, redeem });
       const result = yield* agentSessionIssuer(db)(issue);
