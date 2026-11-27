@@ -4,6 +4,6 @@ type Announce = (text: string) => unknown;
 
 const UNHEARD: Announce = Boolean;
 
-const Announcer = createContext<Announce>(UNHEARD);
+const AnnounceContext = createContext<Announce>(UNHEARD);
 
-export { type Announce, Announcer };
+export { type Announce, AnnounceContext };

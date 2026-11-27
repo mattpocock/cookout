@@ -78,27 +78,27 @@ it.effect("the bearer header wins over a session cookie for another identity", (
   Effect.gen(function* headerWins() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("bot", { owner: "ada" });
     const cookie = yield* sessionCookie(cookout.url, ada.token);
     const both = yield* answer(() =>
       request({
         baseUrl: cookout.url,
-        headers: { authorization: `Bearer ${bot.token}`, cookie },
+        headers: { authorization: `Bearer ${aide.token}`, cookie },
         method: "GET",
         path: whoamiPath,
       }),
     );
 
-    expect(both.json).toStrictEqual({ identity: bot.identity });
+    expect(both.json).toStrictEqual({ identity: aide.identity });
   }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("logging in with an agent token is refused with 403 human_only, naming the kind", () =>
   Effect.gen(function* agentRefused() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("bot", { owner: "ada" });
-    const error = yield* refusal(bot.client.login);
-    const response = yield* logIn(cookout.url, bot.token);
+    const aide = yield* cookout.createIdentity("bot", { owner: "ada" });
+    const error = yield* refusal(aide.client.login);
+    const response = yield* logIn(cookout.url, aide.token);
 
     expect(error).toMatchObject({ code: "human_only", details: { kind: "agent" }, status: 403 });
     expect(response.headers.getSetCookie()).toStrictEqual([]);

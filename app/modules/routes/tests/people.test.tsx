@@ -144,8 +144,8 @@ it("following a row opens its profile beside the list, highlighted, and closing 
   expect.hasAssertions();
 
   const close = await openFiltered(await crewOf("web-people-open"), "#/people", "web-people-open");
-  const bot = new RegExp(testAgentDisplayName("web-people-open-bot"), "u");
-  fireEvent.click(within(identityList()).getByRole("link", { name: bot }));
+  const aide = new RegExp(testAgentDisplayName("web-people-open-bot"), "u");
+  fireEvent.click(within(identityList()).getByRole("link", { name: aide }));
   const panel = await profile();
   const opened = [
     globalThis.location.hash,

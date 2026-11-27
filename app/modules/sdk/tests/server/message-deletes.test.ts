@@ -99,11 +99,11 @@ it.effect("an admin deletes anyone's message", () =>
 it.effect("an agent deletes only its own messages, even with the admin flag", () =>
   Effect.gen(function* agentDeletes() {
     const { cookout, parent } = yield* board;
-    const bot = yield* cookout.createIdentity("bot", { admin: true });
-    const { message } = yield* answer(() => bot.client.createMessage({ channel: "grill", text: "broken post" }));
-    const refused = yield* refusal(() => bot.client.deleteMessage(parent.id));
-    const deleted = yield* answer(() => bot.client.deleteMessage(message.id));
-    const page = yield* answer(() => bot.client.listMessages("grill"));
+    const aide = yield* cookout.createIdentity("bot", { admin: true });
+    const { message } = yield* answer(() => aide.client.createMessage({ channel: "grill", text: "broken post" }));
+    const refused = yield* refusal(() => aide.client.deleteMessage(parent.id));
+    const deleted = yield* answer(() => aide.client.deleteMessage(message.id));
+    const page = yield* answer(() => aide.client.listMessages("grill"));
 
     expect(refused).toMatchObject({ code: "not_owner", status: FORBIDDEN });
     expect(deleted).toMatchObject({ message: { author: { name: "bot" }, id: message.id } });

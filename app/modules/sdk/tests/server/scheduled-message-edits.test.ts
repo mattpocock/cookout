@@ -169,10 +169,10 @@ it.effect("an edit is refused for the same codes as create", () =>
 it.effect("only the creator, an agent creator's owner or an admin can edit a schedule", () =>
   Effect.gen(function* permissions() {
     const { ada, bob, cookout } = yield* board;
-    const bot = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
-    const made = yield* schedule(bot, DAILY_NINE);
+    const aide = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
+    const made = yield* schedule(aide, DAILY_NINE);
     const refused = yield* refusal(() => bob.client.editScheduledMessage(made.id, { text: "mine now" }));
-    const byCreator = yield* edit(bot.client, made, { text: "by the bot" });
+    const byCreator = yield* edit(aide.client, made, { text: "by the bot" });
     const byOwner = yield* edit(ada.client, made, { text: "by ada" });
     const byAdmin = yield* edit(cookout.client, made, { timeZone: "Europe/London" });
 

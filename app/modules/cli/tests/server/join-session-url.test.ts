@@ -78,12 +78,12 @@ it.effect("join --code --session-url sets the session URL its owner sees", () =>
 it.effect("join refuses a --session-url that isn't an absolute http or https URL, with --as or --code", () =>
   Effect.gen(function* refusedSessionUrl() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot");
+    const aide = yield* cookout.createIdentity("release-bot");
     const env = {
       CLAUDECODE: "1",
       CLAUDE_CODE_SESSION_ID: "s1",
       COOKOUT_STATE_DIR: yield* freshStateFolder,
-      COOKOUT_TOKEN: bot.token,
+      COOKOUT_TOKEN: aide.token,
       COOKOUT_URL: cookout.url,
     };
     const notWebError = {

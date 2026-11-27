@@ -11,15 +11,15 @@ const TOO_LONG = 81;
 
 interface Crew {
   readonly human: CookoutClient;
-  readonly bot: CookoutClient;
+  readonly aide: CookoutClient;
 }
 
 async function crewOf(prefix: string): Promise<Crew> {
   const human = await newIdentity({ kind: "human", name: `${prefix}-human` });
-  const bot = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
+  const aide = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
   await newIdentity({ kind: "human", name: `${prefix}-boss` });
   await newIdentity({ kind: "agent", name: `${prefix}-other`, owner: `${prefix}-boss` });
-  return { bot: bot.client, human: human.client };
+  return { aide: aide.client, human: human.client };
 }
 
 async function openSettings(client: CookoutClient): Promise<() => void> {
@@ -76,10 +76,10 @@ interface Watching {
 }
 
 async function watchChannel(prefix: string): Promise<Watching> {
-  const { bot, human } = await crewOf(prefix);
+  const { aide, human } = await crewOf(prefix);
   const reader = await newIdentity({ kind: "human", name: `${prefix}-reader` });
   await adminClient().createChannel({ name: prefix });
-  await bot.createMessage({ channel: prefix, text: "Deployed" });
+  await aide.createMessage({ channel: prefix, text: "Deployed" });
   const { live, stream } = watched(reader.client);
   const unmount = openAt({ client: reader.client, hash: `#/channels/${prefix}`, live });
   await screen.findByText("Deployed");
@@ -184,10 +184,10 @@ it("a display name set elsewhere shows on the open channel's messages without a 
 it("an inbox row shows its author's display name with the name beside it", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, human } = await crewOf("web-names-inbox");
+  const { aide, human } = await crewOf("web-names-inbox");
   await human.setDisplayName("web-names-inbox-bot", "Release Bot");
   await adminClient().createChannel({ name: "web-names-inbox" });
-  await bot.createMessage({ channel: "web-names-inbox", text: "Ping @web-names-inbox-human" });
+  await aide.createMessage({ channel: "web-names-inbox", text: "Ping @web-names-inbox-human" });
   const close = openAt({ client: human, hash: "#/inbox" });
   const unread = await screen.findByRole("list", { name: "For you" });
 

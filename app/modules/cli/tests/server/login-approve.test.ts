@@ -78,11 +78,11 @@ it.effect("login approve approves another machine's waiting login, printing its 
 it.effect("login approve with an agent's token is refused with human_only, and the request stays unapproved", () =>
   Effect.gen(function* agentApproves() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "matt" });
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "matt" });
     const started = yield* answer(() => cookout.clientFor().startLogin(FIRST_LOGIN));
 
     const refused = yield* run(
-      { COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url },
+      { COOKOUT_TOKEN: aide.token, COOKOUT_URL: cookout.url },
       "login",
       "approve",
       started.userCode,

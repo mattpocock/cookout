@@ -33,12 +33,12 @@ it.effect("a human sets the display name of an agent they own, and the agent set
   Effect.gen(function* ownedAgent() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const byOwner = yield* answer(() => ada.client.setDisplayName("release-bot", "Release bot"));
-    const byItself = yield* answer(() => bot.client.setDisplayName("release-bot", "Shipper"));
+    const byItself = yield* answer(() => aide.client.setDisplayName("release-bot", "Shipper"));
 
-    expect(byOwner.identity).toStrictEqual({ ...bot.identity, displayName: "Release bot" });
-    expect(byItself.identity).toStrictEqual({ ...bot.identity, displayName: "Shipper" });
+    expect(byOwner.identity).toStrictEqual({ ...aide.identity, displayName: "Release bot" });
+    expect(byItself.identity).toStrictEqual({ ...aide.identity, displayName: "Shipper" });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -47,9 +47,9 @@ it.effect("anyone else setting a display name is refused with 403 not_owner, and
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const otherHuman = yield* refusal(() => grace.client.setDisplayName("release-bot", "Mine now"));
-    const agentOnHuman = yield* refusal(() => bot.client.setDisplayName("ada", "Ada"));
+    const agentOnHuman = yield* refusal(() => aide.client.setDisplayName("ada", "Ada"));
     const { identities } = yield* answer(cookout.client.listIdentities);
 
     expect([otherHuman, agentOnHuman]).toMatchObject([

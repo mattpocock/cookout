@@ -80,14 +80,14 @@ it.effect("a running cookout gives each command its own random secret", () =>
 it.effect("a command whose name is an agent's reuses that agent as its handler", () =>
   Effect.gen(function* reuseAgent() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("deploy", { owner: "matt" });
+    const aide = yield* cookout.createIdentity("deploy", { owner: "matt" });
     yield* answer(() => cookout.client.addCommand(deploy));
     const { identities } = yield* answer(cookout.client.listIdentities);
-    const { identity } = yield* answer(bot.client.whoami);
+    const { identity } = yield* answer(aide.client.whoami);
     const got = yield* answer(() => cookout.client.getIdentity("deploy"));
 
-    expect(identities).toContainEqual({ ...bot.identity, handler: true });
-    expect([identity, got.identity]).toStrictEqual([bot.identity, { ...bot.identity, handler: true }]);
+    expect(identities).toContainEqual({ ...aide.identity, handler: true });
+    expect([identity, got.identity]).toStrictEqual([aide.identity, { ...aide.identity, handler: true }]);
   }).pipe(Effect.provide(testCookout())),
 );
 

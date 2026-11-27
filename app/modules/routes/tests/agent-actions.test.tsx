@@ -10,13 +10,13 @@ import { refusalOf } from "../../sdk/index.ts";
 
 interface Crew {
   readonly human: CookoutClient;
-  readonly bot: CookoutClient;
+  readonly aide: CookoutClient;
 }
 
 async function crewOf(prefix: string): Promise<Crew> {
   const human = await newIdentity({ kind: "human", name: `${prefix}-human` });
-  const bot = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
-  return { bot: bot.client, human: human.client };
+  const aide = await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
+  return { aide: aide.client, human: human.client };
 }
 
 async function openSettings(client: CookoutClient): Promise<() => void> {
@@ -59,8 +59,8 @@ async function refusalWith(client: CookoutClient): Promise<string> {
   }
 }
 
-async function joinedSession(bot: CookoutClient, name: string): Promise<CookoutClient> {
-  const { agentSessionToken } = await bot.join({ as: name, host: "laptop" });
+async function joinedSession(aide: CookoutClient, name: string): Promise<CookoutClient> {
+  const { agentSessionToken } = await aide.join({ as: name, host: "laptop" });
   const session = clientWith(agentSessionToken);
   await session.whoami();
   return session;
@@ -118,8 +118,8 @@ async function transferTo(name: string, owner: string): Promise<void> {
 it("settings lists your agents with their live session, and Revoke ends it", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, human } = await crewOf("web-mine-session");
-  const session = await joinedSession(bot, "web-mine-session-bot");
+  const { aide, human } = await crewOf("web-mine-session");
+  const session = await joinedSession(aide, "web-mine-session-bot");
   const close = await openSettings(human);
   const card = await agentCard("web-mine-session-bot");
   const { textContent: before } = await within(card).findByText(/^Joined from laptop/u);
@@ -137,7 +137,7 @@ it("settings lists your agents with their live session, and Revoke ends it", { t
 it("rotate shows the new token once, and the old one is refused", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, human } = await crewOf("web-mine-rotate");
+  const { aide, human } = await crewOf("web-mine-rotate");
   const close = await openSettings(human);
   const token = await rotateIn("web-mine-rotate-bot");
   const card = await agentCard("web-mine-rotate-bot");
@@ -145,7 +145,7 @@ it("rotate shows the new token once, and the old one is refused", { timeout: 500
   fireEvent.click(within(card).getByRole("button", { name: "Done" }));
 
   expect([
-    await refusalWith(bot),
+    await refusalWith(aide),
     await nameWith(token),
     warning,
     within(card).queryByLabelText("New Identity token"),
@@ -183,15 +183,15 @@ it("create makes an agent you own, with its display name, and shows its token on
 it("deactivate asks first, naming the agent, then marks it deactivated", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, human } = await crewOf("web-mine-off");
+  const { aide, human } = await crewOf("web-mine-off");
   const close = await openSettings(human);
   const card = await agentCard("web-mine-off-bot");
   await press("web-mine-off-bot", "Deactivate");
-  const refusalBefore = await refusalWith(bot);
+  const refusalBefore = await refusalWith(aide);
   await confirmWith("Deactivate @web-mine-off-bot");
   await within(card).findByRole("button", { name: "Reactivate" });
 
-  expect([refusalBefore, await refusalWith(bot), within(card).getByText("(deactivated)").textContent]).toStrictEqual([
+  expect([refusalBefore, await refusalWith(aide), within(card).getByText("(deactivated)").textContent]).toStrictEqual([
     "accepted",
     "token_revoked",
     "(deactivated)",
@@ -250,15 +250,15 @@ it("copy token puts the new token on the clipboard", { timeout: 5000 }, async ()
 it("a session not yet used shows when it joined, and Cancel keeps the agent active", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { bot, human } = await crewOf("web-mine-cancel");
-  await bot.join({ as: "web-mine-cancel-bot" });
+  const { aide, human } = await crewOf("web-mine-cancel");
+  await aide.join({ as: "web-mine-cancel-bot" });
   const close = await openSettings(human);
   const card = await agentCard("web-mine-cancel-bot");
   const { textContent: line } = await within(card).findByText(/^Joined/u);
   await pressAndAnswer("web-mine-cancel-bot", "Deactivate", "Cancel");
   await within(card).findByRole("button", { name: "Deactivate" });
 
-  expect([line, screen.queryByRole("alertdialog"), await refusalWith(bot)]).toStrictEqual([
+  expect([line, screen.queryByRole("alertdialog"), await refusalWith(aide)]).toStrictEqual([
     expect.stringMatching(/^Joined · not used yet · expires .+/u),
     null,
     "accepted",

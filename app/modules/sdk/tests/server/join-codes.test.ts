@@ -117,9 +117,9 @@ it.effect("only a human makes a join code, for a free name in their own namespac
   Effect.gen(function* refusals() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("bot", { owner: "ada" });
     yield* cookout.createIdentity("grace", { kind: "human" });
-    const byAgent = yield* refusal(() => bot.client.createJoinCode({ displayName: "helper", name: "helper" }));
+    const byAgent = yield* refusal(() => aide.client.createJoinCode({ displayName: "helper", name: "helper" }));
     const taken = yield* refusal(() => ada.client.createJoinCode({ displayName: "bot", name: "bot" }));
     const othersNamespace = yield* refusal(() =>
       ada.client.createJoinCode({ displayName: "grace/helper", name: "grace/helper" }),

@@ -129,9 +129,9 @@ it.effect("an unapproved login request expires after 10 minutes", () =>
 it.effect("an agent can't see or approve a login request", () =>
   Effect.gen(function* agentRefused() {
     const { cookout, started } = yield* startedForAda;
-    const bot = yield* cookout.createIdentity("bot");
-    const shown = yield* refusal(() => bot.client.getLoginRequest(started.userCode));
-    const approved = yield* refusal(() => bot.client.approveLogin(started.userCode));
+    const aide = yield* cookout.createIdentity("bot");
+    const shown = yield* refusal(() => aide.client.getLoginRequest(started.userCode));
+    const approved = yield* refusal(() => aide.client.approveLogin(started.userCode));
     const pending = yield* answer(() => cookout.clientFor().collectLogin(started.requestId));
 
     expect([shown, approved]).toMatchObject([

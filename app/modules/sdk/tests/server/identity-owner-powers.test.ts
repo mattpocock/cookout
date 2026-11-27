@@ -16,7 +16,7 @@ const MISSING = { code: "identity_not_found", status: NOT_FOUND } as const;
 
 interface Seeded {
   readonly ada: CookoutClient;
-  readonly bot: TestIdentity;
+  readonly aide: TestIdentity;
   readonly grace: CookoutClient;
 }
 
@@ -24,14 +24,14 @@ function seeded(cookout: TestCookoutService): Effect.Effect<Seeded> {
   return Effect.gen(function* seedOwners() {
     const ada = yield* cookout.createIdentity("ada", HUMAN);
     const grace = yield* cookout.createIdentity("grace", HUMAN);
-    const bot = yield* cookout.createIdentity("release-bot", { owner: "ada" });
-    return { ada: ada.client, bot, grace: grace.client };
+    const aide = yield* cookout.createIdentity("release-bot", { owner: "ada" });
+    return { ada: ada.client, aide, grace: grace.client };
   });
 }
 
-function joinedAndUsed(cookout: TestCookoutService, bot: TestIdentity): Effect.Effect<CookoutClient> {
+function joinedAndUsed(cookout: TestCookoutService, aide: TestIdentity): Effect.Effect<CookoutClient> {
   return Effect.gen(function* joinAndUse() {
-    const issued = yield* answer(() => bot.client.join({ as: "release-bot", host: "build-box" }));
+    const issued = yield* answer(() => aide.client.join({ as: "release-bot", host: "build-box" }));
     const session = cookout.clientFor(issued.agentSessionToken);
     yield* answer(() => session.whoami());
     return session;
@@ -58,13 +58,13 @@ it.effect("the owner of an agent is refused a token rotation, and the agent key 
 it.effect("another human, or the agent itself, is refused with 403 on rotate, sessions, revoke and transfer", () =>
   Effect.gen(function* othersRefused() {
     const cookout = yield* TestCookout;
-    const { bot, grace } = yield* seeded(cookout);
+    const { aide, grace } = yield* seeded(cookout);
     const refused = yield* Effect.all(
       [
         refusal(() => grace.rotateToken("release-bot")),
         refusal(() => grace.listAgentSessions("release-bot")),
         refusal(() => grace.revokeAgentSession("release-bot")),
-        refusal(() => bot.client.rotateToken("release-bot")),
+        refusal(() => aide.client.rotateToken("release-bot")),
         refusal(() => grace.rotateToken("nobody")),
         refusal(() => grace.transferAgent("release-bot", "grace")),
       ],
@@ -85,8 +85,8 @@ it.effect("another human, or the agent itself, is refused with 403 on rotate, se
 it.effect("the owner lists its agent's live session, never its token, and revoking it refuses the session", () =>
   Effect.gen(function* ownerRevokes() {
     const cookout = yield* TestCookout;
-    const { ada, bot } = yield* seeded(cookout);
-    const session = yield* joinedAndUsed(cookout, bot);
+    const { ada, aide } = yield* seeded(cookout);
+    const session = yield* joinedAndUsed(cookout, aide);
     const [listed, revoked] = yield* Effect.all(
       [answer(() => ada.listAgentSessions("release-bot")), answer(() => ada.revokeAgentSession("release-bot"))],
       ONE_AT_A_TIME,
@@ -111,8 +111,8 @@ it.effect(
   () =>
     Effect.gen(function* adminManages() {
       const cookout = yield* TestCookout;
-      const { bot } = yield* seeded(cookout);
-      yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const { aide } = yield* seeded(cookout);
+      yield* answer(() => aide.client.join({ as: "release-bot" }));
       const listed = yield* answer(() => cookout.client.listAgentSessions("release-bot"));
       const [revoked, keys] = yield* Effect.all(
         [

@@ -14,21 +14,21 @@ const schema = { properties: { branch: { type: "string" } }, required: ["branch"
 
 interface Board {
   readonly ann: TestIdentity;
-  readonly bot: TestIdentity;
+  readonly aide: TestIdentity;
   readonly parent: MessageId;
   readonly first: MessageId;
 }
 
 function board(cookout: TestCookoutService): Effect.Effect<Board> {
-  return Effect.gen(function* annBotAndAThread() {
+  return Effect.gen(function* annAgentAndAThread() {
     const ann = yield* cookout.createIdentity("ann", HUMAN);
-    const bot = yield* cookout.createIdentity("bot");
+    const aide = yield* cookout.createIdentity("bot");
     yield* answer(() => ann.client.createChannel({ name: "grill" }));
     const { message } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "deploy main?" }));
     const { message: first } = yield* answer(() =>
       ann.client.createMessage({ channel: "grill", replyTo: message.id, text: "on it" }),
     );
-    return { ann, bot, first: first.id, parent: message.id };
+    return { aide, ann, first: first.id, parent: message.id };
   });
 }
 
@@ -67,14 +67,14 @@ function deliveredCall(cookout: TestCookoutService): Effect.Effect<DeliveredCall
 it.effect("a reply naming any message in a deleted thread is refused thread_deleted, and nothing is stored", () =>
   Effect.gen(function* refusedEverywhere() {
     const cookout = yield* TestCookout;
-    const { ann, bot, first, parent } = yield* board(cookout);
+    const { ann, aide, first, parent } = yield* board(cookout);
     yield* answer(() => ann.client.deleteMessage(parent));
     const refused = yield* Effect.all(
       [
         refusal(() => ann.client.createMessage({ channel: "grill", replyTo: parent, text: "person, parent" })),
         refusal(() => ann.client.createMessage({ channel: "grill", replyTo: first, text: "person, reply" })),
-        refusal(() => bot.client.createMessage({ channel: "grill", replyTo: parent, text: "agent, parent" })),
-        refusal(() => bot.client.createMessage({ channel: "grill", replyTo: first, text: "agent, reply" })),
+        refusal(() => aide.client.createMessage({ channel: "grill", replyTo: parent, text: "agent, parent" })),
+        refusal(() => aide.client.createMessage({ channel: "grill", replyTo: first, text: "agent, reply" })),
       ],
       ONE_AT_A_TIME,
     );
@@ -90,11 +90,11 @@ it.effect("a reply naming any message in a deleted thread is refused thread_dele
 it.effect("with seen, a reply into a deleted thread is refused as deleted since you read it, never as moved", () =>
   Effect.gen(function* refusedSinceSeen() {
     const cookout = yield* TestCookout;
-    const { ann, bot, first, parent } = yield* board(cookout);
+    const { ann, aide, first, parent } = yield* board(cookout);
     yield* reply(ann, parent, "done");
     yield* answer(() => ann.client.deleteMessage(parent));
     const refused = yield* refusal(() =>
-      bot.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "me too" }),
+      aide.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "me too" }),
     );
 
     expect(refused).toMatchObject({ code: "thread_deleted", message: DELETED_SINCE_SEEN, status: CONFLICT });
@@ -104,16 +104,16 @@ it.effect("with seen, a reply into a deleted thread is refused as deleted since 
 it.effect("deleted replies are not among thread_moved's newer replies", () =>
   Effect.gen(function* deletedNotNewer() {
     const cookout = yield* TestCookout;
-    const { ann, bot, first, parent } = yield* board(cookout);
+    const { ann, aide, first, parent } = yield* board(cookout);
     const gone = yield* reply(ann, parent, "wrong thread, sorry");
     const kept = yield* reply(ann, parent, "merged");
     yield* answer(() => ann.client.deleteMessage(gone));
     const refused = yield* refusal(() =>
-      bot.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "thanks" }),
+      aide.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "thanks" }),
     );
     yield* answer(() => ann.client.deleteMessage(kept));
     const posted = yield* answer(() =>
-      bot.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "thanks" }),
+      aide.client.createMessage({ channel: "grill", replyTo: parent, seen: first, text: "thanks" }),
     );
 
     expect(refused).toMatchObject({ code: "thread_moved", details: { replies: [{ id: kept }] } });
@@ -124,10 +124,10 @@ it.effect("deleted replies are not among thread_moved's newer replies", () =>
 it.effect("a reply naming a deleted reply in a live thread joins that thread", () =>
   Effect.gen(function* joinsLiveThread() {
     const cookout = yield* TestCookout;
-    const { ann, bot, first, parent } = yield* board(cookout);
+    const { ann, aide, first, parent } = yield* board(cookout);
     yield* answer(() => ann.client.deleteMessage(first));
     const posted = yield* answer(() =>
-      bot.client.createMessage({ channel: "grill", replyTo: first, text: "picking it up" }),
+      aide.client.createMessage({ channel: "grill", replyTo: first, text: "picking it up" }),
     );
     const thread = yield* answer(() => ann.client.getThread(parent));
 
@@ -139,11 +139,11 @@ it.effect("a reply naming a deleted reply in a live thread joins that thread", (
 it.effect("an agent's reply naming a deleted reply is still refused thread_moved for newer replies", () =>
   Effect.gen(function* movedPastDeleted() {
     const cookout = yield* TestCookout;
-    const { ann, bot, first, parent } = yield* board(cookout);
+    const { ann, aide, first, parent } = yield* board(cookout);
     const newer = yield* reply(ann, parent, "merged");
     yield* answer(() => ann.client.deleteMessage(first));
     const refused = yield* refusal(() =>
-      bot.client.createMessage({ channel: "grill", replyTo: first, text: "picking it up" }),
+      aide.client.createMessage({ channel: "grill", replyTo: first, text: "picking it up" }),
     );
 
     expect(refused).toMatchObject({ code: "thread_moved", details: { replies: [{ id: newer }] } });

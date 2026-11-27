@@ -15,7 +15,7 @@ const HEADERS = "Extra headers (values write-only), one name: value per line. Sa
 const SECOND = 1;
 
 interface Cast {
-  readonly bot: string;
+  readonly aide: string;
   readonly heir: string;
   readonly viewer: string;
 }
@@ -39,13 +39,13 @@ function textbox(page: Page, name: string): Locator {
 
 async function agentProfileOpen(page: Page): Promise<Cast> {
   const prefix = unique("browser-walk-agent");
-  const cast = { bot: `${prefix}-bot`, heir: `${prefix}-heir`, viewer: `${prefix}-viewer` };
+  const cast = { aide: `${prefix}-bot`, heir: `${prefix}-heir`, viewer: `${prefix}-viewer` };
   const me = await newIdentity({ kind: "human", name: cast.viewer });
   await adminClient().makeAdmin(cast.viewer);
   await newIdentity({ kind: "human", name: cast.heir });
-  await createTestAgent({ by: me.client, name: cast.bot });
-  await me.client.join({ as: cast.bot });
-  await logIn({ page, token: me.token, url: `/#/people/${cast.bot}` });
+  await createTestAgent({ by: me.client, name: cast.aide });
+  await me.client.join({ as: cast.aide });
+  await logIn({ page, token: me.token, url: `/#/people/${cast.aide}` });
 
   await expect(button(page, "Revoke session")).toBeVisible();
 
@@ -126,13 +126,13 @@ function transferSteps({ cast, page }: Walking): readonly Step[] {
 
 function deleteSteps({ cast, page }: Walking): readonly Step[] {
   const remove = button(page, "Delete");
-  const deleted = page.getByText(`@${cast.bot} was deleted, so its profile closed.`, { exact: true });
+  const deleted = page.getByText(`@${cast.aide} was deleted, so its profile closed.`, { exact: true });
   return [
     { focused: remove, keys: "Shift+Tab" },
     { focused: inConfirm(page, "Cancel"), keys: "Enter" },
     { focused: remove, gone: [inDialog(page)], keys: "Escape" },
     { focused: inConfirm(page, "Cancel"), keys: "Enter" },
-    { focused: inConfirm(page, `Delete @${cast.bot}`), keys: "Tab" },
+    { focused: inConfirm(page, `Delete @${cast.aide}`), keys: "Tab" },
     {
       focused: inPane(page).getByRole("heading", { exact: true, level: 1, name: "People & agents" }),
       gone: [inProfile(page)],

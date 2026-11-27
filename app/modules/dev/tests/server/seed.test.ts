@@ -236,7 +236,7 @@ it.effect("the seed prints the ID of every message it posts, by name", () =>
       graceReply: question,
       lunch: "Lunch at 12:30.",
       mentionOfGrace: mention,
-      oldBotPost: retired,
+      oldAgentPost: retired,
       releaseNotes:
         "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150",
       rollbackCall: "/rollback",

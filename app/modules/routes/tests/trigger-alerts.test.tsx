@@ -14,7 +14,7 @@ const NOT_FOUND = "HTTP 404: No route for POST /v1/no-such-route.";
 
 interface Called {
   readonly owner: CookoutClient;
-  readonly bot: string;
+  readonly aide: string;
   readonly channel: string;
   readonly mention: () => Promise<number>;
 }
@@ -23,15 +23,15 @@ function failingUrl(): string {
   return `${webTestCookout().url}/v1/no-such-route`;
 }
 
-async function untilCalled({ bot, owner }: Called, ok: boolean): Promise<void> {
+async function untilCalled({ aide, owner }: Called, ok: boolean): Promise<void> {
   await waitFor(async () => {
-    await expect(owner.getTrigger(bot)).resolves.toHaveProperty("trigger.lastResult.ok", ok);
+    await expect(owner.getTrigger(aide)).resolves.toHaveProperty("trigger.lastResult.ok", ok);
   });
 }
 
-function mentionIn(channel: string, bot: string): () => Promise<number> {
+function mentionIn(channel: string, aide: string): () => Promise<number> {
   return async () => {
-    const { message } = await adminClient().createMessage({ channel, text: `@${bot} wake up` });
+    const { message } = await adminClient().createMessage({ channel, text: `@${aide} wake up` });
     return message.id;
   };
 }
@@ -43,19 +43,19 @@ async function channelWithPostBy(agent: CookoutClient, channel: string): Promise
 
 async function calledAgent(prefix: string): Promise<Called> {
   const owner = await newIdentity({ kind: "human", name: `${prefix}-owner` });
-  const bot = `${prefix}-bot`;
-  const agent = await newIdentity({ kind: "agent", name: bot, owner: `${prefix}-owner` });
-  await owner.client.setTrigger(bot, { token: TOKEN, url: webTestCookout().receiverUrl });
+  const aide = `${prefix}-bot`;
+  const agent = await newIdentity({ kind: "agent", name: aide, owner: `${prefix}-owner` });
+  await owner.client.setTrigger(aide, { token: TOKEN, url: webTestCookout().receiverUrl });
   await channelWithPostBy(agent.client, prefix);
-  const called: Called = { bot, channel: prefix, mention: mentionIn(prefix, bot), owner: owner.client };
+  const called: Called = { aide, channel: prefix, mention: mentionIn(prefix, aide), owner: owner.client };
   await called.mention();
   await untilCalled(called, true);
-  await openedBy({ client: owner.client, hash: `#/people/${bot}` });
+  await openedBy({ client: owner.client, hash: `#/people/${aide}` });
   return called;
 }
 
 async function failedOnce(called: Called): Promise<number> {
-  await called.owner.setTrigger(called.bot, { token: TOKEN, url: failingUrl() });
+  await called.owner.setTrigger(called.aide, { token: TOKEN, url: failingUrl() });
   const failed = await called.mention();
   await untilCalled(called, false);
   return failed;
@@ -86,7 +86,7 @@ it("the profile shows the last call's answer, and a failed one turns the dot red
   globalThis.location.hash = `#/channels/${called.channel}`;
 
   await expect(
-    authorDot({ at: "Listening for mentions.", label: "Unreachable", tooltip: UNREACHABLE, who: called.bot }),
+    authorDot({ at: "Listening for mentions.", label: "Unreachable", tooltip: UNREACHABLE, who: called.aide }),
   ).resolves.toStrictEqual({ presence: "unreachable", tooltip: UNREACHABLE });
 });
 
@@ -98,12 +98,12 @@ it("a failed call raises an inbox alert for the owner, which says why it failed 
   const called = await calledAgent("web-trigger-alert");
   const failed = await failedOnce(called);
   fireEvent.click(inSidebar().getByRole("link", { name: /^Inbox/u }));
-  const alert = `@${called.bot} is unreachable: its trigger URL answered ${NOT_FOUND} to message ${String(failed)}`;
+  const alert = `@${called.aide} is unreachable: its trigger URL answered ${NOT_FOUND} to message ${String(failed)}`;
 
   await expect(inPane().findByText(alert)).resolves.toBeDefined();
   await expect(inPane().findByText("just now · Still unreachable")).resolves.toBeDefined();
 
-  await called.owner.setTrigger(called.bot, { token: TOKEN, url: webTestCookout().receiverUrl });
+  await called.owner.setTrigger(called.aide, { token: TOKEN, url: webTestCookout().receiverUrl });
 
   await expect(inPane().findByText(/Reached again/u)).resolves.toBeDefined();
 });
@@ -112,11 +112,11 @@ it("an alert for a trigger URL that never answered says it couldn't be reached",
   expect.hasAssertions();
 
   const called = await calledAgent("web-trigger-closed");
-  await called.owner.setTrigger(called.bot, { token: TOKEN, url: CLOSED_URL });
+  await called.owner.setTrigger(called.aide, { token: TOKEN, url: CLOSED_URL });
   const failed = await called.mention();
   await untilCalled(called, false);
   fireEvent.click(inSidebar().getByRole("link", { name: /^Inbox/u }));
-  const alert = `@${called.bot} is unreachable: its trigger URL answered the trigger URL couldn't be reached to message ${String(failed)}`;
+  const alert = `@${called.aide} is unreachable: its trigger URL answered the trigger URL couldn't be reached to message ${String(failed)}`;
 
   await expect(inPane().findByText(alert)).resolves.toBeDefined();
 });

@@ -23,12 +23,12 @@ it.effect("an agent subscribing is refused with 403 identity_kind, and the chann
   Effect.gen(function* agentRefused() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
-    const refused = yield* refusal(() => bot.client.subscribe("grill"));
+    const refused = yield* refusal(() => aide.client.subscribe("grill"));
     yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "news" }));
-    const listed = yield* answer(bot.client.listSubscribedChannels);
-    const { items } = yield* answer(() => bot.client.inbox());
+    const listed = yield* answer(aide.client.listSubscribedChannels);
+    const { items } = yield* answer(() => aide.client.inbox());
 
     expect(refused).toMatchObject({
       code: "identity_kind",
@@ -43,17 +43,17 @@ it.effect("an agent that creates a channel isn't subscribed to it, and a person 
   Effect.gen(function* creatorsSubscribed() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const bot = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
-    yield* answer(() => bot.client.createChannel({ name: "bot-room" }));
+    const aide = yield* cookout.createIdentity("todo-bot", { owner: "ada" });
+    yield* answer(() => aide.client.createChannel({ name: "bot-room" }));
     yield* answer(() => ada.client.createChannel({ name: "ada-room" }));
     yield* answer(() => cookout.client.createMessage({ channel: "bot-room", text: "news" }));
     const listed = yield* Effect.all(
-      { ada: answer(ada.client.listSubscribedChannels), bot: answer(bot.client.listSubscribedChannels) },
+      { ada: answer(ada.client.listSubscribedChannels), aide: answer(aide.client.listSubscribedChannels) },
       { concurrency: 1 },
     );
-    const { items } = yield* answer(() => bot.client.inbox());
+    const { items } = yield* answer(() => aide.client.inbox());
 
-    expect(listed).toMatchObject({ ada: { channels: [{ name: "ada-room" }] }, bot: { channels: [] } });
+    expect(listed).toMatchObject({ ada: { channels: [{ name: "ada-room" }] }, aide: { channels: [] } });
     expect(items).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout())),
 );

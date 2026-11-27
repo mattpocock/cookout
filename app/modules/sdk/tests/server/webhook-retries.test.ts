@@ -126,7 +126,7 @@ it.effect("a server restarted mid-backoff still retries the delivery, with the s
 it.effect("the failure reply is posted as the stored handler identity, owner included", () =>
   Effect.gen(function* failureByStoredHandler() {
     const cookout = yield* TestCookout;
-    const bot = yield* cookout.createIdentity("deploy", { owner: "matt" });
+    const aide = yield* cookout.createIdentity("deploy", { owner: "matt" });
     yield* cookout.webhook.failNext(SIX_CALLS, UNAVAILABLE);
     const threadId = yield* calledDeploy(cookout);
     yield* advanceUntilCalls(cookout, SIX_CALLS);
@@ -134,7 +134,7 @@ it.effect("the failure reply is posted as the stored handler identity, owner inc
       Effect.repeat({ until: ({ replies }) => Arr.isReadonlyArrayNonEmpty(replies) }),
     );
 
-    expect(thread.replies).toMatchObject([{ author: { name: bot.identity.name, owner: "matt" } }]);
+    expect(thread.replies).toMatchObject([{ author: { name: aide.identity.name, owner: "matt" } }]);
   }).pipe(Effect.provide(patientCookout)),
 );
 

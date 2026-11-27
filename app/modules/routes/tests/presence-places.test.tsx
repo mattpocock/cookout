@@ -93,7 +93,7 @@ interface Sending {
   readonly send: (presence: Sent) => void;
 }
 
-const TAB_BOT = "web-presence-tab-bot";
+const TAB_AGENT = "web-presence-tab-bot";
 
 function sending(): Sending {
   const { live, send } = scriptedLive();
@@ -106,7 +106,7 @@ function sending(): Sending {
 }
 
 async function detailAfter(send: Sending["send"], presence: Sent, text: string): Promise<string> {
-  send({ identity: TAB_BOT, ...presence });
+  send({ identity: TAB_AGENT, ...presence });
   const shown = await inProfile().findByText(text);
   return shown.textContent;
 }
@@ -117,9 +117,9 @@ it("a profile says an identity is online in a web tab, or only that it is online
   expect.hasAssertions();
 
   const reader = await newIdentity({ kind: "human", name: "web-presence-tab-reader" });
-  await agentNamed(TAB_BOT);
+  await agentNamed(TAB_AGENT);
   const { live, send } = sending();
-  openAt({ client: reader.client, hash: `#/people/${TAB_BOT}`, live });
+  openAt({ client: reader.client, hash: `#/people/${TAB_AGENT}`, live });
   await inProfile().findByRole("heading", { level: 3 });
   const inTab = await detailAfter(send, { connection: { via: "web" }, online: true }, "Online · web");
   const unknown = await detailAfter(send, { online: true }, "Online");

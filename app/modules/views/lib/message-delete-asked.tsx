@@ -1,6 +1,6 @@
 import { DELETE_TEXT, outcomeWords, refusalWords, titleOf } from "./message-delete-words.ts";
 import { useCallback, useContext } from "react";
-import { Announcer } from "./announcer.ts";
+import { AnnounceContext } from "./announcer.ts";
 import { ConfirmDialog } from "../../design-system/controls.tsx";
 import type { Message } from "../../sdk/index.ts";
 import type { MessageDeleting } from "../../board/index.ts";
@@ -15,7 +15,7 @@ interface MessageDeleteAskedProps {
 export function MessageDeleteAsked(props: MessageDeleteAskedProps): ReactNode {
   const { asked, deleting } = props;
   const store = useBoardStore();
-  const announce = useContext(Announcer);
+  const announce = useContext(AnnounceContext);
   const handleCancel = store.calls.cancelDelete;
   const { deleteMessage } = store.calls;
   const handleConfirm = useCallback(() => {
