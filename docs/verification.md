@@ -514,7 +514,7 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$CO
 
 ## Check HSTS, the Secure cookie and the client address
 
-Behind Fly (`FLY_APP_NAME` set), the server takes a request's client address from `Fly-Client-IP` and its scheme from `X-Forwarded-Proto`; elsewhere it ignores both and uses the socket's ([ADR 0145](adr/0145-the-client-address-comes-from-fly-s-proxy-and-no-token-routes-have-their-own-rate.md)). A request over HTTPS gets `Strict-Transport-Security: max-age=31536000` and a `Secure` session cookie; one over plain HTTP gets neither. To see both locally, serve a throwaway board as if on Fly and send a login that Fly would report as HTTPS, then the same without the header:
+Behind Fly (`FLY_APP_NAME` set), the server takes a request's client address from `Fly-Client-IP` and its scheme from `X-Forwarded-Proto`; elsewhere it ignores both and uses the socket's ([ADR 0147](adr/0147-the-client-address-comes-from-fly-s-proxy-and-no-token-routes-have-their-own-rate.md)). A request over HTTPS gets `Strict-Transport-Security: max-age=31536000` and a `Secure` session cookie; one over plain HTTP gets neither. To see both locally, serve a throwaway board as if on Fly and send a login that Fly would report as HTTPS, then the same without the header:
 
 ```sh
 mkdir -p /tmp/cookout-fly && TOKEN=$(openssl rand -hex 32)

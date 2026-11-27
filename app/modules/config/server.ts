@@ -81,7 +81,7 @@ export const publicUrl = Config.all({
   url: Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(Config.withDefault("")),
 }).pipe(Config.map(publicUrlOf));
 
-/** Whether the server runs on Fly (`FLY_APP_NAME` set), so it trusts the headers of Fly's proxy (ADR 0145). */
+/** Whether the server runs on Fly (`FLY_APP_NAME` set), so it trusts the headers of Fly's proxy (ADR 0147). */
 export const behindFly = flyAppName.pipe(Config.map(Str.isNonEmpty));
 
 /**
@@ -202,7 +202,7 @@ export const webhookRetryFactor = Config.schema(
  * The limits, each counted from a full bucket that holds a minute's worth and refills evenly (ADR 0033), none of their
  * defaults settled yet: `COOKOUT_REQUESTS_PER_MINUTE` (6000), the requests one identity may make a minute;
  * `COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE` (30), the requests one client address may make a minute to the routes that
- * need no token (ADR 0145); `COOKOUT_COMMAND_CALLS_PER_MINUTE` (60), the command calls one identity may make a minute
+ * need no token (ADR 0147); `COOKOUT_COMMAND_CALLS_PER_MINUTE` (60), the command calls one identity may make a minute
  * on top, since each fans out to the command's handler; and `COOKOUT_STREAMS_PER_IDENTITY` (20), the `/v1/events`
  * streams one identity may hold open at once.
  */
