@@ -4,9 +4,12 @@ import {
   isoTime,
   onPostgresDatabase,
   openStore,
+  testSecretsCipher,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import type { Redacted } from "effect";
+import type { StorageUnavailable } from "../../server.ts";
 import { postgresStorage } from "../../server.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
@@ -23,9 +26,13 @@ const BEFORE_REQUEST_ORIGINS = [
 const login = { createdAt: created, expiresAt, host: "ada-laptop", userCode: "WDJB-MJHT" };
 const join = { agent: triage.name, createdAt: created, expiresAt, host: "build-box", userCode: "JOIN-CODE" };
 
+function opened(url: Redacted.Redacted): ReturnType<typeof openStore<StorageUnavailable, never>> {
+  return openStore(postgresStorage({ cipher: testSecretsCipher, url }));
+}
+
 const requestsStoredBeforeOrigins = Effect.gen(function* storeRequestsBeforeOrigins() {
   const url = yield* emptyPostgresDatabase;
-  const { close, storage } = yield* url.pipe(postgresStorage, openStore);
+  const { close, storage } = yield* opened(url);
   yield* storage.createIdentity(ada, tokenHash("hash:ada"));
   yield* storage.createIdentity(triage, tokenHash("hash:triage"));
   yield* storage.addLoginRequest({ ...login, requestHash: tokenHash("hash:login") }, created);
@@ -39,7 +46,7 @@ it.live("a Login request and an agent join request stored before request origins
   Effect.scoped(
     Effect.gen(function* upgradeRequests() {
       const url = yield* requestsStoredBeforeOrigins;
-      const { close, storage } = yield* url.pipe(postgresStorage, openStore);
+      const { close, storage } = yield* opened(url);
       const now = isoTime("2026-01-01T00:05:00.000Z");
       const found = [
         yield* storage.findLoginRequest("WDJB-MJHT", now),

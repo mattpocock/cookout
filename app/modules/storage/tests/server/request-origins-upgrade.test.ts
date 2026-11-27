@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Path } from "effect";
 import { expect, it } from "@effect/vitest";
-import { freshDatabasePath, identityName, isoTime, openStore } from "../../../testing/server.ts";
+import { freshDatabasePath, identityName, isoTime, openStore, testSecretsCipher } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { sqliteStorage } from "../../server.ts";
 
@@ -23,7 +23,7 @@ it.effect(
   () =>
     Effect.gen(function* upgradeSqlite() {
       const path = yield* copiedDatabase;
-      const { storage } = yield* openStore(sqliteStorage(path));
+      const { storage } = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path }));
       const login = yield* storage.findLoginRequest("WDJB-MJHT", now);
       const join = yield* storage.findAgentJoinRequest("JOIN-CODE", now);
       const approved = yield* storage.approveLoginRequest("WDJB-MJHT", identityName("ada"), now);

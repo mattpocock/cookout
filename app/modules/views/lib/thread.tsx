@@ -58,6 +58,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
           channel={channel}
           closing={closing}
           draft={draft}
+          keymap={props.keymap}
           linked={props.linked}
           me={props.me}
           readPosition={readPosition}

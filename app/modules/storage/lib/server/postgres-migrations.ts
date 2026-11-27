@@ -1,16 +1,17 @@
 import {
+  POSTGRES_ADMIN_SETTING_MIGRATION,
   POSTGRES_ATTACHMENTS_MIGRATION,
   POSTGRES_ATTACHMENT_SIZES_MIGRATION,
   POSTGRES_CALL_TIMES_MIGRATION,
   POSTGRES_LOGIN_EXPIRY_MIGRATION,
   POSTGRES_REQUEST_ORIGINS_MIGRATION,
   POSTGRES_SEARCH_MIGRATION,
+  POSTGRES_SECRETS_KEY_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
 } from "./feature-migrations.ts";
 import type { Effect } from "effect";
-import { POSTGRES_ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -270,6 +271,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   ],
   POSTGRES_CALL_TIMES_MIGRATION,
   POSTGRES_LOGIN_EXPIRY_MIGRATION,
+  POSTGRES_SECRETS_KEY_MIGRATION,
   POSTGRES_REQUEST_ORIGINS_MIGRATION,
 ];
 
