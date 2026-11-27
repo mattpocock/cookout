@@ -143,8 +143,7 @@ function answered(page: Page, reader: string): readonly Step[] {
     ["Enter", button(reactivated, "Reactivate")],
     ["Enter", cancel],
     ["Tab", button(confirm, `Reactivate @${reader}-reactivated`)],
-    ["Enter", deactivated.getByRole("link", { exact: true, name: testAgentDisplayName(`${reader}-deactivated`) })],
-    ["Tab", button(deactivated, "Deactivate")],
+    ["Enter", button(deactivated, "Deactivate")],
     ["Enter", cancel],
     ["Escape", button(deactivated, "Deactivate")],
     ["Enter", cancel],
@@ -169,9 +168,11 @@ function inboxLink(page: Page): Locator {
     .filter({ hasText: "for you" });
 }
 
-async function deactivateHeld(page: Page): Promise<() => void> {
+const ANSWERED_AT = { Deactivate: "deactivate", Reactivate: "reactivate" } as const;
+
+async function answerHeld(page: Page, action: keyof typeof ANSWERED_AT): Promise<() => void> {
   const answer = Promise.withResolvers<null>();
-  await page.route("**/v1/identities/*/deactivate", async (route) => {
+  await page.route(`**/v1/identities/*/${ANSWERED_AT[action]}`, async (route) => {
     const response = await route.fetch();
     await answer.promise;
     await route.fulfill({ response });
@@ -181,10 +182,16 @@ async function deactivateHeld(page: Page): Promise<() => void> {
   };
 }
 
-async function confirmedBeforeTheAnswer(page: Page, reader: string): Promise<void> {
+interface Answering {
+  readonly page: Page;
+  readonly row: Locator;
+  readonly action: "Deactivate" | "Reactivate";
+}
+
+async function confirmedBeforeTheAnswer({ action, page, row }: Answering): Promise<void> {
   const counted = await inboxLink(page).textContent();
-  const release = await deactivateHeld(page);
-  await button(agentRow(page, `${reader}-deactivated`), "Deactivate").focus();
+  const release = await answerHeld(page, action);
+  await button(row, action).focus();
   await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Enter");
@@ -200,7 +207,18 @@ test("confirming Deactivate on an offer whose row goes before the answer puts fo
 }) => {
   const reader = unique("kbwalk-offer-first");
   await logInWithStream({ page, token: await offered(ownCookout, reader), url: "/#/inbox" });
-  await confirmedBeforeTheAnswer(page, reader);
+  await confirmedBeforeTheAnswer({ action: "Deactivate", page, row: agentRow(page, `${reader}-deactivated`) });
 
   await expect(button(agentRow(page, `${reader}-kept`), "Deactivate")).toBeFocused();
+});
+
+test("confirming Reactivate on a deactivated agent whose row goes before the answer puts focus on the next notice's button", async ({
+  ownCookout,
+  page,
+}) => {
+  const reader = unique("kbwalk-reactivate-first");
+  await logInWithStream({ page, token: await offered(ownCookout, reader), url: "/#/inbox" });
+  await confirmedBeforeTheAnswer({ action: "Reactivate", page, row: agentRow(page, `${reader}-reactivated`) });
+
+  await expect(button(agentRow(page, `${reader}-deactivated`), "Deactivate")).toBeFocused();
 });
