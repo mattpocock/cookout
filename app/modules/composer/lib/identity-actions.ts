@@ -145,10 +145,7 @@ async function copyAfter(previous: Promise<void>, text: string | null): Promise<
 }
 
 function linkOf(state: LoginLinkState): string | null {
-  if (state.status === "shown") {
-    return state.link;
-  }
-  return null;
+  return (state.status === "shown" && state.link) || null;
 }
 
 async function linkSent(options: IdentityActionsOptions, publish: Publish): Promise<void> {
