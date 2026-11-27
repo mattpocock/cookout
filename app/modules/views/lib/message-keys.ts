@@ -231,6 +231,7 @@ type MessageAction =
   | "copyMessageLink"
   | "copyMessageText"
   | "deleteMessage"
+  | "editThreadTitle"
   | "markUnread"
   | "openThread"
   | "replyToMessage"
@@ -253,6 +254,7 @@ function messageActions({ actions, keymap }: MessageKeysOf): Readonly<Record<Mes
     copyMessageLink: choose("copyMessageLink"),
     copyMessageText: choose("copyMessageText"),
     deleteMessage: choose("deleteMessage"),
+    editThreadTitle: choose("editThreadTitle"),
     markUnread: choose("markUnread"),
     openThread: press({ action: "openThread", actions, keymap, messageOf: focusedMessage, whenOpen: PANEL_PARENT }),
     replyToMessage: press({

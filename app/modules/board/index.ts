@@ -68,6 +68,8 @@
  * `calls.setTitle(id, title)` sets, changes or (with an empty title) clears the Thread title of the thread holding the
  * message, applying the answer as a `thread` event, and answers `null`, or the server's refusal (an `invalid_request`'s
  * first schema problem as its message, such as "Use at most 100 characters."), changing nothing;
+ * `calls.askTitle(id)` asks for the title form of the thread whose top-level message is `id` (a message's Add title or
+ * Edit title in a channel, #979), held as `titleAsked` until that thread's heading takes it with `calls.takeTitle`;
  * `calls.askDelete(message)` asks to delete one of the logged-in human's messages, held as `messageDeleting`'s `asked`
  * for the confirmation to show until `calls.cancelDelete` or the delete; `calls.deleteMessage` deletes it through the SDK
  * (for a top-level message, its whole thread), one delete at a time, applying the answer as a `message-deleted` event,
@@ -244,6 +246,7 @@ export {
   scheduleListOf,
   subscribedChannels,
   threadOf,
+  titleAsked,
 } from "./lib/board-selectors.ts";
 export { searchResultsOf } from "./lib/search-selectors.ts";
 export { type ApprovalCode, createApprovalCode } from "./lib/approval-code.ts";

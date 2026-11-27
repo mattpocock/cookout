@@ -1,5 +1,5 @@
 import type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./message-selectors.ts";
-import type { ChannelName, ScheduledMessageId } from "../../sdk/index.ts";
+import type { ChannelName, MessageId, ScheduledMessageId } from "../../sdk/index.ts";
 import type { ChannelsState, WebhookCommandsState } from "./listed-slices.ts";
 import { channelMessages, messageBefore, threadMessages } from "./message-selectors.ts";
 import type { BoardState } from "./board-store.ts";
@@ -55,6 +55,10 @@ function messageDeleting(state: BoardState): MessageDeleting {
   return state.messageDeleting;
 }
 
+function titleAsked(state: BoardState): MessageId | null {
+  return state.titleAsked;
+}
+
 function channelPage(name: ChannelName): (state: BoardState) => ChannelMessagesState {
   const select = channelMessages(name);
   return (state) => select(state.messages);
@@ -82,4 +86,5 @@ export {
   scheduleListOf,
   subscribedChannels,
   threadOf,
+  titleAsked,
 };

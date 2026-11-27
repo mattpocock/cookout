@@ -41,6 +41,7 @@ interface OwnState {
   readonly messages: MessagesHeld;
   readonly closingRefusal: ClosingRefusal | null;
   readonly messageDeleting: ReturnType<BoardCalls["deleting"]>;
+  readonly titleAsked: MessageId | null;
 }
 
 interface Following {
@@ -124,6 +125,7 @@ function createOwn(options: OwnOptions): Own {
       notice: parts.notice(),
       schedules: parts.schedules.state(),
       subscriptions: parts.subscriptions.state(),
+      titleAsked: parts.calls.titleAsked(),
       webhookCommands: parts.webhookCommands.state(),
     }),
     subscribers: (following) => ({

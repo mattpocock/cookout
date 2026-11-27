@@ -20,7 +20,8 @@ import type {
   ScheduledMessage,
   ScheduledMessageId,
 } from "../../scheduled-messages/index.ts";
-import type { SetTitle, TitlingClient } from "./thread-titling.ts";
+import type { SetTitle, TitleAsking, TitlingClient } from "./thread-titling.ts";
+import { createTitleAsking, titleRefusal } from "./thread-titling.ts";
 import type { SearchAnswer } from "../../search/web.ts";
 import type { SessionListCalls } from "./session-list.ts";
 import type { SessionsClient } from "./session-calls.ts";
@@ -29,7 +30,6 @@ import { createMessageDeleting } from "./message-deleting.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
 import { sessionCalls } from "./session-calls.ts";
-import { titleRefusal } from "./thread-titling.ts";
 
 type CallsClient = ClosingClient &
   SessionsClient &
@@ -51,7 +51,7 @@ type CallsClient = ClosingClient &
 
 type ScheduleChange = "pause" | "resume" | "remove";
 
-interface BoardCalls extends SessionListCalls {
+interface BoardCalls extends SessionListCalls, TitleAsking {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
   readonly setSubscribed: (channel: ChannelName, subscribed: boolean, from: AskedFrom) => void;
   readonly close: (messageId: MessageId) => void;
@@ -154,8 +154,9 @@ function scheduleCalls({ client, heard }: CallsOptions): ScheduleCalls {
   };
 }
 
-function titleCalls(options: CallsOptions): Pick<BoardCalls, "setTitle"> {
+function titleCalls(options: CallsOptions): Pick<BoardCalls, "setTitle" | keyof TitleAsking> {
   return {
+    ...createTitleAsking(options.changed),
     setTitle: async (messageId, title) => {
       try {
         const { message } = await options.client.setThreadTitle(messageId, title);

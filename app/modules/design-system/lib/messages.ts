@@ -32,7 +32,7 @@ export type {
 } from "./identity-card-parts.ts";
 export { ReactionChip } from "./reaction-chip.tsx";
 export { ReactionChips } from "./reaction-chips.tsx";
-export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
+export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice, TitleChoice } from "./menu-parts.ts";
 export { FileChip } from "./file-chip.tsx";
 export { ImageCarousel } from "./image-carousel.tsx";
 export { ImageThumbnail } from "./image-thumbnail.tsx";

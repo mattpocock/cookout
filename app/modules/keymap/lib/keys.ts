@@ -163,6 +163,12 @@ const KEYS = [
   { action: "markUnread", chord: "Alt+Enter", does: "Mark it and everything after it unread", scope: "message" },
   { action: "copyMessageLink", chord: "l", does: "Copy its link", scope: "message" },
   { action: "copyMessageText", chord: "c", does: "Copy its text, as Markdown", scope: "message" },
+  {
+    action: "editThreadTitle",
+    chord: "e",
+    does: "Add or edit its thread's title, from a top-level message in a channel",
+    scope: "message",
+  },
   { action: "toggleThreadClosed", chord: "x", does: "Close its thread, or reopen it", scope: "message" },
   { action: "deleteMessage", chord: "Delete", does: "Delete it, when you wrote it", scope: "message" },
   { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the channel's link", scope: "message" },
