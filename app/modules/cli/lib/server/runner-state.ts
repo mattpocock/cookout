@@ -215,9 +215,6 @@ function endingText(ended: Ending): string {
   if (Predicate.isNumber(ended.exitCode)) {
     return `exited ${String(ended.exitCode)}`;
   }
-  if (Predicate.isNumber(ended.timedOutAfterMinutes)) {
-    return `timed out after ${String(ended.timedOutAfterMinutes)} min`;
-  }
   return `failed: ${failedCode(ended)}`;
 }
 

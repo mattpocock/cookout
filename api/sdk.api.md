@@ -796,12 +796,10 @@ interface Presence {
 interface PresenceResponse {
   readonly presence: readonly Presence[];
 }
-/** How a wake run failed: the exit code it ended with, or the minutes after which its runner killed it. Never any of its output. */
-type WakeRunFailure = {
+/** How a wake run failed: the non-zero exit code it ended with. Never any of its output. */
+interface WakeRunFailure {
   readonly exitCode: number;
-} | {
-  readonly timedOutAfterMinutes: number;
-};
+}
 /** The answer to `PUT` and `DELETE /v1/presence/wake-run`: whether a wake run of the caller's is now in progress. */
 interface WakeRunResponse {
   readonly wakeRun: boolean;

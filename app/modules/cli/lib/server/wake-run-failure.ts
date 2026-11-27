@@ -4,11 +4,8 @@ import type { InboxItem } from "../../../sdk/index.ts";
 import type { WakeRunFailure } from "../../../presence/index.ts";
 import { callClient } from "./adapters/sdk.ts";
 
-function failureText(failure: WakeRunFailure): string {
-  if ("exitCode" in failure) {
-    return `My wake run exited ${String(failure.exitCode)}.`;
-  }
-  return `My wake run timed out after ${String(failure.timedOutAfterMinutes)} min.`;
+function failureText({ exitCode }: WakeRunFailure): string {
+  return `My wake run exited ${String(exitCode)}.`;
 }
 
 function repliedTo(asAgent: ClientWithAgentSessionState, given: readonly InboxItem[]) {

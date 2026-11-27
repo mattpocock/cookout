@@ -13,25 +13,16 @@ import { runCookout } from "./command-line.ts";
 
 const SUCCESS = 0;
 
-function timeoutArgs(timeoutMinutes: number | undefined): readonly string[] {
-  return Option.match(Option.fromUndefinedOr(timeoutMinutes), {
-    onNone: () => [],
-    onSome: (minutes) => ["--timeout", String(minutes)],
-  });
-}
-
 function joinWaking({
   command,
   name,
   on,
   settings,
-  timeoutMinutes,
 }: {
   readonly command?: readonly string[] | undefined;
   readonly name: string;
   readonly on: WakeBoard;
   readonly settings: FakeWakeSettings;
-  readonly timeoutMinutes?: number | undefined;
 }): Effect.Effect<BoardAgent, never, CommandLineNeeds | TestCookout | Scope.Scope> {
   return Effect.gen(function* joinAndRegister() {
     const fs = yield* FileSystem.FileSystem;
@@ -44,7 +35,7 @@ function joinWaking({
       onSome: Effect.succeed,
     });
     const { exitCode, stderr } = yield* runCookout({
-      args: ["join", "--as", name, "--wake", ...timeoutArgs(timeoutMinutes), "--", ...wake],
+      args: ["join", "--as", name, "--wake", "--", ...wake],
       env: joined.env,
     });
     if (exitCode !== SUCCESS) {
