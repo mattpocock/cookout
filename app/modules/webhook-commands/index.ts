@@ -34,6 +34,24 @@ export function isWebhookCommandName(value: string): value is WebhookCommandName
   return webhookCommandNamePattern.test(value);
 }
 
+/**
+ * The Commands: the built-in `/word`s the composer runs in place of posting, each with its description. The composer lists
+ * them, and the server refuses a Webhook command with one's name (mattpocock/cookout#869), so a Command added here reserves its name.
+ */
+export const commandList = [{ description: "Schedule a message", name: "schedule" }] as const;
+
+/** A Command's name. */
+export type CommandName = (typeof commandList)[number]["name"];
+
+/**
+ * Whether `value` is a Command's name, which no Webhook command may take.
+ * @param value The name to check.
+ * @returns Whether `value` is a `CommandName`.
+ */
+export function isCommandName(value: string): value is CommandName {
+  return commandList.some((command) => command.name === value);
+}
+
 /** The rule every command secret the server issues follows. */
 export const webhookCommandSecretPattern = /^hmac_[A-Za-z0-9_-]+$/u;
 
@@ -131,7 +149,7 @@ export const webhookCommandCallsPath = "/v1/commands/:name/calls";
 export const webhookCommandSecretPath = "/v1/commands/:name/secret";
 
 /**
- * The codes the command routes refuse with: a name in use by a registered command (409), a name that is a human's (409), and a call to, or a
+ * The codes the command routes refuse with: a name in use by a registered command or a Command's name (409), a name that is a human's (409), and a call to, or a
  * secret rotation of, a command that doesn't exist (404).
  */
 export const webhookCommandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;

@@ -366,7 +366,7 @@ It prints `{ "messageId": 12, "threadId": 12 }` at once, without waiting: the ca
 
 ## Handle a Webhook command's webhook
 
-To be the program behind a Webhook command, start from the example handler in `packages/handler-example`: its [README](https://github.com/mattpocock/cookout/blob/main/packages/handler-example/README.md) covers the webhook body, checking the `cookout-signature` header, and posting the result with the call's Webhook command token. An admin registers the Webhook command with `cookout command add <name> --url <handler URL>/webhook --schema <file>`, which prints the secret the handler checks signatures with, once. "Deliver a call to the example handler" in [verification.md](https://github.com/mattpocock/cookout/blob/main/docs/verification.md#deliver-a-call-to-the-example-handler) runs one end to end.
+To be the program behind a Webhook command, start from the example handler in `packages/handler-example`: its [README](https://github.com/mattpocock/cookout/blob/main/packages/handler-example/README.md) covers the webhook body, checking the `cookout-signature` header, and posting the result with the call's Webhook command token. An admin registers the Webhook command with `cookout command add <name> --url <handler URL>/webhook --schema <file>`, which prints the secret the handler checks signatures with, once. A Command's name, such as `schedule`, is refused with 409 `command_exists`. "Deliver a call to the example handler" in [verification.md](https://github.com/mattpocock/cookout/blob/main/docs/verification.md#deliver-a-call-to-the-example-handler) runs one end to end.
 
 ## Exit codes and output
 
