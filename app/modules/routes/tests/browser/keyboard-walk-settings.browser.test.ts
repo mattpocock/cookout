@@ -58,6 +58,11 @@ function profileAndThemeSteps(page: Page): readonly Step[] {
 
 function agentSteps(page: Page, agent: string): readonly Step[] {
   const card = inPane(page).getByRole("group", { exact: true, name: `@${agent}` });
+  const expiry = card.getByRole("textbox", { exact: true, name: "Expires in" });
+  const joined = inPane(page).getByText(
+    `Created @${agent}. Its harness joins with cookout join --as ${agent}, which you approve; for CI or a service, use Make key on its card.`,
+    { exact: true },
+  );
   return [
     { focused: link(page, "My agents"), keys: "Tab" },
     ...sectionSteps(page, "My agents"),
@@ -65,32 +70,42 @@ function agentSteps(page: Page, agent: string): readonly Step[] {
     { focused: field(page, "New agent's name"), keys: agent, typed: true },
     { focused: field(page, "Its display name"), keys: "Tab" },
     { focused: field(page, "Its display name"), keys: "Walked agent", typed: true },
-    { focused: button(page, "Copy token"), keys: "Enter" },
-    { focused: button(page, "Copy token"), keys: "Enter", shows: [tokenCopied(page)] },
+    { focused: field(page, "Its display name"), keys: "Enter", shows: [joined, card] },
+    { focused: field(page, "New agent's name"), keys: "Shift+Tab" },
+    { focused: card.getByRole("button", { exact: true, name: "Make key" }), keys: "Shift+Tab" },
+    { focused: expiry, keys: "Shift+Tab" },
+    { focused: card.getByRole("textbox", { exact: true, name: "Key name" }), keys: "Shift+Tab" },
+    { focused: card.getByRole("textbox", { exact: true, name: "Key name" }), keys: "walk-key", typed: true },
+    { focused: button(page, "Copy key"), keys: "Enter" },
+    { focused: button(page, "Copy key"), keys: "Enter", shows: [tokenCopied(page)] },
     { focused: button(page, "Done"), keys: "Tab" },
     {
-      focused: card.getByRole("button", { exact: true, name: "Rotate token" }),
-      gone: [button(page, "Copy token")],
+      focused: card
+        .getByRole("group", { exact: true, name: "walk-key" })
+        .getByRole("button", { exact: true, name: "Revoke" }),
+      gone: [button(page, "Copy key")],
       keys: "Enter",
     },
+    { focused: card.getByRole("textbox", { exact: true, name: "Key name" }), keys: "Tab" },
+    { focused: expiry, keys: "Tab" },
+    { focused: card.getByRole("button", { exact: true, name: "Make key" }), keys: "Tab" },
   ];
 }
 
 function sessionSteps(page: Page): readonly Step[] {
   return [
-    { focused: inPane(page).getByRole("button", { exact: true, name: "Deactivate" }), keys: "Tab" },
     { focused: field(page, "New agent's name"), keys: "Tab" },
     { focused: field(page, "Its display name"), keys: "Tab" },
     { focused: button(page, "Create"), keys: "Tab" },
     { focused: link(page, "Sessions"), keys: "Tab" },
     ...sectionSteps(page, "Sessions"),
-    { focused: button(page, "Revoke"), keys: "Tab" },
+    { focused: inPane(page).getByRole("button", { exact: true, name: "Revoke" }).last(), keys: "Tab" },
     { focused: button(page, "Log out"), keys: "Tab" },
     { focused: page.getByLabel("Token", { exact: true }), keys: "Enter" },
   ];
 }
 
-test("Settings by keyboard alone: each section, display names, the theme choice, creating an agent with its token shown once, and logging out", async ({
+test("Settings by keyboard alone: each section, display names, the theme choice, creating an agent, making it a key shown once, and logging out", async ({
   page,
 }) => {
   await copiesRecorded(page);

@@ -1,6 +1,7 @@
+import { Alert, Muted } from "../../design-system/content.tsx";
 import { InputField, LineForm } from "../../design-system/controls.tsx";
 import type { AgentCreation } from "../../composer/index.ts";
-import { Alert } from "../../design-system/content.tsx";
+import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
@@ -11,6 +12,10 @@ const TEXT = {
   label: "Create an agent",
   submit: "Create",
 } as const;
+
+function joinWords(name: IdentityName): string {
+  return `Created @${name}. Its harness joins with cookout join --as ${name}, which you approve; for CI or a service, use Make key on its card.`;
+}
 
 interface CreateAgentFormProps {
   readonly creation: AgentCreation;
@@ -43,6 +48,7 @@ export function CreateAgentForm(props: CreateAgentFormProps): ReactNode {
         required
         value={state.displayName}
       />
+      {state.created !== null && <Muted>{joinWords(state.created)}</Muted>}
       {create.status === "failed" && <Alert>{`Couldn't create the agent (${create.code}): ${create.message}`}</Alert>}
     </LineForm>
   );

@@ -96,6 +96,10 @@ function rotateSteps({ page }: Walking): readonly Step[] {
   ];
 }
 
+function keyRevoke(page: Page, name: string): Locator {
+  return inProfile(page).getByRole("group", { exact: true, name }).getByRole("button", { exact: true, name: "Revoke" });
+}
+
 function revokeSteps({ page }: Walking): readonly Step[] {
   const revoke = button(page, "Revoke session");
   return [
@@ -104,7 +108,33 @@ function revokeSteps({ page }: Walking): readonly Step[] {
     { focused: revoke, gone: [inDialog(page)], keys: "Escape" },
     { focused: inConfirm(page, "Cancel"), keys: "Enter" },
     { focused: inConfirm(page, "Revoke session"), keys: "Tab" },
-    { focused: button(page, "Rotate token"), gone: [revoke, inDialog(page)], keys: "Enter" },
+    { focused: keyRevoke(page, "test"), gone: [revoke, inDialog(page)], keys: "Enter" },
+  ];
+}
+
+function makeKeySteps({ page }: Walking): readonly Step[] {
+  return [
+    { focused: textbox(page, "Key name"), keys: "Tab" },
+    { focused: textbox(page, "Key name"), keys: "walk-ci", typed: true },
+    { focused: textbox(page, "Expires in"), keys: "Tab" },
+    { focused: textbox(page, "Expires in"), keys: "30d", typed: true },
+    { focused: button(page, "Make key"), keys: "Tab" },
+    { focused: button(page, "Copy key"), keys: "Enter" },
+    { focused: button(page, "Copy key"), keys: "Enter", shows: [tokenCopied(page)] },
+    { focused: button(page, "Done"), keys: "Tab" },
+    { focused: keyRevoke(page, "walk-ci"), gone: [button(page, "Copy key")], keys: "Enter" },
+  ];
+}
+
+function revokeKeySteps({ page }: Walking): readonly Step[] {
+  return [
+    { focused: inConfirm(page, "Cancel"), keys: "Enter" },
+    { focused: inConfirm(page, "Revoke key"), keys: "Tab" },
+    { focused: keyRevoke(page, "test"), gone: [keyRevoke(page, "walk-ci"), inDialog(page)], keys: "Enter" },
+    { focused: textbox(page, "Key name"), keys: "Tab" },
+    { focused: textbox(page, "Expires in"), keys: "Tab" },
+    { focused: button(page, "Make key"), keys: "Tab" },
+    { focused: button(page, "Rotate token"), keys: "Tab" },
   ];
 }
 
@@ -143,7 +173,7 @@ function deleteSteps({ cast, page }: Walking): readonly Step[] {
   ];
 }
 
-test("an agent's profile by keyboard alone: display name, description, trigger URL and token, Revoke, Rotate token, copy token, Transfer and Delete", async ({
+test("an agent's profile by keyboard alone: display name, description, trigger URL and token, Revoke, Make key and Revoke on a key, Rotate token, copy token, Transfer and Delete", async ({
   page,
 }) => {
   await copiesRecorded(page);
@@ -155,6 +185,8 @@ test("an agent's profile by keyboard alone: display name, description, trigger U
       ...textSteps(walking),
       ...triggerSteps(walking),
       ...revokeSteps(walking),
+      ...makeKeySteps(walking),
+      ...revokeKeySteps(walking),
       ...rotateSteps(walking),
       ...transferSteps(walking),
       ...deleteSteps(walking),

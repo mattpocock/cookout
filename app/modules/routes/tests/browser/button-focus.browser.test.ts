@@ -88,16 +88,18 @@ test("the create-agent form tabs from the name to the display name before Create
   await expect(button(inPane(page), "Create")).toBeFocused();
 });
 
-test("a new agent's Copy token takes focus, and Done gives it to that agent's Rotate token", async ({ page }) => {
+test("a new agent's new key's Copy key takes focus, and Done gives it to that key's Revoke", async ({ page }) => {
   const group = await agentMade(page);
+  await field(group, "Key name").fill("focus-ci");
+  await field(group, "Key name").press("Enter");
 
-  await expect(button(group, "Copy token")).toBeFocused();
+  await expect(button(group, "Copy key")).toBeFocused();
 
   await page.keyboard.press("Tab");
   await page.keyboard.press("Enter");
 
-  await expect(button(group, "Copy token")).toBeHidden();
-  await expect(button(group, "Rotate token")).toBeFocused();
+  await expect(button(group, "Copy key")).toBeHidden();
+  await expect(button(group.getByRole("group", { exact: true, name: "focus-ci" }), "Revoke")).toBeFocused();
 });
 
 async function scheduleListOpen(page: Page, prefix: string): Promise<void> {
