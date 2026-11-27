@@ -36,7 +36,6 @@ const SettingsSchema = Schema.Struct({
   hang: Schema.optionalKey(Schema.Boolean),
   log: Schema.String,
   print: Schema.optionalKey(Schema.String),
-  printRepeat: Schema.optionalKey(Schema.Int),
   reply: Schema.optionalKey(Schema.String),
   runs: Schema.optionalKey(Schema.Array(CookoutRunSchema)),
   sdkReply: Schema.optionalKey(Schema.String),
@@ -221,15 +220,11 @@ function childOf(pidFile: string): Effect.Effect<void, never, Needs> {
   }).pipe(Effect.orDie);
 }
 
-const ONCE = 1;
-
-function printed(settings: Settings) {
-  return (text: string): Effect.Effect<void> =>
-    Effect.sync(() => {
-      const repeated = Str.repeat(settings.printRepeat ?? ONCE)(text);
-      process.stdout.write(`${repeated}\n`);
-      process.stderr.write(`${repeated}\n`);
-    });
+function printed(text: string): Effect.Effect<void> {
+  return Effect.sync(() => {
+    process.stdout.write(`${text}\n`);
+    process.stderr.write(`${text}\n`);
+  });
 }
 
 function exitCodeOf(settings: Settings): Effect.Effect<number, never, FileSystem.FileSystem> {
@@ -262,7 +257,7 @@ function wake(settings: Settings): Effect.Effect<void, never, Needs | Stdio.Stdi
     const stdin = yield* Effect.orDie(stdio.stdin.pipe(Stream.decodeText, Stream.mkString));
     const inbox = yield* inboxOf(stdin);
     yield* started(inbox, settings, stdin);
-    yield* ifSet(settings.print, printed(settings));
+    yield* ifSet(settings.print, printed);
     yield* ifSet(settings.childPidFile, childOf);
     yield* answerAll(inbox, settings);
     yield* Effect.when(Effect.never, Effect.succeed(settings.hang === true));
