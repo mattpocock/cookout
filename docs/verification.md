@@ -522,6 +522,19 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node --input-type=
 
 The revoke answers `{ ended: N }`, the session and the live credentials below it; each one's next request is 401 `token_unknown` and its open event stream ends with that refusal. A second revoke of the same ID, another person's ID or an unknown one is 404 `session_not_found`; with an agent's token both calls are 403 `human_only`. Log out and expiry end only their own credential.
 
+## Send a login link
+
+An admin sends a person a one-time login link (#912). `POST /v1/identities/:name/login-link` answers `{ link, expiresAt }`: `link` is `<board>/#/login-link/<secret>`, shown this once, and it works once, for 15 minutes. Redeeming its secret with `POST /v1/login-links/redeem` (no token, behind the per-address limit) sets the session cookie and answers the person; the session it makes is below the link, which is below the admin's credential, so revoking that credential ends it. Make a link for the seeded `grace` with the admin's token, redeem it, use the cookie, and redeem it again:
+
+```sh
+env $(cat /tmp/cookout-dev.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const { link } = await createCookoutClient().createLoginLink("grace"); console.log(link.split("/#/login-link/")[1]);' > /tmp/cookout-link.secret
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -si -X POST -H "Content-Type: application/json" -d "{\"secret\":\"$(cat /tmp/cookout-link.secret)\"}" "$COOKOUT_URL/v1/login-links/redeem" | grep -i set-cookie | sed -E "s/^[Ss]et-[Cc]ookie: ([^;]*).*/\1/" > /tmp/cookout-grace.cookie'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Cookie: $(cat /tmp/cookout-grace.cookie)" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Content-Type: application/json" -d "{\"secret\":\"$(cat /tmp/cookout-link.secret)\"}" "$COOKOUT_URL/v1/login-links/redeem"'
+```
+
+The cookie answers `whoami` as `grace`; the second redeem, one after 15 minutes and an unknown secret are 404 `login_link_not_found`. A link for an agent is 403 `human_only`, one made with a non-admin's token 403 `admin_only`, and one for an unknown name 404 `identity_not_found`. Creating a person (`POST /v1/identities` with `kind: "human"`) answers a `loginLink` beside the token, the same one-time link; creating an agent answers none.
+
 ## Log out everywhere
 
 `previewLogOutEverywhere()` (`GET /v1/sessions/log-out-everywhere`) answers what Log out everywhere would end, as `{ willEnd: { sessions, agentSessions, joinCodes } }`, and ends nothing; `logOutEverywhere()` (`POST` to the same path) ends them and answers `{ ended: { … } }` with the same counts. It ends every credential below the caller's own tokens and own sessions except the session it was sent from and what that session made, and that session becomes a root: it no longer lists `madeBy`. Identity tokens stay. With `grace` logged in on two CLI sessions, the second approved by the first, preview and log out from the second:

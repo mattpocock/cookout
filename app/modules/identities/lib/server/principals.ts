@@ -6,10 +6,10 @@ import type {
   StorageUnavailable,
   WebhookCommandTokenGrant,
 } from "../../../storage/server.ts";
-import { agentKeyExpired, loginExpired } from "../../../logins/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
+import { loginExpired } from "../../../logins/index.ts";
 
 const tokenUnknown: Refusal = {
   code: "token_unknown",
@@ -92,7 +92,7 @@ function webhookCommandTokenPrincipal(lookup: LoginLookup) {
 }
 
 const agentKeyExpiredRefusal: Refusal = {
-  code: agentKeyExpired,
+  code: "agent_key_expired",
   message: "This agent key passed its expiry. Ask the agent's owner for a new one: cookout agent-key create.",
   status: 401,
 };

@@ -1,18 +1,44 @@
 import { Effect } from "effect";
-import type { Fails } from "./errors.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SectionsBesideIdentities } from "./identity-section-types.ts";
 import { memoryAdminSetting } from "./admin-setting.ts";
 import { memoryAgentKeys } from "./agent-keys-memory.ts";
 import { memoryIdentities } from "./identities.ts";
+import { memoryLoginLinks } from "./login-links-memory.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
 import { memoryOfflineAlerts } from "./offline-alerts.ts";
 import { memoryReach } from "./reach-sections.ts";
 
 type MemoryIdentitySections = Omit<ReturnType<typeof memoryIdentities>, "tokens"> & SectionsBesideIdentities;
 
-function openIn(state: MemoryState): <Done>(work: () => Done) => Fails<Done> {
-  return (work) => Effect.andThen(state.ensureOpen, Effect.sync(work));
+type LineageCalls = Pick<
+  MemoryIdentitySections,
+  "endCredentialsOf" | "logOutEverywhere" | "previewLogOutEverywhere" | "revokeBelowRevokedTokens"
+>;
+
+function memoryLineageCalls(state: MemoryState): LineageCalls {
+  return {
+    endCredentialsOf: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.endCredentialsOf(name, now)),
+      ),
+    logOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.logOutEverywhere(request)),
+      ),
+    previewLogOutEverywhere: (request) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.previewLogOutEverywhere(request)),
+      ),
+    revokeBelowRevokedTokens: (name, now) =>
+      Effect.andThen(
+        state.ensureOpen,
+        Effect.sync(() => state.lineage.revokeBelowRevokedTokens(name, now)),
+      ),
+  };
 }
 
 function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
@@ -21,38 +47,43 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
     findIdentity: identities.findIdentity,
     state,
   });
+  const { dropLoginLinks, ...loginLinks } = memoryLoginLinks({
+    findIdentity: identities.findIdentity,
+    issueLoginCredential: loginRequests.issueLoginCredential,
+    state,
+  });
   const { dropPresence, ...presence } = memoryReach(state);
   const { dropOfflineAlerts, ...offlineAlerts } = memoryOfflineAlerts(state);
-  const open = openIn(state);
   return {
     ...identities,
     ...memoryAgentKeys({
       lineage: state.lineage,
-      open,
+      open: (work) => Effect.andThen(state.ensureOpen, Effect.sync(work)),
       tokens,
     }),
     ...memoryAdminSetting(identities),
     ...loginRequests,
+    ...loginLinks,
     ...presence,
     ...offlineAlerts,
+    ...memoryLineageCalls(state),
     deactivateIdentity: (name) =>
       Effect.tap(identities.deactivateIdentity(name), ({ status }) =>
-        Effect.when(dropLoginCredentials(name), Effect.succeed(status === "deactivated")),
+        Effect.when(
+          Effect.andThen(dropLoginCredentials(name), dropLoginLinks(name)),
+          Effect.succeed(status === "deactivated"),
+        ),
       ),
-    endCredentialsOf: (name, now) => open(() => state.lineage.endCredentialsOf(name, now)),
-    logOutEverywhere: (request) => open(() => state.lineage.logOutEverywhere(request)),
-    previewLogOutEverywhere: (request) => open(() => state.lineage.previewLogOutEverywhere(request)),
     removeIdentity: (name, messages) =>
       Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
         Effect.when(
-          Effect.all([dropLoginCredentials(name), dropPresence(name), dropOfflineAlerts(name)], {
+          Effect.all([dropLoginCredentials(name), dropLoginLinks(name), dropPresence(name), dropOfflineAlerts(name)], {
             concurrency: 1,
             discard: true,
           }),
           Effect.succeed(status === "deleted"),
         ),
       ),
-    revokeBelowRevokedTokens: (name, now) => open(() => state.lineage.revokeBelowRevokedTokens(name, now)),
   };
 }
 

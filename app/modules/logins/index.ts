@@ -4,7 +4,7 @@
  * `cookout login` starts a login request, a human approves it in the web UI by typing its user code, and the CLI collects
  * the Login's own credential with the secret request ID.
  */
-import type { Identity, Token } from "../identities/index.ts";
+import type { Identity, IdentityResponse, LoginLinkResponse, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 interface StartLoginRequest {
@@ -159,6 +159,27 @@ export const sessionsPath = "/v1/sessions";
  */
 export const sessionByIdPath = "/v1/sessions/:id";
 
+/** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
+export const loginLinkSeconds = 900;
+
+/**
+ * `POST /v1/identities/:name/login-link` (an admin; 403 `admin_only` otherwise): a one-time login link for the person
+ * named, answered once. An agent is 403 `human_only`; an unknown name is 404 `identity_not_found`.
+ */
+export const loginLinkPath = "/v1/identities/:name/login-link";
+
+/**
+ * `POST /v1/login-links/redeem` (no token): redeems a login link's secret, setting the session cookie and answering its
+ * person. A used, expired or unknown link is 404 `login_link_not_found`.
+ */
+export const redeemLoginLinkPath = "/v1/login-links/redeem";
+
+/** The web UI's path a login link opens, before its secret: `<board>/#/login-link/<secret>`. */
+export const loginLinkWebPath = "/#/login-link/";
+
+/** The refusal code for a login link that was used, expired or never made. */
+export const loginLinkNotFound = "login_link_not_found";
+
 /**
  * `GET /v1/sessions/log-out-everywhere` (a human) previews, and `POST` does, Log out everywhere: every credential in
  * the caller's lineage ends except the session the request was sent with and what it made, which becomes a root.
@@ -228,6 +249,16 @@ export interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /**
+   * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
+   * within 15 minutes. An agent is 403 `human_only`.
+   */
+  readonly createLoginLink: (name: string) => Promise<LoginLinkResponse>;
+  /**
+   * `POST /v1/login-links/redeem` (no token): redeems a login link's secret into a web session for its person, set as
+   * the session cookie. A used, expired or unknown link is 404 `login_link_not_found`.
+   */
+  readonly redeemLoginLink: (secret: Token) => Promise<IdentityResponse>;
   /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
   readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
   /**
@@ -237,30 +268,11 @@ export interface LoginCalls {
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 
-/**
- * `POST /v1/identities/:name/agent-keys` (the agent's owner only: an agent is 403 `human_only`, anyone else 403
- * `not_owner`, an admin included) makes an agent key, answering its secret this once; `GET` (the owner or an admin)
- * lists the agent's live keys, never a secret (ADR 0155).
- */
+/** `POST` (the agent's owner) makes an agent key, its secret shown once; `GET` (or an admin) lists them (ADR 0155). */
 export const agentKeysPath = "/v1/identities/:name/agent-keys";
 
-/**
- * `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the agent's live key with that public
- * ID, with the agent session joined with it. An unknown ID is 404 `agent_key_not_found`.
- */
+/** `DELETE` (the owner or an admin) revokes an agent's live key by its public ID, with what it made. */
 export const agentKeyPath = "/v1/identities/:name/agent-keys/:id";
-
-/** The 401 a request sent with an agent key past its expiry gets. */
-export const agentKeyExpired = "agent_key_expired";
-
-/** A key's name: 1-40 lowercase letters, digits, `.`, `_` or `-`, starting with a letter or digit, unique among the agent's live keys. */
-export const agentKeyNamePattern = /^[a-z0-9][a-z0-9._-]{0,39}$/u;
-
-/** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
-export interface CreateAgentKeyRequest {
-  readonly name: string;
-  readonly expiresIn?: string;
-}
 
 /** An agent key as listed: never its secret. */
 export interface AgentKeyView {
@@ -285,14 +297,4 @@ export interface ListAgentKeysResponse {
 /** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
 export interface RevokeAgentKeyResponse {
   readonly ended: number;
-}
-
-/** The SDK's calls for an agent's keys (ADR 0155). */
-export interface AgentKeyCalls {
-  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
-  readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
-  /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
-  readonly listAgentKeys: (agent: string) => Promise<ListAgentKeysResponse>;
-  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
-  readonly revokeAgentKey: (agent: string, id: PublicId) => Promise<RevokeAgentKeyResponse>;
 }

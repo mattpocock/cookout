@@ -12,13 +12,15 @@ import type {
   RevokeSessionResponse,
   WebLoginCollectedResponse,
 } from "../../../logins/index.ts";
-import { agentKeyNamePattern, hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
+import { hostMaximumLength, isPublicId, userCodePattern } from "../../../logins/index.ts";
 import { IdentitySchema } from "./wire.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { idleExpiryPattern } from "../../../agent-sessions/index.ts";
 import { isToken } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
+
+const agentKeyNamePattern = /^[a-z0-9][a-z0-9._-]{0,39}$/u;
 
 const MINIMUM_HOST = 1;
 

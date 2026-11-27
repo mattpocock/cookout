@@ -1,9 +1,9 @@
 import { Caller, CredentialSent, issueToken } from "./auth.ts";
 import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import type { Identity, Token } from "../../index.ts";
 import { now, webSessionWhere } from "./login-support.ts";
 import { sessionCookieName, sessionPath, token, whoamiPath } from "../../index.ts";
-import type { Identity } from "../../index.ts";
 import { IdentityResponseSchema } from "./wire.ts";
 import type { IssuedToken } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -57,21 +57,45 @@ function issueWebSession(
   });
 }
 
-const loginRoute: Route<Caller | Storage | Secrets> = {
-  handle: () =>
-    Effect.gen(function* logIn() {
-      const identity = yield* Caller;
-      if (identity.kind !== "human") {
-        return yield* Effect.fail(humanOnly(identity));
-      }
-      const issued = yield* issueWebSession(identity);
-      const response = yield* identityResponse({ identity });
-      const options = yield* siteCookieOptions;
-      return yield* HttpServerResponse.setCookie(response, sessionCookieName, issued.token, options);
-    }),
+interface SignedIn {
+  readonly identity: Identity;
+  readonly token: Token;
+}
+
+type Answering<Needs> = Effect.Services<ReturnType<Route<Needs>["handle"]>>;
+
+interface SignInRoute<Needs, Failure> {
+  readonly method: Route<Needs>["method"];
+  readonly path: string;
+  readonly signIn: Effect.Effect<SignedIn, Failure, Answering<Needs>>;
+}
+
+function signedInRoute<Needs, Failure>({ method, path, signIn }: SignInRoute<Needs, Failure>): Route<Needs> {
+  return {
+    handle: () =>
+      Effect.gen(function* answerSignedIn() {
+        const signedIn = yield* signIn;
+        const response = yield* identityResponse({ identity: signedIn.identity });
+        const options = yield* siteCookieOptions;
+        return yield* HttpServerResponse.setCookie(response, sessionCookieName, signedIn.token, options);
+      }),
+    method,
+    path,
+  };
+}
+
+const loginRoute: Route<Caller | Storage | Secrets> = signedInRoute({
   method: "POST",
   path: sessionPath,
-};
+  signIn: Effect.gen(function* logIn() {
+    const identity = yield* Caller;
+    if (identity.kind !== "human") {
+      return yield* Effect.fail(humanOnly(identity));
+    }
+    const issued = yield* issueWebSession(identity);
+    return { identity, token: issued.token };
+  }),
+});
 
 const revokeSessionCookie = Effect.gen(function* revokeSessionCookie() {
   const request = yield* HttpServerRequest.HttpServerRequest;
@@ -98,3 +122,5 @@ const logoutRoute: Route<Caller | Storage | Secrets> = {
 };
 
 export const callerRoutes: readonly Route<Caller | Storage | Secrets>[] = [whoamiRoute, loginRoute, logoutRoute];
+
+export { signedInRoute };

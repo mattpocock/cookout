@@ -2,6 +2,7 @@
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
+
 declare const brand: unique symbol;
 
 /**
@@ -66,9 +67,25 @@ export interface AgentCreationCalls<Answer> {
   /**
    * `POST /v1/identities` as an agent: creates an agent owned by this agent's owner and brought in by this agent. It
    * answers with no token: the new agent gets an agent session token only from an approved join, which shows in this
-   * agent's inbox. A human creates agents with `createIdentity`, which answers with the token.
+   * agent's inbox. A human creates agents with `createIdentity`, then makes it agent keys.
    */
   readonly createAgentForOwner: (request: CreateAgentForOwnerRequest) => Promise<Answer>;
+}
+
+/** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
+export interface CreateAgentKeyRequest {
+  readonly name: string;
+  readonly expiresIn?: string;
+}
+
+/** The SDK's calls for an agent's keys (ADR 0155), with the answers and the key's public `Id` they carry. */
+export interface AgentKeyCalls<Made, Listed, Revoked, Id> {
+  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
+  readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<Made>;
+  /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
+  readonly listAgentKeys: (agent: string) => Promise<Listed>;
+  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
+  readonly revokeAgentKey: (agent: string, id: Id) => Promise<Revoked>;
 }
 
 export { deactivationWarning, deletionWarning, handledCommands } from "./lib/handler.ts";

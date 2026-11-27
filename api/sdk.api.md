@@ -94,9 +94,23 @@ interface AgentCreationCalls<Answer> {
   /**
    * `POST /v1/identities` as an agent: creates an agent owned by this agent's owner and brought in by this agent. It
    * answers with no token: the new agent gets an agent session token only from an approved join, which shows in this
-   * agent's inbox. A human creates agents with `createIdentity`, which answers with the token.
+   * agent's inbox. A human creates agents with `createIdentity`, then makes it agent keys.
    */
   readonly createAgentForOwner: (request: CreateAgentForOwnerRequest) => Promise<Answer>;
+}
+/** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
+interface CreateAgentKeyRequest {
+  readonly name: string;
+  readonly expiresIn?: string;
+}
+/** The SDK's calls for an agent's keys (ADR 0155), with the answers and the key's public `Id` they carry. */
+interface AgentKeyCalls$1<Made, Listed, Revoked, Id> {
+  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
+  readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<Made>;
+  /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
+  readonly listAgentKeys: (agent: string) => Promise<Listed>;
+  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
+  readonly revokeAgentKey: (agent: string, id: Id) => Promise<Revoked>;
 }
 /**
  * Avatars on the wire, shared by the server, the SDK, the CLI and the web: the `AvatarId` brand and its check, an
@@ -194,6 +208,13 @@ type IdentityResponse = {
 type IdentityWithTokenResponse = {
   readonly identity: Identity;
   readonly token: Token;
+  /** On creating a person only: a one-time login link for them, shown this once (#912). */
+  readonly loginLink?: LoginLinkResponse;
+};
+/** A one-time login link, shown once: it logs its person in once, until `expiresAt`, 15 minutes after it was made. */
+type LoginLinkResponse = {
+  readonly link: string;
+  readonly expiresAt: IsoTime;
 };
 /** The answer to `GET /v1/identities`: every identity, sorted by name. */
 type ListIdentitiesResponse = {
@@ -227,8 +248,10 @@ interface SetDisplayNameRequest {
   readonly displayName: string | null;
 }
 /**
- * The harness running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
- * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
+ * The harness running a client's process (`Harness`), such as `claude-code`: 1–40 of `a-z`, `0-9` or `-` (`isHarness`).
+ * The CLI and the SDK send it in `harnessHeader` when such a tool runs the process. A human's token sent with it is
+ * 403 `agent_as_human`, to catch an agent that inherited a person's token; not a security boundary (ADR 0038).
+ * A message posted with it records the tool as `harness`.
  */
 type Harness = Brand$1<"Harness">;
 declare const brand$7: unique symbol;
@@ -1049,6 +1072,16 @@ interface LoginCalls$1 {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /**
+   * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
+   * within 15 minutes. An agent is 403 `human_only`.
+   */
+  readonly createLoginLink: (name: string) => Promise<LoginLinkResponse>;
+  /**
+   * `POST /v1/login-links/redeem` (no token): redeems a login link's secret into a web session for its person, set as
+   * the session cookie. A used, expired or unknown link is 404 `login_link_not_found`.
+   */
+  readonly redeemLoginLink: (secret: Token) => Promise<IdentityResponse>;
   /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
   readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
   /**
@@ -1056,11 +1089,6 @@ interface LoginCalls$1 {
    * client's session and what it made, whose open event streams close, and answers what ended by kind.
    */
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
-}
-/** The body of `POST /v1/identities/:name/agent-keys`: its name, and how long until it expires (`30d`), or never. */
-interface CreateAgentKeyRequest {
-  readonly name: string;
-  readonly expiresIn?: string;
 }
 /** An agent key as listed: never its secret. */
 interface AgentKeyView {
@@ -1082,15 +1110,6 @@ interface ListAgentKeysResponse {
 /** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
 interface RevokeAgentKeyResponse {
   readonly ended: number;
-}
-/** The SDK's calls for an agent's keys (ADR 0155). */
-interface AgentKeyCalls {
-  /** `POST /v1/identities/:name/agent-keys` (the owner): makes a key, its secret shown this once. */
-  readonly createAgentKey: (agent: string, key: CreateAgentKeyRequest) => Promise<CreateAgentKeyResponse>;
-  /** `GET /v1/identities/:name/agent-keys` (the owner or an admin): the agent's live keys, oldest first. */
-  readonly listAgentKeys: (agent: string) => Promise<ListAgentKeysResponse>;
-  /** `DELETE /v1/identities/:name/agent-keys/:id` (the owner or an admin): revokes the key and what it made. */
-  readonly revokeAgentKey: (agent: string, id: PublicId) => Promise<RevokeAgentKeyResponse>;
 }
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 declare const agentSessionPath = "/v1/agent-session";
@@ -1368,7 +1387,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "login_link_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1898,6 +1917,7 @@ interface EventCalls {
   readonly endWakeRun: () => Promise<WakeRunResponse>;
   readonly failWakeRun: (failure: WakeRunFailure) => Promise<WakeRunResponse>;
 }
+type AgentKeyCalls = AgentKeyCalls$1<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
 type LoginCalls = LoginCalls$1 & AgentKeyCalls;
 interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;

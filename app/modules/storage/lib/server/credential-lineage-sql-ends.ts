@@ -88,6 +88,11 @@ function kindTables(db: SqlDatabase): readonly KindTable[] {
       find: "SELECT agent AS identity_name, expires_at FROM join_codes WHERE code_hash = ?",
       kind: "join code",
     },
+    {
+      end: "DELETE FROM login_links WHERE link_hash = ?",
+      find: "SELECT identity_name, expires_at FROM login_links WHERE link_hash = ?",
+      kind: "login link",
+    },
   ];
 }
 

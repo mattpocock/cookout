@@ -1,23 +1,33 @@
-import type { AgentKeyCalls, LoginCalls as SessionLoginCalls } from "../../logins/index.ts";
+import type {
+  CreateAgentKeyResponse,
+  ListAgentKeysResponse,
+  PublicId,
+  RevokeAgentKeyResponse,
+  LoginCalls as SessionLoginCalls,
+} from "../../logins/index.ts";
 import {
   agentKeyPath,
   agentKeysPath,
   collectLoginRequestPath,
   logOutEverywherePath,
+  loginLinkPath,
   loginPath,
   loginRequestApprovalPath,
   loginRequestPath,
   loginRequestsPath,
+  redeemLoginLinkPath,
   sessionByIdPath,
   sessionsPath,
 } from "../../logins/index.ts";
 import {
   isCreateAgentKeyResponse,
+  isIdentityResponse,
   isListAgentKeysResponse,
   isListSessionsResponse,
   isLogOutEverywherePreview,
   isLogOutEverywhereResponse,
   isLoginCollectedResponse,
+  isLoginLinkResponse,
   isLoginRequestResponse,
   isLoginRequestStartedResponse,
   isLogoutResponse,
@@ -26,7 +36,10 @@ import {
   isWebLoginCollectedResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
+import type { AgentKeyCalls as KeyCalls } from "../../identities/client.ts";
 import { send } from "./request.ts";
+
+type AgentKeyCalls = KeyCalls<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
 
 type LoginCalls = SessionLoginCalls & AgentKeyCalls;
 
@@ -105,6 +118,26 @@ function sessionCalls(server: ClientConnection): SessionCalls {
   };
 }
 
+function loginLinkCalls(server: ClientConnection): Pick<LoginCalls, "createLoginLink" | "redeemLoginLink"> {
+  return {
+    createLoginLink: async (name) => {
+      const params = { name };
+      const made = await send(server, { isExpected: isLoginLinkResponse, method: "POST", params, path: loginLinkPath });
+      return made;
+    },
+    redeemLoginLink: async (secret) => {
+      const body = { secret };
+      const redeemed = await send(server, {
+        body,
+        isExpected: isIdentityResponse,
+        method: "POST",
+        path: redeemLoginLinkPath,
+      });
+      return redeemed;
+    },
+  };
+}
+
 function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogin" | "collectWebLogin"> {
   return {
     collectWebLogin: async (requestId) => {
@@ -130,10 +163,10 @@ function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogi
   };
 }
 
-function loginCalls(server: ClientConnection): LoginCalls {
+function sessionLoginCalls(server: ClientConnection): SessionLoginCalls {
   return {
     ...sessionCalls(server),
-    ...agentKeyCalls(server),
+    ...loginLinkCalls(server),
     ...webLoginCalls(server),
     approveLogin: async (userCode) => {
       const params = { code: userCode };
@@ -179,6 +212,10 @@ function loginCalls(server: ClientConnection): LoginCalls {
       return started;
     },
   };
+}
+
+function loginCalls(server: ClientConnection): LoginCalls {
+  return { ...sessionLoginCalls(server), ...agentKeyCalls(server) };
 }
 
 export { loginCalls };
