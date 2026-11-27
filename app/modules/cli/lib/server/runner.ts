@@ -80,7 +80,9 @@ const startCommand = Command.make("start", {}, () =>
       "any the agent acked meanwhile; a mention left unacked goes to one more run. It prints one stderr line once " +
       "every connection is open, and one stdout line as each run exits or is skipped. It never acks. When a " +
       "cookout watch for an agent replaces its connection, it stands down for that agent, dropping its waiting " +
-      "mentions, until the agent is offline; then it reconnects and its unread mentions go to one run.",
+      "mentions, until the agent is offline; then it reconnects and its unread mentions go to one run. When a " +
+      "Claude Code agent's session is open, it writes the mentions into that session's inbox socket instead, as " +
+      "one line of untrusted board data, and starts a wake run only if they aren't acked within 10 minutes.",
   ),
 );
 

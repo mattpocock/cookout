@@ -12,14 +12,22 @@ import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
+import { overHttps } from "../../../http/server.ts";
 
 const FORBIDDEN = 403;
 
-const cookieOptions = {
+type CookieOptions = NonNullable<Cookies.Cookie["options"]>;
+
+const plainCookieOptions = {
   httpOnly: true,
   path: "/",
   sameSite: "strict",
-} as const satisfies NonNullable<Cookies.Cookie["options"]>;
+} as const satisfies CookieOptions;
+
+const cookieOptions: Effect.Effect<CookieOptions, never, HttpServerRequest.HttpServerRequest> = Effect.map(
+  overHttps,
+  (secure) => ({ ...plainCookieOptions, secure }),
+);
 
 function humanOnly({ kind, name }: Identity): Refusal {
   return {
@@ -72,7 +80,8 @@ const loginRoute: Route<Caller | Storage | Secrets> = {
       }
       const issued = yield* issueWebSession(identity);
       const response = yield* identityResponse({ identity });
-      return yield* HttpServerResponse.setCookie(response, sessionCookieName, issued.token, cookieOptions);
+      const options = yield* cookieOptions;
+      return yield* HttpServerResponse.setCookie(response, sessionCookieName, issued.token, options);
     }),
   method: "POST",
   path: sessionPath,
@@ -95,7 +104,8 @@ const logoutRoute: Route<Caller | Storage | Secrets> = {
     Effect.gen(function* logOut() {
       yield* revokeSessionCookie;
       const response = yield* callerResponse;
-      return yield* HttpServerResponse.expireCookie(response, sessionCookieName, cookieOptions);
+      const options = yield* cookieOptions;
+      return yield* HttpServerResponse.expireCookie(response, sessionCookieName, options);
     }),
   method: "DELETE",
   path: sessionPath,

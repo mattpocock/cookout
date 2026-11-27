@@ -54,7 +54,7 @@
  * it shows (`docs/adr/0068-a-page-catches-up-by-reading-again.md`). `loadOlder` pages further back; `post` posts a
  * top-level message with any files (#377), adds it, and only then calls `posted`, so a refused post keeps its text and files; `call` calls a Webhook command
  * with data typed as JSON, keeping the schema errors of data it refuses, and only a successful call empties
- * `callData` and calls `called`; `showClosed` keeps how many threads of a run of closed threads the feed shows.
+ * `callData` and calls `called`, and a refused one calls `refused`; `showClosed` keeps how many threads of a run of closed threads the feed shows.
  * `threads.subscribeShowing(place, acking)` shows a thread (`threadOf(place)`): read when first shown and again when
  * opened again or on a link back, acking its latest message if a reader that acks has come; a reader that doesn't ack
  * (the Inbox's conversation) calls `threads.ack` itself. A reply heard live joins every loaded thread it belongs to and
@@ -157,7 +157,7 @@ export {
 } from "./lib/schedule-list.ts";
 export { cronWords } from "./lib/cron-words.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
-export type { CallState } from "./lib/webhook-command-call.ts";
+export type { CallRequest, CallState } from "./lib/webhook-command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Outgoing } from "./lib/outgoing.ts";
