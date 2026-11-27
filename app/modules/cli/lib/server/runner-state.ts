@@ -15,7 +15,7 @@ const PRETTY = 2;
 
 type HeldState = "connected" | "connecting" | "running";
 type LiveState = HeldState | "retrying";
-type State = LiveState | "not-running";
+type State = LiveState | "not-connected" | "not-running";
 
 const LastErrorSchema = Schema.Struct({ code: Schema.String, message: Schema.String });
 
@@ -153,6 +153,22 @@ function statusOf(runs: ReadonlyMap<string, LastRun>) {
     });
 }
 
+function isHeld({ state }: RegistrationStatus): boolean {
+  return state !== "not-running";
+}
+
+function withRunnerRunning(registrations: readonly RegistrationStatus[]): readonly RegistrationStatus[] {
+  if (!Arr.some(registrations, isHeld)) {
+    return registrations;
+  }
+  return Arr.map(registrations, (status) => {
+    if (isHeld(status)) {
+      return status;
+    }
+    return { ...status, state: "not-connected" as const };
+  });
+}
+
 const byAgent = Order.mapInput(Order.String, ({ agent }: { readonly agent: string }) => agent);
 
 const runnerStatus: Effect.Effect<RunnerStatus, AgentSessionStateFailure, AgentSessionStateNeeds> = Effect.gen(
@@ -160,7 +176,8 @@ const runnerStatus: Effect.Effect<RunnerStatus, AgentSessionStateFailure, AgentS
     const registered = yield* registeredSessions;
     const events = yield* runnerEvents;
     const runs = lastRuns(events);
-    const registrations = yield* Effect.forEach(registered, statusOf(runs), { concurrency: 1 });
+    const statuses = yield* Effect.forEach(registered, statusOf(runs), { concurrency: 1 });
+    const registrations = withRunnerRunning(statuses);
     const dropped = yield* filesBeside({ schema: DroppedSchema, suffix: DROPPED_SUFFIX });
     return {
       dropped: Arr.sort(
@@ -175,6 +192,7 @@ const runnerStatus: Effect.Effect<RunnerStatus, AgentSessionStateFailure, AgentS
 const stateText: Readonly<Record<State, string>> = {
   connected: "connected",
   connecting: "connecting",
+  "not-connected": "not connected: the running runner holds no connection for it yet; cookout runner logs says why",
   "not-running": "not running: no runner is running",
   retrying: "retrying",
   running: "running a wake run",

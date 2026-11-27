@@ -1,5 +1,5 @@
 import type { AgentSessionStateFailure, AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
-import { Array as Arr, Effect, Option, Path, Predicate, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, Function, Option, Path, Predicate, Schema, String as Str } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type { HarnessSession, HarnessSessionId } from "../../../config/index.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
@@ -173,6 +173,11 @@ function opened({ file, registration }: RegisteredSession): Effect.Effect<Client
   });
 }
 
+function latestRegistration({ file, registration }: RegisteredSession): Effect.Effect<Registration> {
+  const read = Effect.orElseSucceed(file.beside(REGISTRATION_SUFFIX).read(RegistrationSchema), Option.none);
+  return Effect.map(read, Option.getOrElse(Function.constant(registration)));
+}
+
 const registeredSessions: Effect.Effect<
   readonly RegisteredSession[],
   AgentSessionStateFailure,
@@ -202,6 +207,7 @@ export {
   SESSION_ID_PLACEHOLDER,
   TIMEOUT_DESCRIPTION,
   forgetRegistration,
+  latestRegistration,
   opened,
   register,
   registerHere,
