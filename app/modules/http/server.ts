@@ -11,14 +11,23 @@ import {
   DateTime,
   Effect,
   FileSystem,
+  Function,
   Layer,
   Option,
   Path,
   Predicate,
   Record as Rec,
   String as Str,
+  Struct,
 } from "effect";
-import { ErrorResponseSchema, HealthResponseSchema, SchemaProblemsSchema, securityHeaders } from "./lib/server/wire.ts";
+import {
+  ErrorResponseSchema,
+  HealthResponseSchema,
+  SchemaProblemsSchema,
+  flyReportOf,
+  securityHeaders,
+  strictTransportSecurity,
+} from "./lib/server/wire.ts";
 import type { Gate, Route } from "./lib/server/router.ts";
 import { HttpIncomingMessage, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { guardRefusal, notFound, respond, toRefusal } from "./lib/server/refusals.ts";
@@ -39,6 +48,7 @@ interface Listen {
 interface Serving extends Listen {
   readonly webFolder?: string;
   readonly publicUrl?: string;
+  readonly behindFly?: boolean;
 }
 
 interface ServedRoutes<Needs, OpenNeeds> {
@@ -124,10 +134,44 @@ function webRoutes({ publicUrl = "", webFolder }: Serving): readonly Route<WebNe
   });
 }
 
-function withSecurityHeaders(response: HttpServerResponse.HttpServerResponse): HttpServerResponse.HttpServerResponse {
-  const missing = Rec.filter(securityHeaders, (_value, name) => !Predicate.hasProperty(response.headers, name));
+function withSecurityHeaders(
+  response: HttpServerResponse.HttpServerResponse,
+  secure: boolean,
+): HttpServerResponse.HttpServerResponse {
+  let wanted: Readonly<Record<string, string>> = securityHeaders;
+  if (secure) {
+    wanted = { ...securityHeaders, ...strictTransportSecurity };
+  }
+  const missing = Rec.filter(wanted, (_value, name) => !Predicate.hasProperty(response.headers, name));
   return HttpServerResponse.setHeaders(response, missing);
 }
+
+function seenThroughFly(request: HttpServerRequest.HttpServerRequest): HttpServerRequest.HttpServerRequest {
+  const { address, protocol } = flyReportOf(request.headers);
+  const remoteAddress = Option.orElse(Option.liftPredicate(address, Str.isNonEmpty), () => request.remoteAddress);
+  return request.modify({ protocol, remoteAddress });
+}
+
+function seenThroughProxy<Value, Failure, Needs>(
+  behindFly: boolean,
+  app: Effect.Effect<Value, Failure, Needs>,
+): Effect.Effect<Value, Failure, Needs | HttpServerRequest.HttpServerRequest> {
+  if (!behindFly) {
+    return app;
+  }
+  return Effect.updateService(app, HttpServerRequest.HttpServerRequest, seenThroughFly);
+}
+
+const requestClientAddress: Effect.Effect<string, never, HttpServerRequest.HttpServerRequest> = Effect.map(
+  HttpServerRequest.HttpServerRequest,
+  ({ remoteAddress }) => Option.getOrElse(remoteAddress, Function.constant("unknown")),
+);
+
+const requestOverHttps: Effect.Effect<boolean, never, HttpServerRequest.HttpServerRequest> =
+  HttpServerRequest.HttpServerRequest.pipe(
+    Effect.map(HttpServerRequest.toURL),
+    Effect.map((url) => Option.contains(Option.map(url, Struct.get("protocol")), "https:")),
+  );
 
 function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
   return respond(toRefusal(failure));
@@ -214,7 +258,7 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
  * goes through the web guards first: a `Host` that isn't the server's own
  * (or the host of `publicUrl`) is refused with 421 `foreign_host`, except at `GET /v1/health`, which shows no
  * data and answers any `Host` so a platform's probe needs none (mattpocock/cookout#489), a write from another site's `Origin` with
- * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing.
+ * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing, and over HTTPS HSTS too.
  * @param serving The port and host to listen on, the folder of the built web UI if it serves one, and the public URL if it has one.
  * @param routes Every route but `/v1/health`: the `gated` ones, and the `open` ones that need no token and never go through `gate`.
  * @param gate What every request to one of the `gated` routes goes through first.
@@ -225,12 +269,14 @@ export function httpServer<Needs, Provides, Requires, Fails, OpenNeeds = never>(
   routes: ServedRoutes<Needs, OpenNeeds>,
   gate: Gate<Provides, Requires, Fails>,
 ) {
-  const { host, port, publicUrl = "" } = serving;
+  const { behindFly = false, host, port, publicUrl = "" } = serving;
   const { gated, open: openRoutes = [] } = routes;
   const open: readonly Route<Storage | WebNeeds | OpenNeeds>[] = [healthRoute, ...webRoutes(serving), ...openRoutes];
-  const app = Effect.andThen(guardRequest(publicUrl), dispatch({ gate, gated, open })).pipe(
+  const answered = Effect.andThen(guardRequest(publicUrl), dispatch({ gate, gated, open })).pipe(
     Effect.catch(answerFailure),
-    Effect.map(withSecurityHeaders),
+    Effect.zipWith(requestOverHttps, withSecurityHeaders),
+  );
+  const app = seenThroughProxy(behindFly, answered).pipe(
     Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
   );
   return Layer.provideMerge(HttpServer.serve(app), nodeHttpServer({ host, port }));
@@ -241,3 +287,9 @@ export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Ef
   HttpServer.HttpServer,
   (server) => HttpServer.formatAddress(server.address),
 );
+
+/** The request's client address (ADR 0145): behind Fly its `Fly-Client-IP`, elsewhere the socket's, header ignored. */
+export const clientAddress = requestClientAddress;
+
+/** Whether the request came over HTTPS (ADR 0145): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
+export const overHttps = requestOverHttps;

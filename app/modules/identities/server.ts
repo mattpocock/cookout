@@ -175,7 +175,8 @@ export const identityRoutes: readonly Route<Caller | Storage | Secrets | Identit
 export const openIdentityRoutes: typeof openLoginRoutes = openLoginRoutes;
 
 /**
- * The request limit of the address a request to one of `openIdentityRoutes` comes from: `Limits` provides it.
+ * The request limit of the client address a request to one of the no-token routes comes from (`Limits` provides it),
+ * and the step that takes one request from it.
  */
 export { AddressLimit } from "./lib/server/routes.ts";
 

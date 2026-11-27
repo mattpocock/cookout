@@ -75,6 +75,8 @@ export type TestCookoutOptions = {
   readonly adminName?: string;
   readonly webhookTimeoutSeconds?: number;
   readonly requestsPerMinute?: number;
+  readonly noTokenRequestsPerMinute?: number;
+  readonly flyAppName?: string;
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
   readonly triggers?: "receiver" | "scripted";
@@ -84,6 +86,7 @@ export type TestCookoutOptions = {
 type Setting =
   | "commandCallsPerMinute"
   | "maxIdleExpiry"
+  | "noTokenRequestsPerMinute"
   | "requestsPerMinute"
   | "streamsPerIdentity"
   | "webhookTimeoutSeconds";
@@ -91,6 +94,7 @@ type Setting =
 const settingNames: readonly (readonly [Setting, string])[] = [
   ["commandCallsPerMinute", "COOKOUT_COMMAND_CALLS_PER_MINUTE"],
   ["maxIdleExpiry", "COOKOUT_MAX_IDLE_EXPIRY"],
+  ["noTokenRequestsPerMinute", "COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE"],
   ["requestsPerMinute", "COOKOUT_REQUESTS_PER_MINUTE"],
   ["streamsPerIdentity", "COOKOUT_STREAMS_PER_IDENTITY"],
   ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
@@ -199,6 +203,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
         const named = adminName === undefined ? {} : { adminName: identityName(adminName) };
         const server = cookoutServer({
           adminToken,
+          behindFly: Predicate.isNotUndefined(options.flyAppName),
           host: "127.0.0.1",
           port: 0,
           publicUrl: options.publicUrl ?? "",
