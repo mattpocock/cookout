@@ -6,13 +6,13 @@ import { boardUrlOrEmpty, loginFor } from "../logins.ts";
 import { cookoutAuth, cookoutSession, cookoutToken, harnessEnvironment, isWakeRun } from "../../../../config/server.ts";
 import { harnessIn, harnessSessionIn } from "../../../../config/index.ts";
 import { noteIgnoredForProxy, throughProxy, toFailure, toFailureAt } from "./http.ts";
+import { onAgentSessionEnded, onSavedLoginEnded } from "./ended.ts";
 import type { CallFailure } from "./call-failure.ts";
 import type { CookoutClient } from "../../../../sdk/index.ts";
-import type { JoinedSession } from "./ended-session.ts";
+import type { JoinedSession } from "./ended.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
 import { createCookoutClient } from "../../../../sdk/index.ts";
-import { onAgentSessionEnded } from "./ended-session.ts";
 
 type CredentialSource =
   | "COOKOUT_TOKEN"
@@ -200,7 +200,10 @@ function runWith<Value>(env: CliEnvironment, credential: Credential, run: Run<Va
     Effect.gen(function* runWithClient() {
       yield* throughProxy;
       const opened = yield* clientFor(env, credential);
-      return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened.joined)));
+      return yield* run(opened).pipe(
+        Effect.catch(onAgentSessionEnded(opened)),
+        Effect.catch(onSavedLoginEnded({ source: opened.source, url: env.url })),
+      );
     }),
   );
 }

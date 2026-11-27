@@ -3,11 +3,13 @@ import type {
   CollectLoginRequest,
   IssueLoginCredential,
   LoginCollection,
+  LoginCredentialLookup,
   LoginRequest,
   LoginRequestsSection,
   NewLoginRequest,
+  UseLoginCredential,
 } from "./login-requests.ts";
-import { GONE, PENDING, collected } from "./login-requests.ts";
+import { EXPIRED, GONE, PENDING, UNKNOWN, collected, loginCredentialExpiry } from "./login-requests.ts";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
@@ -21,7 +23,12 @@ interface MemoryRequest {
 
 type Requests = Map<TokenHash, MemoryRequest>;
 
-type LoginCredentials = Map<TokenHash, IdentityName>;
+interface HeldCredential {
+  readonly identity: IdentityName;
+  readonly lastUsedAt: IsoTime;
+}
+
+type LoginCredentials = Map<TokenHash, HeldCredential>;
 
 interface MemoryLoginRequestsOptions {
   readonly findIdentity: FindIdentity;
@@ -59,7 +66,7 @@ function liveByCode(requests: Requests, userCode: string, now: IsoTime): Option.
 }
 
 function dropCredentialsOf({ credentials, madeWith }: Held, name: IdentityName): void {
-  for (const [hash, holder] of credentials) {
+  for (const [hash, { identity: holder }] of credentials) {
     if (holder === name) {
       credentials.delete(hash);
       madeWith.delete(hash);
@@ -71,7 +78,8 @@ function revokeMadeWithRevokedIn(held: Held) {
   return (name: IdentityName): readonly TokenHash[] =>
     Arr.filter([...held.credentials.keys()], (hash) => {
       const made = Option.fromUndefinedOr(held.madeWith.get(hash));
-      if (held.credentials.get(hash) !== name || !Option.exists(made, held.tokenRevoked)) {
+      const holder = Option.map(Option.fromUndefinedOr(held.credentials.get(hash)), ({ identity }) => identity);
+      if (!Option.contains(holder, name) || !Option.exists(made, held.tokenRevoked)) {
         return false;
       }
       held.credentials.delete(hash);
@@ -107,7 +115,7 @@ function collectFrom(requests: Requests, held: Held) {
     return Option.match(identity, {
       onNone: () => GONE,
       onSome: (approver) => {
-        held.credentials.set(credentialHash, approver.name);
+        held.credentials.set(credentialHash, { identity: approver.name, lastUsedAt: now });
         return collected(approver);
       },
     });
@@ -143,22 +151,72 @@ function findCredentialIn(held: Held) {
   return (hash: TokenHash): Identity | undefined =>
     pipe(
       Option.fromUndefinedOr(held.credentials.get(hash)),
-      Option.flatMap((name) => identityOf(held, name)),
+      Option.flatMap(({ identity }) => identityOf(held, identity)),
       Option.getOrUndefined,
     );
 }
 
 function issueStraightTo(held: Held) {
-  return ({ credentialHash, identity, madeWith }: IssueLoginCredential): Identity | undefined =>
+  return ({ credentialHash, identity, madeWith, now }: IssueLoginCredential): Identity | undefined =>
     pipe(
       identityOf(held, identity),
       Option.map((found) => {
-        held.credentials.set(credentialHash, found.name);
+        held.credentials.set(credentialHash, { identity: found.name, lastUsedAt: now });
         held.madeWith.set(credentialHash, held.madeWith.get(madeWith) ?? madeWith);
         return found;
       }),
       Option.getOrUndefined,
     );
+}
+
+interface FoundCredential {
+  readonly credential: HeldCredential;
+  readonly identity: Identity;
+}
+
+interface LookUp {
+  readonly held: Held;
+  readonly renew: boolean;
+  readonly use: UseLoginCredential;
+}
+
+function foundIn(held: Held, hash: TokenHash): Option.Option<FoundCredential> {
+  return Option.flatMap(Option.fromUndefinedOr(held.credentials.get(hash)), (credential) =>
+    Option.map(identityOf(held, credential.identity), (identity) => ({ credential, identity })),
+  );
+}
+
+function forget(held: Held, hash: TokenHash): void {
+  held.credentials.delete(hash);
+  held.madeWith.delete(hash);
+}
+
+function lastUseOf({ renew, use }: LookUp, credential: HeldCredential): IsoTime {
+  if (renew) {
+    return use.now;
+  }
+  return credential.lastUsedAt;
+}
+
+function lookedUp(lookUp: LookUp, { credential, identity }: FoundCredential): LoginCredentialLookup {
+  const { held, renew, use } = lookUp;
+  if (use.now >= loginCredentialExpiry(credential.lastUsedAt)) {
+    if (renew) {
+      forget(held, use.hash);
+    }
+    return EXPIRED;
+  }
+  const lastUsedAt = lastUseOf(lookUp, credential);
+  held.credentials.set(use.hash, { ...credential, lastUsedAt });
+  return { expiresAt: loginCredentialExpiry(lastUsedAt), identity, lastUsedAt, status: "active" };
+}
+
+function lookUpIn(held: Held, renew: boolean) {
+  return (use: UseLoginCredential): LoginCredentialLookup =>
+    Option.match(foundIn(held, use.hash), {
+      onNone: () => UNKNOWN,
+      onSome: (found) => lookedUp({ held, renew, use }, found),
+    });
 }
 
 function memoryLoginRequests({
@@ -174,9 +232,11 @@ function memoryLoginRequests({
   const findCredential = findCredentialIn(held);
   const issue = issueStraightTo(held);
   const revokeMadeWith = revokeMadeWithRevokedIn(held);
+  const lookUp = { check: lookUpIn(held, false), use: lookUpIn(held, true) };
   return {
     addLoginRequest: (request, now) => open(state, () => add(request, now)),
     approveLoginRequest: (userCode, approver, now) => open(state, () => approve(userCode, approver, now)),
+    checkLoginCredential: (given) => open(state, () => lookUp.check(given)),
     collectLoginRequest: (given) => open(state, () => collect(given)),
     dropLoginCredentials: (name) =>
       Effect.sync(() => {
@@ -193,6 +253,7 @@ function memoryLoginRequests({
         return held.credentials.delete(hash);
       }),
     revokeLoginCredentialsMadeWithRevokedTokens: (name) => open(state, () => revokeMadeWith(name)),
+    useLoginCredential: (given) => open(state, () => lookUp.use(given)),
   };
 }
 
