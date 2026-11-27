@@ -6,7 +6,7 @@ import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, Ch
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse, LoginLinkResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
-import type { ListSessionsResponse, LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse, RevokeSessionResponse } from "../../../logins/index.ts";
+import type { ListSessionsResponse, LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse, RevokeSessionResponse, WebLoginCollectedResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse, ListOpenThreadsResponse } from "../../../messages/index.ts";
 import type { DeletedMessageResponse } from "../../../messages/client.ts";
 import type { ListScheduledMessagesResponse, ScheduledMessageEvent, ScheduledMessagePreviewResponse, ScheduledMessageResponse } from "../../../scheduled-messages/index.ts";
@@ -78,6 +78,7 @@ export declare function isLoginRequestResponse(data: unknown): data is LoginRequ
 export declare function isLoginRequestStartedResponse(data: unknown): data is LoginRequestStartedResponse;
 export declare function isLogoutResponse(data: unknown): data is LogoutResponse;
 export declare function isRevokeSessionResponse(data: unknown): data is RevokeSessionResponse;
+export declare function isWebLoginCollectedResponse(data: unknown): data is WebLoginCollectedResponse;
 export declare function isListMessagesResponse(data: unknown): data is ListMessagesResponse;
 export declare function isMessageResponse(data: unknown): data is MessageResponse;
 export declare function isReactionsResponse(data: unknown): data is ReactionsResponse;

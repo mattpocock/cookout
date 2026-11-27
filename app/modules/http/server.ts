@@ -1,10 +1,8 @@
 /**
- * The cookout's HTTP server on Node's HTTP server: routing, `/v1/health`, the
- * body size limit, the web guards, and the one place a failure becomes an
- * `{ error }` body. A handler fails with a `Refusal` to answer with it;
- * storage, body and path failures are answered by kind, and anything else is
- * a 500. Given a web folder, it also serves the built web UI: `index.html` at
- * `/` and the build's files under `/assets/`, with no token.
+ * The cookout's HTTP server on Node's HTTP server: routing, `/v1/health`, the body size limit, the web guards, and
+ * the one place a failure becomes an `{ error }` body. A handler fails with a `Refusal` to answer with it; storage,
+ * body and path failures are answered by kind, and anything else is a 500. Given a web folder, it also serves the
+ * built web UI: `index.html` at `/` and the build's files under `/assets/`, with no token.
  */
 import {
   Boolean as Bool,
@@ -174,6 +172,8 @@ const requestOverHttps: Effect.Effect<boolean, never, HttpServerRequest.HttpServ
     Effect.map((url) => Option.contains(Option.map(url, Struct.get("protocol")), "https:")),
   );
 
+const siteCookie = { httpOnly: true, path: "/", sameSite: "strict" } as const;
+
 function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
   return respond(toRefusal(failure));
 }
@@ -288,10 +288,10 @@ export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Ef
 /** The request's client address (ADR 0148): behind Fly its `Fly-Client-IP`, elsewhere the socket's, header ignored. */
 export const clientAddress = requestClientAddress;
 
-/** Whether the request came over HTTPS (ADR 0148): on an encrypted socket, or behind Fly by `X-Forwarded-Proto`. */
-export const overHttps = requestOverHttps;
+/** A cookie only this site's own pages send, for the whole site and out of scripts' reach: `Secure` over HTTPS (ADR 0148: on an encrypted socket, or behind Fly by `X-Forwarded-Proto`). */
+export const siteCookieOptions = Effect.map(requestOverHttps, (secure) => ({ ...siteCookie, secure }));
 
-/** The origin the request came to: `https://` or `http://` by `overHttps`, then its `Host`, which the guards checked. */
+/** The origin the request came to: `https://` or `http://` as it came over HTTPS (ADR 0148), then its `Host`, which the guards checked. */
 export const requestOrigin: Effect.Effect<string, never, HttpServerRequest.HttpServerRequest> = Effect.zipWith(
   Effect.map(requestOverHttps, (secure) => Bool.match(secure, { onFalse: () => "http", onTrue: () => "https" })),
   HttpServerRequest.HttpServerRequest,

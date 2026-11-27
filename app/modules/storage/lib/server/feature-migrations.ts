@@ -13,6 +13,7 @@ export {
 export { LOGIN_EXPIRY_MIGRATION, POSTGRES_LOGIN_EXPIRY_MIGRATION } from "./login-expiry-migrations.ts";
 export { LOGIN_LINKS_MIGRATION, POSTGRES_LOGIN_LINKS_MIGRATION } from "./login-links.ts";
 export { POSTGRES_REQUEST_ORIGINS_MIGRATION, REQUEST_ORIGINS_MIGRATION } from "./request-origins.ts";
+export { LOGIN_REQUEST_KINDS_MIGRATION, POSTGRES_LOGIN_REQUEST_KINDS_MIGRATION } from "./login-requests.ts";
 export { POSTGRES_SECRETS_KEY_MIGRATION, SECRETS_KEY_MIGRATION } from "./sealed-secrets.ts";
 export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION } from "./search-sqlite.ts";
 export {

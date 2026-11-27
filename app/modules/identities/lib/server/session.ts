@@ -4,7 +4,6 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, Token } from "../../index.ts";
 import { now, webSessionWhere } from "./login-support.ts";
 import { sessionCookieName, sessionPath, token, whoamiPath } from "../../index.ts";
-import type { Cookies } from "effect/http";
 import { IdentityResponseSchema } from "./wire.ts";
 import type { IssuedToken } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -12,22 +11,9 @@ import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
-import { overHttps } from "../../../http/server.ts";
+import { siteCookieOptions } from "../../../http/server.ts";
 
 const FORBIDDEN = 403;
-
-type CookieOptions = NonNullable<Cookies.Cookie["options"]>;
-
-const plainCookieOptions = {
-  httpOnly: true,
-  path: "/",
-  sameSite: "strict",
-} as const satisfies CookieOptions;
-
-const cookieOptions: Effect.Effect<CookieOptions, never, HttpServerRequest.HttpServerRequest> = Effect.map(
-  overHttps,
-  (secure) => ({ ...plainCookieOptions, secure }),
-);
 
 function humanOnly({ kind, name }: Identity): Refusal {
   return {
@@ -90,7 +76,7 @@ function signedInRoute<Needs, Failure>({ method, path, signIn }: SignInRoute<Nee
       Effect.gen(function* answerSignedIn() {
         const signedIn = yield* signIn;
         const response = yield* identityResponse({ identity: signedIn.identity });
-        const options = yield* cookieOptions;
+        const options = yield* siteCookieOptions;
         return yield* HttpServerResponse.setCookie(response, sessionCookieName, signedIn.token, options);
       }),
     method,
@@ -128,7 +114,7 @@ const logoutRoute: Route<Caller | Storage | Secrets> = {
     Effect.gen(function* logOut() {
       yield* revokeSessionCookie;
       const response = yield* callerResponse;
-      const options = yield* cookieOptions;
+      const options = yield* siteCookieOptions;
       return yield* HttpServerResponse.expireCookie(response, sessionCookieName, options);
     }),
   method: "DELETE",

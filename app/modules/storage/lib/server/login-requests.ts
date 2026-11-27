@@ -6,8 +6,11 @@ import type { RequestOrigin } from "./request-origins.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { loginCredentialIdleSeconds } from "../../../logins/index.ts";
 
+type LoginRequestKind = "web" | "cli";
+
 interface NewLoginRequest extends RequestOrigin {
   readonly requestHash: TokenHash;
+  readonly kind?: LoginRequestKind;
   readonly userCode: string;
   readonly host: string;
   readonly createdAt: IsoTime;
@@ -24,6 +27,7 @@ interface LoginRequest extends RequestOrigin {
 
 interface CollectLoginRequest {
   readonly requestHash: TokenHash;
+  readonly kind?: LoginRequestKind;
   readonly credentialHash: TokenHash;
   readonly now: IsoTime;
 }
@@ -89,8 +93,18 @@ function collected(identity: Identity): LoginCollection {
   return { identity, status: "collected" };
 }
 
+const LOGIN_REQUEST_KINDS_MIGRATION =
+  "ALTER TABLE login_requests ADD COLUMN kind TEXT NOT NULL DEFAULT 'cli' CHECK (kind IN ('web', 'cli'));";
+
+const POSTGRES_LOGIN_REQUEST_KINDS_MIGRATION: readonly string[] = [
+  `ALTER TABLE login_requests ADD COLUMN kind text COLLATE "C" NOT NULL DEFAULT 'cli' CHECK (kind IN ('web', 'cli'))`,
+];
+
 export {
   type ApproveLoginRequest,
+  LOGIN_REQUEST_KINDS_MIGRATION,
+  type LoginRequestKind,
+  POSTGRES_LOGIN_REQUEST_KINDS_MIGRATION,
   type CollectLoginRequest,
   EXPIRED,
   GONE,
