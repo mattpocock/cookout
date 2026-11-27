@@ -234,8 +234,7 @@ export const identityOwnerPath = "/v1/identities/:name/owner";
 
 /**
  * `PUT /v1/identities/:name/display-name`: sets or clears an identity's display name, answering `IdentityResponse`.
- * The identity itself, the human who owns it (an agent whose owner is that human's name) or an admin may; anyone else
- * is refused with 403 `not_owner`.
+ * The identity itself, the human who owns it or an admin may; anyone else is refused with 403 `not_owner`.
  */
 export const identityDisplayNamePath = "/v1/identities/:name/display-name";
 
@@ -297,4 +296,5 @@ export const identityErrorCodes = [
   ...avatarErrorCodes,
   "login_request_not_found",
   "login_link_not_found",
+  "setup_link_not_found",
 ] as const;

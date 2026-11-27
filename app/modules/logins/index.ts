@@ -157,7 +157,6 @@ export const identitySessionPath = "/v1/identities/:name/sessions/:id";
 
 /** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
 export const loginLinkSeconds = 900;
-
 /**
  * `POST /v1/identities/:name/login-link` (an admin; 403 `admin_only` otherwise): a one-time login link for the person
  * named, answered once. An agent is 403 `human_only`; an unknown name is 404 `identity_not_found`.

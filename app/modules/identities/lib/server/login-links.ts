@@ -1,4 +1,4 @@
-import { Caller, CredentialSent, adminActedOn, issueToken, requireAdmin } from "./auth.ts";
+import { Caller, CredentialSent, adminActed, adminActedOn, issueToken, requireAdmin } from "./auth.ts";
 import { Effect, Option, Predicate } from "effect";
 import type { Identity, IdentityName, LoginLinkResponse } from "../../index.ts";
 import type { IdentityChanges, Secrets } from "./auth.ts";
@@ -95,6 +95,24 @@ const makeRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   path: loginLinkPath,
 };
 
+function consoleLoginLink({
+  name,
+  origin,
+}: Readonly<{ name: string; origin: string }>): Effect.Effect<
+  LoginLinkResponse,
+  Refusal | StorageUnavailable,
+  Storage | Secrets | IdentityChanges
+> {
+  return Effect.gen(function* makeConsoleLoginLink() {
+    const person = yield* personNamed(name);
+    const { credential, made } = yield* madeLinkFor({ name: person.name, origin }).pipe(
+      Effect.provideService(CredentialSent, Option.none()),
+    );
+    yield* adminActed({ act: "sent a login link", credential, identity: person.name });
+    return made;
+  });
+}
+
 export const loginLinkRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [makeRoute];
 
-export { loginLinkFor };
+export { consoleLoginLink, loginLinkFor };

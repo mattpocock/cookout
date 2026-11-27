@@ -50,15 +50,16 @@ export {
   type CliResult,
   type CommandLineNeeds,
   commandLineServices,
+  runAdmin,
   runCookout,
   runDev,
   type ServeProcess,
   type ServeOptions,
   runServe,
   startServe,
-  type Watched,
   watchCookout,
 } from "./lib/server/command-line.ts";
+export type { Watched } from "./lib/server/console-lines.ts";
 export { interruptCookout } from "./lib/server/cli-interrupt.ts";
 export { type DevProcess, startDev, startDevServing, startFakeRoutine, startProbedDev } from "./lib/server/dev.ts";
 export {

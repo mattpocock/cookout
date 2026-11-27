@@ -13,7 +13,8 @@
  * top-level message), `#/channels/<name>/schedules` the channel's Scheduled messages page and
  * `#/channels/<name>/schedules/<scheduled message id>` the same with that schedule highlighted, and `#/approve` the approval page for a login request or an agent join
  * request, as are `#/approve/<anything>` and `#/approve-join/<anything>`, which carry no code to it, and
- * `#/login-link/<secret>` the page a login link opens, carrying its secret); a channel name
+ * `#/login-link/<secret>` the page a login link opens, carrying its secret, and `#/setup-link/<secret>` the page the
+ * setup link opens, where the first admin names themselves); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
  * a thread ID that isn't a message ID, a schedule ID that isn't a `ScheduledMessageId`, or a section the settings page doesn't
  * have is `missing`; `#/threads` and `#/threads/all`, where the removed Open
@@ -54,7 +55,10 @@ type Route =
   | SchedulesRoute
   | { readonly name: "approve" }
   | { readonly name: "login-link"; readonly secret: string }
+  | { readonly name: "setup-link"; readonly secret: string }
   | { readonly name: "missing" };
+
+type LinkRoute = Extract<Route, { readonly name: "login-link" | "setup-link" }>;
 
 type LinkedRoute = Extract<
   Route,
@@ -78,6 +82,8 @@ const PROFILE_QUERY = /\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
 const WITH_PROFILE = /^.*\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
 const APPROVE = /^#\/approve(?:-join)?(?:\/[^/]*)?$/u;
 const LOGIN_LINK = /^#\/login-link\/(?<secret>[^/?]+)$/u;
+const SETUP_LINK = /^#\/setup-link\/(?<secret>[^/?]+)$/u;
+const UNLINKED: ReadonlySet<Route["name"]> = new Set(["approve", "login", "login-link", "missing", "setup-link"]);
 const MISSING: Route = { name: "missing" };
 
 function channelRoute(channel: string): Route {
@@ -140,6 +146,7 @@ const matchers: readonly Matcher[] = [
   (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => APPROVE.test(hash) && { name: "approve" },
   (hash) => LOGIN_LINK.test(hash) && { name: "login-link", secret: hash.replace(LOGIN_LINK, "$<secret>") },
+  (hash) => SETUP_LINK.test(hash) && { name: "setup-link", secret: hash.replace(SETUP_LINK, "$<secret>") },
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   threadMatch,
   schedulesMatch,
@@ -198,7 +205,7 @@ function besideProfile(route: Route, profile: IdentityName): Place {
 }
 
 function isLinked(route: Route): route is LinkedRoute {
-  return route.name !== "login" && route.name !== "approve" && route.name !== "login-link" && route.name !== "missing";
+  return !UNLINKED.has(route.name);
 }
 
 function routeOf(hash: string): Route {
@@ -269,6 +276,16 @@ export function closedHref(route: Route): string {
   return hrefOf(route);
 }
 
-export type { LinkedRoute, Place, Route, SettingsSection };
+/**
+ * Whether `route` is one a one-time link opens, a login link's or the setup link's, shown whether or not anyone is
+ * logged in.
+ * @param route The route the hash opens.
+ * @returns Whether it is a login link's or the setup link's page.
+ */
+export function isLinkRoute(route: Route): route is LinkRoute {
+  return route.name === "login-link" || route.name === "setup-link";
+}
+
+export type { LinkedRoute, LinkRoute, Place, Route, SettingsSection };
 export type { SchedulesRoute } from "./lib/schedules-route.ts";
 export type { InboxSelection, InboxThreadSelection, ThreadSelection } from "./lib/thread-selection.ts";

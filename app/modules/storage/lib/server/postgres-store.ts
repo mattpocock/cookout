@@ -4,8 +4,9 @@ import type { FullStorage } from "./memory-store.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import type { SecretsCipher } from "../../../secrets/server.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { migratePostgres } from "./postgres-migrations.ts";
+import { migrateInOrder } from "./postgres-schema-version.ts";
 import { openPostgres } from "./adapters/postgres.ts";
+import { postgresMigrations } from "./postgres-migrations.ts";
 import { sqlStorage } from "./sql-storage.ts";
 import { sqlStore } from "./sql-store.ts";
 
@@ -22,7 +23,7 @@ function openPostgresStore({
 }: PostgresOpening): Effect.Effect<FullStorage, StorageUnavailable, Scope.Scope> {
   return Effect.gen(function* openStore() {
     const opened = yield* openPostgres(url);
-    yield* migratePostgres(opened);
+    yield* migrateInOrder({ db: opened, migrations: postgresMigrations });
     const db = watch(opened);
     return yield* sqlStore({ db, storage: sqlStorage({ cipher, db }) });
   });

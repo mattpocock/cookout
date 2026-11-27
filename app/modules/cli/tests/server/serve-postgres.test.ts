@@ -1,10 +1,19 @@
-import { Effect, FileSystem, Redacted } from "effect";
-import { answer, emptyPostgresDatabase, freshDatabasePath, runServe, startServe } from "../../../testing/server.ts";
+import { Effect, FileSystem, Redacted, Schema, String as Str } from "effect";
+import {
+  answer,
+  emptyPostgresDatabase,
+  freshDatabasePath,
+  runAdmin,
+  runServe,
+  startServe,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
 import type { ServeProcess } from "../../../testing/server.ts";
+import { loginLinkWebPath } from "../../../logins/index.ts";
 import { secretsLive } from "../../../secrets/server.ts";
 import { testClient } from "../../../testing/index.ts";
+import { token } from "../../../identities/index.ts";
 
 const EXIT_FAILURE = 1;
 const NOTHING_LISTENS = "1";
@@ -75,4 +84,35 @@ it.effect("cookout serve on a DATABASE_URL nothing answers fails with one stderr
     expect(failed.stderr).not.toContain("\n");
     expect(failed.stderr).not.toContain(url.password);
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+const isLoginLinkLine = Schema.is(Schema.Struct({ loginLink: Schema.String }));
+
+function loginLinkOf(printed: unknown): string {
+  if (isLoginLinkLine(printed)) {
+    return printed.loginLink;
+  }
+  return "";
+}
+
+const consoleLinkOnPostgres = Effect.fnUntraced(function* consoleLinkThenRedeem(env: Readonly<Record<string, string>>) {
+  const server = yield* startServe({ env });
+  const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+  yield* answer(() => admin.createIdentity({ kind: "human", name: "ada" }));
+  yield* server.stop;
+  const made = yield* runAdmin({ args: ["login-link", "ada"], env });
+  const [, secret = ""] = Str.split(loginLinkWebPath)(loginLinkOf(made.stdoutJson));
+  const again = yield* startServe({ env });
+  return yield* answer(() => testClient({ env: {}, url: again.url }).redeemLoginLink(token(secret)));
+});
+
+it.effect("cookout admin login-link on DATABASE_URL makes a link from the Postgres store that logs its person in", () =>
+  Effect.scoped(
+    Effect.gen(function* consoleLinkPostgres() {
+      const url = yield* postgresUrl;
+      const redeemed = yield* consoleLinkOnPostgres({ DATABASE_URL: url.toString() });
+
+      expect(redeemed.identity).toMatchObject({ kind: "human", name: "ada" });
+    }),
+  ).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

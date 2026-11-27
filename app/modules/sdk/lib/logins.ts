@@ -5,6 +5,7 @@ import type {
   RevokeAgentKeyResponse,
   LoginCalls as SessionLoginCalls,
 } from "../../logins/index.ts";
+import type { RedeemSetupLinkRequest, SetupLinkCalls } from "../../logins/setup-links.ts";
 import {
   agentKeyPath,
   agentKeysPath,
@@ -39,11 +40,12 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { AgentKeyCalls as KeyCalls } from "../../identities/client.ts";
+import { redeemSetupLinkPath } from "../../logins/setup-links.ts";
 import { send } from "./request.ts";
 
 type AgentKeyCalls = KeyCalls<CreateAgentKeyResponse, ListAgentKeysResponse, RevokeAgentKeyResponse, PublicId>;
 
-type LoginCalls = SessionLoginCalls & AgentKeyCalls;
+type LoginCalls = SessionLoginCalls & AgentKeyCalls & SetupLinkCalls;
 
 function agentKeyCalls(server: ClientConnection): AgentKeyCalls {
   return {
@@ -167,6 +169,20 @@ function loginLinkCalls(server: ClientConnection): Pick<LoginCalls, "createLogin
   };
 }
 
+function setupLinkCalls(server: ClientConnection): SetupLinkCalls {
+  return {
+    redeemSetupLink: async (request: RedeemSetupLinkRequest) => {
+      const redeemed = await send(server, {
+        body: request,
+        isExpected: isIdentityResponse,
+        method: "POST",
+        path: redeemSetupLinkPath,
+      });
+      return redeemed;
+    },
+  };
+}
+
 function webLoginCalls(server: ClientConnection): Pick<LoginCalls, "startWebLogin" | "collectWebLogin"> {
   return {
     collectWebLogin: async (requestId) => {
@@ -244,7 +260,12 @@ function sessionLoginCalls(server: ClientConnection): Omit<SessionLoginCalls, ke
 }
 
 function loginCalls(server: ClientConnection): LoginCalls {
-  return { ...sessionLoginCalls(server), ...personSessionCalls(server), ...agentKeyCalls(server) };
+  return {
+    ...sessionLoginCalls(server),
+    ...personSessionCalls(server),
+    ...agentKeyCalls(server),
+    ...setupLinkCalls(server),
+  };
 }
 
 export { loginCalls };

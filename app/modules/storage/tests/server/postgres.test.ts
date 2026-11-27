@@ -30,7 +30,7 @@ const BEFORE_SECRETS_KEY = [
      DROP COLUMN session_kind, DROP COLUMN where_from, DROP COLUMN client_ip, DROP COLUMN admin_name, DROP COLUMN admin_act,
      ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL, DROP COLUMN made_via, DROP COLUMN acted_on_agent`,
   "ALTER TABLE identities DROP COLUMN feeder",
-  "DROP TABLE agent_keys, login_links, credential_lineage",
+  "DROP TABLE setup_links, agent_keys, login_links, credential_lineage",
   "ALTER TABLE login_requests DROP COLUMN kind, DROP COLUMN approved_with, DROP COLUMN client_ip, DROP COLUMN user_agent",
   "ALTER TABLE agent_join_requests DROP COLUMN approved_with, DROP COLUMN client_ip, DROP COLUMN user_agent",
   "DROP TABLE secrets_key",
@@ -60,7 +60,7 @@ const BEFORE_LOGIN_EXPIRY = [
   ...BEFORE_SECRETS_KEY,
   `UPDATE login_credentials SET made_with = '${hashA}' WHERE hash = '${hashB}'`,
   "ALTER TABLE login_credentials DROP COLUMN last_used_at, DROP COLUMN expires_at",
-  "UPDATE schema_version SET version = version - 12",
+  "UPDATE schema_version SET version = version - 13",
 ];
 const DAYS_UNUSED = 90;
 const JUST_BEFORE = -1;

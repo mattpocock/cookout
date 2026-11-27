@@ -26,6 +26,7 @@ const FIXED: Readonly<Record<Exclude<Route["name"], "channel" | "profile" | "sch
   missing: "Nothing here",
   people: "People",
   settings: "Settings",
+  "setup-link": "Set up",
 };
 
 const LOGGED_OUT = "Log in";

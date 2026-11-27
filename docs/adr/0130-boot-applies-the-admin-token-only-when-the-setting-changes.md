@@ -2,6 +2,8 @@
 
 2026-11-26 (mattpocock/cookout#757). Supersedes the "every boot" part of [ADR 0032](0032-the-admin-token-is-a-required-setting.md) and the boot paragraph of [ADR 0039](0039-cookout-admin-name-names-the-admin-token-identity.md).
 
+Superseded in part on 2026-11-27 by [ADR 0162](0162-the-first-admin-comes-from-a-setup-link-and-the-admin-token-is-optional.md): all of this applies only when `COOKOUT_ADMIN_TOKEN` is set; unset, boot applies no admin setting.
+
 ## Context
 
 ADR 0032 made `COOKOUT_ADMIN_TOKEN` the admin's only token at every boot, and ADR 0110 (#608) made that boot also end the web sessions made with any token it revoked. So a token made by `cookout identity rotate <admin>` worked only until the next deploy or restart: boot put the setting's token back, revoked the rotated one and logged the browser out. On 2026-11-25, a day of many deploys, Matt lost his token again and again (board msg 5818). The intent, in `adminTokenSet`'s doc comment, was always that a rotated token stops working once the setting changes.

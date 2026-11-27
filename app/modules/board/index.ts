@@ -130,7 +130,10 @@
  * `session.loginLink` logs in by a one-time login link (#969): `redeem(secret)` redeems it once (`redeemLoginLink`,
  * which sets the session cookie), so the session is logged in as its person at once; a link the server doesn't have
  * (used, expired or never made) is `gone`, and any other refusal is kept to show. Asking again for the same secret
- * does nothing.
+ * does nothing. `session.setupLink` makes the first admin from the setup link `cookout serve` prints (#913): it holds
+ * the name and optional display name typed, and `redeem(secret)` sends them (`redeemSetupLink`, which sets the session
+ * cookie), so the session is logged in as the new admin; a link the server doesn't have is `gone`, and any other
+ * refusal, such as a taken name, is kept to show beside the form.
  *
  * `createApprovalCode` makes the approval page's code field store: the code a person types (trimmed, upper-cased, its
  * dash put back), or that what they typed isn't a code; it starts empty and empties again when the page closes, so no
@@ -198,7 +201,7 @@ export {
   reactionRefusal,
   reactionsOf,
 } from "./lib/part-selectors.ts";
-export type { BoardState, LoginLinkState, SessionState, WebLoginState } from "./lib/board-store.ts";
+export type { BoardState, LoginLinkState, SessionState, SetupLinkState, WebLoginState } from "./lib/board-store.ts";
 export type { MarkAllState, MarkChannelRefusal } from "./lib/inbox-calls.ts";
 export {
   type AlertsShown,

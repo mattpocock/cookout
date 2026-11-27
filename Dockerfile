@@ -28,7 +28,8 @@ COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
 # A fresh named volume copies this folder's owner, so the non-root user can write the database.
-RUN mkdir -p /data && chown node:node /data
+# `cookout` on the PATH runs the console commands, such as `cookout admin login-link <name>`.
+RUN mkdir -p /data && chown node:node /data && chmod +x dist/main.js && ln -s /app/dist/main.js /usr/local/bin/cookout
 VOLUME /data
 USER node
 EXPOSE 8080
