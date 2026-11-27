@@ -66,9 +66,11 @@ export { signalWatchBinary, type StoppedWatch } from "./lib/server/cli-signal.ts
 export { runCookoutWhile } from "./lib/server/cli-clock.ts";
 export { type FakeWakeSettings, type StartedRunner, fakeWakeCommand, startRunner } from "./lib/server/runner.ts";
 export {
+  type CookoutRunLine,
   type RegistrationFile,
   type WakeLogLine,
   agentSessionTokenIn,
+  cookoutRunsIn,
   agentSessionTokensIn,
   registeredAgentsIn,
   registrationIn,

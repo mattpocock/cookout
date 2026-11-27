@@ -272,6 +272,8 @@ export const cookoutAuth = Config.String("COOKOUT_AUTH").pipe(Config.withDefault
  */
 export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
 
+export { isWakeRun, wakeRunVariable } from "./lib/server/wake-run.ts";
+
 /**
  * `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`: the proxy every CLI verb but `serve` sends `http://` and `https://`
  * requests through (`https://` falls back to `HTTP_PROXY`), and the hosts it reaches directly. Each lowercase name, as

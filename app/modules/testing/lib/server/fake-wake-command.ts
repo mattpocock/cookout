@@ -13,6 +13,7 @@ import {
   Stream,
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import { CookoutRunSchema, recorded } from "./fake-wake-runs.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
@@ -22,6 +23,7 @@ import { parseLine } from "./cli.ts";
 import { runMain } from "@effect/platform-node/NodeRuntime";
 
 const FIRST_ARGUMENT = 2;
+const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
 const SUCCESS = 0;
 const POLL = "10 millis";
 const CHILD_SECONDS = "600";
@@ -36,6 +38,7 @@ const SettingsSchema = Schema.Struct({
   print: Schema.optionalKey(Schema.String),
   printRepeat: Schema.optionalKey(Schema.Int),
   reply: Schema.optionalKey(Schema.String),
+  runs: Schema.optionalKey(Schema.Array(CookoutRunSchema)),
   sdkReply: Schema.optionalKey(Schema.String),
   succeedAfter: Schema.optionalKey(Schema.String),
   tokenFile: Schema.optionalKey(Schema.String),
@@ -200,6 +203,7 @@ function answerAll(inbox: Inbox, settings: Settings): Effect.Effect<void, never,
     const messages = Arr.join(Arr.map(messagesOf(inbox), String), " ");
     yield* ifSet(settings.touch, (file) => Effect.orDie(fs.writeFileString(file, messages)));
     yield* ifSet(settings.waitFor, waitUntilExists);
+    yield* Effect.forEach(settings.runs ?? [], recorded({ log: settings.log, session: sessionId }), ONE_AT_A_TIME);
     const replies = Arr.map(inbox.items, (item) => reply({ item, settings }));
     const sdk = ifSet(settings.tokenFile, throughSdk(inbox, settings));
     yield* Effect.all([...replies, sdk], { concurrency: "unbounded", discard: true });
