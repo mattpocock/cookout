@@ -1,8 +1,8 @@
+import { Array as Arr, Effect } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { CookoutClient } from "../../index.ts";
-import { Effect } from "effect";
 
 const BAD_REQUEST = 400;
 const UNAUTHORIZED = 401;
@@ -133,7 +133,7 @@ it.effect(
 
       expect(listed).toStrictEqual({ agentSessions: [{ expiresAt: WEEK_ON, issuedAt: BOOT }] });
       expect(revoked).toStrictEqual({ revoked: true });
-      expect(keys).toStrictEqual({ agentKeys: [] });
+      expect(Arr.map(keys.agentKeys, ({ name }) => name)).toStrictEqual(["test"]);
       expect(missing).toMatchObject([MISSING, MISSING, MISSING, MISSING]);
     }).pipe(Effect.provide(testCookout())),
 );

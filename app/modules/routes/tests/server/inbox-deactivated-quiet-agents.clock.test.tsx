@@ -126,7 +126,7 @@ it.effect("a second tab drops the row from For you as soon as another session's 
 
 const deactivated: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(function* deactivateUnwatched() {
   const cookout = yield* TestCookout;
-  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  const ada = yield* cookout.createIdentity("ada", { ...HUMAN, credential: "identity token" });
   yield* cookout.createIdentity("triage-agent", { owner: "ada" });
   yield* Effect.andThen(quietFor("2159 hours"), quietFor("1 hour"));
   yield* Effect.repeat(unreadIds(ada.client), { until: (ids) => ids.length > ZERO });
@@ -172,7 +172,7 @@ const TWO = 2;
 
 const twoDeactivated: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(function* deactivateTwo() {
   const cookout = yield* TestCookout;
-  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  const ada = yield* cookout.createIdentity("ada", { ...HUMAN, credential: "identity token" });
   yield* cookout.createIdentity("triage-agent", { owner: "ada" });
   yield* TestClock.adjust("1 minute");
   yield* cookout.createIdentity("ada/helper", { owner: "ada" });

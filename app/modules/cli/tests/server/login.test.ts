@@ -61,7 +61,7 @@ const setUp: Effect.Effect<LoginSetup, never, SetupNeeds> = Effect.gen(function*
   const cookout = yield* TestCookout;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+  const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
   const folder = yield* Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-config-" }));
   const file = path.join(folder, "cookout", "credentials");
   return { ada, cookout, env: { COOKOUT_URL: cookout.url, XDG_CONFIG_HOME: folder }, file, folder };

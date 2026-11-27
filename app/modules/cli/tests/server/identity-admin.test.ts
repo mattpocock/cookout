@@ -51,7 +51,7 @@ it.effect("cookout identity sessions lists, --revoke revokes, and transfer --own
 it.effect("cookout identity rotate ends the web sessions logged in with the old token", () =>
   Effect.gen(function* rotateEndsWebSession() {
     const cookout = yield* TestCookout;
-    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    const grace = yield* cookout.createIdentity("grace", { credential: "identity token", kind: "human" });
     const loggedIn = yield* answer(() =>
       request({
         baseUrl: cookout.url,

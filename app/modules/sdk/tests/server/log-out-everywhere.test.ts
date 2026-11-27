@@ -55,7 +55,7 @@ function devicesOf(cookout: TestCookoutService, ada: TestIdentity): Effect.Effec
 it.effect("Log out everywhere's preview counts what it then ends, and only the session it was sent from stays", () =>
   Effect.gen(function* loggedOutEverywhere() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const { chiefSession, desktop, laptop, phone } = yield* devicesOf(cookout, ada);
     const fromPhone = cookout.clientFor(phone);
     const preview = yield* answer(() => fromPhone.previewLogOutEverywhere());
@@ -119,7 +119,7 @@ function loginLinkSession(cookout: TestCookoutService, name: string): Effect.Eff
 it.effect("Log out everywhere counts and ends the sessions redeemed from login links", () =>
   Effect.gen(function* loginLinkSessionsCounted() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const cookie = yield* loginLinkSession(cookout, "ada");
     const phone = yield* cliSession(cookout, ada.client, "ada-phone");
     const fromPhone = cookout.clientFor(phone);

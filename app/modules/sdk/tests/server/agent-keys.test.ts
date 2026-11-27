@@ -17,6 +17,9 @@ const AN_HOUR_ON = "2026-01-01T01:00:00.000Z";
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const HUMAN = { kind: "human" } as const;
 const AGENT = "release-bot";
+const SEEDED_KEY = "test";
+
+type ListedKeys = Awaited<ReturnType<TestIdentity["client"]["listAgentKeys"]>>;
 const UNKNOWN_IDS = Arr.filter(["0123456789abcdef"], isPublicId);
 
 interface Seeded {
@@ -32,6 +35,13 @@ function seeded(cookout: TestCookoutService): Effect.Effect<Seeded> {
     yield* answer(() => ada.client.createChannel({ name: "deploys" }));
     return { ada, grace };
   });
+}
+
+function keysMadeInTheTest(client: TestIdentity["client"]): Effect.Effect<ListedKeys> {
+  return Effect.map(
+    answer(() => client.listAgentKeys(AGENT)),
+    ({ agentKeys }) => ({ agentKeys: Arr.filter(agentKeys, ({ name }) => name !== SEEDED_KEY) }),
+  );
 }
 
 function postedBy(cookout: TestCookoutService, token: string): Effect.Effect<string> {
@@ -58,7 +68,7 @@ it.effect("an owner makes two keys that both post as the agent, and revoking one
       { ci: refusal(() => cookout.clientFor(ci.token).whoami()), deploy: postedBy(cookout, deploy.token) },
       ONE_AT_A_TIME,
     );
-    const listed = yield* answer(() => ada.client.listAgentKeys(AGENT));
+    const listed = yield* keysMadeInTheTest(ada.client);
 
     expect({ after: { ci: after.ci.code, deploy: after.deploy }, authors, listed, revoked }).toStrictEqual({
       after: { ci: "token_revoked", deploy: AGENT },
@@ -74,10 +84,7 @@ it.effect("a key's secret is in the answer that makes it and in no list of the a
     const cookout = yield* TestCookout;
     const { ada } = yield* seeded(cookout);
     const made = yield* answer(() => ada.client.createAgentKey(AGENT, { expiresIn: "30d", name: "ci" }));
-    const listed = yield* Effect.all(
-      [answer(() => ada.client.listAgentKeys(AGENT)), answer(() => cookout.client.listAgentKeys(AGENT))],
-      ONE_AT_A_TIME,
-    );
+    const listed = yield* Effect.all([keysMadeInTheTest(ada.client), keysMadeInTheTest(cookout.client)], ONE_AT_A_TIME);
 
     const listedKey = { expiresAt: "2026-01-31T00:00:00.000Z", id: made.agentKey.id, madeAt: BOOT, name: "ci" };
 
@@ -122,7 +129,7 @@ it.effect("an admin lists and revokes an agent's keys, but making one is 403 not
     const { ada } = yield* seeded(cookout);
     const made = yield* answer(() => ada.client.createAgentKey(AGENT, { name: "ci" }));
     const refused = yield* refusal(() => cookout.client.createAgentKey(AGENT, { name: "admin" }));
-    const listed = yield* answer(() => cookout.client.listAgentKeys(AGENT));
+    const listed = yield* keysMadeInTheTest(cookout.client);
     const revoked = yield* answer(() => cookout.client.revokeAgentKey(AGENT, made.agentKey.id));
     const after = yield* refusal(() => cookout.clientFor(made.token).whoami());
 

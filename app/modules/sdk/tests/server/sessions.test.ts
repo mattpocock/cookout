@@ -159,7 +159,7 @@ const byWhere = Order.mapInput(Order.String, ({ where }: { readonly where: strin
 it.effect("a person lists their live sessions, with where each is, what made it and which one is current", () =>
   Effect.gen(function* listed() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     yield* webSession(cookout.url, ada.token);
     const laptop = yield* cliSession(cookout, ada.client, "ada-laptop");
     const { sessions } = yield* answer(() => cookout.clientFor(laptop).listSessions());
@@ -176,7 +176,7 @@ it.effect("a person lists their live sessions, with where each is, what made it 
 it.effect("a web session's where is its browser and OS from the User-Agent, else web browser", () =>
   Effect.gen(function* named() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     yield* Effect.forEach(USER_AGENTS, (userAgent) => webSession(cookout.url, ada.token, userAgent), {
       concurrency: 1,
     });
@@ -196,7 +196,7 @@ it.effect("a web session's where is its browser and OS from the User-Agent, else
 it.effect("revoking a session ends the sessions below it, whose next request is 401 and whose stream closes", () =>
   Effect.gen(function* revoked() {
     const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const ada = yield* cookout.createIdentity("ada", { credential: "identity token", kind: "human" });
     const { desktop, laptop } = yield* sessionTree(cookout, ada);
     const stream = yield* openStream(cookout.url, desktop);
     const id = yield* sessionIdAt(ada.client, "ada-laptop");
