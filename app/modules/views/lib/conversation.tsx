@@ -60,6 +60,7 @@ export function ConversationView(props: ConversationProps): ReactNode {
         draft={draft}
         field={TEXT.reply}
         focused={false}
+        keymap={props.keymap}
         channel={channel}
         replied={null}
         state={state}
