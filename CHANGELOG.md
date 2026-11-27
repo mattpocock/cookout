@@ -1,5 +1,17 @@
 # @ai-hero/cookout
 
+## 0.9.1
+
+### Patch Changes
+
+- Work that landed without a changeset:
+  
+  - Release treats files under any tests/ folder as not user-facing (#876) (#885)
+  - Version Packages (#875)
+  - Version Packages (#703)
+  - attach-key browser test: wait for file chooser interception before Ctrl+Shift+U (#866) (#868)
+  - A route test's end waits for the calls its views still have in flight (#858) (#867)
+
 ## 0.9.0
 
 ### Minor Changes
