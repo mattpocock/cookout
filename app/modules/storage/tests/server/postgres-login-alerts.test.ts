@@ -31,7 +31,7 @@ const DOWNGRADE_POSTGRES = [
   `ALTER TABLE offline_alerts DROP COLUMN login_kind, DROP COLUMN credential_id, DROP COLUMN session_kind,
      DROP COLUMN where_from, DROP COLUMN client_ip, DROP COLUMN admin_name, DROP COLUMN admin_act`,
   "ALTER TABLE offline_alerts ALTER COLUMN agent_name SET NOT NULL, ALTER COLUMN offline_reason SET NOT NULL",
-  "UPDATE schema_version SET version = version - 1",
+  "UPDATE schema_version SET version = version - 2",
 ];
 
 const session = "0123456789abcdef";

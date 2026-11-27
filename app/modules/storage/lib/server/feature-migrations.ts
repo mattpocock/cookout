@@ -1,3 +1,7 @@
+export {
+  AGENT_SUBSCRIPTIONS_MIGRATION,
+  POSTGRES_AGENT_SUBSCRIPTIONS_MIGRATION,
+} from "./agent-subscriptions-migrations.ts";
 export { ADMIN_SETTING_MIGRATION, POSTGRES_ADMIN_SETTING_MIGRATION } from "./admin-setting.ts";
 export {
   ATTACHMENT_SIZES_MIGRATION,

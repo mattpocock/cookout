@@ -17,8 +17,8 @@ interface Board {
 
 function board(cookout: TestCookoutService): Effect.Effect<Board> {
   return Effect.gen(function* annAndBob() {
-    const ann = yield* cookout.createIdentity("ann");
-    const bob = yield* cookout.createIdentity("bob");
+    const ann = yield* cookout.createIdentity("ann", { kind: "human" });
+    const bob = yield* cookout.createIdentity("bob", { kind: "human" });
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     return { ann, bob };
   });
