@@ -980,6 +980,20 @@ interface LogoutResponse {
  * the person types the code into the page on a device already logged in (#905).
  */
 declare const approvalPath = "/#/approve";
+/** The live credentials Log out everywhere ends, counted by kind. */
+interface LogOutEverywhereCounts {
+  readonly sessions: number;
+  readonly agentSessions: number;
+  readonly joinCodes: number;
+}
+/** The answer to `GET /v1/sessions/log-out-everywhere`: what Log out everywhere would end now. */
+interface LogOutEverywherePreview {
+  readonly willEnd: LogOutEverywhereCounts;
+}
+/** The answer to `POST /v1/sessions/log-out-everywhere`: what it ended. */
+interface LogOutEverywhereResponse {
+  readonly ended: LogOutEverywhereCounts;
+}
 /** The answer to `GET /v1/sessions`, oldest first. */
 interface ListSessionsResponse {
   readonly sessions: readonly SessionView[];
@@ -1013,6 +1027,13 @@ interface LoginCalls {
    * whose open event streams close. Another person's ID or an unknown one is 404 `session_not_found`.
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
+  /** `GET /v1/sessions/log-out-everywhere` (a human): what Log out everywhere would end, by kind, ending nothing. */
+  readonly previewLogOutEverywhere: () => Promise<LogOutEverywherePreview>;
+  /**
+   * `POST /v1/sessions/log-out-everywhere` (a human): ends every credential in the caller's lineage except this
+   * client's session and what it made, whose open event streams close, and answers what ended by kind.
+   */
+  readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 declare const agentSessionPath = "/v1/agent-session";

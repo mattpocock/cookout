@@ -6,7 +6,7 @@ import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, Ch
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
-import type { ListSessionsResponse, LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse, RevokeSessionResponse } from "../../../logins/index.ts";
+import type { ListSessionsResponse, LogOutEverywherePreview, LogOutEverywhereResponse, LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse, RevokeSessionResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse, ListOpenThreadsResponse } from "../../../messages/index.ts";
 import type { DeletedMessageResponse } from "../../../messages/client.ts";
 import type { ListScheduledMessagesResponse, ScheduledMessageEvent, ScheduledMessagePreviewResponse, ScheduledMessageResponse } from "../../../scheduled-messages/index.ts";
@@ -72,6 +72,8 @@ export declare function isOfflineAlertResponse(data: unknown): data is OfflineAl
 export declare function isReadPositionsResponse(data: unknown): data is ReadPositionsResponse;
 export declare function isSubscriptionResponse(data: unknown): data is SubscriptionResponse;
 export declare function isListSessionsResponse(data: unknown): data is ListSessionsResponse;
+export declare function isLogOutEverywherePreview(data: unknown): data is LogOutEverywherePreview;
+export declare function isLogOutEverywhereResponse(data: unknown): data is LogOutEverywhereResponse;
 export declare function isLoginCollectedResponse(data: unknown): data is LoginCollectedResponse;
 export declare function isLoginRequestResponse(data: unknown): data is LoginRequestResponse;
 export declare function isLoginRequestStartedResponse(data: unknown): data is LoginRequestStartedResponse;

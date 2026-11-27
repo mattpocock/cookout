@@ -11,6 +11,8 @@ import { Caller, CredentialSent, credentialsOf, sentToken } from "./auth.ts";
 import {
   CollectLoginRequestSchema,
   ListSessionsResponseSchema,
+  LogOutEverywherePreviewSchema,
+  LogOutEverywhereResponseSchema,
   LoginCollectedResponseSchema,
   LoginRequestResponseSchema,
   LoginRequestStartedResponseSchema,
@@ -214,6 +216,8 @@ export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRo
 
 export const loginResponseSchemas = {
   ListSessionsResponse: ListSessionsResponseSchema,
+  LogOutEverywherePreview: LogOutEverywherePreviewSchema,
+  LogOutEverywhereResponse: LogOutEverywhereResponseSchema,
   LoginCollectedResponse: LoginCollectedResponseSchema,
   LoginRequestResponse: LoginRequestResponseSchema,
   LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
