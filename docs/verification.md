@@ -238,7 +238,24 @@ wait; cat /tmp/cookout-login-b.json
 env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-config-b node app/main.ts whoami
 ```
 
-`login approve` exits 0 and prints `{ "loginRequest": { … "approved": true } }`. B's background `login` then exits 0 and prints `{ identity, url }` for `ada`, B's `whoami` says `ada` with `"source": "login"` from its own Login credential, and A keeps working. With an agent's `COOKOUT_TOKEN`, `login approve` exits 1 with `human_only` and the request stays unapproved; inside a harness (`CLAUDECODE=1`), with A's Login or `ada`'s `COOKOUT_TOKEN` and with or without `COOKOUT_ALLOW_HUMAN=1`, it exits 1 with `approval_in_harness` and the request stays unapproved ([ADR 0149](adr/0149-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)); an unknown or expired code exits 1 with `login_request_not_found`, and a malformed one with `not_found`. `cookout login --help` lists `approve`. Remove the folders when done: `rm -r /tmp/cookout-config-a /tmp/cookout-config-b`.
+`login approve` exits 0 and prints `{ "loginRequest": { … "approved": true } }`. B's background `login` then exits 0 and prints `{ identity, url }` for `ada`, B's `whoami` says `ada` with `"source": "login"` from its own Login credential, and A keeps working. With an agent's `COOKOUT_TOKEN`, `login approve` exits 1 with `human_only` and the request stays unapproved; inside a harness (`CLAUDECODE=1`), with A's Login or `ada`'s `COOKOUT_TOKEN` and with or without `COOKOUT_ALLOW_HUMAN=1`, it exits 1 with `approval_in_harness` and the request stays unapproved ([ADR 0149](adr/0149-a-wake-run-and-login-approve-in-a-harness-never-use-a-person-s-session.md)); an unknown or expired code exits 1 with `login_request_not_found`, and a malformed one with `not_found`. `cookout login --help` lists `approve`. Keep the folders for the next section.
+
+## List and revoke your sessions from the CLI
+
+`cookout login list`, `cookout login revoke <id>` and `cookout logout --everywhere` are the terminal's side of Settings' Sessions, sending `listSessions`, `revokeSession` and Log out everywhere as the CLI's caller. Carry on from "Approve a login from the CLI", where B has a browser Login, and log in a third machine C the same way (A approving its code), then:
+
+```sh
+B="env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-config-b node app/main.ts"
+C="env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-config-c node app/main.ts"
+$B login list
+$B login revoke "$($B login list | jq -r '.sessions[] | select(.current == false) | .id' | tail -1)"
+$C whoami
+$B logout --everywhere
+$B logout --everywhere --yes
+$B whoami
+```
+
+`login list` prints `{ "sessions": [ … ] }`, oldest first, each with `id`, `kind`, `where`, `madeAt`, `lastUsedAt`, `expiresAt`, `madeBy` and `current`, which is `true` only on B's own. The revoke prints `{ "ended": 1, "loggedOut": false, url }`, and C's `whoami` exits 1 with `token_unknown`, saying the Login saved for the board no longer works and `cookout login` logs in again. Revoking B's own id prints `"loggedOut": true` and removes B's saved Login, so B's `logout` then says there is no Login. `logout --everywhere` prints on stderr how many sessions, agent sessions and join codes it will end and asks `Log out everywhere but this machine? [y/N]`; answering `n` exits 1 with `not_confirmed` and ends nothing, and from a pipe with no `--yes` it exits 1 with `usage`. `--yes` ends them all but B's, printing `{ "ended": { … } }`, and B's `whoami` still says `ada`. With an agent's `COOKOUT_TOKEN`, each of the three exits 1 with `human_only`. `cookout login --help` lists `list` and `revoke`, and `cookout logout --help` lists `--everywhere` and `--yes`. Remove the folders when done: `rm -r /tmp/cookout-config-a /tmp/cookout-config-b /tmp/cookout-config-c`.
 
 ## Join as an agent
 

@@ -59,7 +59,7 @@
  */
 import { CliError, Command } from "effect/cli";
 import { cookoutServer, serverCommands } from "./lib/server/server-commands.ts";
-import { loginCommand, logoutCommand } from "./lib/server/login.ts";
+import { loginCommand, logoutCommand } from "./lib/server/login-commands.ts";
 import { onRunnerHost, verbCommands } from "./lib/server/verbs.ts";
 
 import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";

@@ -1,4 +1,4 @@
-import { Array as Arr, Duration, Effect, Option, String as Str } from "effect";
+import { Array as Arr, Duration, Effect, Option, Order, String as Str } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -48,10 +48,16 @@ function whoamiStatus(url: string, cookie: string): Effect.Effect<number> {
   );
 }
 
+const byWhere = Order.mapInput(Order.String, ({ where }: { readonly where: string }) => where);
+
 function sessionsOf(identity: TestIdentity): Effect.Effect<readonly { kind: string; where: string }[]> {
   return Effect.map(
     answer(() => identity.client.listSessions()),
-    ({ sessions }) => Arr.map(sessions, ({ kind, where }) => ({ kind, where })),
+    ({ sessions }) =>
+      Arr.sort(
+        Arr.map(sessions, ({ kind, where }) => ({ kind, where })),
+        byWhere,
+      ),
   );
 }
 
@@ -95,7 +101,10 @@ it.effect("an admin's login link logs its person in once, for 15 minutes, and a 
     ]);
     expect([first.status, first.json]).toStrictEqual([OK, { identity: ada.identity }]);
     expect([second, loggedIn]).toMatchObject([{ code: "login_link_not_found", status: NOT_FOUND }, OK]);
-    expect(sessions).toStrictEqual([{ kind: "web", where: "Firefox on macOS" }]);
+    expect(sessions).toStrictEqual([
+      { kind: "web", where: "Firefox on macOS" },
+      { kind: "web", where: "web browser" },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

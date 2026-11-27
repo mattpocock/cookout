@@ -12,6 +12,7 @@ type CallFailureCode =
   | "login_missing"
   | "wake_run_no_login"
   | "approval_in_harness"
+  | "not_confirmed"
   | "agent_join_request_expired"
   | "not_joined"
   | "not_registered"
