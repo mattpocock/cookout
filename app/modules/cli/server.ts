@@ -1,5 +1,6 @@
 /**
- * The `cookout` command tree. `serve` starts the server; every other verb
+ * The `cookout` command tree. `serve` starts the server and `admin` (`setup-link`, `login-link <name>`) works on
+ * the server's own store, with no running server or session (mattpocock/cookout#913); every other verb
  * calls the server through the SDK. `watch` prints one stdout line per new
  * inbox item, and everything else on stderr. Answers are JSON on stdout; refusals are
  * `{ error: { code, message } }` on stderr with exit code 1. `Secrets` comes
