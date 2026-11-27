@@ -523,6 +523,19 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Origin: https://elsew
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/channels"'
 ```
 
+## Check HSTS, the Secure cookie and the client address
+
+Behind Fly (`FLY_APP_NAME` set), the server takes a request's client address from `Fly-Client-IP` and its scheme from `X-Forwarded-Proto`; elsewhere it ignores both and uses the socket's ([ADR 0148](adr/0148-the-client-address-comes-from-fly-s-proxy-and-no-token-routes-have-their-own-rate.md)). A request over HTTPS gets `Strict-Transport-Security: max-age=31536000` and a `Secure` session cookie; one over plain HTTP gets neither. To see both locally, serve a throwaway board as if on Fly and send a login that Fly would report as HTTPS, then the same without the header:
+
+```sh
+mkdir -p /tmp/cookout-fly && TOKEN=$(openssl rand -hex 32)
+COOKOUT_ADMIN_TOKEN=$TOKEN COOKOUT_ADMIN_NAME=ada FLY_APP_NAME=local COOKOUT_DB=/tmp/cookout-fly/cookout.db COOKOUT_HOST=127.0.0.1 PORT=3200 node app/main.ts serve > /tmp/cookout-fly/serve.log 2>&1 &
+curl -si -X POST -H "Authorization: Bearer $TOKEN" -H "X-Forwarded-Proto: https" http://127.0.0.1:3200/v1/session | grep -i -e strict-transport-security -e set-cookie
+curl -si -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3200/v1/session | grep -i -e strict-transport-security -e set-cookie
+```
+
+The first prints HSTS and a cookie marked `Secure`; the second neither. Without `FLY_APP_NAME`, the first prints neither too. The routes that need no token (starting and collecting Login requests and agent join requests, and redeeming a join code) allow `COOKOUT_NO_TOKEN_REQUESTS_PER_MINUTE` (30) a minute per client address; on that board the 31st `curl -s -X POST -H "Fly-Client-IP: 203.0.113.1" -H "Content-Type: application/json" -d '{"host":"x"}' http://127.0.0.1:3200/v1/login-requests` in a minute is refused with 429 `rate_limited`, while one with another `Fly-Client-IP` is admitted. Stop it with `kill %1`.
+
 ## Run the storage tests on Postgres
 
 Every storage contract file, `app/modules/storage/tests/server/postgres.test.ts`, and the `cookout serve` tests on `DATABASE_URL` (`app/modules/cli/tests/server/serve-postgres.test.ts`) run in Vitest's `postgres` project, which needs Docker; the contract suite runs there on all three Layers, memory, SQLite and Postgres. Its global setup ([scripts/postgres-test-container.ts](../scripts/postgres-test-container.ts)) starts one throwaway `postgres:18-alpine` container per run (label `cookout-tests=postgres`), published on a free port on 127.0.0.1 that Docker picks, so it never touches a database already running on the machine. Each test gets its own database, cloned from a migrated template. The container is removed when the run ends, and a watchdog removes it if the run is killed. Without Docker, every Postgres test fails with a message naming Docker; none is skipped. To run only them:
