@@ -27,7 +27,9 @@ interface SetupLinksSection {
   readonly redeemSetupLink: (redeem: RedeemSetupLink) => Fails<SetupLinkRedemption>;
 }
 
-const SETUP_LINK_GONE: SetupLinkRedemption = { status: "gone" };
+function setupLinkGone(): SetupLinkRedemption {
+  return { status: "gone" };
+}
 
 const SETUP_LINK_NAME_TAKEN: SetupLinkRedemption = { status: "name_taken" };
 
@@ -48,8 +50,8 @@ const POSTGRES_SETUP_LINKS_MIGRATION: readonly string[] = [
 export {
   POSTGRES_SETUP_LINKS_MIGRATION,
   SETUP_LINKS_MIGRATION,
-  SETUP_LINK_GONE,
   SETUP_LINK_NAME_TAKEN,
+  setupLinkGone,
   type NewSetupLink,
   type RedeemSetupLink,
   type SetupLinkRedemption,

@@ -1,7 +1,7 @@
 import { Array as Arr, Effect, Option, Predicate, Ref } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { NewSetupLink, RedeemSetupLink, SetupLinkRedemption, SetupLinksSection } from "./setup-links.ts";
-import { SETUP_LINK_GONE, SETUP_LINK_NAME_TAKEN } from "./setup-links.ts";
+import { SETUP_LINK_NAME_TAKEN, setupLinkGone } from "./setup-links.ts";
 import type { Fails } from "./errors.ts";
 import type { LoginRequestsSection } from "./login-requests.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -33,7 +33,7 @@ function memorySetupLinks(options: MemorySetupLinksOptions): SetupLinksSection {
       const issue = { credentialHash, host, identity: admin.name, now, parent: ROOT };
       const made = yield* options.issueLoginCredential(issue);
       return Option.match(Option.fromUndefinedOr(made), {
-        onNone: () => SETUP_LINK_GONE,
+        onNone: setupLinkGone,
         onSome: ({ identity, session }): SetupLinkRedemption => ({ identity, session, status: "redeemed" }),
       });
     });
@@ -44,7 +44,7 @@ function memorySetupLinks(options: MemorySetupLinksOptions): SetupLinksSection {
         const identities = yield* options.listIdentities();
         const link = yield* Ref.get(held);
         if (!isLive(link, redeem) || hasActiveAdmin(identities)) {
-          return SETUP_LINK_GONE;
+          return setupLinkGone();
         }
         if (Predicate.isNotUndefined(options.findIdentity(redeem.admin.name))) {
           return SETUP_LINK_NAME_TAKEN;

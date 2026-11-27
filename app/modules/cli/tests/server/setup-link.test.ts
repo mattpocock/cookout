@@ -11,7 +11,7 @@ import {
 import { createTestAgent, testClient } from "../../../testing/index.ts";
 import { expect, it } from "@effect/vitest";
 import { loginLinkWebPath, redeemLoginLinkPath, redeemSetupLinkPath, setupLinkWebPath } from "../../../logins/index.ts";
-import { tokenHash, whoamiPath } from "../../../identities/index.ts";
+import { token, tokenHash, whoamiPath } from "../../../identities/index.ts";
 import type { CommandLineNeeds } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { request } from "../../../http/client.ts";
@@ -272,7 +272,7 @@ it.effect("cookout admin setup-link prints a fresh link while no admin exists, a
 
 const ada = identityFixture("ada", { kind: "human" });
 
-function takenThenFree(): Effect.Effect<readonly [unknown, number], never, CommandLineNeeds> {
+function takenThenFree(): Effect.Effect<readonly [unknown, unknown], never, CommandLineNeeds> {
   return Effect.scoped(
     Effect.gen(function* redeemTakenName() {
       const database = yield* freshDatabasePath;
@@ -281,8 +281,10 @@ function takenThenFree(): Effect.Effect<readonly [unknown, number], never, Comma
       const server = yield* startServe({ adminToken: NO_TOKEN, database });
       const [link = ""] = setupLinksIn(server.lines);
       const taken = yield* redeemedSetup(server.url, link, "ada");
-      const free = yield* redeemedSetup(server.url, link, "grace");
-      return [taken.json, free.status] as const;
+      const secret = secretAfter(setupLinkWebPath, link);
+      const sent = { displayName: "Grace", name: "grace", secret: token(secret) };
+      const free = yield* answer(() => testClient({ env: {}, url: server.url }).redeemSetupLink(sent));
+      return [taken.json, free] as const;
     }),
   ).pipe(Effect.orDie);
 }
@@ -291,6 +293,8 @@ it.effect("a setup link sent with a name already taken is refused, and still mak
   Effect.gen(function* takenName() {
     const [taken, free] = yield* takenThenFree();
 
-    expect([taken, free]).toMatchObject([{ error: { code: "identity_exists" } }, OK]);
+    const grace = { identity: { admin: true, displayName: "Grace", name: "grace" } };
+
+    expect([taken, free]).toMatchObject([{ error: { code: "identity_exists" } }, grace]);
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

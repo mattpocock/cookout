@@ -1,6 +1,6 @@
 import { Effect, Option } from "effect";
 import type { NewSetupLink, RedeemSetupLink, SetupLinkRedemption, SetupLinksSection } from "./setup-links.ts";
-import { SETUP_LINK_GONE, SETUP_LINK_NAME_TAKEN } from "./setup-links.ts";
+import { SETUP_LINK_NAME_TAKEN, setupLinkGone } from "./setup-links.ts";
 import { TRUE, isFalse } from "./adapters/sql-database.ts";
 import { counted, insertIdentity } from "./identity-row.ts";
 import type { Fails } from "./errors.ts";
@@ -56,7 +56,7 @@ function adminMade(db: SqlDatabase, redeem: RedeemSetupLink, publicId: PublicId)
     });
     const made = yield* credentialIn(db)(credentialHash);
     return Option.match(made, {
-      onNone: () => SETUP_LINK_GONE,
+      onNone: setupLinkGone,
       onSome: (identity): SetupLinkRedemption => ({ identity, session: publicId, status: "redeemed" }),
     });
   });
@@ -67,7 +67,7 @@ function redeemed(db: SqlDatabase, redeem: RedeemSetupLink, publicId: PublicId):
     const live = yield* counted(db, LIVE_LINKS, redeem.linkHash, redeem.now);
     const admins = yield* counted(db, activeAdmins(db));
     if (live === NONE || admins !== NONE) {
-      return SETUP_LINK_GONE;
+      return setupLinkGone();
     }
     const taken = yield* counted(db, TAKEN_NAMES, redeem.admin.name);
     if (taken !== NONE) {
