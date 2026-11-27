@@ -701,6 +701,16 @@ interface LoginCalls$1 {
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
   /**
+   * `GET /v1/identities/:name/sessions` (that person, or an admin): the person's live sessions, oldest first, never a
+   * secret. Anyone else is 403 `admin_only`; an agent is 403 `human_only`.
+   */
+  readonly listIdentitySessions: (name: string) => Promise<ListSessionsResponse>;
+  /**
+   * `DELETE /v1/identities/:name/sessions/:id` (that person, or an admin): revokes their session with that public ID
+   * and everything below it. An admin revoking someone else's puts an admin act Login alert in their Inbox.
+   */
+  readonly revokeIdentitySession: (name: string, id: PublicId) => Promise<RevokeSessionResponse>;
+  /**
    * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
    * within 15 minutes. An agent is 403 `human_only`.
    */
@@ -830,10 +840,11 @@ interface OfflineAlert {
   readonly trigger?: TriggerFailure;
 }
 /** What an admin did to someone's credentials, as a Login alert tells them. */
-type AdminAct = "revoked" | "sent a login link";
+type AdminAct = "revoked a session" | "revoked an agent key" | "revoked an agent session" | "sent a login link" | "deactivated";
 /**
  * What a Login alert reports: a new session (its kind, where it was made, the IP when known, `via` when a login link
- * made it, and whether it has ended), or an admin acting on the person's credentials.
+ * made it, and whether it has ended), or an admin acting on the person's credentials (ADR 0161): the admin, what they
+ * did, the credential when the act names one, and the agent when it was one of the person's agents.
  */
 type LoginAlertEvent = {
   readonly kind: "new session";
@@ -847,7 +858,8 @@ type LoginAlertEvent = {
   readonly kind: "admin act";
   readonly admin: IdentityName;
   readonly act: AdminAct;
-  readonly credential: PublicId;
+  readonly credential?: PublicId;
+  readonly agent?: IdentityName;
 };
 /** A Login alert in a person's Inbox: an alert of the offline alert kind, read and cleared like one. */
 interface LoginAlert {
@@ -1432,7 +1444,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "login_link_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "login_link_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "login_expired", "session_not_found", "agent_key_name_invalid", "agent_key_expiry_invalid", "agent_key_name_taken", "agent_key_not_found", "agent_key_expired", "agent_keys_instead", "admin_sees_no_secrets", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */

@@ -132,7 +132,7 @@ it.effect("rotating the human's token ends the login approved with it and the we
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const credential = yield* loginCredential(cookout, ada);
     const cookie = yield* sessionCookie(cookout.url, credential);
-    yield* answer(() => cookout.client.rotateToken("ada"));
+    yield* answer(() => ada.client.rotateToken("ada"));
     const statuses = yield* Effect.forEach(
       [{ authorization: `Bearer ${credential}` }, { cookie }],
       (headers: Readonly<Record<string, string>>) =>
@@ -152,7 +152,7 @@ it.effect("rotating the human's token closes the event streams of every session 
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const { made, other } = yield* twoWebStreams(cookout, ada);
-    yield* answer(() => cookout.client.rotateToken("ada"));
+    yield* answer(() => ada.client.rotateToken("ada"));
     const ended = yield* Effect.forEach([made, other], (frames) => eventsUntilEnd(frames), { concurrency: 1 });
 
     expect(
@@ -175,7 +175,7 @@ it.effect("rotating the human's token closes a web stream whose cookie holds tha
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const stream = yield* webStream(cookout.url, `${sessionCookieName}=${ada.token}`);
-    yield* answer(() => cookout.client.rotateToken("ada"));
+    yield* answer(() => ada.client.rotateToken("ada"));
     const ended = yield* eventsUntilEnd(stream);
 
     expect(Arr.map(ended, ({ data, event }) => [event, Str.includes(REVOKED)(data)])).toStrictEqual([

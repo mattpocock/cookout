@@ -260,7 +260,7 @@ it.effect("an admin act Login alert is shown as it was recorded, with no session
     yield* cliSession(cookout, ada.client, "ada-laptop");
     const made = yield* loginAlertsOf(ada.client);
     const credential = yield* sessionOf(made);
-    const login = { act: "revoked", admin: identityName("matt"), credential, kind: "admin act" } as const;
+    const login = { act: "revoked a session", admin: identityName("matt"), credential, kind: "admin act" } as const;
     yield* cookout.seedLoginAlert({ login, owner: ada.identity.name, raisedAt: isoTime("2026-01-01T10:42:00.000Z") });
     const alerts = yield* loginAlertsOf(ada.client);
 

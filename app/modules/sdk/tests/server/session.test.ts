@@ -123,7 +123,7 @@ it.effect("a session cookie stops working when the human's token is rotated", ()
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const cookie = yield* sessionCookie(cookout.url, ada.token);
-    yield* answer(() => cookout.client.rotateToken("ada"));
+    yield* answer(() => ada.client.rotateToken("ada"));
     const response = yield* withCookie(cookout.url, cookie)({ method: "GET", path: whoamiPath });
 
     expect(response).toMatchObject({ json: { error: { code: "token_unknown" } }, status: UNAUTHORIZED });

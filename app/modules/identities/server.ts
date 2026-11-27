@@ -278,7 +278,7 @@ export { avatarRoutes } from "./lib/server/avatars.ts";
  * `identity` event. Deleting an identity publishes it on its own hub, which the live stream sends on as an
  * `identity-deleted` event.
  */
-export { IdentityChanges, THE_COOKOUT, endingsOf, identityChangesLayer } from "./lib/server/changes.ts";
+export { IdentityChanges, THE_COOKOUT, adminActedOn, endingsOf, identityChangesLayer } from "./lib/server/changes.ts";
 
 /**
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the

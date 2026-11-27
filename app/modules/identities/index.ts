@@ -214,8 +214,8 @@ export const identityDeactivatePath = "/v1/identities/:name/deactivate";
 export const identityReactivatePath = "/v1/identities/:name/reactivate";
 
 /**
- * `POST /v1/identities/:name/token` (the agent's owner, or an admin): issues a new token, and the old one stops
- * working at once. Anyone else is refused with 403 `not_owner`.
+ * `POST /v1/identities/:name/token` (a person, for their own token): a new token, and the old one stops working. An
+ * admin naming someone else is 403 `admin_sees_no_secrets` (ADR 0161); an agent's owner is 409 `agent_keys_instead`.
  */
 export const identityTokenPath = "/v1/identities/:name/token";
 

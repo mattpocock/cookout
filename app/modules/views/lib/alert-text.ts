@@ -68,10 +68,22 @@ function leadOf(via: "login link" | undefined): string {
   return TEXT.newLogin;
 }
 
+type AdminActEvent = Extract<LoginAlert["login"], { readonly kind: "admin act" }>;
+
+function actTextOf({ act, agent }: AdminActEvent): string {
+  if (typeof agent !== "string") {
+    return act;
+  }
+  if (act === "deactivated") {
+    return `deactivated @${agent}`;
+  }
+  return `${act} of @${agent}`;
+}
+
 function loginTextOf({ login, raisedAt }: LoginAlert): string {
   const at = timeOf(raisedAt).short;
   if (login.kind === "admin act") {
-    return `${TEXT.adminActed}@${login.admin} ${login.act}, ${at}`;
+    return `${TEXT.adminActed}@${login.admin} ${actTextOf(login)}, ${at}`;
   }
   const where = whereOf(login.sessionKind, login.where);
   return `${leadOf(login.via)}${[where, login.clientIp, at].filter(Boolean).join(", ")}`;

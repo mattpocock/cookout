@@ -6,14 +6,11 @@
  */
 import type { Identity, IdentityResponse, LoginLinkResponse, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
+import type { PublicId } from "./lib/public-ids.ts";
 
 interface StartLoginRequest {
   readonly host: string;
 }
-
-declare const brand: unique symbol;
-
-const publicIdPattern = /^[0-9a-f]{16}$/u;
 
 interface SessionMadeByView {
   readonly kind: "web" | "cli" | "identity token";
@@ -55,18 +52,6 @@ export interface LoginRequestView extends ApprovalRequestDetails {
   readonly host: string;
   readonly expiresAt: IsoTime;
   readonly approved: boolean;
-}
-
-/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
-export type PublicId = string & { readonly [brand]: "PublicId" };
-
-/**
- * Whether `value` follows the public ID rule.
- * @param value The text to check.
- * @returns Whether it is a public ID.
- */
-export function isPublicId(value: string): value is PublicId {
-  return publicIdPattern.test(value);
 }
 
 /** A login request's user code, which a person types into the approval page from the terminal: `WDJB-MJHT`. */
@@ -159,6 +144,18 @@ export const sessionsPath = "/v1/sessions";
  */
 export const sessionByIdPath = "/v1/sessions/:id";
 
+/**
+ * `GET /v1/identities/:name/sessions` (the person named, or an admin; anyone else is 403 `admin_only`): that person's
+ * live sessions, never a secret (ADR 0161). An agent is 403 `human_only`; an unknown name is 404 `identity_not_found`.
+ */
+export const identitySessionsPath = "/v1/identities/:name/sessions";
+
+/**
+ * `DELETE /v1/identities/:name/sessions/:id` (the person named, or an admin): revokes that person's live session with
+ * everything below it. An admin revoking someone else's raises an admin act Login alert for them (ADR 0161).
+ */
+export const identitySessionPath = "/v1/identities/:name/sessions/:id";
+
 /** How long a login link lasts before it is gone, used or not: 15 minutes (#912). */
 export const loginLinkSeconds = 900;
 
@@ -250,6 +247,16 @@ export interface LoginCalls {
    */
   readonly revokeSession: (id: PublicId) => Promise<RevokeSessionResponse>;
   /**
+   * `GET /v1/identities/:name/sessions` (that person, or an admin): the person's live sessions, oldest first, never a
+   * secret. Anyone else is 403 `admin_only`; an agent is 403 `human_only`.
+   */
+  readonly listIdentitySessions: (name: string) => Promise<ListSessionsResponse>;
+  /**
+   * `DELETE /v1/identities/:name/sessions/:id` (that person, or an admin): revokes their session with that public ID
+   * and everything below it. An admin revoking someone else's puts an admin act Login alert in their Inbox.
+   */
+  readonly revokeIdentitySession: (name: string, id: PublicId) => Promise<RevokeSessionResponse>;
+  /**
    * `POST /v1/identities/:name/login-link` (an admin): a login link for the person named, which logs them in once,
    * within 15 minutes. An agent is 403 `human_only`.
    */
@@ -268,33 +275,18 @@ export interface LoginCalls {
   readonly logOutEverywhere: () => Promise<LogOutEverywhereResponse>;
 }
 
-/** `POST` (the agent's owner) makes an agent key, its secret shown once; `GET` (or an admin) lists them (ADR 0157). */
-export const agentKeysPath = "/v1/identities/:name/agent-keys";
+/**
+ * Agent keys (ADR 0157): `POST /v1/identities/:name/agent-keys` (the agent's owner) makes one, its secret shown once in
+ * its answer; `GET` (or an admin) lists them, never a secret; `DELETE …/agent-keys/:id` (the owner or an admin) revokes one.
+ */
+export {
+  type AgentKeyView,
+  type CreateAgentKeyResponse,
+  type ListAgentKeysResponse,
+  type RevokeAgentKeyResponse,
+  agentKeyPath,
+  agentKeysPath,
+} from "./lib/agent-keys.ts";
 
-/** `DELETE` (the owner or an admin) revokes an agent's live key by its public ID, with what it made. */
-export const agentKeyPath = "/v1/identities/:name/agent-keys/:id";
-
-/** An agent key as listed: never its secret. */
-export interface AgentKeyView {
-  readonly id: PublicId;
-  readonly name: string;
-  readonly madeAt: IsoTime;
-  readonly lastUsedAt?: IsoTime;
-  readonly expiresAt?: IsoTime;
-}
-
-/** The answer to making an agent key: the key, and its secret, shown only here. */
-export interface CreateAgentKeyResponse {
-  readonly agentKey: AgentKeyView;
-  readonly token: Token;
-}
-
-/** The answer to `GET /v1/identities/:name/agent-keys`, oldest first. */
-export interface ListAgentKeysResponse {
-  readonly agentKeys: readonly AgentKeyView[];
-}
-
-/** The answer to revoking an agent key: how many live credentials it ended, the key and those below it. */
-export interface RevokeAgentKeyResponse {
-  readonly ended: number;
-}
+/** A credential's public ID (ADR 0153): 16 random hex digits, not secret, unrelated to its hash. It never authenticates. */
+export { type PublicId, isPublicId } from "./lib/public-ids.ts";
