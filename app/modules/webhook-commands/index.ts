@@ -113,9 +113,17 @@ export interface CallCommandRequest {
   /** The channel the call message is posted in. */
   readonly channel: string;
   readonly data: JsonValue;
+  /**
+   * A message whose thread the call is made in, as a reply's `replyTo` (mattpocock/cookout#871). Without it the call
+   * message is top-level and starts its own thread.
+   */
+  readonly replyTo?: MessageId;
 }
 
-/** The answer to a command call (202): the call message, which is also the top-level message of its thread. */
+/**
+ * The answer to a command call (202): the call message, and the thread it was made in, which the handler replies in.
+ * A call without `replyTo` starts its own thread, so the two are the same message.
+ */
 export interface CallCommandResponse {
   readonly messageId: MessageId;
   readonly threadId: MessageId;
