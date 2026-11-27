@@ -1,6 +1,6 @@
-import type { AskedOffer } from "./asked-offer.ts";
+import type { DeactivationOffer, DeactivationOfferId } from "../../sdk/index.ts";
+import type { AskedRows } from "./asked-rows.ts";
 import { ButtonRow } from "../../design-system/controls.tsx";
-import type { DeactivationOffer } from "../../sdk/index.ts";
 import type { DeactivationOffers } from "../../unread/index.ts";
 import type { Identities } from "../../composer/index.ts";
 import { IdentityConfirm } from "./identity-confirm.tsx";
@@ -15,7 +15,7 @@ interface OpenOfferRowProps {
   readonly offer: DeactivationOffer;
   readonly offers: Pick<DeactivationOffers, "keep">;
   readonly identities: Pick<Identities, "actions">;
-  readonly asking: Pick<AskedOffer, "ask" | "closed">;
+  readonly asking: Pick<AskedRows<DeactivationOfferId, DeactivationOffer>, "ask" | "closed">;
 }
 
 export function OpenOfferRow(props: OpenOfferRowProps): ReactNode {

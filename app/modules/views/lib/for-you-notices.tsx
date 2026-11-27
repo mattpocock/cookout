@@ -4,7 +4,7 @@ import { AgentJoinRequestRow } from "./agent-join-request-row.tsx";
 import type { Identities } from "../../composer/index.ts";
 import { OpenOffers } from "./open-offers.tsx";
 import type { ReactNode } from "react";
-import { UnreadDeactivatedQuietAgentRow } from "./unread-deactivated-quiet-agent-row.tsx";
+import { UnreadDeactivatedQuietAgents } from "./unread-deactivated-quiet-agents.tsx";
 import { UnreadNudgeRow } from "./unread-nudge-row.tsx";
 
 interface NoticeActions {
@@ -34,14 +34,11 @@ export function ForYouNotices(props: ForYouNoticesProps): ReactNode {
           requests={actions.agentJoinRequests}
         />
       ))}
-      {props.deactivated.map((entry) => (
-        <UnreadDeactivatedQuietAgentRow
-          entries={actions.deactivatedQuietAgents}
-          entry={entry}
-          identities={actions.identities}
-          key={`deactivated ${String(entry.id)}`}
-        />
-      ))}
+      <UnreadDeactivatedQuietAgents
+        deactivated={props.deactivated}
+        entries={actions.deactivatedQuietAgents}
+        identities={actions.identities}
+      />
       <OpenOffers
         deactivationOffers={actions.deactivationOffers}
         identities={actions.identities}
