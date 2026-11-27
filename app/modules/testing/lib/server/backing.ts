@@ -21,11 +21,13 @@ import {
   pausedMidRunStorage,
   unusableStorage,
 } from "./storage.ts";
+import type { AgedLogins } from "./aged-logins.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import type { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import type { TriggerCaller } from "../../../triggers/server.ts";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
+import { agedLoginsOn } from "./aged-logins.ts";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsOf } from "./secrets.ts";
 import { triggerCallerLive } from "../../../triggers/server.ts";
@@ -112,6 +114,10 @@ function storageFor(options: BackingOptions): Effect.Effect<Layer.Layer<Stores>,
   );
 }
 
+function agedStorageFor(options: BackingOptions): Effect.Effect<AgedLogins, never, Scope.Scope | Secrets> {
+  return Effect.flatMap(storageFor(options), agedLoginsOn);
+}
+
 type Backing = Secrets | WebhookFake | TriggerCaller | ScriptedTriggers;
 
 function triggersOf(kind: BackingOptions["triggers"]): Layer.Layer<TriggerCaller | ScriptedTriggers> {
@@ -133,4 +139,4 @@ function scriptedTriggersIn(store: Context.Context<ScriptedTriggers>): ScriptedT
   return Context.get(store, ScriptedTriggers);
 }
 
-export { type StorageKind, backingServices, newToken, scriptedTriggersIn, storageFor };
+export { type StorageKind, agedStorageFor, backingServices, newToken, scriptedTriggersIn, storageFor };
