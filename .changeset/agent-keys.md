@@ -1,5 +1,0 @@
----
-"@ai-hero/cookout": minor
----
-
-Breaking: creating an agent no longer answers a token, and rotating an agent's token is refused with `agent_keys_instead`. An agent's CI and services now use **agent keys**: its owner makes as many as they like with `cookout agent-key create <agent> <key-name> [--expires 30d]`, which prints the secret this once (`cookout agent-key create ci-bot ci | jq -r .token | gh secret set COOKOUT_TOKEN`). `cookout agent-key list <agent>` shows each key with when it was made and last used, and `cookout agent-key revoke <agent> <id>` ends one with the agent sessions joined with it, leaving the others working. Only the owner makes a key; the owner or an admin lists and revokes them. A key past its expiry is refused with `agent_key_expired`. The SDK adds `createAgentKey`, `listAgentKeys` and `revokeAgentKey`, and `createIdentity` answers no `token` for an agent. On upgrade, each agent's existing token becomes a key named `legacy`, so every `COOKOUT_TOKEN` already in use keeps working.
