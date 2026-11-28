@@ -8,6 +8,8 @@ const BLOCK =
 const INLINE =
   "invisible absolute top-1/2 right-full z-10 mr-1 -translate-y-1/2 group-focus-within/inline-actions:visible group-hover/inline-actions:visible has-data-[state=open]:visible";
 
+const NONE = 0;
+
 interface HoverMoreActionsParts {
   readonly choices: readonly MenuChoice[];
   readonly inline: boolean;
@@ -23,6 +25,9 @@ function placeOf(inline: boolean): string {
 }
 
 export function HoverMoreActions(parts: HoverMoreActionsParts): ReactNode {
+  if (parts.choices.length === NONE) {
+    return null;
+  }
   return (
     <span className={placeOf(parts.inline)}>
       <MoreActions choices={parts.choices} inTabOrder={parts.inTabOrder} label={parts.label} />
