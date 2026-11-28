@@ -46,7 +46,7 @@ it("saving before a time or a cron expression is given sends nothing", { timeout
 });
 
 async function oneOff(): Promise<ScheduledMessage> {
-  const client = createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  const client = createCookoutClient({ env: {}, token: webTestCookout().adminSession, url: webTestCookout().url });
   await client.createChannel({ name: "board-scheduling-edit" }).catch(() => null);
   const { scheduledMessage } = await client.createScheduledMessage({
     at: "2099-06-01T09:30",

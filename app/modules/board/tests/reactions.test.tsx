@@ -14,7 +14,7 @@ interface Opened {
 }
 
 function adminClient(): CookoutClient {
-  return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  return createCookoutClient({ env: {}, token: webTestCookout().adminSession, url: webTestCookout().url });
 }
 
 interface Human {
