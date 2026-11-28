@@ -2,7 +2,8 @@
  * The test composition root, importable only from tests. `runDev`,
  * `startDev` (`startProbedDev` with `--probe`, `startDevServing` with `--web` and a built web folder) and `startFakeRoutine` run the dev program's commands (ADR 0079) in process, and `adminSessionOf(dev)` redeems the login link `startDev` printed for the admin's web session (#999). It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
- * admin on a token it makes and identities seeded through `Storage`, both storage
+ * admin made with no Identity token and logged in by a session from a login link (`adminSession`, and
+ * `adminLogsInAgain` for a fresh one after the clock has moved past its expiry), and identities seeded through `Storage`, both storage
  * Layers on fresh stores, a store that is unusable). `assetStoreLayers` are the asset store Layers on fresh stores, S3 on
  * a fresh bucket in the `s3` project's throwaway container, and `s3ServeSettings` puts `cookout serve` on one. `freshSqliteQueryPlans` and `freshPostgresQueryPlans` run work on a fresh
  * SQLite or Postgres store and return the query plan of each statement it ran. It runs `cookout`

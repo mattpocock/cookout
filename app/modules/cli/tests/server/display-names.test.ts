@@ -14,7 +14,7 @@ const both: readonly string[] = ["identity", "display-name", "linus", "Linus", "
 it.effect("cookout identity create --display-name, display-name and --clear reach the server", () =>
   Effect.gen(function* displayNameVerbs() {
     const cookout = yield* TestCookout;
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach([create, set, clear], (args) => runCookout({ args, env }), ONE_AT_A_TIME);
     const { identities } = yield* answer(cookout.client.listIdentities);
 

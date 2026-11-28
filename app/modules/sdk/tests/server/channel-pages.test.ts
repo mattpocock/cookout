@@ -102,7 +102,7 @@ it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path 
       Effect.forEach(
         (attempt) =>
           HttpClient.execute(
-            HttpClientRequest.setHeader(attempt, "authorization", `Bearer ${cookout.adminToken}`),
+            HttpClientRequest.setHeader(attempt, "authorization", `Bearer ${cookout.adminSession}`),
           ).pipe(
             Effect.flatMap((response) => Effect.map(response.json, (body) => ({ body, status: response.status }))),
           ),

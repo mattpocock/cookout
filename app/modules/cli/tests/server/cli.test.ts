@@ -47,7 +47,7 @@ const verbs: readonly (readonly string[])[] = [
 it.effect("every verb passes its arguments and flags to the server and prints the answer as JSON", () =>
   Effect.gen(function* verbsReachTheServer() {
     const cookout = yield* TestCookout;
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* pipe(
       verbs,
       Effect.forEach((args) => runCookout({ args, env }), ONE_AT_A_TIME),
@@ -78,7 +78,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
 it.effect("a refusal is JSON on stderr, with its status, and exit code 1", () =>
   Effect.gen(function* refusalOnStderr() {
     const cookout = yield* TestCookout;
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const gone = yield* runCookout({ args: ["identity", "deactivate", "nobody"], env });
 
     expect(gone).toMatchObject({
@@ -92,7 +92,7 @@ it.effect("a refusal is JSON on stderr, with its status, and exit code 1", () =>
 it.effect("cookout identity create needs --kind human or agent, and identity list shows each kind", () =>
   Effect.gen(function* createNeedsKind() {
     const cookout = yield* TestCookout;
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const noKind = yield* runCookout({ args: ["identity", "create", "bot"], env });
     const badKind = yield* runCookout({ args: ["identity", "create", "bot", "--kind", "robot"], env });
     yield* runCookout({ args: ["identity", "create", "ada", "--kind", "human"], env });

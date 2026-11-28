@@ -117,8 +117,8 @@ it.effect("the admin identity gets its admin back at the next boot", () =>
     yield* answer(() => cookout.client.makeAdmin("grace"));
     yield* answer(() => grace.client.removeAdmin("admin"));
     const before = yield* answer(cookout.client.whoami);
-    const restarted = yield* cookout.restart;
-    const after = yield* answer(restarted.whoami);
+    const restarted = yield* cookout.startSecondServerAs("admin");
+    const after = yield* answer(cookout.clientFor(restarted.settingToken).whoami);
 
     expect(before.identity).toMatchObject({ admin: false, name: "admin" });
     expect(after.identity).toMatchObject({ admin: true, name: "admin" });

@@ -9,12 +9,11 @@ import {
   Layer,
   Option,
   Schema,
-  String as Str,
   pipe,
 } from "effect";
 import { exitCodeAfterFailure, runCookout as runCommandLine } from "../../../cli/server.ts";
 import { memoryStorage, storageLayer } from "../../../storage/server.ts";
-import { parseLine, signallingConsole, textOf, watched } from "./console-lines.ts";
+import { parseLine, setupLinkSession, signallingConsole, textOf, watched } from "./console-lines.ts";
 import type { NodeServices } from "@effect/platform-node/NodeServices";
 import type { Scope } from "effect";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -35,7 +34,7 @@ interface CliResult {
 }
 
 interface ServeProcess {
-  readonly adminToken: string;
+  readonly adminSession: string;
   readonly lines: readonly unknown[];
   readonly stdout: string;
   readonly stop: Effect.Effect<void>;
@@ -43,12 +42,15 @@ interface ServeProcess {
 }
 
 interface ServeOptions {
-  readonly adminToken?: string;
   readonly env?: Readonly<Record<string, string>>;
   readonly database?: string;
   readonly port?: number;
   readonly storage?: ServeLayers["storage"];
   readonly webFolder?: string;
+}
+
+interface StartOptions extends ServeOptions {
+  readonly redeemSetupLink?: false;
 }
 
 interface Invocation {
@@ -76,7 +78,6 @@ interface Started<Line> {
   readonly stop: Effect.Effect<void>;
 }
 
-const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
 const NO_ARGS: readonly string[] = [];
 const ANY_FREE_PORT = 0;
@@ -163,17 +164,13 @@ function startUntil<Line>(
   });
 }
 
-function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> & Pick<ServeProcess, "adminToken"> {
-  const { adminToken = serveAdminToken, database, env = {}, port = ANY_FREE_PORT, ...web } = options;
+function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> {
+  const { database, env = {}, port = ANY_FREE_PORT, ...web } = options;
   const listen = ["serve", "--port", String(port), "--host", "127.0.0.1"];
   const db = Option.match(Option.fromNullishOr(database), { onNone: () => [], onSome: (path) => ["--db", path] });
   const args = [...listen, ...db];
   const program = exitCodeAfter(runCommandLine(args, { storage: storageLayer, ...web }));
-  const admin = Option.match(Option.liftPredicate(adminToken, Str.isNonEmpty), {
-    onNone: () => ({}),
-    onSome: (set) => ({ COOKOUT_ADMIN_TOKEN: set }),
-  });
-  return { adminToken, env: { ...admin, COOKOUT_SECRETS_KEY: testSecretsKey, ...env }, program };
+  return { env: { COOKOUT_SECRETS_KEY: testSecretsKey, ...env }, program };
 }
 
 function runAdmin({
@@ -190,10 +187,25 @@ function runServe(options: ServeOptions): Effect.Effect<CliResult, never, Needs>
   return captured(serveCommandLine(options));
 }
 
-function startServe(options: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
-  const { adminToken, env, program } = serveCommandLine(options);
-  const started = startUntil(program, isListening, env);
-  return Effect.map(started, ({ line, ...output }) => ({ ...output, adminToken, url: line.listening }));
+function adminSessionOf(
+  noSetupLink: boolean,
+  printed: { readonly lines: readonly unknown[]; readonly url: string },
+): Effect.Effect<string> {
+  if (noSetupLink) {
+    return Effect.succeed("");
+  }
+  return setupLinkSession(printed);
+}
+
+function startServe(options: StartOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+  const { redeemSetupLink, ...serving } = options;
+  const { env, program } = serveCommandLine(serving);
+  return Effect.gen(function* startServing() {
+    const { line, ...output } = yield* startUntil(program, isListening, env);
+    const url = line.listening;
+    const adminSession = yield* adminSessionOf(redeemSetupLink === false, { lines: output.lines, url });
+    return { ...output, adminSession, url };
+  });
 }
 
 function watchCookout<During, WatchNeeds>({

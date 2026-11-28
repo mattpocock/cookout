@@ -7,8 +7,6 @@ import { request } from "../../../http/client.ts";
 import { secretsLive } from "../../../secrets/server.ts";
 import { whoamiPath } from "../../../identities/index.ts";
 
-const NO_TOKEN = "";
-
 function whoamiOf(url: string, session: string): Effect.Effect<unknown> {
   return Effect.map(
     answer(() =>
@@ -22,7 +20,7 @@ it.effect("the setup link a fresh cookout prints redeems, by the name given, for
   Effect.scoped(
     Effect.gen(function* redeemSetupLink() {
       const database = yield* freshDatabasePath;
-      const server = yield* startServe({ adminToken: NO_TOKEN, database });
+      const server = yield* startServe({ database, redeemSetupLink: false });
       const link = linkIn(Str.split("\n")(server.stdout));
       const session = yield* answer(() => sessionFromLoginLink({ link, name: "admin", url: server.url }));
       const whoami = yield* whoamiOf(server.url, session);

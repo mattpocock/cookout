@@ -51,7 +51,7 @@ it.effect("an admin creates an agent with an owner, and the key its owner makes 
       name: "auth-griller",
       owner: "matt",
     });
-    expect(created.token).not.toBe(cookout.adminToken);
+    expect(created.token).not.toBe(cookout.adminSession);
     expect(whoami).toStrictEqual({ identity: created.identity });
   }).pipe(Effect.provide(testCookout())),
 );
@@ -85,7 +85,7 @@ it.effect("every identity gets a different random token of at least 256 bits", (
       ),
     );
     const tokens = [
-      cookout.adminToken,
+      cookout.adminSession,
       ...pipe(
         created,
         Arr.map(({ token }) => token),
@@ -192,7 +192,7 @@ it.effect("a body that isn't JSON is refused with 400", () =>
   Effect.gen(function* notJson() {
     const cookout = yield* TestCookout;
     const response = yield* HttpClientRequest.post(`${cookout.url}${identitiesPath}`).pipe(
-      HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminToken}`),
+      HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminSession}`),
       HttpClientRequest.bodyText("{nope", "application/json"),
       HttpClient.execute,
     );

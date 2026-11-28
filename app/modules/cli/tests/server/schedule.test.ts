@@ -99,7 +99,7 @@ const adminRunsAfterAdaIsDeactivated: Effect.Effect<Run, never, TestCookoutTag |
     );
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const folder = yield* freshStateFolder;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     return (args) => runCookout({ args, env });
   });
 

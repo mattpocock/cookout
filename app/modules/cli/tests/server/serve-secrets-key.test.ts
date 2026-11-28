@@ -39,7 +39,7 @@ function boardWithTrigger(database: string): Effect.Effect<void> {
   return Effect.scoped(
     Effect.gen(function* setTriggerAndStop() {
       const board = yield* startServe({ database });
-      const admin = testClient({ env: {}, token: board.adminToken, url: board.url });
+      const admin = testClient({ env: {}, token: board.adminSession, url: board.url });
       yield* answer(() => createTestAgent({ by: admin, displayName: "triage", name: "triage" }));
       yield* answer(() =>
         admin.setTrigger("triage", { headers: HEADERS, token: TRIGGER_TOKEN, url: "https://routines.test/fire" }),

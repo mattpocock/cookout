@@ -18,7 +18,7 @@ function asked(cookout: TestCookoutService, id: AvatarId): Effect.Effect<HttpRes
   return answer(() =>
     request({
       baseUrl: cookout.url,
-      headers: { authorization: `Bearer ${cookout.adminToken}` },
+      headers: { authorization: `Bearer ${cookout.adminSession}` },
       method: "GET",
       params: { id },
       path: AVATAR,

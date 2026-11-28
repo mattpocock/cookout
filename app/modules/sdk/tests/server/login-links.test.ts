@@ -190,7 +190,7 @@ it.effect("a login link made over HTTPS on Fly links to the board over HTTPS", (
     const response = yield* answer(() =>
       request({
         baseUrl: cookout.url,
-        headers: { authorization: `Bearer ${cookout.adminToken}`, "x-forwarded-proto": "https" },
+        headers: { authorization: `Bearer ${cookout.adminSession}`, "x-forwarded-proto": "https" },
         method: "POST",
         params: { name: "ada" },
         path: loginLinkPath,

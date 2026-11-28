@@ -28,7 +28,7 @@ it.effect("cookout watch keeps retrying, naming the URL in the same wording, whe
     const database = yield* freshDatabasePath;
     const serving = yield* Scope.make();
     const server = yield* Scope.provide(serving)(startServe({ database }));
-    const env = { COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url };
+    const env = { COOKOUT_TOKEN: server.adminSession, COOKOUT_URL: server.url };
 
     const result = yield* runCookoutWhile({
       args: ["watch", "--timeout", "600"],

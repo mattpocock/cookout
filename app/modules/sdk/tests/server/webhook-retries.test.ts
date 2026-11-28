@@ -50,12 +50,12 @@ it.effect("a handler that fails twice is retried with the same call ID and then 
     const calls = yield* Effect.andThen(TestClock.adjust("1 hour"), cookout.webhook.calls);
     const { replies } = yield* answer(() => cookout.client.getThread(threadId));
     const body = {
-      callId: "call_test_4",
+      callId: "call_test_5",
       channel: "grill",
       command: "deploy",
       data: { branch: "main" },
       threadId,
-      token: "cookout_test_3",
+      token: "cookout_test_4",
     };
 
     expect(Arr.map(calls, ({ status }) => status)).toStrictEqual([UNAVAILABLE, UNAVAILABLE, OK]);
@@ -92,7 +92,7 @@ it.effect("a handler that always fails gets 5 retries, then a failure reply appe
     const calls = yield* cookout.webhook.calls;
 
     expect(Arr.map(calls, (call) => call.body)).toMatchObject(
-      Arr.replicate({ callId: "call_test_4", threadId }, SIX_CALLS),
+      Arr.replicate({ callId: "call_test_5", threadId }, SIX_CALLS),
     );
     expect(thread.replies).toMatchObject([
       {
@@ -117,7 +117,7 @@ it.effect("a server restarted mid-backoff still retries the delivery, with the s
 
     expect(Arr.map(calls, ({ status }) => status)).toStrictEqual([UNAVAILABLE, OK]);
     expect(Arr.map(calls, (call) => call.body)).toMatchObject(
-      Arr.replicate({ callId: "call_test_4", command: "deploy", data: { branch: "main" }, threadId }, TWO_CALLS),
+      Arr.replicate({ callId: "call_test_5", command: "deploy", data: { branch: "main" }, threadId }, TWO_CALLS),
     );
     expect(replies).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout({ storage: "sqlite", webhookTimeoutSeconds: 86_400 }))),

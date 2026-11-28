@@ -1,9 +1,8 @@
-import { Array as Arr, Context, Effect, Layer, Logger, MutableList, Schedule, Stream } from "effect";
+import { Array as Arr, Context, Effect, Exit, Layer, Logger, MutableList, Ref, Schedule, Scope, Stream } from "effect";
 import { AssetStore, Storage } from "../../../storage/server.ts";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
-import type { Scope } from "effect";
 import type { StoredPresence } from "../../../storage/server.ts";
 import { TestClock } from "effect/testing";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
@@ -105,6 +104,35 @@ function lastEndOn({
   );
 }
 
+interface Restartable {
+  readonly first: Booted;
+  readonly running: Ref.Ref<BootedContext>;
+  readonly restartServerAfter: (whileDown: Effect.Effect<void>) => Effect.Effect<{ readonly url: string }>;
+}
+
+function restartable(boot: Effect.Effect<Booted, never, Scope.Scope>): Effect.Effect<Restartable, never, Scope.Scope> {
+  return Effect.gen(function* bootRestartable() {
+    const scope = yield* Effect.scope;
+    const firstScope = yield* Scope.fork(scope);
+    const serverScope = yield* Ref.make(firstScope);
+    const first = yield* Scope.provide(boot, firstScope);
+    const running = yield* Ref.make(first.server);
+    function restartServerAfter(whileDown: Effect.Effect<void>): Effect.Effect<{ readonly url: string }> {
+      return Effect.gen(function* restartServer() {
+        const stopped = yield* Ref.get(serverScope);
+        yield* Scope.close(stopped, Exit.void);
+        yield* whileDown;
+        const next = yield* Scope.fork(scope);
+        yield* Ref.set(serverScope, next);
+        const { server, url } = yield* Scope.provide(boot, next);
+        yield* Ref.set(running, server);
+        return { url };
+      });
+    }
+    return { first, restartServerAfter, running };
+  });
+}
+
 export type { HeldAssets };
 export {
   type Booted,
@@ -115,4 +143,5 @@ export {
   heldAssetsOn,
   lastEndOn,
   liveConnectionsClosedOn,
+  restartable,
 };

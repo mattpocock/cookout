@@ -31,7 +31,7 @@ it.effect("a feeder's cookout inbox and cookout watch are refused, saying it onl
     yield* cookout.createIdentity("matt", { kind: "human" });
     const github = yield* cookout.createIdentity("github", { owner: "matt" });
     const env = { COOKOUT_TOKEN: github.token, COOKOUT_URL: cookout.url };
-    yield* runCookout({ args: ["identity", "feeder", "github"], env: { ...env, COOKOUT_TOKEN: cookout.adminToken } });
+    yield* runCookout({ args: ["identity", "feeder", "github"], env: { ...env, COOKOUT_TOKEN: cookout.adminSession } });
     const reads: readonly (readonly string[])[] = [["inbox"], ["watch"]];
     const results = yield* Effect.forEach(reads, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
     const refused = {

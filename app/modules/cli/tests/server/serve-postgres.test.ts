@@ -26,10 +26,10 @@ function shown({ host, pathname }: { readonly host: string; readonly pathname: s
 }
 
 const postAndRead = Effect.fnUntraced(function* postThenRead({
-  adminToken,
+  adminSession,
   url,
-}: Pick<ServeProcess, "adminToken" | "url">) {
-  const admin = testClient({ env: {}, token: adminToken, url });
+}: Pick<ServeProcess, "adminSession" | "url">) {
+  const admin = testClient({ env: {}, token: adminSession, url });
   yield* answer(() => admin.createChannel({ name: "grill" }));
   const posted = yield* answer(() => admin.createMessage({ channel: "grill", text: "lunch is on the grill" }));
   const thread = yield* answer(() => admin.getThread(posted.message.id));
@@ -97,7 +97,7 @@ function loginLinkOf(printed: unknown): string {
 
 const consoleLinkOnPostgres = Effect.fnUntraced(function* consoleLinkThenRedeem(env: Readonly<Record<string, string>>) {
   const server = yield* startServe({ env });
-  const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+  const admin = testClient({ env: {}, token: server.adminSession, url: server.url });
   yield* answer(() => admin.createIdentity({ kind: "human", name: "ada" }));
   yield* server.stop;
   const made = yield* runAdmin({ args: ["login-link", "ada"], env });

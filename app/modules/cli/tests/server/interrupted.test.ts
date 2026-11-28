@@ -5,7 +5,6 @@ import { TestClock } from "effect/testing";
 
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
-const SERVE_ADMIN_TOKEN = "test-admin-token-0123456789abcdef0123456789";
 const ANY_FREE_PORT = "0";
 
 it.effect(
@@ -32,7 +31,7 @@ it.effect("cookout serve interrupted, as SIGTERM stops it, exits 0 and prints no
     const stopped = yield* interruptCookout({
       args: ["serve", "--port", ANY_FREE_PORT, "--host", "127.0.0.1"],
       asked: TestClock.withLive(Effect.sleep("200 millis")),
-      env: { COOKOUT_ADMIN_TOKEN: SERVE_ADMIN_TOKEN, COOKOUT_SECRETS_KEY: testSecretsKey },
+      env: { COOKOUT_SECRETS_KEY: testSecretsKey },
     });
 
     expect(stopped.exitCode).toBe(EXIT_SUCCESS);
