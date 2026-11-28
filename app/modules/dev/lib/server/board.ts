@@ -1,12 +1,7 @@
 import { Array as Arr, Effect, Function } from "effect";
-import type {
-  CookoutClient,
-  IdentityWithTokenResponse,
-  Message,
-  MessageId,
-  PostMessageRequest,
-} from "../../../sdk/index.ts";
+import type { CookoutClient, Identity, Message, MessageId, PostMessageRequest } from "../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../sdk/index.ts";
+import { sessionOf } from "./sessions.ts";
 
 interface SeedFailure {
   readonly code: string;
@@ -18,9 +13,14 @@ interface BoardConnection {
   readonly url: string;
 }
 
+interface SeededCredential {
+  readonly identity: Identity;
+  readonly token: string;
+}
+
 interface SeededIdentity {
   readonly client: CookoutClient;
-  readonly created: IdentityWithTokenResponse;
+  readonly created: SeededCredential;
 }
 
 interface SeededMessages {
@@ -45,7 +45,7 @@ type Conversation = Pick<
 
 interface SeededBoard {
   readonly channels: readonly string[];
-  readonly identities: readonly IdentityWithTokenResponse[];
+  readonly identities: readonly SeededCredential[];
   readonly messages: SeededMessages;
   readonly thread: MessageId;
 }
@@ -89,10 +89,11 @@ interface Seeding {
 }
 
 function createHuman({ admin, url }: Seeding, name: string): Effect.Effect<SeededIdentity, SeedFailure> {
-  return Effect.map(
-    call(() => admin.createIdentity({ kind: "human", name })),
-    (created) => ({ client: clientAt(url, created.token), created }),
-  );
+  return Effect.gen(function* loggedInPerson() {
+    const created = yield* call(() => admin.createIdentity({ kind: "human", name }));
+    const token = yield* sessionOf({ created, url });
+    return { client: clientAt(url, token), created: { identity: created.identity, token } };
+  });
 }
 
 function createAgent(

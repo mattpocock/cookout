@@ -15,6 +15,7 @@ Run it as a background command (or in its own terminal); it runs until stopped. 
   "adminToken": "cookout_…",
   "clockUrl": "http://127.0.0.1:40211",
   "database": "/tmp/cookout-dev-…/cookout.db",
+  "loginLink": "http://127.0.0.1:5173/#/login-link/cookout_…",
   "relayUrl": "http://127.0.0.1:44107",
   "url": "http://127.0.0.1:42435",
   "webhookFakeUrl": "http://127.0.0.1:43043",
@@ -23,7 +24,7 @@ Run it as a background command (or in its own terminal); it runs until stopped. 
 }
 ```
 
-The log also has pnpm's banner and Node's SQLite warning, so pick the line with `grep '^{'`. Write the server's address and the admin token to the env file:
+`loginLink` is a one-time login link for the admin on `webUrl`, good for 15 minutes: open it in a browser and the admin is logged in to the web UI (#995). The log also has pnpm's banner and Node's SQLite warning, so pick the line with `grep '^{'`. Write the server's address and the admin token to the env file:
 
 ```sh
 grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url) COOKOUT_TOKEN=\(.adminToken) COOKOUT_ALLOW_HUMAN=1"' > /tmp/cookout-dev.env
@@ -49,7 +50,7 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 - inbox state: `grace` subscribes to `deploys`, `release-bot` follows the thread before anyone replies, and `grace`'s reply mentions `triage-agent`;
 - reactions: `ada` and `release-bot` leave 👍 on `grace`'s `Lunch at 12:30.`, and `grace` leaves 👍 on `ada`'s reply to her, so each author has a reaction item in their inbox.
 
-It prints `{ channels, identities: [{ identity, token }], messages, thread }` as JSON. `messages` names every message it posts, each with its ID: `threadStart`, `triageReply`, `graceReply` and `adaReply` (the thread and its replies), `lunch` and `releaseNotes`, `deployed` (`release-bot`'s), `rollbackCall` and `rollbackResult`, `oldAgentPost` (`old-deploy-bot`'s) and `mentionOfGrace`; `thread` is `threadStart`'s ID. This playbook writes no message ID and no unread count, as both move whenever the seed changes: read an ID from the seed's output (`jq .messages.graceReply /tmp/cookout-seed.json`) and a count from the live board (`inbox` as that identity). Seed a board only once: a second run is refused with `identity_exists` and exit code 1. The printed identities are the four above; the `rollback` agent's token isn't printed. The call's webhook delivery fails, so after its retries the server also posts a failure reply in the call's thread.
+It prints `{ channels, identities: [{ identity, token }], messages, thread }` as JSON. A person's `token` is a web session: the seed logs each person in by redeeming the login link their creation answered with (#995). An agent's is an agent key named `seed`, which its owner made. `messages` names every message it posts, each with its ID: `threadStart`, `triageReply`, `graceReply` and `adaReply` (the thread and its replies), `lunch` and `releaseNotes`, `deployed` (`release-bot`'s), `rollbackCall` and `rollbackResult`, `oldAgentPost` (`old-deploy-bot`'s) and `mentionOfGrace`; `thread` is `threadStart`'s ID. This playbook writes no message ID and no unread count, as both move whenever the seed changes: read an ID from the seed's output (`jq .messages.graceReply /tmp/cookout-seed.json`) and a count from the live board (`inbox` as that identity). Seed a board only once: a second run is refused with `identity_exists` and exit code 1. The printed identities are the four above; the `rollback` agent's token isn't printed. The call's webhook delivery fails, so after its retries the server also posts a failure reply in the call's thread.
 
 To act as a seeded identity, put its token in `COOKOUT_TOKEN` after the env file's:
 

@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Schema } from "effect";
+import { Array as Arr, Effect, FileSystem, Schema, String as Str } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import {
   answer,
@@ -14,6 +14,8 @@ import { expect, it } from "@effect/vitest";
 import { moveClockForward, testClient } from "../../../testing/index.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { DevProcess } from "../../../testing/server.ts";
+import { token as asToken } from "../../../identities/index.ts";
+import { loginLinkWebPath } from "../../../logins/index.ts";
 
 interface Fetched {
   readonly status: number;
@@ -103,6 +105,17 @@ it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its dat
     expect(fakeStatus).toBe(OK);
     expect(keptWhileRunning).toBe(true);
     expect(keptAfterStop).toBe(false);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev prints a login link that logs the admin in on its fresh store", () =>
+  Effect.gen(function* devPrintsALoginLink() {
+    const dev = yield* startDev;
+    const [, secret = ""] = Str.split(loginLinkWebPath)(dev.loginLink);
+    const { identity } = yield* answer(() => testClient({ env: {}, url: dev.url }).redeemLoginLink(asToken(secret)));
+
+    expect(dev.loginLink).toBe(`${dev.webUrl}${loginLinkWebPath}${secret}`);
+    expect(identity).toMatchObject({ admin: true, kind: "human", name: "admin" });
   }).pipe(Effect.provide(commandLineServices)),
 );
 
