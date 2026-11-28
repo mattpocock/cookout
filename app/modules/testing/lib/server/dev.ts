@@ -1,10 +1,10 @@
 import { Effect, Schema } from "effect";
 import type { CommandLineNeeds } from "./command-line.ts";
 import type { Scope } from "effect";
+import { sessionFromLoginLink } from "../../../../../scripts/lib/login-link-session.ts";
 import { startDevCommand } from "./command-line.ts";
 
 const DevStartLine = Schema.Struct({
-  adminToken: Schema.String,
   clockUrl: Schema.String,
   database: Schema.String,
   loginLink: Schema.String,
@@ -39,9 +39,13 @@ function startDevServing(webFolder: string): Started<DevProcess> {
   );
 }
 
+function adminSessionOf({ loginLink, url }: Pick<DevProcess, "loginLink" | "url">): Effect.Effect<string> {
+  return Effect.promise(() => sessionFromLoginLink({ link: loginLink, url }));
+}
+
 const startFakeRoutine: Started<typeof FakeRoutineLine.Type> = Effect.map(
   startDevCommand({ args: ["fake-routine"], isReady: Schema.is(FakeRoutineLine) }),
   ({ line }) => line,
 );
 
-export { type DevProcess, startDev, startDevServing, startFakeRoutine, startProbedDev };
+export { type DevProcess, adminSessionOf, startDev, startDevServing, startFakeRoutine, startProbedDev };

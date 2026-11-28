@@ -1,19 +1,17 @@
 import { Clock, Context, Effect, FileSystem, Layer, Option, Path } from "effect";
-import { Secrets, newSecretsKey, secretsCipher, secretsLive } from "../../../secrets/server.ts";
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
+import { adminWithoutToken, loginLinkFor } from "../../../identities/server.ts";
 import { cuttableRelay, serverUrl } from "../../../http/server.ts";
 import { diskAssetStore, sqliteStorage } from "../../../storage/server.ts";
+import { newSecretsKey, secretsCipher, secretsLive } from "../../../secrets/server.ts";
 import type { Scope } from "effect";
 import type { Serving } from "../../../http/server.ts";
-import type { Token } from "../../../identities/index.ts";
 import { adjustableClock } from "./adjustable-clock.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { firstAdminName } from "../../../identities/index.ts";
-import { loginLinkFor } from "../../../identities/server.ts";
 import { triggerCallerLive } from "../../../triggers/server.ts";
 
 interface DevCookout {
-  readonly adminToken: string;
   readonly clockUrl: string;
   readonly database: string;
   readonly loginLink: string;
@@ -56,10 +54,10 @@ function webUrlFor(
   });
 }
 
-function servingOf(adminToken: Token, { port, web }: DevCookoutOptions): Serving & { readonly adminToken: Token } {
+function servingOf({ port, web }: DevCookoutOptions): Serving {
   return Option.match(web, {
-    onNone: () => ({ adminToken, host: LOCAL, port }),
-    onSome: (webFolder) => ({ adminToken, host: LOCAL, port, webFolder }),
+    onNone: () => ({ host: LOCAL, port }),
+    onSome: (webFolder) => ({ host: LOCAL, port, webFolder }),
   });
 }
 
@@ -78,15 +76,14 @@ function devCookoutOn(options: DevCookoutOptions): Effect.Effect<Omit<DevCookout
         triggerCallerLive,
       ),
     );
-    const adminToken = yield* Context.get(live, Secrets).newToken;
+    yield* Effect.provideContext(adminWithoutToken(firstAdminName), live);
     const backing = Layer.succeedContext(live);
-    const server = yield* Layer.build(cookoutServer(servingOf(adminToken, options)).pipe(Layer.provide(backing)));
+    const server = yield* Layer.build(cookoutServer(servingOf(options)).pipe(Layer.provide(backing)));
     const fake = yield* Layer.build(webhookFake);
     const url = yield* Effect.provideContext(serverUrl, server);
     const webUrl = yield* webUrlFor(url, options);
     const relay = yield* cuttableRelay(webUrl);
     return {
-      adminToken,
       database,
       loginLink: (yield* Effect.provideContext(loginLinkFor({ name: firstAdminName, origin: webUrl }), live)).link,
       relayUrl: relay.url,

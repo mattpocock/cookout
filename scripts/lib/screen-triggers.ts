@@ -10,7 +10,7 @@ interface Owner {
 }
 
 interface Presences extends Owner {
-  readonly adminToken: string;
+  readonly adminSession: string;
   readonly dropped: string;
   readonly droppedToken: string;
   readonly image: Uint8Array;
@@ -48,8 +48,8 @@ async function setScreenTriggers({ ownerToken, url }: Owner): Promise<void> {
 }
 
 export async function setScreenPresences(presences: Presences): Promise<void> {
-  const { adminToken, url } = presences;
-  await dropWatch({ adminToken, agent: presences.dropped, agentToken: presences.droppedToken, url });
+  const { adminSession, url } = presences;
+  await dropWatch({ adminSession, agent: presences.dropped, agentToken: presences.droppedToken, url });
   const dropped = createCookoutClient({ env: {}, token: presences.droppedToken, url });
   await dropped.join({ as: presences.dropped, sessionUrl: WATCHED_AT });
   await setScreenTriggers(presences);

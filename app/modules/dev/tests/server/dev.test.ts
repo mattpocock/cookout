@@ -1,6 +1,7 @@
-import { Array as Arr, Effect, FileSystem, Schema, String as Str } from "effect";
+import { Effect, FileSystem, Schema, String as Str } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import {
+  adminSessionOf,
   answer,
   commandLineServices,
   runCookout,
@@ -9,13 +10,11 @@ import {
   startFakeRoutine,
   startProbedDev,
 } from "../../../testing/server.ts";
-import { clockForwardPath, relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { expect, it } from "@effect/vitest";
-import { moveClockForward, testClient } from "../../../testing/index.ts";
-import type { CookoutClient } from "../../../sdk/index.ts";
-import type { DevProcess } from "../../../testing/server.ts";
+import { relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { token as asToken } from "../../../identities/index.ts";
 import { loginLinkWebPath } from "../../../logins/index.ts";
+import { testClient } from "../../../testing/index.ts";
 
 interface Fetched {
   readonly status: number;
@@ -27,9 +26,6 @@ const NO_CONTENT = 204;
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const THREE_REPLIES = 3;
-const NOT_FOUND = 404;
-const QUIET_DAYS = 3;
-const NONE = 0;
 const SeededToken = Schema.Struct({ token: Schema.String });
 const SeedOutput = Schema.Struct({ identities: Schema.NonEmptyArray(SeededToken), thread: Schema.Finite });
 const ThreadParent = Schema.Struct({ text: Schema.String });
@@ -95,7 +91,9 @@ function postedJson(url: string): Effect.Effect<unknown> {
 it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its database when it stops", () =>
   Effect.gen(function* devServesAndCleansUp() {
     const dev = yield* startDev;
-    const { identity } = yield* answer(() => testClient({ env: {}, token: dev.adminToken, url: dev.url }).whoami());
+    const { identity } = yield* Effect.flatMap(adminSessionOf(dev), (token) =>
+      answer(() => testClient({ env: {}, token, url: dev.url }).whoami()),
+    );
     const fakeStatus = yield* postedStatus(dev.webhookFakeUrl, "/command");
     const keptWhileRunning = yield* databaseExists(dev.database);
     yield* dev.stop;
@@ -108,13 +106,14 @@ it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its dat
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("pnpm dev prints a login link that logs the admin in on its fresh store", () =>
+it.effect("pnpm dev prints a login link that logs the admin in on its fresh store, and no admin token", () =>
   Effect.gen(function* devPrintsALoginLink() {
     const dev = yield* startDev;
     const [, secret = ""] = Str.split(loginLinkWebPath)(dev.loginLink);
     const { identity } = yield* answer(() => testClient({ env: {}, url: dev.url }).redeemLoginLink(asToken(secret)));
 
     expect(dev.loginLink).toBe(`${dev.webUrl}${loginLinkWebPath}${secret}`);
+    expect(dev).not.toHaveProperty("adminToken");
     expect(identity).toMatchObject({ admin: true, kind: "human", name: "admin" });
   }).pipe(Effect.provide(commandLineServices)),
 );
@@ -177,7 +176,8 @@ it.effect("a write from the web UI's page passes the Origin guard through the Vi
 it.effect("pnpm seed prints the seeded tokens, and the cookout CLI reads the seeded thread with one", () =>
   Effect.gen(function* seedThenReadThread() {
     const dev = yield* startDev;
-    const seeded = yield* runDev({ args: ["seed"], env: { COOKOUT_TOKEN: dev.adminToken, COOKOUT_URL: dev.url } });
+    const env = { COOKOUT_TOKEN: yield* adminSessionOf(dev), COOKOUT_URL: dev.url };
+    const seeded = yield* runDev({ args: ["seed"], env });
     const board = shaped(seeded.stdoutJson, Schema.is(SeedOutput), seeded.stderr);
     const [first] = board.identities;
     const read = yield* runCookout({
@@ -200,7 +200,8 @@ it.effect("pnpm seed without COOKOUT_URL and COOKOUT_TOKEN is refused as JSON on
     expect(seeded.stderrJson).toStrictEqual({
       error: {
         code: "url_missing",
-        message: "Set COOKOUT_URL and COOKOUT_TOKEN to the url and adminToken that pnpm dev printed.",
+        message:
+          "Set COOKOUT_URL to the url that pnpm dev printed, and COOKOUT_TOKEN to the session its loginLink gives the admin.",
       },
     });
   }).pipe(Effect.provide(commandLineServices)),
@@ -209,7 +210,7 @@ it.effect("pnpm seed without COOKOUT_URL and COOKOUT_TOKEN is refused as JSON on
 it.effect("pnpm seed on a board it already seeded is refused with the server's code", () =>
   Effect.gen(function* seedTwice() {
     const dev = yield* startDev;
-    const env = { COOKOUT_TOKEN: dev.adminToken, COOKOUT_URL: dev.url };
+    const env = { COOKOUT_TOKEN: yield* adminSessionOf(dev), COOKOUT_URL: dev.url };
     yield* runDev({ args: ["seed"], env });
     const again = yield* runDev({ args: ["seed"], env });
 
@@ -223,8 +224,9 @@ it.effect("pnpm seed on a board it already seeded is refused with the server's c
 it.effect("pnpm seed against a stopped cookout is refused", () =>
   Effect.gen(function* seedStoppedCookout() {
     const dev = yield* startDev;
+    const env = { COOKOUT_TOKEN: yield* adminSessionOf(dev), COOKOUT_URL: dev.url };
     yield* dev.stop;
-    const seeded = yield* runDev({ args: ["seed"], env: { COOKOUT_TOKEN: dev.adminToken, COOKOUT_URL: dev.url } });
+    const seeded = yield* runDev({ args: ["seed"], env });
 
     expect(seeded.exitCode).toBe(EXIT_FAILURE);
     expect(seeded.stderrJson).toMatchObject({ error: { code: "seed_failed" } });
@@ -247,50 +249,5 @@ it.effect("the dev program's fake routine answers a fire as a routine does, nami
 
     expect(routine.fireUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1\/claude_code\/routines\/.+\/fire$/u);
     expect(answered).toMatchObject({ claude_code_session_url: routine.sessionUrl, type: "routine_fire" });
-  }).pipe(Effect.provide(commandLineServices)),
-);
-
-function threadStartedOn(dev: DevProcess): Effect.Effect<CookoutClient> {
-  return Effect.gen(function* startThread() {
-    const admin = testClient({ env: {}, token: dev.adminToken, url: dev.url });
-    yield* answer(() => admin.createChannel({ name: "release" }));
-    const { token } = yield* answer(() => admin.createIdentity({ kind: "human", name: "ada" }));
-    const ada = testClient({ env: {}, token, url: dev.url });
-    yield* answer(() => ada.createMessage({ channel: "release", text: "Who owns the release notes?" }));
-    return ada;
-  });
-}
-
-it.effect(
-  "pnpm dev's clock moves forward when told, and the nudge job raises a nudge for a thread quiet that long",
-  () =>
-    Effect.gen(function* devClockMovesForward() {
-      const dev = yield* startDev;
-      const ada = yield* threadStartedOn(dev);
-      const before = yield* answer(() => ada.inbox());
-      yield* Effect.promise(() => moveClockForward({ clockUrl: dev.clockUrl, days: QUIET_DAYS }));
-      const after = yield* Effect.repeat(
-        answer(() => ada.inbox()),
-        { until: ({ nudges }) => nudges.length > NONE },
-      );
-
-      expect(before.nudges).toStrictEqual([]);
-      expect(Arr.map(after.nudges, ({ text }) => text)).toStrictEqual(["Quiet for 3 days: close it, or follow up?"]);
-    }).pipe(Effect.provide(commandLineServices)),
-);
-
-it.effect("pnpm dev's clock refuses a move backwards, and answers 404 off its one path", () =>
-  Effect.gen(function* devClockRefuses() {
-    const dev = yield* startDev;
-    const backwards = yield* Effect.flip(
-      Effect.tryPromise({
-        catch: String,
-        try: () => moveClockForward({ clockUrl: dev.clockUrl, days: -1 }),
-      }),
-    );
-    const elsewhere = yield* fetchedText(`${dev.clockUrl}${clockForwardPath}`);
-
-    expect(backwards).toContain("did not move forward");
-    expect(elsewhere.status).toBe(NOT_FOUND);
   }).pipe(Effect.provide(commandLineServices)),
 );

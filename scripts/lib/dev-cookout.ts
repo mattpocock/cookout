@@ -1,27 +1,29 @@
 import { field, parseJson, text } from "./json.ts";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
+import { sessionFromLoginLink } from "./login-link-session.ts";
 import { spawn } from "node:child_process";
 
 interface StartLine {
-  readonly adminToken: string;
   readonly clockUrl: string;
+  readonly loginLink: string;
   readonly url: string;
   readonly webUrl: string;
 }
 
-interface DevCookout extends StartLine {
+interface DevCookout extends Omit<StartLine, "loginLink"> {
+  readonly adminSession: string;
   readonly stop: () => Promise<void>;
 }
 
 function startLineOf(line: string): StartLine | null {
   const started = parseJson(line);
-  const [adminToken, clockUrl, url, webUrl] = ["adminToken", "clockUrl", "url", "webUrl"].map((name) =>
+  const [clockUrl, loginLink, url, webUrl] = ["clockUrl", "loginLink", "url", "webUrl"].map((name) =>
     text(field(started, name)),
   );
   const urls = typeof clockUrl === "string" && typeof url === "string" && typeof webUrl === "string";
-  if (typeof adminToken === "string" && urls) {
-    return { adminToken, clockUrl, url, webUrl };
+  if (typeof loginLink === "string" && urls) {
+    return { clockUrl, loginLink, url, webUrl };
   }
   return null;
 }
@@ -60,8 +62,9 @@ async function startDevCookout({ env = {}, webFolder = "" }: DevCookoutOptions =
     }
   }
   try {
-    const started = await startLine(createInterface({ input: dev.stdout }));
-    return { ...started, stop };
+    const { loginLink, ...started } = await startLine(createInterface({ input: dev.stdout }));
+    const adminSession = await sessionFromLoginLink({ link: loginLink, url: started.url });
+    return { ...started, adminSession, stop };
   } catch (error) {
     await stop();
     throw error;

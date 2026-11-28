@@ -1,12 +1,13 @@
 import { createInterface } from "node:readline";
 import { once } from "node:events";
+import { sessionFromLoginLink } from "./lib/login-link-session.ts";
 import { spawn } from "node:child_process";
 import { webBuild } from "./lib/web-build.ts";
 
 const PRESENCE_GRACE_SECONDS = "2";
 
 interface DevCookout {
-  readonly adminToken: string;
+  readonly loginLink: string;
   readonly relayUrl: string;
   readonly webUrl: string;
 }
@@ -21,10 +22,10 @@ function fieldsOf(line: string): Readonly<Record<string, unknown>> {
 }
 
 function devCookoutIn(line: string): DevCookout | null {
-  const { adminToken, relayUrl, webUrl } = fieldsOf(line);
+  const { loginLink, relayUrl, webUrl } = fieldsOf(line);
   const urls = typeof relayUrl === "string" && typeof webUrl === "string";
-  if (typeof adminToken === "string" && urls) {
-    return { adminToken, relayUrl, webUrl };
+  if (typeof loginLink === "string" && urls) {
+    return { loginLink, relayUrl, webUrl };
   }
   return null;
 }
@@ -55,7 +56,7 @@ async function setup(): Promise<() => Promise<void>> {
     stdio: ["ignore", "pipe", "ignore"],
   });
   const cookout = await startLine(createInterface({ input: dev.stdout }));
-  process.env["COOKOUT_TOKEN"] = cookout.adminToken;
+  process.env["COOKOUT_TOKEN"] = await sessionFromLoginLink({ link: cookout.loginLink, url: cookout.webUrl });
   process.env["COOKOUT_URL"] = cookout.webUrl;
   process.env["COOKOUT_ALLOW_HUMAN"] = "1";
   process.env["COOKOUT_RELAY_URL"] = cookout.relayUrl;

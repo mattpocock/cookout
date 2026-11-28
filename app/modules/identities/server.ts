@@ -199,9 +199,9 @@ export const openIdentityRoutes: typeof openLoginRoutes = [...openLoginRoutes, .
  * The request limit of the client address a request to one of the no-token routes comes from (`Limits` provides it),
  * and the step that takes one request from it; a fresh setup link while the store has no admin, and a login link made
  * from the server console (#913, ADR 0162); and a login link made with no admin act to alert on, for `pnpm dev` to print
- * for its admin (#995).
+ * for its admin (#995), who `adminWithoutToken(name)` makes with no Identity token (#999).
  */
-export { AddressLimit, consoleLoginLink, loginLinkFor, setupLinkFor } from "./lib/server/routes.ts";
+export { AddressLimit, adminWithoutToken, consoleLoginLink, loginLinkFor, setupLinkFor } from "./lib/server/routes.ts";
 
 /**
  * The client IP and User-Agent (its first 500 characters) a Login or agent join request starts from, to store with

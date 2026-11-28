@@ -52,7 +52,7 @@ function tokenOf(identities: readonly unknown[], name: string): string {
 function seed(server: DevCookout): Board {
   const run = spawnSync(
     "env",
-    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url }, [
+    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: server.adminSession, COOKOUT_URL: server.url }, [
       process.execPath,
       "app/dev.ts",
       "seed",
@@ -209,7 +209,7 @@ function shooter(newPage: NewPage, out: string): (shot: Shot) => Promise<void> {
 
 function boardFor(board: Board, login: Login): Board {
   if (login === "admin") {
-    return { ...board, token: board.server.adminToken };
+    return { ...board, token: board.server.adminSession };
   }
   return board;
 }
@@ -242,10 +242,10 @@ function report(failures: readonly string[], out: string): void {
 async function prepared(server: DevCookout): Promise<Board> {
   const board = seed(server);
   closeThreads(board);
-  const { adminToken, url } = server;
+  const { adminSession, url } = server;
   await titleScreenThread({ thread: board.titled, token: board.token, url });
   await setScreenPresences({
-    adminToken,
+    adminSession,
     dropped: DROPPED_AGENT,
     droppedToken: board.dropped,
     image: hillsPng(),
