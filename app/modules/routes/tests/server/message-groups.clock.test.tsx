@@ -18,7 +18,7 @@ function people(cookout: TestCookoutService, channel: string): Effect.Effect<Peo
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const alan = yield* cookout.createIdentity("alan", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
-    yield* answer(() => cookout.client.createChannel({ name: channel }));
+    yield* answer(() => ada.client.createChannel({ name: channel }));
     yield* TestClock.adjust("12 hours");
     return { ada, alan, grace };
   });
