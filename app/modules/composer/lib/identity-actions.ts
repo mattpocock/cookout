@@ -4,7 +4,7 @@ import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
-type IdentityAction = "deactivate" | "delete" | "feed" | "reactivate" | "revoke" | "rotate" | "transfer" | "unfeed";
+type IdentityAction = "deactivate" | "delete" | "feed" | "reactivate" | "revoke" | "transfer" | "unfeed";
 
 type ActionState =
   | { readonly status: "idle" }
@@ -25,7 +25,6 @@ interface IdentityActionsSnapshot {
   readonly messages: MessageCount;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
-  readonly tokenForgotten: boolean;
   readonly transferTo: string;
 }
 
@@ -66,7 +65,6 @@ const START: Held = {
   loginLink: NO_LINK,
   messages: "loading",
   token: null,
-  tokenForgotten: false,
   transferTo: "",
 };
 
@@ -89,7 +87,6 @@ function sendsFor({ list, name }: IdentityActionsOptions, transferTo: () => stri
     feed: answering({}, calls.setFeeder, name, true),
     reactivate: async () => ({ token: await calls.reactivate(name) }),
     revoke: answering({}, calls.revokeSession, name),
-    rotate: async () => ({ token: await calls.rotateToken(name) }),
     transfer: async () => {
       await calls.transfer(name, transferTo().trim());
       return { transferTo: "" };
@@ -102,13 +99,13 @@ type Publish = (next: Partial<Held>) => void;
 
 type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken">;
 
-function editsOf(publish: Publish, held: () => Held): Edits {
+function editsOf(publish: Publish): Edits {
   return {
     editTransfer: (transferTo) => {
       publish({ transferTo });
     },
     forgetToken: () => {
-      publish({ token: null, tokenForgotten: held().token !== null });
+      publish({ token: null });
     },
   };
 }
@@ -125,7 +122,6 @@ function asksOf(publish: Publish): IdentityActions["ask"] {
     feed: askTo("feed"),
     reactivate: askTo("reactivate"),
     revoke: askTo("revoke"),
-    rotate: askTo("rotate"),
     transfer: askTo("transfer"),
     unfeed: askTo("unfeed"),
   };
@@ -250,7 +246,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const sends = sendsFor(options, () => current.transferTo);
 
   function publish(next: Partial<Held>): void {
-    const changed = { ...current, tokenForgotten: false, ...next };
+    const changed = { ...current, ...next };
     if (sameSnapshot({ after: changed, before: current })) {
       return;
     }
@@ -272,7 +268,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const add = selectedStore({ snapshot, subscribe: joined(options.list.store.subscribe, listeners.add) }).subscribe;
 
   return {
-    ...editsOf(publish, () => current),
+    ...editsOf(publish),
     ...linkCallsOf(options, publish, () => current),
     ask: asksOf(publish),
     cancel: cancelOf(publish, () => current),

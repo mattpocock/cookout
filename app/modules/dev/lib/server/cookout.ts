@@ -8,12 +8,15 @@ import type { Serving } from "../../../http/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import { adjustableClock } from "./adjustable-clock.ts";
 import { cookoutServer } from "../../../cli/server.ts";
+import { firstAdminName } from "../../../identities/index.ts";
+import { loginLinkFor } from "../../../identities/server.ts";
 import { triggerCallerLive } from "../../../triggers/server.ts";
 
 interface DevCookout {
   readonly adminToken: string;
   readonly clockUrl: string;
   readonly database: string;
+  readonly loginLink: string;
   readonly relayUrl: string;
   readonly url: string;
   readonly webhookFakeUrl: string;
@@ -85,6 +88,7 @@ function devCookoutOn(options: DevCookoutOptions): Effect.Effect<Omit<DevCookout
     return {
       adminToken,
       database,
+      loginLink: (yield* Effect.provideContext(loginLinkFor({ name: firstAdminName, origin: webUrl }), live)).link,
       relayUrl: relay.url,
       url,
       webUrl,

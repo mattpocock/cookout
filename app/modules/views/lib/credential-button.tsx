@@ -2,7 +2,6 @@ import type { Identity } from "../../sdk/index.ts";
 import type { IdentityActions } from "../../composer/index.ts";
 import { LoginLinkButton } from "./login-link-button.tsx";
 import type { ReactNode } from "react";
-import { RotateButton } from "./rotate-button.tsx";
 
 interface CredentialButtonProps {
   readonly actions: IdentityActions;
@@ -11,11 +10,8 @@ interface CredentialButtonProps {
 
 export function CredentialButton(props: CredentialButtonProps): ReactNode {
   const { actions, identity } = props;
-  if (identity.deactivated === true) {
+  if (identity.deactivated === true || identity.kind === "agent") {
     return null;
-  }
-  if (identity.kind === "agent") {
-    return <RotateButton actions={actions} />;
   }
   return <LoginLinkButton actions={actions} />;
 }

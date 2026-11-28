@@ -79,6 +79,24 @@ it.effect("the seed makes humans, and agents with owners, each with a working to
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("the seed logs each person in by a session, which their printed token is", () =>
+  Effect.gen(function* seededSessions() {
+    const cookout = yield* TestCookout;
+    const board = yield* seeded(cookout);
+    const people = Arr.filter(board.identities, ({ identity }) => ["ada", "grace"].includes(identity.name));
+    const sessions = yield* Effect.forEach(
+      people,
+      ({ token }) => answer(() => cookout.clientFor(token).listSessions()),
+      { concurrency: 1 },
+    );
+
+    expect(Arr.map(people, ({ identity }) => identity.name)).toStrictEqual(["ada", "grace"]);
+    expect(
+      Arr.map(sessions, (listed) => Arr.map(listed.sessions, ({ current, kind }) => [kind, current])),
+    ).toStrictEqual([[["web", true]], [["web", true]]]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
 it.effect("the seed makes channels with top-level messages and a thread holding a reply to a reply", () =>
   Effect.gen(function* seededThread() {
     const cookout = yield* TestCookout;

@@ -74,7 +74,7 @@ it("an agent's profile offers no login link, even to an admin", { timeout: 5000 
   const client = await adminOf("web-link-agent");
   await newIdentity({ kind: "agent", name: "web-link-agent-bot", owner: "web-link-agent-viewer" });
   const { close } = await profileOpened({ client, name: "web-link-agent-bot" });
-  await inProfile().findByRole("button", { name: "Rotate token" });
+  await inProfile().findByRole("button", { name: "Make feeder" });
 
   expect(inProfile().queryByRole("button", { name: SEND })).toBeNull();
 

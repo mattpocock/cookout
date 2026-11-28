@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { openOnMenuKey } from "./menu-keys.ts";
 import { useSelectionMenu } from "./selection-menu.ts";
 
+const NONE = 0;
+
 interface ActionContextMenuParts {
   readonly choices: readonly MenuChoice[];
   readonly label: string;
@@ -20,6 +22,7 @@ export function ActionContextMenu(parts: ActionContextMenuParts): ReactNode {
     <Root>
       <Trigger
         asChild
+        disabled={parts.choices.length === NONE}
         onContextMenuCapture={handleContextMenuCapture}
         onKeyDown={handleKeyDown}
         onMouseDownCapture={handleMouseDownCapture}

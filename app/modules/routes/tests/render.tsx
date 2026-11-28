@@ -40,7 +40,6 @@ type AppClient = BoardStoreClient &
     | "listAgentSessions"
     | "reactivateIdentity"
     | "revokeAgentSession"
-    | "rotateToken"
     | "transferAgent"
     | "listIdentities"
     | "readPositions"

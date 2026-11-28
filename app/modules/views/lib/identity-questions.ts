@@ -19,7 +19,6 @@ const VERBS: Readonly<Record<IdentityAction, string>> = {
   feed: "make it a feeder",
   reactivate: "reactivate",
   revoke: "revoke the session",
-  rotate: "rotate the token",
   transfer: "transfer",
   unfeed: "make it an agent again",
 };
@@ -34,7 +33,6 @@ const WARNINGS: Readonly<Record<IdentityAction, (identity: Identity) => string>>
   feed: noWarning,
   reactivate: noWarning,
   revoke: noWarning,
-  rotate: noWarning,
   transfer: noWarning,
   unfeed: noWarning,
 };
@@ -70,14 +68,8 @@ const QUESTIONS: Readonly<Record<IdentityAction, (name: string, to: string) => Q
     destructive: true,
     title: `Revoke @${name}'s session?`,
   }),
-  rotate: (name) => ({
-    body: "Its identity token stops working at once and can't be brought back. The new one is shown once here.",
-    confirm: "Rotate token",
-    destructive: true,
-    title: `Rotate @${name}'s token?`,
-  }),
   transfer: (name, to) => ({
-    body: `@${to} owns it from now on and can rotate, revoke or deactivate it. An admin can transfer it again.`,
+    body: `@${to} owns it from now on and can make and revoke its keys, revoke its session or deactivate it. An admin can transfer it again.`,
     confirm: `Transfer to @${to}`,
     destructive: false,
     title: `Transfer @${name} to @${to}?`,
