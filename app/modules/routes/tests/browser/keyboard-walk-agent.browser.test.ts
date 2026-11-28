@@ -82,20 +82,6 @@ function triggerSteps({ page }: Walking): readonly Step[] {
   ];
 }
 
-function rotateSteps({ page }: Walking): readonly Step[] {
-  const rotate = button(page, "Rotate token");
-  return [
-    { focused: inConfirm(page, "Cancel"), keys: "Enter" },
-    { focused: rotate, gone: [inDialog(page)], keys: "Escape" },
-    { focused: inConfirm(page, "Cancel"), keys: "Enter" },
-    { focused: inConfirm(page, "Rotate token"), keys: "Tab" },
-    { focused: button(page, "Copy token"), keys: "Enter" },
-    { focused: button(page, "Copy token"), keys: "Enter", shows: [tokenCopied(page)] },
-    { focused: button(page, "Done"), keys: "Tab" },
-    { focused: rotate, gone: [button(page, "Copy token")], keys: "Enter" },
-  ];
-}
-
 function keyRevoke(page: Page, name: string): Locator {
   return inProfile(page).getByRole("group", { exact: true, name }).getByRole("button", { exact: true, name: "Revoke" });
 }
@@ -134,7 +120,6 @@ function revokeKeySteps({ page }: Walking): readonly Step[] {
     { focused: textbox(page, "Key name"), keys: "Tab" },
     { focused: textbox(page, "Expires in"), keys: "Tab" },
     { focused: button(page, "Make key"), keys: "Tab" },
-    { focused: button(page, "Rotate token"), keys: "Tab" },
   ];
 }
 
@@ -173,7 +158,7 @@ function deleteSteps({ cast, page }: Walking): readonly Step[] {
   ];
 }
 
-test("an agent's profile by keyboard alone: display name, description, trigger URL and token, Revoke, Make key and Revoke on a key, Rotate token, copy token, Transfer and Delete", async ({
+test("an agent's profile by keyboard alone: display name, description, trigger URL and token, Revoke, Make key and Revoke on a key, Transfer and Delete", async ({
   page,
 }) => {
   await copiesRecorded(page);
@@ -187,7 +172,6 @@ test("an agent's profile by keyboard alone: display name, description, trigger U
       ...revokeSteps(walking),
       ...makeKeySteps(walking),
       ...revokeKeySteps(walking),
-      ...rotateSteps(walking),
       ...transferSteps(walking),
       ...deleteSteps(walking),
     ],

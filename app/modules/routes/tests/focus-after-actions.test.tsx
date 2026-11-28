@@ -79,7 +79,7 @@ it("make admin that loses focus while the change is sent takes it back once it i
   close();
 });
 
-it("revoking an agent's session puts focus on its Rotate token, as Revoke session is gone", {
+it("revoking an agent's session puts focus on its Deactivate, as Revoke session is gone", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -90,7 +90,7 @@ it("revoking an agent's session puts focus on its Rotate token, as Revoke sessio
   await within(card).findByText("No live session");
 
   await waitFor(() => {
-    expect(globalThis.document.activeElement).toBe(within(card).getByRole("button", { name: "Rotate token" }));
+    expect(globalThis.document.activeElement).toBe(within(card).getByRole("button", { name: "Deactivate" }));
   });
 
   close();

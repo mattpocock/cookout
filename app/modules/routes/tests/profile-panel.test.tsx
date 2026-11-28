@@ -116,7 +116,7 @@ it("an owner renames their agent in the panel and the new name shows on its mess
     expect(within(messages).getByRole("article").textContent).toMatch(/Release Bot@web-panel-rename-bot/u);
   });
 
-  expect(inProfile().getByRole("button", { name: "Rotate token" })).toBeDefined();
+  expect(inProfile().getByRole("button", { name: "Make key" })).toBeDefined();
 
   close();
   await events.close();

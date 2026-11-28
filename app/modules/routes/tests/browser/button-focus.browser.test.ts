@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inDialog, inPane, inProfile, inSidebar, sidebarLink } from "./regions.ts";
+import { inPane, inSidebar, sidebarLink } from "./regions.ts";
 import type { Person } from "./people.ts";
 import { logInToChannels } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
@@ -41,15 +41,6 @@ function field(region: Locator, name: string): Locator {
   return region.getByLabel(name, { exact: true });
 }
 
-async function rotated(page: Page): Promise<Locator> {
-  const { agent, owner } = await ownerOfAgent("browser-focus-rotate");
-  await logInToChannels({ page, token: owner.token, url: `/#/people/${agent}` });
-  const rotate = button(inProfile(page), "Rotate token");
-  await pressOn(rotate, "Enter");
-  await pressOn(button(inDialog(page), "Rotate token"), "Enter");
-  return rotate;
-}
-
 async function agentMade(page: Page): Promise<Locator> {
   const { owner } = await ownerOfAgent("browser-focus-create");
   const made = unique("browser-focus-made");
@@ -59,21 +50,6 @@ async function agentMade(page: Page): Promise<Locator> {
   await page.keyboard.press("Enter");
   return inGroup(page, made);
 }
-
-test("a rotated token's Copy token takes focus, and Done gives it back to Rotate token", async ({ page }) => {
-  const rotate = await rotated(page);
-
-  await expect(button(inProfile(page), "Copy token")).toBeFocused();
-
-  await page.keyboard.press("Tab");
-
-  await expect(button(inProfile(page), "Done")).toBeFocused();
-
-  await page.keyboard.press("Enter");
-
-  await expect(button(inProfile(page), "Copy token")).toBeHidden();
-  await expect(rotate).toBeFocused();
-});
 
 test("the create-agent form tabs from the name to the display name before Create", async ({ page }) => {
   const { owner } = await ownerOfAgent("browser-focus-form");
