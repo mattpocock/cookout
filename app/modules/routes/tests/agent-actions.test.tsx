@@ -1,8 +1,9 @@
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import { inDialog, inSettings, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
+import type { Mock } from "vitest";
 import { alertSaying } from "./alerts.ts";
 import { openAt } from "./render.tsx";
 import { refusalOf } from "../../sdk/index.ts";
@@ -70,6 +71,17 @@ async function profileAs(client: CookoutClient, name: string): Promise<HTMLEleme
   openAt({ client, hash: `#/people/${name}` });
   const panel = await screen.findByRole("complementary", { name: "Profile" });
   return panel;
+}
+
+function stubClipboard(): Mock<(text: string) => Promise<void>> {
+  const writeText = vi.fn<(text: string) => Promise<void>>(async () => {
+    await Promise.resolve();
+  });
+  Object.defineProperty(globalThis.navigator, "clipboard", { configurable: true, value: { writeText } });
+  onTestFinished(() => {
+    Reflect.deleteProperty(globalThis.navigator, "clipboard");
+  });
+  return writeText;
 }
 
 async function submitIn(label: string, text: string): Promise<void> {
@@ -167,6 +179,40 @@ it("on a profile, the owner gets the agent's actions without Transfer, and other
 
   await waitFor(() => {
     expect([ownerForms, within(otherPanel).queryAllByRole("button")]).toStrictEqual([[], []]);
+  });
+});
+
+it("an agent reactivated from its card shows no token: its owner makes it an agent key", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { human } = await crewOf("web-mine-back");
+  await human.deactivateIdentity("web-mine-back-bot");
+  const close = await openSettings(human);
+  await pressAndAnswer("web-mine-back-bot", "Reactivate", "Reactivate @web-mine-back-bot");
+  const card = await agentCard("web-mine-back-bot");
+  await within(card).findByRole("button", { name: "Deactivate" });
+
+  expect(within(card).queryByLabelText("New Identity token")).toBeNull();
+
+  close();
+});
+
+it("a reactivated person's Copy token puts their new token on the clipboard", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const writeText = stubClipboard();
+  await newIdentity({ kind: "human", name: "web-mine-copy-human" });
+  await adminClient().deactivateIdentity("web-mine-copy-human");
+  const panel = await profileAs(adminClient(), "web-mine-copy-human");
+  fireEvent.click(await within(panel).findByRole("button", { name: "Reactivate" }));
+  await confirmWith("Reactivate @web-mine-copy-human");
+  const token = await within(panel).findByLabelText("New Identity token");
+  fireEvent.click(within(panel).getByRole("button", { name: "Copy token" }));
+
+  await waitFor(() => {
+    expect(writeText).toHaveBeenCalledWith(token.textContent);
   });
 });
 
