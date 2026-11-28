@@ -7,6 +7,7 @@ const DevStartLine = Schema.Struct({
   adminToken: Schema.String,
   clockUrl: Schema.String,
   database: Schema.String,
+  loginLink: Schema.String,
   relayUrl: Schema.String,
   url: Schema.String,
   webUrl: Schema.String,
