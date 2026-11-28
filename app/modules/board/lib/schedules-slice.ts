@@ -17,9 +17,13 @@ type SchedulesClient = Pick<CookoutClient, "listScheduledMessages">;
 
 const EMPTY: Schedules = { deleted: new Set(), listed: { status: "loading" } };
 
+function staleAgainst(held: ScheduledMessage, changed: ScheduledMessage): boolean {
+  return changed.updatedAt < held.updatedAt || JSON.stringify(held) === JSON.stringify(changed);
+}
+
 function withSchedule(schedules: readonly ScheduledMessage[], changed: ScheduledMessage): readonly ScheduledMessage[] {
   const held = schedules.find((schedule) => schedule.id === changed.id) ?? null;
-  if (held !== null && JSON.stringify(held) === JSON.stringify(changed)) {
+  if (held !== null && staleAgainst(held, changed)) {
     return schedules;
   }
   const others = schedules.filter((schedule) => schedule.id !== changed.id);
