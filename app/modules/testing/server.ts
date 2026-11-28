@@ -1,6 +1,6 @@
 /**
  * The test composition root, importable only from tests. `runDev`,
- * `startDev` (`startProbedDev` with `--probe`, `startDevServing` with `--web` and a built web folder) and `startFakeRoutine` run the dev program's commands (ADR 0079) in process. It builds the test
+ * `startDev` (`startProbedDev` with `--probe`, `startDevServing` with `--web` and a built web folder) and `startFakeRoutine` run the dev program's commands (ADR 0079) in process, and `adminSessionOf(dev)` redeems the login link `startDev` printed for the admin's web session (#999). It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
  * admin on a token it makes and identities seeded through `Storage`, both storage
  * Layers on fresh stores, a store that is unusable). `assetStoreLayers` are the asset store Layers on fresh stores, S3 on
@@ -61,7 +61,14 @@ export {
 } from "./lib/server/command-line.ts";
 export type { Watched } from "./lib/server/console-lines.ts";
 export { interruptCookout } from "./lib/server/cli-interrupt.ts";
-export { type DevProcess, startDev, startDevServing, startFakeRoutine, startProbedDev } from "./lib/server/dev.ts";
+export {
+  type DevProcess,
+  adminSessionOf,
+  startDev,
+  startDevServing,
+  startFakeRoutine,
+  startProbedDev,
+} from "./lib/server/dev.ts";
 export {
   runCookoutBinary,
   watchCookoutBinary,

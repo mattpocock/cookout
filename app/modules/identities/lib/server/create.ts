@@ -235,4 +235,19 @@ function humanAdmin(name: IdentityName): Effect.Effect<Identity> {
   }));
 }
 
-export { CreateIdentityRequestSchema, createAgentByAgent, createIdentity, humanAdmin, ownerNotHuman };
+function adminWithoutToken(name: IdentityName): Effect.Effect<void, StorageUnavailable, Storage> {
+  return Effect.gen(function* makeAdminWithoutToken() {
+    const admin = yield* humanAdmin(name);
+    const storage = yield* Storage;
+    yield* storage.createIdentity(admin);
+  });
+}
+
+export {
+  CreateIdentityRequestSchema,
+  adminWithoutToken,
+  createAgentByAgent,
+  createIdentity,
+  humanAdmin,
+  ownerNotHuman,
+};

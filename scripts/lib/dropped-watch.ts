@@ -4,7 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 interface Dropping {
   readonly url: string;
-  readonly adminToken: string;
+  readonly adminSession: string;
   readonly agent: string;
   readonly agentToken: string;
 }
@@ -30,7 +30,7 @@ async function untilOffline(admin: CookoutClient, agent: string, tries: number):
   await untilOffline(admin, agent, tries - ONE);
 }
 
-export async function dropWatch({ adminToken, agent, agentToken, url }: Dropping): Promise<void> {
+export async function dropWatch({ adminSession, agent, agentToken, url }: Dropping): Promise<void> {
   const connected = Promise.withResolvers<null>();
   const watch = await createCookoutClient({ env: {}, token: agentToken, url }).watch({
     onConnected: () => {
@@ -41,5 +41,5 @@ export async function dropWatch({ adminToken, agent, agentToken, url }: Dropping
   await connected.promise;
   await watch.close();
   await listening.catch(() => null);
-  await untilOffline(createCookoutClient({ env: {}, token: adminToken, url }), agent, TRIES);
+  await untilOffline(createCookoutClient({ env: {}, token: adminSession, url }), agent, TRIES);
 }

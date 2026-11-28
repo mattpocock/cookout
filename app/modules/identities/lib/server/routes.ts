@@ -267,7 +267,7 @@ export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets | Id
 
 export { identityNotFound, nameParam };
 export { endBelowDeactivated } from "./cascade.ts";
-export { humanAdmin } from "./create.ts";
+export { adminWithoutToken, humanAdmin } from "./create.ts";
 
 export { loginResponseSchemas, loginRoutes, openLoginRoutes } from "./logins.ts";
 export { sessionRoutes } from "./sessions.ts";

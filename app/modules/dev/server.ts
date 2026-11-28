@@ -2,7 +2,7 @@
  * The dev program's commands, behind `pnpm dev` and `pnpm seed` (ADR 0079):
  * `start` runs the cookout on a temporary SQLite file with a webhook fake,
  * on `127.0.0.1` and a free port unless `--port` says otherwise, and prints
- * one JSON line with the URL, the admin token it made for the run, the database path,
+ * one JSON line with the URL, the login link for its admin (who has no Identity token), the database path,
  * the fake's URL, the URL of the Vite dev server for the web UI, which
  * passes `/v1` on to the cookout, and the URL of a relay in front of it that
  * a browser test can cut and restore (`cuttableRelay` in the http module). With `--probe`, the web UI's pages load the

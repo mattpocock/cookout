@@ -11,7 +11,8 @@ const toPretty = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown, { spa
 const usage: SeedFailure = { code: "usage", message: "Run with --help to see the commands." };
 const missingConnection: SeedFailure = {
   code: "url_missing",
-  message: "Set COOKOUT_URL and COOKOUT_TOKEN to the url and adminToken that pnpm dev printed.",
+  message:
+    "Set COOKOUT_URL to the url that pnpm dev printed, and COOKOUT_TOKEN to the session its loginLink gives the admin.",
 };
 
 function printLine(line: unknown): Effect.Effect<void> {
@@ -73,7 +74,11 @@ const seedCommand = Command.make("seed", {}, () =>
     const printed = yield* Effect.orDie(toPretty(board));
     yield* Console.log(printed);
   }).pipe(Effect.tapError(printFailure)),
-).pipe(Command.withDescription("Fill the cookout at COOKOUT_URL with a small board, as the admin in COOKOUT_TOKEN."));
+).pipe(
+  Command.withDescription(
+    "Fill the cookout at COOKOUT_URL with a small board, as the admin whose session is in COOKOUT_TOKEN.",
+  ),
+);
 
 const devCommand = Command.make("dev").pipe(
   Command.withDescription("Run the cookout locally to verify a change."),

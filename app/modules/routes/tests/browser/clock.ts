@@ -26,8 +26,8 @@ const clockFixtures: Fixtures<ClockFixtures & ClockOptions, object, PlaywrightTe
   },
   ownCookout: async ({ webFolder }, provide) => {
     const cookout = await startDevCookout({ webFolder });
-    const { adminToken, clockUrl, webUrl } = cookout;
-    const admin = testClient({ token: adminToken, url: webUrl });
+    const { adminSession, clockUrl, webUrl } = cookout;
+    const admin = testClient({ token: adminSession, url: webUrl });
     async function newIdentity(request: CreateIdentityRequest): Promise<Person> {
       const { token } = await createdBy({ by: admin, request });
       return { client: testClient({ token, url: webUrl }), token };
