@@ -81,7 +81,7 @@ async function endToken({ kind, name }: CreateIdentityRequest, token: string): P
     await testClient({ env: {}, token, url: webTestCookout().url }).rotateToken(name);
     return;
   }
-  const admin = testClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  const admin = testClient({ env: {}, token: webTestCookout().adminSession, url: webTestCookout().url });
   const { agentKeys } = await admin.listAgentKeys(name);
   await Promise.all(
     agentKeys.map(async ({ id }) => {
@@ -116,7 +116,7 @@ export function clientWith(token: string): CookoutClient {
 }
 
 export function adminClient(): CookoutClient {
-  return clientWith(webTestCookout().adminToken);
+  return clientWith(webTestCookout().adminSession);
 }
 
 export function sessionOf(client: CookoutClient): Session {

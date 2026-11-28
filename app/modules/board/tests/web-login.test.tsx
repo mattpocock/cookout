@@ -23,8 +23,8 @@ interface Made {
 }
 
 async function madeThenFaked(name: string): Promise<Made> {
-  const { adminToken, url } = webTestCookout();
-  const { identity } = await createCookoutClient({ env: {}, token: adminToken, url }).createIdentity({
+  const { adminSession, url } = webTestCookout();
+  const { identity } = await createCookoutClient({ env: {}, token: adminSession, url }).createIdentity({
     kind: "human",
     name,
   });

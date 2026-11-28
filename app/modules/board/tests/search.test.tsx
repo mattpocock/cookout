@@ -18,7 +18,7 @@ const NO_PAUSE = 0;
 const SUGGESTED = 3;
 
 function adminClient(): CookoutClient {
-  return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  return createCookoutClient({ env: {}, token: webTestCookout().adminSession, url: webTestCookout().url });
 }
 
 function opened(): BoardStore {

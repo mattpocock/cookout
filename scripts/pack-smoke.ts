@@ -1,12 +1,12 @@
 import { field, list, parseJson, text } from "./lib/json.ts";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { linkIn, sessionFromLoginLink } from "./lib/login-link-session.ts";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import type { ChildProcessByStdio } from "node:child_process";
 import type { Readable } from "node:stream";
 import { createInterface } from "node:readline";
 import { fail } from "./lib/tools.ts";
 import { once } from "node:events";
-import packageJson from "../package.json" with { type: "json" };
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -72,7 +72,6 @@ function run(command: string, args: readonly string[], cwd = "."): string {
   return result.stdout;
 }
 
-const adminToken = run("openssl", ["rand", "-hex", "32"]).trim();
 const secretsKey = run("openssl", ["rand", "-hex", "32"]).trim();
 const AGENT = "pack-agent";
 const CHANNEL = "pack";
@@ -94,11 +93,13 @@ async function closeCode(closing: Promise<readonly unknown[]>): Promise<number> 
 }
 
 function startServer(): Started {
-  const args = withEnv(
-    { COOKOUT_ADMIN_TOKEN: adminToken, COOKOUT_DB: database, COOKOUT_SECRETS_KEY: secretsKey },
-    bin,
-    ["serve", "--port", "0", "--host", "127.0.0.1"],
-  );
+  const args = withEnv({ COOKOUT_DB: database, COOKOUT_SECRETS_KEY: secretsKey }, bin, [
+    "serve",
+    "--port",
+    "0",
+    "--host",
+    "127.0.0.1",
+  ]);
   const child = spawn("env", args, { cwd: install, stdio: ["ignore", "pipe", "inherit"] });
   servers.add(child);
   const exited = closeCode(once(child, "close"));
@@ -163,29 +164,14 @@ function installTarball(): void {
 
 function printsPackageVersion(): void {
   const printed = run(bin, ["--version"], install).trim();
-  const expected = `cookout v${packageJson.version}`;
+  const packageJson = parseJson(readFileSync("package.json", "utf8"));
+  const version = text(field(packageJson, "version")) ?? "";
+  const expected = `cookout v${version}`;
   check(printed === expected, `the installed cookout --version prints ${expected} (it printed ${printed})`);
 }
 
-function refusesShortAdminToken(): void {
-  const args = withEnv(
-    { COOKOUT_ADMIN_TOKEN: "too-short", COOKOUT_DB: database, COOKOUT_SECRETS_KEY: secretsKey },
-    bin,
-    ["serve", "--port", "0"],
-  );
-  const result = spawnSync("env", args, { cwd: install, encoding: "utf8" });
-  check(
-    result.status === EXIT_FAILURE && result.stderr.includes("admin_token_invalid"),
-    "cookout serve with a COOKOUT_ADMIN_TOKEN under 32 characters refuses to start with admin_token_invalid",
-  );
-}
-
 function refusesWithoutSecretsKey(): void {
-  const args = withEnv({ COOKOUT_ADMIN_TOKEN: adminToken, COOKOUT_DB: database, COOKOUT_SECRETS_KEY: "" }, bin, [
-    "serve",
-    "--port",
-    "0",
-  ]);
+  const args = withEnv({ COOKOUT_DB: database, COOKOUT_SECRETS_KEY: "" }, bin, ["serve", "--port", "0"]);
   const result = spawnSync("env", args, { cwd: install, encoding: "utf8" });
   check(
     result.status === EXIT_FAILURE && result.stderr.includes("secrets_key_invalid"),
@@ -193,46 +179,42 @@ function refusesWithoutSecretsKey(): void {
   );
 }
 
-function printsNoToken(server: Server): boolean {
-  return server.lines.every((line) => !JSON.stringify(line).includes(adminToken));
+function setupLinkOf(server: Server): string {
+  return linkIn(server.lines.map((line) => JSON.stringify(line)));
 }
 
-function seed(url: string): void {
-  const created = cli(url, adminToken, [
-    "identity",
-    "create",
-    AGENT,
-    "--kind",
-    "agent",
-    "--owner",
-    "admin",
-    "--display-name",
-    "Smoke agent",
-  ]);
-  const agentToken = text(field(created, "token")) ?? "";
-  check(agentToken !== "", `cookout identity create ${AGENT} answers with a token`);
-  cli(url, adminToken, ["channel", "create", CHANNEL]);
+function seed(url: string, adminSession: string): void {
+  cli(url, adminSession, ["identity", "create", AGENT, "--kind", "agent", "--display-name", "Smoke agent"]);
+  const agentToken = text(field(cli(url, adminSession, ["agent-key", "create", AGENT, "smoke"]), "token")) ?? "";
+  check(agentToken !== "", `its owner admin's cookout agent-key create ${AGENT} answers with a token`);
+  cli(url, adminSession, ["channel", "create", CHANNEL]);
   const posted = field(cli(url, agentToken, ["message", "post", CHANNEL, MESSAGE]), "message");
   check(field(posted, "text") === MESSAGE, `${AGENT} posts a message in #${CHANNEL}`);
 }
 
-async function boot(): Promise<void> {
+async function boot(): Promise<string> {
   const first = await serve();
-  check(printsNoToken(first), "the first boot prints nothing of COOKOUT_ADMIN_TOKEN");
+  const link = setupLinkOf(first);
+  check(link !== "", "the first boot, with no COOKOUT_ADMIN_TOKEN, prints a setup link");
+  const adminSession = await sessionFromLoginLink({ link, name: "admin", url: first.url });
   check(typeof parseJson(health(first.url)) === "object", `curl -fsS ${first.url}/v1/health succeeds`);
   check(webPage(first.url).includes('<div id="root">'), `curl -fsS ${first.url}/ answers with the built web UI`);
-  seed(first.url);
+  seed(first.url, adminSession);
   check((await first.stop()) === EXIT_SUCCESS, "cookout serve exits 0 on SIGTERM");
+  return adminSession;
 }
 
-async function restart(): Promise<void> {
+async function restart(adminSession: string): Promise<void> {
   const second = await serve();
-  check(printsNoToken(second), "a restart on the same COOKOUT_DB prints nothing of COOKOUT_ADMIN_TOKEN");
-  const answer = cli(second.url, adminToken, ["whoami"]);
-  check(field(field(answer, "identity"), "name") === "admin", "COOKOUT_ADMIN_TOKEN passes cookout whoami as admin");
-  const identities = names(cli(second.url, adminToken, ["identity", "list"]), "identities", "name");
+  check(setupLinkOf(second) === "", "a restart on the same COOKOUT_DB, which has an admin, prints no setup link");
+  const answer = cli(second.url, adminSession, ["whoami"]);
+  check(
+    field(field(answer, "identity"), "name") === "admin",
+    "after a restart, the session the setup link gave passes cookout whoami as admin",
+  );
+  const identities = names(cli(second.url, adminSession, ["identity", "list"]), "identities", "name");
   check(identities.includes(AGENT), `after a restart, cookout identity list still has ${AGENT}`);
-  const messages = cli(second.url, adminToken, ["message", "list", CHANNEL]);
+  const messages = cli(second.url, adminSession, ["message", "list", CHANNEL]);
   const kept = (list(field(messages, "messages")) ?? []).some(
     (message) => field(message, "text") === MESSAGE && field(field(message, "author"), "name") === AGENT,
   );
@@ -252,10 +234,8 @@ function importSdk(): void {
 async function main(): Promise<void> {
   installTarball();
   printsPackageVersion();
-  refusesShortAdminToken();
   refusesWithoutSecretsKey();
-  await boot();
-  await restart();
+  await restart(await boot());
   importSdk();
 }
 
