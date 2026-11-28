@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline";
 import { once } from "node:events";
-import { sessionFromLink } from "./lib/login-link-session.ts";
+import { sessionFromLoginLink } from "./lib/login-link-session.ts";
 import { spawn } from "node:child_process";
 import { webBuild } from "./lib/web-build.ts";
 
@@ -56,7 +56,7 @@ async function setup(): Promise<() => Promise<void>> {
     stdio: ["ignore", "pipe", "ignore"],
   });
   const cookout = await startLine(createInterface({ input: dev.stdout }));
-  process.env["COOKOUT_TOKEN"] = await sessionFromLink({ link: cookout.loginLink, url: cookout.webUrl });
+  process.env["COOKOUT_TOKEN"] = await sessionFromLoginLink({ link: cookout.loginLink, url: cookout.webUrl });
   process.env["COOKOUT_URL"] = cookout.webUrl;
   process.env["COOKOUT_ALLOW_HUMAN"] = "1";
   process.env["COOKOUT_RELAY_URL"] = cookout.relayUrl;

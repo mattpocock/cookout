@@ -27,7 +27,7 @@ type ThreadLoaded = Loaded<ThreadMessagesState>;
 const PAGE_SIZE = 50;
 
 function adminClient(): CookoutClient {
-  return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
+  return createCookoutClient({ env: {}, token: webTestCookout().adminSession, url: webTestCookout().url });
 }
 
 async function humanIn(channel: string): Promise<Human> {

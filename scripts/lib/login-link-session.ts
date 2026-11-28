@@ -10,13 +10,12 @@ interface LinkRedeemed {
 }
 
 interface Redemption {
-  readonly body: Readonly<Record<string, string>>;
-  readonly kind: string;
   readonly path: string;
-  readonly url: string;
+  readonly body: object;
 }
 
 const prefix = `${sessionCookieName}=`;
+const linkFields = ["setupLink", "loginLink"];
 
 function sessionCookieOf(headers: Headers): string {
   const cookie = headers.getSetCookie().find((set) => set.startsWith(prefix)) ?? "";
@@ -24,27 +23,38 @@ function sessionCookieOf(headers: Headers): string {
   return pair.slice(prefix.length);
 }
 
-async function sessionRedeemed({ body, kind, path, url }: Redemption): Promise<string> {
-  const answer = await request({ baseUrl: url, body, method: "POST", path });
-  const session = sessionCookieOf(answer.headers);
-  if (session === "") {
-    throw new Error(`the ${kind} gave no session: ${String(answer.status)} ${answer.text}`);
-  }
-  return session;
-}
-
-function redemptionOf({ link, name = "", url }: LinkRedeemed): Redemption {
+function redemptionOf({ link, name = "" }: LinkRedeemed): Redemption {
   if (link.includes(setupLinkWebPath)) {
-    const [, setupSecret = ""] = link.split(setupLinkWebPath);
-    return { body: { name, secret: setupSecret }, kind: "setup link", path: redeemSetupLinkPath, url };
+    const [, secret = ""] = link.split(setupLinkWebPath);
+    return { body: { name, secret }, path: redeemSetupLinkPath };
   }
   const [, secret = ""] = link.split(loginLinkWebPath);
-  return { body: { secret }, kind: "login link", path: redeemLoginLinkPath, url };
+  return { body: { secret }, path: redeemLoginLinkPath };
 }
 
-async function sessionFromLink(redeemed: LinkRedeemed): Promise<string> {
-  const session = await sessionRedeemed(redemptionOf(redeemed));
+function linkOf(line: string): string {
+  try {
+    const parsed: unknown = JSON.parse(line);
+    const fields = new Map<string, unknown>(Object.entries(parsed ?? {}));
+    const values = linkFields.map((field) => fields.get(field));
+    return values.find((value): value is string => typeof value === "string") ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function linkIn(lines: readonly string[]): string {
+  return lines.map((line) => linkOf(line)).find((link) => link !== "") ?? "";
+}
+
+async function sessionFromLoginLink(redeemed: LinkRedeemed): Promise<string> {
+  const { body, path } = redemptionOf(redeemed);
+  const answer = await request({ baseUrl: redeemed.url, body, method: "POST", path });
+  const session = sessionCookieOf(answer.headers);
+  if (session === "") {
+    throw new Error(`the link gave no session: ${String(answer.status)} ${answer.text}`);
+  }
   return session;
 }
 
-export { sessionFromLink };
+export { linkIn, sessionFromLoginLink };

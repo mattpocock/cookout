@@ -3,7 +3,7 @@ import type { Console } from "effect";
 import { TestConsole } from "effect/testing";
 import { firstAdminName } from "../../../identities/index.ts";
 import { parseLine } from "./cli.ts";
-import { sessionFromLink } from "../../../../../scripts/lib/login-link-session.ts";
+import { sessionFromLoginLink } from "../../../../../scripts/lib/login-link-session.ts";
 
 interface Watched<During> {
   readonly during: During;
@@ -79,7 +79,8 @@ const isSetupLine = Schema.is(Schema.Struct({ setupLink: Schema.String }));
 function setupLinkSession({ lines, url }: Printed): Effect.Effect<string> {
   return Option.match(Arr.findFirst(lines, isSetupLine), {
     onNone: () => Effect.succeed(NO_SESSION),
-    onSome: ({ setupLink }) => Effect.promise(() => sessionFromLink({ link: setupLink, name: firstAdminName, url })),
+    onSome: ({ setupLink }) =>
+      Effect.promise(() => sessionFromLoginLink({ link: setupLink, name: firstAdminName, url })),
   });
 }
 
