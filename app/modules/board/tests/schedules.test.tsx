@@ -116,6 +116,21 @@ it("a scheduled-message event changes its schedule by ID, and the same event aga
   expect(store.snapshot().schedules).toBe(after);
 });
 
+it("a scheduled-message event older than the schedule held leaves it as it is, so a late pause can't undo a resume", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const schedule = await scheduledIn("store-schedules-late");
+  const { hand, store } = await shownListing("store-schedules-late", ["standup"]);
+  const { scheduledMessage: paused } = await adminClient().pauseScheduledMessage(schedule.id);
+  const { scheduledMessage: resumed } = await adminClient().resumeScheduledMessage(schedule.id);
+  sent(hand, resumed);
+  sent(hand, { ...paused, updatedAt: schedule.createdAt });
+
+  expect(scheduleListOf(resumed.channel)(store.snapshot())).toMatchObject({ schedules: [{ status: "active" }] });
+});
+
 async function keptThenGone(channel: string): Promise<ScheduledMessage> {
   await scheduledIn(channel, "kept");
   const gone = await scheduledIn(channel, "gone");
