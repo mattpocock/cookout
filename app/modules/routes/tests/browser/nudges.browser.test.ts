@@ -28,7 +28,16 @@ async function threadStarted(cookout: OwnCookout, channel: string): Promise<Star
   return { parent: message, starter };
 }
 
+const NONE = 0;
+
 async function everyNudgeRead(starter: Person): Promise<void> {
+  await expect
+    .poll(async () => {
+      const { nudges } = await starter.client.inbox();
+      return nudges.length;
+    })
+    .toBeGreaterThan(NONE);
+
   const { nudges } = await starter.client.inbox();
   await Promise.all(
     nudges.map(async ({ id }) => {
