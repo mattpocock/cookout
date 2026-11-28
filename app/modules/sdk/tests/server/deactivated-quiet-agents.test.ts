@@ -148,9 +148,10 @@ it.effect("the entry goes to every active admin when the owner is Deactivated, a
     const bob = yield* cookout.createIdentity("bob", { ...ADMIN, credential: "identity token" });
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(bob.client));
-    const theirs = yield* entriesOnceThere(cookout.client);
+    const admin = yield* cookout.adminLogsInAgain;
+    const theirs = yield* entriesOnceThere(admin);
     const { deactivatedQuietAgent } = yield* answer(() => bob.client.markDeactivatedQuietAgentRead(idOf(entries)));
-    const after = yield* Effect.all([unread(bob.client), unread(cookout.client)], { concurrency: 1 });
+    const after = yield* Effect.all([unread(bob.client), unread(admin)], { concurrency: 1 });
 
     expect([Arr.map(entries, ({ identity }) => identity.name), theirs]).toStrictEqual([["ada/scout"], entries]);
     expect([deactivatedQuietAgent.read, after]).toStrictEqual([true, [[], []]]);
@@ -161,7 +162,8 @@ it.effect("marking all as read covers the entry, and one the caller didn't get i
   Effect.gen(function* markAll() {
     const { ada, cookout } = yield* board;
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(ada.client));
-    const notTheirs = yield* refusal(() => cookout.client.markDeactivatedQuietAgentRead(idOf(entries)));
+    const admin = yield* cookout.adminLogsInAgain;
+    const notTheirs = yield* refusal(() => admin.markDeactivatedQuietAgentRead(idOf(entries)));
     const zero = yield* HttpClientRequest.post(`${cookout.url}/v1/inbox/deactivated-quiet-agents/0/read`).pipe(
       HttpClientRequest.setHeader("authorization", `Bearer ${ada.token}`),
       HttpClient.execute,

@@ -42,7 +42,7 @@ function deployInGrill(
       cookout.client.addCommand({ name: "deploy", schema: required, url: `${cookout.webhook.url}/deploy` }),
     );
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
-    return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
   });
 }
 
@@ -50,7 +50,7 @@ it.effect("cookout command add reads the schema file and prints the secret once;
   Effect.gen(function* addAndList() {
     const cookout = yield* TestCookout;
     const { file, folder } = yield* schemaFile;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const added = yield* runCookout({
       args: ["command", "add", "deploy", "--url", url, "--schema", file, "--description", "Ship it"],
       env,
@@ -60,7 +60,7 @@ it.effect("cookout command add reads the schema file and prints the secret once;
     const command = { description: "Ship it", handler: "deploy", name: "deploy", schema, url };
     const release = { handler: "release", name: "release", schema, url };
 
-    expect(added).toMatchObject({ exitCode: 0, stdoutJson: { command, secret: "hmac_test_2" } });
+    expect(added).toMatchObject({ exitCode: 0, stdoutJson: { command, secret: "hmac_test_3" } });
     expect(listed).toMatchObject({
       exitCode: 0,
       stdoutJson: { commands: [command, release] },
@@ -99,7 +99,7 @@ it.effect(
 
       expect(rotated).toMatchObject({
         exitCode: 0,
-        stdoutJson: { command: { name: "deploy" }, secret: "hmac_test_3" },
+        stdoutJson: { command: { name: "deploy" }, secret: "hmac_test_4" },
       });
       expect(missing).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "command_not_found" } } });
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
@@ -109,7 +109,7 @@ it.effect("cookout command add with a Command's name exits 1 with the command_ex
   Effect.gen(function* addCommandName() {
     const cookout = yield* TestCookout;
     const { file, folder } = yield* schemaFile;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const refused = yield* runCookout({ args: ["command", "add", "schedule", "--url", url, "--schema", file], env });
 
     expect(refused).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "command_exists" } } });

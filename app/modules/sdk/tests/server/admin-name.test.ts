@@ -1,6 +1,6 @@
-import { Array as Arr, Effect } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { Effect } from "effect";
 import type { TestCookoutService } from "../../../testing/server.ts";
 import { createCookoutClient } from "../../index.ts";
 
@@ -11,25 +11,12 @@ function postAsAdmin(cookout: TestCookoutService): Effect.Effect<void> {
   });
 }
 
-it.effect(
-  "with COOKOUT_ADMIN_NAME on a fresh store, the admin token belongs to that human admin and no admin exists",
-  () =>
-    Effect.gen(function* namedOnFreshStore() {
-      const cookout = yield* TestCookout;
-      const whoami = yield* answer(cookout.client.whoami);
-      const { identities } = yield* answer(cookout.client.listIdentities);
-
-      expect(whoami.identity).toMatchObject({ admin: true, kind: "human", name: "matt" });
-      expect(Arr.map(identities, ({ name }) => name)).toStrictEqual(["matt"]);
-    }).pipe(Effect.provide(testCookout({ adminName: "matt" }))),
-);
-
 it.effect("changing COOKOUT_ADMIN_NAME moves the token to the new name and leaves the old admin and its messages", () =>
   Effect.gen(function* renamedOnRestart() {
     const cookout = yield* TestCookout;
     yield* postAsAdmin(cookout);
     const second = yield* cookout.startSecondServerAs("matt");
-    const client = createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url });
+    const client = createCookoutClient({ env: {}, token: second.settingToken, url: second.url });
     const whoami = yield* answer(client.whoami);
     const { identities } = yield* answer(client.listIdentities);
     const page = yield* answer(() => client.listMessages("grill"));
@@ -48,7 +35,7 @@ it.effect("COOKOUT_ADMIN_NAME naming an existing human makes it an admin with th
     const cookout = yield* TestCookout;
     const matt = yield* cookout.createIdentity("matt", { credential: "identity token", kind: "human" });
     const second = yield* cookout.startSecondServerAs("matt");
-    const whoami = yield* answer(createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).whoami);
+    const whoami = yield* answer(createCookoutClient({ env: {}, token: second.settingToken, url: second.url }).whoami);
     const old = yield* refusal(createCookoutClient({ env: {}, token: matt.token, url: second.url }).whoami);
 
     expect(whoami.identity).toMatchObject({ admin: true, kind: "human", name: "matt" });

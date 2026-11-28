@@ -1,9 +1,9 @@
 import { DateTime, Effect, Option } from "effect";
+import { Identities, adminWithoutToken } from "../../../identities/server.ts";
 import type { Identity, IdentityName, Token, TokenHash } from "../../../identities/index.ts";
 import { Storage, newPublicId } from "../../../storage/server.ts";
 import { currentTime, fixtureTime } from "./time.ts";
 import { firstAdminName, isIdentityName, isOwner } from "../../../identities/index.ts";
-import { Identities } from "../../../identities/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
@@ -124,12 +124,28 @@ function seededIdentity({ credential, identity }: IdentitySeed): Seeding {
   return seededWith[credential](identity);
 }
 
+function loggedIn(name: IdentityName): Seeding {
+  return Effect.gen(function* logPersonIn() {
+    const storage = yield* Storage;
+    const found = yield* Effect.orDie(Effect.flatMap(storage.findIdentityByName(name), Effect.fromNullishOr));
+    return yield* sessionFromLoginLink(found);
+  });
+}
+
+function adminLoggedIn(name: string): Seeding {
+  const admin = nameOf(name);
+  return Effect.andThen(adminWithoutToken(admin), loggedIn(admin));
+}
+
 export {
+  type CredentialNeeds,
   type IdentityFixtureOptions,
   type SeededCredential,
+  adminLoggedIn,
   fixtureOwnerName,
   identityFixture,
   identityName,
+  loggedIn,
   ownedByAdminUnlessNamed,
   seededIdentity,
   testCookoutAdminName,

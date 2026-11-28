@@ -10,7 +10,7 @@ import { request } from "../../../http/client.ts";
 import { secretsLive } from "../../../secrets/server.ts";
 import { whoamiPath } from "../../../identities/index.ts";
 
-const NO_TOKEN = "";
+const ADMIN_TOKEN = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const OK = 200;
@@ -64,12 +64,12 @@ function bootTwiceRedeemingBetween(): Effect.Effect<FirstBoot, never, CommandLin
   return Effect.scoped(
     Effect.gen(function* setUpThenRestart() {
       const database = yield* freshDatabasePath;
-      const first = yield* startServe({ adminToken: NO_TOKEN, database });
+      const first = yield* startServe({ database, redeemSetupLink: false });
       const [link = ""] = setupLinksIn(first.lines);
       const redeemed = yield* redeemedSetup(first.url, link, "grace");
       const whoami = yield* whoamiBy(first.url, redeemed.cookie);
       yield* first.stop;
-      const second = yield* startServe({ adminToken: NO_TOKEN, database });
+      const second = yield* startServe({ database, redeemSetupLink: false });
       const seen = { firstLinks: setupLinksIn(first.lines), secondLinks: setupLinksIn(second.lines) };
       return { ...seen, status: redeemed.status, whoami };
     }),
@@ -95,9 +95,9 @@ function linksOfTwoBoots(): Effect.Effect<readonly [string, string, number], nev
   return Effect.scoped(
     Effect.gen(function* bootTwice() {
       const database = yield* freshDatabasePath;
-      const first = yield* startServe({ adminToken: NO_TOKEN, database });
+      const first = yield* startServe({ database, redeemSetupLink: false });
       yield* first.stop;
-      const second = yield* startServe({ adminToken: NO_TOKEN, database, env: { COOKOUT_ADMIN_TOKEN: "" } });
+      const second = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: "" }, redeemSetupLink: false });
       const [earlier = ""] = setupLinksIn(first.lines);
       const [later = ""] = setupLinksIn(second.lines);
       const stale = yield* redeemedSetup(second.url, earlier, "grace");
@@ -120,7 +120,7 @@ it.effect("cookout serve with COOKOUT_ADMIN_TOKEN set prints no setup link", () 
   Effect.scoped(
     Effect.gen(function* tokenSet() {
       const database = yield* freshDatabasePath;
-      const server = yield* startServe({ database });
+      const server = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN } });
 
       expect(setupLinksIn(server.lines)).toStrictEqual([]);
     }),
@@ -181,8 +181,8 @@ function redeemedTwice(url: string, secret: string): Effect.Effect<readonly [num
   });
 }
 
-function adaCreatedOn(server: { readonly adminToken: string; readonly url: string }): Effect.Effect<void> {
-  const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+function adaCreatedOn(server: { readonly adminSession: string; readonly url: string }): Effect.Effect<void> {
+  const admin = testClient({ env: {}, token: server.adminSession, url: server.url });
   return Effect.asVoid(answer(() => admin.createIdentity({ kind: "human", name: "ada" })));
 }
 
@@ -226,7 +226,7 @@ function refusedNames(): Effect.Effect<readonly unknown[], never, CommandLineNee
     Effect.gen(function* refuseNames() {
       const database = yield* freshDatabasePath;
       const server = yield* startServe({ database });
-      const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+      const admin = testClient({ env: {}, token: server.adminSession, url: server.url });
       yield* answer(() => createTestAgent({ by: admin, name: "triage" }));
       const runs = yield* Effect.forEach(
         ["nobody", "triage"],
@@ -256,7 +256,7 @@ function setupLinkCommandRuns(): Effect.Effect<readonly unknown[], never, Comman
     const database = yield* freshDatabasePath;
     const before = yield* runAdmin({ args: ["setup-link"], database });
     const [link = ""] = setupLinksIn([before.stdoutJson]);
-    const server = yield* startServe({ adminToken: NO_TOKEN, database });
+    const server = yield* startServe({ database, redeemSetupLink: false });
     yield* server.stop;
     const after = yield* runAdmin({ args: ["setup-link"], database });
     yield* Effect.scoped(Effect.flatMap(startServe({ database }), ({ stop }) => stop));

@@ -1,7 +1,7 @@
 import { field, parseJson, text } from "./json.ts";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
-import { sessionFromLoginLink } from "./login-link-session.ts";
+import { sessionFromLink } from "./login-link-session.ts";
 import { spawn } from "node:child_process";
 
 interface StartLine {
@@ -63,7 +63,7 @@ async function startDevCookout({ env = {}, webFolder = "" }: DevCookoutOptions =
   }
   try {
     const { loginLink, ...started } = await startLine(createInterface({ input: dev.stdout }));
-    const adminSession = await sessionFromLoginLink({ link: loginLink, url: started.url });
+    const adminSession = await sessionFromLink({ link: loginLink, url: started.url });
     return { ...started, adminSession, stop };
   } catch (error) {
     await stop();

@@ -9,12 +9,12 @@ const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 const METHOD_NOT_ALLOWED = 405;
 
-it.effect("a fresh board makes an admin identity that works with the admin token it booted with", () =>
+it.effect("a fresh board makes an admin identity that works with the session it logged in with", () =>
   Effect.gen(function* freshBoardAdmin() {
     const cookout = yield* TestCookout;
     const whoami = yield* answer(cookout.client.whoami);
 
-    expect(cookout.adminToken).toMatch(/^cookout_/u);
+    expect(cookout.adminSession).toMatch(/^cookout_/u);
     expect(whoami).toStrictEqual({
       identity: { admin: true, createdAt: "2026-01-01T00:00:00.000Z", kind: "human", name: "admin" },
     });
@@ -47,7 +47,7 @@ it.effect("a header that isn't a bearer token gets 401 token_missing", () =>
     const response = yield* answer(() =>
       request({
         baseUrl: cookout.url,
-        headers: { authorization: `Basic ${cookout.adminToken}` },
+        headers: { authorization: `Basic ${cookout.adminSession}` },
         method: "GET",
         path: whoamiPath,
       }),
@@ -72,7 +72,7 @@ it.effect("a server on a store that already has identities makes no new admin", 
     const cookout = yield* TestCookout;
     const second = yield* cookout.startSecondServer;
     const { identities } = yield* answer(
-      createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).listIdentities,
+      createCookoutClient({ env: {}, token: cookout.adminSession, url: second.url }).listIdentities,
     );
 
     expect(identities).toStrictEqual([
@@ -84,10 +84,12 @@ it.effect("a server on a store that already has identities makes no new admin", 
 it.effect("restarting with the same admin token keeps a token rotated since, and the setting's stays revoked", () =>
   Effect.gen(function* restartKeepsRotated() {
     const cookout = yield* TestCookout;
-    const rotated = yield* answer(() => cookout.client.rotateToken("admin"));
-    const second = yield* cookout.startSecondServer;
+    const first = yield* cookout.startSecondServerAs("admin");
+    const setting = createCookoutClient({ env: {}, token: first.settingToken, url: first.url });
+    const rotated = yield* answer(() => setting.rotateToken("admin"));
+    const second = yield* cookout.startSecondServerAs("admin");
     const whoami = yield* answer(createCookoutClient({ env: {}, token: rotated.token, url: second.url }).whoami);
-    const old = yield* refusal(createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).whoami);
+    const old = yield* refusal(createCookoutClient({ env: {}, token: second.settingToken, url: second.url }).whoami);
 
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
     expect(old).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
@@ -110,7 +112,7 @@ it.effect("a wrong-method request with a working token gets 405", () =>
     const response = yield* answer(() =>
       request({
         baseUrl: cookout.url,
-        headers: { authorization: `Bearer ${cookout.adminToken}` },
+        headers: { authorization: `Bearer ${cookout.adminSession}` },
         method: "POST",
         path: whoamiPath,
       }),

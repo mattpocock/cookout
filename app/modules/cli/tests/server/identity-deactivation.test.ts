@@ -15,7 +15,7 @@ it.effect("cookout identity deactivate and reactivate, and identity list --deact
   Effect.gen(function* deactivationVerbs() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("grace", { kind: "human" });
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(verbs, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
     expect(results).toMatchObject([
@@ -31,7 +31,7 @@ it.effect("cookout identity delete deletes an identity, and a second delete prin
   Effect.gen(function* deleteVerb() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("e2e-cli-bot");
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const deleteArgs: readonly string[] = ["identity", "delete", "e2e-cli-bot"];
     const results = yield* Effect.forEach([deleteArgs, deleteArgs], (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
@@ -54,7 +54,7 @@ it.effect("cookout identity get and list show what a handler handles, and deacti
     yield* answer(() =>
       cookout.client.addCommand({ name: "example", schema: { type: "object" }, url: "https://hooks.example.com/x" }),
     );
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(handlerVerbs, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
     expect(results).toMatchObject([
@@ -73,7 +73,7 @@ it.effect("cookout identity get shows no handles on an identity that handles no 
   Effect.gen(function* plainGet() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("plain-bot");
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const result = yield* runCookout({ args: ["identity", "get", "plain-bot"], env });
 
     expect(result).toMatchObject({ ...succeeded, stdoutJson: { identity: { name: "plain-bot" } } });

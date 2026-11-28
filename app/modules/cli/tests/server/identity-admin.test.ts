@@ -18,7 +18,7 @@ it.effect("cookout identity admin makes an admin, and --remove takes it away", (
   Effect.gen(function* adminVerbs() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("grace", { kind: "human" });
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(verbs, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
     expect(results).toMatchObject([
@@ -39,7 +39,7 @@ it.effect("cookout identity sessions lists, --revoke revokes, and transfer --own
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("grace", { kind: "human" });
     yield* cookout.createIdentity("release-bot");
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(ownerVerbs, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
     expect(results).toMatchObject([
@@ -98,7 +98,7 @@ it.effect("cookout identity sessions <person> lists and --revoke <id> revokes fo
     const cookout = yield* TestCookout;
     const id = yield* graceSessionId(cookout);
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-    const asAdmin = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const asAdmin = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const asAda = { COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
     const results = yield* Effect.forEach(
       [

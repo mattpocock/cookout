@@ -20,7 +20,7 @@ function postRawWebhookCommand(
   body: string,
 ): Effect.Effect<RawAnswer, never, HttpClient.HttpClient> {
   return HttpClientRequest.post(`${cookout.url}${webhookCommandsPath}`).pipe(
-    HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminToken}`),
+    HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminSession}`),
     HttpClientRequest.bodyText(body, "application/json"),
     HttpClient.execute,
     Effect.flatMap((response) => Effect.map(response.json, (json) => ({ json, status: response.status }))),
@@ -58,7 +58,7 @@ it.effect(
         url: deploy.url,
       };
 
-      expect(added).toStrictEqual({ command, secret: "hmac_test_3" });
+      expect(added).toStrictEqual({ command, secret: "hmac_test_4" });
       expect(listed.commands).toStrictEqual([command]);
       expect(Arr.filter(identities, (identity) => "handler" in identity)).toStrictEqual([
         { admin: false, createdAt: BOOT, handler: true, kind: "agent", name: "deploy", owner: "admin" },

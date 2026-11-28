@@ -33,7 +33,7 @@ function textOf(posted: readonly Message[], id: MessageId): string {
 
 function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Type, never, CommandLineNeeds> {
   return Effect.gen(function* seedTheCookout() {
-    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const env = { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url };
     const { stdoutJson } = yield* runDev({ args: ["seed"], env });
     if (isSeedOutput(stdoutJson)) {
       return stdoutJson;

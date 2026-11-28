@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { CommandLineNeeds } from "./command-line.ts";
 import type { Scope } from "effect";
-import { sessionFromLoginLink } from "../../../../../scripts/lib/login-link-session.ts";
+import { sessionFromLink } from "../../../../../scripts/lib/login-link-session.ts";
 import { startDevCommand } from "./command-line.ts";
 
 const DevStartLine = Schema.Struct({
@@ -40,7 +40,7 @@ function startDevServing(webFolder: string): Started<DevProcess> {
 }
 
 function adminSessionOf({ loginLink, url }: Pick<DevProcess, "loginLink" | "url">): Effect.Effect<string> {
-  return Effect.promise(() => sessionFromLoginLink({ link: loginLink, url }));
+  return Effect.promise(() => sessionFromLink({ link: loginLink, url }));
 }
 
 const startFakeRoutine: Started<typeof FakeRoutineLine.Type> = Effect.map(

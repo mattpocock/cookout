@@ -43,7 +43,7 @@ const postedOnS3: Effect.Effect<PostedOnS3, never, Needs> = Effect.gen(function*
   const bucket = yield* Effect.orDie(freshS3Bucket);
   const database = yield* freshDatabasePath;
   const server = yield* startServe({ database, env: s3ServeSettings(bucket) });
-  const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+  const admin = testClient({ env: {}, token: server.adminSession, url: server.url });
   yield* answer(() => admin.createChannel({ name: "grill" }));
   const attachments = [{ bytes: BYTES, name: "trace.bin" }];
   const { message } = yield* answer(() => admin.createMessage({ attachments, channel: "grill", text: "the trace" }));
@@ -58,7 +58,7 @@ function assetGet({ id, server }: PostedOnS3): Effect.Effect<Downloaded, never, 
     const path = yield* Path.Path;
     const folder = yield* freshStateFolder;
     const target = path.join(folder, "trace.bin");
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url };
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: server.adminSession, COOKOUT_URL: server.url };
     const { exitCode } = yield* runCookout({ args: ["asset", "get", id, "-o", target], env });
     const read = yield* Effect.orDie(fs.readFile(target));
     return { exitCode, written: Uint8Array.from(read) };
@@ -69,7 +69,7 @@ function servedHeaders({ id, server }: PostedOnS3): Effect.Effect<string> {
   const served = answer(() =>
     request({
       baseUrl: server.url,
-      headers: { authorization: `Bearer ${server.adminToken}` },
+      headers: { authorization: `Bearer ${server.adminSession}` },
       method: "GET",
       params: { id },
       path: "/v1/assets/:id",

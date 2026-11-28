@@ -268,11 +268,11 @@ it.effect("after a restart, an identity that reconnects within the boot grace ne
     const ann = yield* human(cookout, "ann");
     yield* watchedFor(cookout, ann, "0 seconds");
     const { url } = yield* cookout.restartServer;
-    const feed = yield* feedOf(clientAt(url, cookout.adminToken));
+    const feed = yield* feedOf(clientAt(url, cookout.adminSession));
     yield* TestClock.adjust("1 minute");
     yield* open(clientAt(url, ann.token));
     const cameBack = yield* nextPresenceEvent(feed);
-    const afterBootGrace = yield* presenceAfter(clientAt(url, cookout.adminToken), "ann", "10 minutes");
+    const afterBootGrace = yield* presenceAfter(clientAt(url, cookout.adminSession), "ann", "10 minutes");
 
     expect([cameBack, afterBootGrace]).toMatchObject([
       { presence: { connection: { via: "watch" }, identity: "ann", online: true }, type: "presence" },

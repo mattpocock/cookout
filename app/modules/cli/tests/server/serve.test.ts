@@ -22,6 +22,7 @@ interface StoredFiles {
 
 const ISSUED = 3;
 const UNAUTHORIZED = 401;
+const ADMIN_TOKEN = "test-admin-token-0123456789abcdef0123456789";
 const NEW_ADMIN_TOKEN = "new-admin-token-0123456789abcdef0123456789";
 const SHORT_ADMIN_TOKEN = "hunter2-but-longer";
 const EXIT_FAILURE = 1;
@@ -44,23 +45,23 @@ function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSy
   }).pipe(Effect.orDie);
 }
 
-function issueTokens(url: string, adminToken: string): Effect.Effect<readonly string[]> {
+function issueTokens(url: string, adminSession: string): Effect.Effect<readonly string[]> {
   return Effect.gen(function* createAndKeyAgain() {
-    const admin = testClient({ env: {}, token: adminToken, url });
+    const admin = testClient({ env: {}, token: adminSession, url });
     const created = yield* answer(() => createTestAgent({ by: admin, displayName: "agent", name: "agent" }));
     const second = yield* answer(() => admin.createAgentKey("agent", { name: "second" }));
-    return [adminToken, created.token, second.token];
+    return [adminSession, created.token, second.token];
   });
 }
 
 it.effect("a fresh board's admin works with COOKOUT_ADMIN_TOKEN, and serve prints nothing about it", () =>
   Effect.gen(function* adminTokenFromSetting() {
     const database = yield* freshDatabasePath;
-    const server = yield* startServe({ database });
-    const whoami = yield* answer(testClient({ env: {}, token: server.adminToken, url: server.url }).whoami);
+    const server = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN } });
+    const whoami = yield* answer(testClient({ env: {}, token: ADMIN_TOKEN, url: server.url }).whoami);
 
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
-    expect(server.stdout).not.toContain(server.adminToken);
+    expect(server.stdout).not.toContain(ADMIN_TOKEN);
     expect(Arr.filter(server.lines, mentionsAToken)).toStrictEqual([]);
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
@@ -68,11 +69,11 @@ it.effect("a fresh board's admin works with COOKOUT_ADMIN_TOKEN, and serve print
 it.effect("restarting a board with a different COOKOUT_ADMIN_TOKEN makes the new one work and the old one fail", () =>
   Effect.gen(function* restartWithNewAdminToken() {
     const database = yield* freshDatabasePath;
-    const first = yield* startServe({ database });
+    const first = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN } });
     yield* first.stop;
-    const second = yield* startServe({ adminToken: NEW_ADMIN_TOKEN, database });
+    const second = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: NEW_ADMIN_TOKEN } });
     const whoami = yield* answer(testClient({ env: {}, token: NEW_ADMIN_TOKEN, url: second.url }).whoami);
-    const old = yield* refusal(testClient({ env: {}, token: first.adminToken, url: second.url }).whoami);
+    const old = yield* refusal(testClient({ env: {}, token: ADMIN_TOKEN, url: second.url }).whoami);
 
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
     expect(old).toMatchObject({ status: UNAUTHORIZED });
@@ -85,7 +86,7 @@ it.effect("a stopping board drops a connection that never sent a request instead
     const database = yield* freshDatabasePath;
     const server = yield* startServe({ database });
     const silent = yield* silentConnection(server.url);
-    const whoami = yield* answer(testClient({ env: {}, token: server.adminToken, url: server.url }).whoami);
+    const whoami = yield* answer(testClient({ env: {}, token: server.adminSession, url: server.url }).whoami);
     yield* server.stop;
     yield* silent.dropped;
 
@@ -97,7 +98,7 @@ it.effect("the database never holds a token itself", () =>
   Effect.gen(function* noTokensOnDisk() {
     const database = yield* freshDatabasePath;
     const server = yield* startServe({ database });
-    const tokens = yield* issueTokens(server.url, server.adminToken);
+    const tokens = yield* issueTokens(server.url, server.adminSession);
     yield* server.stop;
     const { files, text } = yield* filesNextTo(database);
     const onDisk = Arr.filter(tokens, (token) => Str.includes(token)(text));
@@ -124,10 +125,17 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_TOKEN too short to be a token w
 
 it.effect("cookout serve gives the admin token to COOKOUT_ADMIN_NAME, and to admin when it is empty", () =>
   Effect.gen(function* adminNameFromSetting() {
-    const named = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "matt" } });
-    const empty = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "" } });
-    const matt = yield* answer(testClient({ env: {}, token: named.adminToken, url: named.url }).whoami);
-    const admin = yield* answer(testClient({ env: {}, token: empty.adminToken, url: empty.url }).whoami);
+    const setting = { COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN };
+    const named = yield* startServe({
+      database: yield* freshDatabasePath,
+      env: { ...setting, COOKOUT_ADMIN_NAME: "matt" },
+    });
+    const empty = yield* startServe({
+      database: yield* freshDatabasePath,
+      env: { ...setting, COOKOUT_ADMIN_NAME: "" },
+    });
+    const matt = yield* answer(testClient({ env: {}, token: ADMIN_TOKEN, url: named.url }).whoami);
+    const admin = yield* answer(testClient({ env: {}, token: ADMIN_TOKEN, url: empty.url }).whoami);
 
     expect(matt.identity).toMatchObject({ admin: true, kind: "human", name: "matt" });
     expect(admin.identity).toMatchObject({ admin: true, kind: "human", name: "admin" });
@@ -214,10 +222,11 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that names an agent, namin
   Effect.gen(function* refusesAgentAdminName() {
     const database = yield* freshDatabasePath;
     const first = yield* startServe({ database });
-    const admin = testClient({ env: {}, token: first.adminToken, url: first.url });
+    const admin = testClient({ env: {}, token: first.adminSession, url: first.url });
     yield* answer(() => createTestAgent({ by: admin, displayName: "release-bot", name: "release-bot" }));
     yield* first.stop;
-    const refused = yield* runServe({ database, env: { COOKOUT_ADMIN_NAME: "release-bot" } });
+    const env = { COOKOUT_ADMIN_NAME: "release-bot", COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN };
+    const refused = yield* runServe({ database, env });
 
     expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
     expect(refused.stderrJson).toMatchObject({ error: { code: "admin_name_agent" } });
@@ -230,7 +239,7 @@ it.effect("cookout serve without DATABASE_URL opens the SQLite file at COOKOUT_D
     const fs = yield* FileSystem.FileSystem;
     const database = yield* freshDatabasePath;
     const server = yield* startServe({ env: { COOKOUT_DB: database } });
-    const whoami = yield* answer(testClient({ env: {}, token: server.adminToken, url: server.url }).whoami);
+    const whoami = yield* answer(testClient({ env: {}, token: server.adminSession, url: server.url }).whoami);
     const made = yield* fs.exists(database);
 
     expect(whoami.identity).toMatchObject({ name: "admin" });

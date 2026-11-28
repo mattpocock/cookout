@@ -1,7 +1,9 @@
-import { Array as Arr, Deferred, Effect } from "effect";
+import { Array as Arr, Deferred, Effect, Option, Schema } from "effect";
 import type { Console } from "effect";
 import { TestConsole } from "effect/testing";
+import { firstAdminName } from "../../../identities/index.ts";
 import { parseLine } from "./cli.ts";
+import { sessionFromLink } from "../../../../../scripts/lib/login-link-session.ts";
 
 interface Watched<During> {
   readonly during: During;
@@ -66,5 +68,20 @@ function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
   });
 }
 
-export { type Watched, signallingConsole, textOf, watched };
+interface Printed {
+  readonly lines: readonly unknown[];
+  readonly url: string;
+}
+
+const NO_SESSION = "";
+const isSetupLine = Schema.is(Schema.Struct({ setupLink: Schema.String }));
+
+function setupLinkSession({ lines, url }: Printed): Effect.Effect<string> {
+  return Option.match(Arr.findFirst(lines, isSetupLine), {
+    onNone: () => Effect.succeed(NO_SESSION),
+    onSome: ({ setupLink }) => Effect.promise(() => sessionFromLink({ link: setupLink, name: firstAdminName, url })),
+  });
+}
+
+export { type Watched, setupLinkSession, signallingConsole, textOf, watched };
 export { parseLine } from "./cli.ts";

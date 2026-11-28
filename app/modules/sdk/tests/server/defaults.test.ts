@@ -6,7 +6,7 @@ import { createCookoutClient } from "../../index.ts";
 it.effect("the SDK defaults its URL and token to COOKOUT_URL and COOKOUT_TOKEN", () =>
   Effect.gen(function* envDefaults() {
     const cookout = yield* TestCookout;
-    const client = createCookoutClient({ env: { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url } });
+    const client = createCookoutClient({ env: { COOKOUT_TOKEN: cookout.adminSession, COOKOUT_URL: cookout.url } });
     const whoami = yield* answer(client.whoami);
 
     expect(whoami.identity).toMatchObject({ name: "admin" });
@@ -21,7 +21,7 @@ it.effect("in a browser, with no process, the SDK reads no environment and uses 
         vi.stubGlobal("process", {});
         Reflect.deleteProperty(globalThis, "process");
       }),
-      () => Effect.sync(() => createCookoutClient({ token: cookout.adminToken, url: cookout.url })),
+      () => Effect.sync(() => createCookoutClient({ token: cookout.adminSession, url: cookout.url })),
       () => Effect.sync(() => vi.unstubAllGlobals()),
     );
     const whoami = yield* answer(client.whoami);

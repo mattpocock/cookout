@@ -22,7 +22,7 @@ function servingWithAssetsIn(
 ): Effect.Effect<ServingAdmin, never, NodeServices.NodeServices | Secrets | Scope.Scope> {
   return Effect.gen(function* serveWithAssets() {
     const server = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ASSETS_DIR: folder } });
-    const admin = testClient({ env: {}, token: server.adminToken, url: server.url });
+    const admin = testClient({ env: {}, token: server.adminSession, url: server.url });
     yield* answer(() => admin.createChannel({ name: "grill" }));
     const serving: ServingAdmin = { admin, stop: server.stop };
     return serving;

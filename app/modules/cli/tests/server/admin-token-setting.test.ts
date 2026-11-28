@@ -8,7 +8,8 @@ import { request } from "../../../http/client.ts";
 import { secretsLive } from "../../../secrets/server.ts";
 import { testClient } from "../../../testing/index.ts";
 
-const NEW_ADMIN_TOKEN = "new-admin-token-0123456789abcdef0123456789";
+const SETTING = "test-admin-token-0123456789abcdef0123456789";
+const NEW_SETTING = "new-admin-token-0123456789abcdef0123456789";
 
 interface RotatedAdmin {
   readonly token: string;
@@ -21,9 +22,9 @@ interface Answers {
   readonly session: number;
 }
 
-function rotatedAdmin(url: string, adminToken: string): Effect.Effect<RotatedAdmin> {
+function rotatedAdmin(url: string): Effect.Effect<RotatedAdmin> {
   return Effect.gen(function* rotateAndLogIn() {
-    const rotated = yield* answer(() => testClient({ env: {}, token: adminToken, url }).rotateToken("admin"));
+    const rotated = yield* answer(() => testClient({ env: {}, token: SETTING, url }).rotateToken("admin"));
     const response = yield* answer(() =>
       request({
         baseUrl: url,
@@ -55,24 +56,22 @@ function answersAt(url: string, setting: string, rotated: RotatedAdmin): Effect.
   );
 }
 
-function restartedAfterRotation(restart: {
-  readonly adminToken?: string;
-}): Effect.Effect<Answers, never, CommandLineNeeds> {
+function restartedAfterRotation(setting: string): Effect.Effect<Answers, never, CommandLineNeeds> {
   return Effect.scoped(
     Effect.gen(function* rotateThenRestart() {
       const database = yield* freshDatabasePath;
-      const first = yield* startServe({ database });
-      const rotated = yield* rotatedAdmin(first.url, first.adminToken);
+      const first = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: SETTING } });
+      const rotated = yield* rotatedAdmin(first.url);
       yield* first.stop;
-      const second = yield* startServe({ ...restart, database });
-      return yield* answersAt(second.url, second.adminToken, rotated);
+      const second = yield* startServe({ database, env: { COOKOUT_ADMIN_TOKEN: setting } });
+      return yield* answersAt(second.url, setting, rotated);
     }),
   );
 }
 
 it.effect("a rotated admin token and its web session keep working across a restart with the same setting", () =>
   Effect.gen(function* restartKeepsRotation() {
-    const once = yield* restartedAfterRotation({});
+    const once = yield* restartedAfterRotation(SETTING);
 
     expect(once).toStrictEqual({ rotated: 200, session: 200, setting: 401 });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
@@ -80,7 +79,7 @@ it.effect("a rotated admin token and its web session keep working across a resta
 
 it.effect("after a restart with a changed COOKOUT_ADMIN_TOKEN only its token works, and older web sessions end", () =>
   Effect.gen(function* restartWithChangedSetting() {
-    const changed = yield* restartedAfterRotation({ adminToken: NEW_ADMIN_TOKEN });
+    const changed = yield* restartedAfterRotation(NEW_SETTING);
 
     expect(changed).toStrictEqual({ rotated: 401, session: 401, setting: 200 });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),

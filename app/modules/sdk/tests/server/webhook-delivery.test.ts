@@ -49,12 +49,12 @@ it.effect("after a good call the handler gets the call, signed with the command'
 
     expect(call).toMatchObject({
       body: {
-        callId: "call_test_4",
+        callId: "call_test_5",
         channel: "grill",
         command: "deploy",
         data: { branch: "main" },
         threadId: called.threadId,
-        token: "cookout_test_3",
+        token: "cookout_test_4",
       },
       headers: { "content-type": "application/json", "cookout-signature": signature },
       method: "POST",
@@ -78,8 +78,8 @@ it.effect("each call has its own call ID and command token, and a failed deliver
     const calls = yield* cookout.webhook.waitForCalls(TWO_CALLS);
 
     expect(calls).toMatchObject([
-      { body: { callId: "call_test_4", threadId: first.threadId, token: "cookout_test_3" }, status: UNAVAILABLE },
-      { body: { callId: "call_test_6", threadId: second.threadId, token: "cookout_test_5" } },
+      { body: { callId: "call_test_5", threadId: first.threadId, token: "cookout_test_4" }, status: UNAVAILABLE },
+      { body: { callId: "call_test_7", threadId: second.threadId, token: "cookout_test_6" } },
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
@@ -109,7 +109,7 @@ it.effect("after an admin rotates a command's secret, calls are signed with the 
       concurrency: 1,
     });
 
-    expect({ old, secret: rotated.secret }).toStrictEqual({ old: "hmac_test_2", secret: "hmac_test_3" });
+    expect({ old, secret: rotated.secret }).toStrictEqual({ old: "hmac_test_3", secret: "hmac_test_4" });
     expect(call.headers).toMatchObject({ "cookout-signature": signedNew });
     expect(signedOld).not.toBe(signedNew);
   }).pipe(Effect.provide(testCookout())),

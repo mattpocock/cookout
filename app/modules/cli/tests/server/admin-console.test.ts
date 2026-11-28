@@ -52,7 +52,7 @@ it.effect("cookout admin on a file that isn't a database says why on stderr, and
 
 it.effect("a setup link sent with a name that has a '/' is refused as a bad request, not looked up", () =>
   Effect.gen(function* slashName() {
-    const server = yield* startServe({ adminToken: "", database: yield* freshDatabasePath });
+    const server = yield* startServe({ database: yield* freshDatabasePath, redeemSetupLink: false });
     const anonymous = testClient({ env: {}, url: server.url });
     const secret = token("cookout_setup-unused");
     const slashed = yield* refusal(() => anonymous.redeemSetupLink({ name: "ops/bot", secret }));
@@ -78,7 +78,7 @@ function takenThenFree(): Effect.Effect<readonly [unknown, unknown], never, Comm
       const database = yield* freshDatabasePath;
       const store = yield* openStore(sqliteStorage({ cipher: testSecretsCipher, path: database }));
       yield* Effect.andThen(store.storage.createIdentity(ada, tokenHash("hash:ada")), store.close);
-      const server = yield* startServe({ adminToken: "", database });
+      const server = yield* startServe({ database, redeemSetupLink: false });
       const anonymous = testClient({ env: {}, url: server.url });
       const secret = token(secretIn(server.lines));
       const taken = yield* refusal(() => anonymous.redeemSetupLink({ name: "ada", secret }));
