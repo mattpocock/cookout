@@ -7,8 +7,9 @@ import type { ReactNode } from "react";
 export function IdentityCard(parts: IdentityCardTriggerParts): ReactNode {
   const source = useContext(IdentityCards);
   const card = useSyncExternalStore(source.subscribe, () => source.cardOf(parts.name));
-  if (card === null) {
-    return parts.children;
-  }
-  return <IdentityCardRoot card={card}>{parts.children}</IdentityCardRoot>;
+  return (
+    <IdentityCardRoot card={card} name={parts.name}>
+      {parts.children}
+    </IdentityCardRoot>
+  );
 }

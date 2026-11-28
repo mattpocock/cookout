@@ -123,3 +123,51 @@ test("by keyboard alone, Tab from a focused name reaches the card's Message, and
   await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toBeFocused();
   await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toHaveValue(`@${author} `);
 });
+
+const IDENTITIES = /\/v1\/identities(?:\?|$)/u;
+
+async function identitiesHeld(page: Page): Promise<() => void> {
+  const arrived = Promise.withResolvers<null>();
+  await page.route(IDENTITIES, async (route) => {
+    const response = await route.fetch();
+    await arrived.promise;
+    await route.fulfill({ response });
+  });
+  return () => {
+    arrived.resolve(null);
+  };
+}
+
+interface FocusedEarly {
+  readonly author: string;
+  readonly name: Locator;
+  readonly release: () => void;
+}
+
+async function focusedBeforeTheIdentities(page: Page, channel: string): Promise<FocusedEarly> {
+  const author = `${channel}-author`;
+  await adminClient().createChannel({ name: channel });
+  await postAs(channel, author, "human");
+  const release = await identitiesHeld(page);
+  await openAsReader(page, channel);
+  const name = page
+    .getByRole("feed", { exact: true, name: "Messages" })
+    .getByRole("link", { exact: true, name: author });
+  await name.focus();
+
+  await expect(name).toBeFocused();
+  await expect(name).not.toHaveAttribute("data-identity-card");
+
+  return { author, name, release };
+}
+
+test("a name focused before the identities list arrives keeps its focus when it does, and its card opens", async ({
+  page,
+}) => {
+  const { author, name, release } = await focusedBeforeTheIdentities(page, unique("browser-card-late"));
+  release();
+
+  await expect(name).toHaveAttribute("data-identity-card");
+  await expect(name).toBeFocused();
+  await expect(page.getByRole("dialog", { exact: true, name: author })).toBeVisible();
+});
