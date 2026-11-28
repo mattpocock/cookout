@@ -21,20 +21,12 @@ function sessionCookieOf(response: HttpResponse): Option.Option<string> {
   );
 }
 
-function seedFailed(error: unknown): Failure {
-  return { code: "seed_failed", message: String(error) };
-}
-
 function redeemed(url: string, link: string): Effect.Effect<string, Failure> {
   const [, secret = ""] = Str.split(loginLinkWebPath)(link);
   const redeem = { baseUrl: url, body: { secret }, method: "POST", path: redeemLoginLinkPath } as const;
-  return Effect.tryPromise({ catch: seedFailed, try: () => request(redeem) }).pipe(
-    Effect.flatMap((response) =>
-      Option.match(sessionCookieOf(response), {
-        onNone: Function.constant(Effect.fail(noSession)),
-        onSome: Effect.succeed,
-      }),
-    ),
+  return Effect.tryPromise({ catch: Function.constant(noSession), try: () => request(redeem) }).pipe(
+    Effect.flatMap((response) => Effect.fromOption(sessionCookieOf(response))),
+    Effect.mapError(Function.constant(noSession)),
   );
 }
 
